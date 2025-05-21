@@ -1,12 +1,12 @@
 [package]
-name = "vbw"
+name = "septopus"
 version = "0.1.0"
-description = "Virtual block world, UGC world on chain."
+description = "Septopus world, UGC world on chain."
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "vbw"
+name = "septopus"
 
 [features]
 default = []

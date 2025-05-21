@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-vbw = "7tUr1JZECqmPAHqew3sjrzmygXsxCfzWoqfXaLsn6AZF"
+septopus = "7tUr1JZECqmPAHqew3sjrzmygXsxCfzWoqfXaLsn6AZF"
 
 [registry]
 url = "https://api.apr.dev"

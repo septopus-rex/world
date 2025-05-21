@@ -1,8 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Vbw } from "../target/types/vbw";
+import { Septopus } from "../target/types/septopus";
 import self from "./preset";
 
-const program = anchor.workspace.Vbw as anchor.Program<Vbw>;
+const program = anchor.workspace.Septopus as anchor.Program<Septopus>;
 const provider = anchor.AnchorProvider.env();
 
 anchor.setProvider(provider);

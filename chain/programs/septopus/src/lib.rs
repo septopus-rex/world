@@ -2,6 +2,7 @@
 
 use anchor_lang::prelude::*;
 
+//declare_id!("7tUr1JZECqmPAHqew3sjrzmygXsxCfzWoqfXaLsn6AZF");
 declare_id!("7tUr1JZECqmPAHqew3sjrzmygXsxCfzWoqfXaLsn6AZF");
 
 use {
@@ -17,7 +18,7 @@ pub mod manage;
 pub mod constants;
 
 #[program]
-pub mod vbw {
+pub mod septopus {
     use super::*;
 
     /************************************************************************************************/
