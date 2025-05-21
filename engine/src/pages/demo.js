@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import * as THREE from "three";
-import World from "@/vbw/app";
+import World from "@/septopus/app";
 
 export default function Demo() {
   const self = {
