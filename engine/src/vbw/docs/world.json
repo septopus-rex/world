@@ -1,0 +1,19 @@
+{
+    "defaultWaterMap1": "6",
+    "defaultWaterMap0": "5",
+    "defaultEarthTexture": "1",
+    "maxTriggerAction": "3",
+    "founderByCoin": "false",
+    "pollParamUserPercent": "0.3",
+    "pollParamUserMin": "2000",
+    "pollParam": "true",
+    "costMigrate": "9999",
+    "playerJumpLimit": "0.8",
+    "playerCrossLimit": "0.4",
+    "deathUnactive": "365",
+    "reviveHangup": "30",
+    "costRevive": "1000",
+    "blockPlayerCapacity": "0",
+    "startPlayer": "[2018,1111]",
+    "deltaElevation": "10"
+}
