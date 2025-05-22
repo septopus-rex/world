@@ -22,22 +22,24 @@ use crate::constants::{
 /********************************************************************/
 
 pub fn module_add(
-    ctx: Context<AddModule>,      //default from system
-    index:u32,
-    ipfs:String,                    //IPFS cid          
+    ctx: Context<AddModule>,    //default from system
+    index:u32,                  //module index
+    ipfs:String,                //IPFS cid          
 ) -> Result<()> {
 
-    let clock = &ctx.accounts.clock;
-    let payer_pubkey = ctx.accounts.payer.key();
-    let owner=payer_pubkey.to_string();
-    let create=clock.slot;
-    let status=ResoureStatus::Created as u32;
-    *ctx.accounts.module_data=ModuleData{
-        ipfs,
-        owner,
-        create,
-        status,
-    };
+    // let clock = &ctx.accounts.clock;
+    // let payer_pubkey = ctx.accounts.payer.key();
+    // let owner=payer_pubkey.to_string();
+    // let create=clock.slot;
+    // let status=ResoureStatus::Created as u32;
+
+    // *ctx.accounts.module_data=ModuleData{
+    //     ipfs,
+    //     owner,
+    //     create,
+    //     status,
+    // };
+
     Ok(())
 }
 
@@ -107,21 +109,20 @@ pub struct AddModule<'info> {
     // #[account(mut,seeds = [VBW_SEEDS_RESOURE_MAP],bump)]
     // pub resource_map: Account<'info, ResourceMap>,
 
-    #[account(
-        init,
-        space = SOLANA_PDA_LEN + ModuleData::INIT_SPACE,     
-        payer = payer,
-        seeds = [
-            VBW_SEEDS_MODULE_DATA,
-            &index.to_le_bytes(),
-            //&ipfs.as_bytes(),
-        ],
-        bump,
-    )]
-    pub module_data: Account<'info, ModuleData>,
+    // #[account(
+    //     init_if_needed,
+    //     space = SOLANA_PDA_LEN + ModuleData::INIT_SPACE,     
+    //     payer = payer,
+    //     seeds = [
+    //         VBW_SEEDS_MODULE_DATA,
+    //         &index.to_le_bytes(),
+    //     ],
+    //     bump,
+    // )]
+    // pub module_data: Account<'info, ModuleData>,
 
-    #[account(mut,seeds = [VBW_SEEDS_MODULE_COUNT],bump)]
-    pub module_counter: Account<'info, ModuleCounter>,
+    // #[account(mut,seeds = [VBW_SEEDS_MODULE_COUNT],bump)]
+    // pub module_counter: Account<'info, ModuleCounter>,
 
     pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
@@ -135,7 +136,7 @@ pub struct ApproveModule<'info> {
 
     #[account(mut,seeds = [
         VBW_SEEDS_MODULE_DATA,
-        //&index.to_le_bytes()
+        &index.to_le_bytes()
     ],bump)]
     pub module_data: Account<'info, ModuleData>,
 }
@@ -153,7 +154,7 @@ pub struct ComplainModule<'info> {
         payer = payer,
         seeds = [
             VBW_SEEDS_COMPLAIN_MODULE,      //need to set [u8;4] to avoid error
-            //&index.to_le_bytes(),
+            &index.to_le_bytes(),
         ],
         bump,
     )]
@@ -171,7 +172,7 @@ pub struct RecoverModule<'info> {
 
     #[account(mut,seeds = [
         VBW_SEEDS_MODULE_DATA,
-        //&index.to_le_bytes()
+        &index.to_le_bytes()
     ],bump)]
     pub module_data: Account<'info, ModuleData>,
 }

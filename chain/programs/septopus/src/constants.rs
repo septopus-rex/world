@@ -175,9 +175,9 @@ pub struct ResourceFootprint {
 #[derive(InitSpace)]
 pub struct ModuleData {
     #[max_len(80)]
-    pub ipfs:String,     //JSON world setting
+    pub ipfs:String,     //Module IPFS cid
     #[max_len(50)] 
-    pub owner:String,    //creator of gene to accept token
+    pub owner:String,    //creator of module 
     pub create: u64,     //create slot height
     pub status: u32,      //block status  ["created","approved","banned"]
 }
