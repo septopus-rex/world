@@ -11,10 +11,10 @@ use crate::constants::{
     WorldData,
     BlockData,
     ComplainData,
-    VBW_SEEDS_WORLD_LIST,
-    VBW_SEEDS_WORLD_COUNT,
-    VBW_SEEDS_BLOCK_DATA,
-    VBW_SEEDS_COMPLAIN_BLOCK,
+    SPW_SEEDS_WORLD_LIST,
+    SPW_SEEDS_WORLD_COUNT,
+    SPW_SEEDS_BLOCK_DATA,
+    SPW_SEEDS_COMPLAIN_BLOCK,
     BlockStatus,
     ErrorCode,
 };
@@ -31,7 +31,7 @@ pub fn mint(
     world:u32,
     //_bump:u8,
 ) -> Result<()> {
-
+    msg!("world {} localtion: [{},{}]", world,x,y);
     //1. input check
     //1.1 wether world is on sell
     let world_list=&mut ctx.accounts.world_list;
@@ -271,7 +271,7 @@ pub struct MintBlock<'info> {
         space = SOLANA_PDA_LEN + BlockData::INIT_SPACE,
         payer = payer,
         seeds = [
-            VBW_SEEDS_BLOCK_DATA,
+            SPW_SEEDS_BLOCK_DATA,
             &x.to_le_bytes(),
             &y.to_le_bytes(),
             &world.to_le_bytes(),
@@ -285,14 +285,14 @@ pub struct MintBlock<'info> {
         space = SOLANA_PDA_LEN + WorldCounter::INIT_SPACE,     
         payer = payer,
         seeds = [
-            VBW_SEEDS_WORLD_COUNT,
+            SPW_SEEDS_WORLD_COUNT,
             &world.to_le_bytes(),
         ],
         bump,
     )]
     pub world_counter: Account<'info, WorldCounter>,
 
-    #[account(mut,seeds = [VBW_SEEDS_WORLD_LIST],bump)]
+    #[account(mut,seeds = [SPW_SEEDS_WORLD_LIST],bump)]
     pub world_list: Account<'info, WorldList>,
 
     pub system_program: Program<'info, System>,
@@ -306,14 +306,14 @@ pub struct UpdateBlock<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_BLOCK_DATA,
+        SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
         &y.to_le_bytes(),
         &world.to_le_bytes(),
     ],bump)]
     pub block_data: Account<'info, BlockData>,
 
-    #[account(mut,seeds = [VBW_SEEDS_WORLD_LIST],bump)]
+    #[account(mut,seeds = [SPW_SEEDS_WORLD_LIST],bump)]
     pub world_list: Account<'info, WorldList>,
 
     pub clock: Sysvar<'info, Clock>,
@@ -326,7 +326,7 @@ pub struct SellBlock<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_BLOCK_DATA,
+        SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
         &y.to_le_bytes(),
         &world.to_le_bytes(),
@@ -343,7 +343,7 @@ pub struct BuyBlock<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_BLOCK_DATA,
+        SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
         &y.to_le_bytes(),
         &world.to_le_bytes(),
@@ -360,7 +360,7 @@ pub struct RevokeBlock<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_BLOCK_DATA,
+        SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
         &y.to_le_bytes(),
         &world.to_le_bytes(),
@@ -377,7 +377,7 @@ pub struct ComplainBlock<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_BLOCK_DATA,
+        SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
         &y.to_le_bytes(),
         &world.to_le_bytes(),
@@ -389,7 +389,7 @@ pub struct ComplainBlock<'info> {
         space = SOLANA_PDA_LEN + ComplainData::INIT_SPACE,     
         payer = payer,
         seeds = [
-            VBW_SEEDS_COMPLAIN_BLOCK,    //need to set [u8;4] to avoid error
+            SPW_SEEDS_COMPLAIN_BLOCK,    //need to set [u8;4] to avoid error
             &x.to_le_bytes(),
             &y.to_le_bytes(),
             &world.to_le_bytes(),
@@ -410,7 +410,7 @@ pub struct RecoverBlock<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_BLOCK_DATA,
+        SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
         &y.to_le_bytes(),
         &world.to_le_bytes(),

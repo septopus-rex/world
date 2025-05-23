@@ -160,13 +160,13 @@ const self={
         },
 
         modulecounter:async ()=>{
-          const pda_mcounter=self.getPDA([Buffer.from("c_module")],PID);
+          const pda_mcounter=self.getPDA([Buffer.from("c_md")],PID);
           const raw=await self.getAccount(pda_mcounter);
           if(raw===null) return console.log(`"modulecounter" is not created.`)
           console.log(raw.data.toString());
         },
         texturecounter:async ()=>{
-          const pda_tcounter=self.getPDA([Buffer.from("c_texture")],PID);
+          const pda_tcounter=self.getPDA([Buffer.from("c_tx")],PID);
           const raw=await self.getAccount(pda_tcounter);
           if(raw===null) return console.log(`"texturecounter" is not created.`)
           console.log(raw.data.toString());

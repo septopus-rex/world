@@ -10,9 +10,9 @@ use crate::constants::{
     ModuleData,
     ComplainData,
     ModuleCounter,
-    VBW_SEEDS_MODULE_DATA,
-    VBW_SEEDS_COMPLAIN_MODULE,
-    VBW_SEEDS_MODULE_COUNT,
+    SPW_SEEDS_MODULE_DATA,
+    SPW_SEEDS_COMPLAIN_MODULE,
+    SPW_SEEDS_MODULE_COUNT,
     ResoureStatus,
     ErrorCode,
 };
@@ -27,11 +27,15 @@ pub fn module_add(
     ipfs:String,                //IPFS cid          
 ) -> Result<()> {
 
+    msg!("ipfs len: {}", ipfs.len());
+
     // let clock = &ctx.accounts.clock;
     // let payer_pubkey = ctx.accounts.payer.key();
     // let owner=payer_pubkey.to_string();
     // let create=clock.slot;
     // let status=ResoureStatus::Created as u32;
+
+    // msg!("ipfs len: {}, owner len: {}", ipfs.len(), owner.len());
 
     // *ctx.accounts.module_data=ModuleData{
     //     ipfs,
@@ -101,28 +105,28 @@ pub fn module_recover(
 /********************************************************************/
 
 #[derive(Accounts)]
-#[instruction(index:u32,ipfs:String)]
+#[instruction(index:u32)]
 pub struct AddModule<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    // #[account(mut,seeds = [VBW_SEEDS_RESOURE_MAP],bump)]
+    // #[account(mut,seeds = [SPW_SEEDS_RESOURE_MAP],bump)]
     // pub resource_map: Account<'info, ResourceMap>,
 
-    // #[account(
-    //     init_if_needed,
-    //     space = SOLANA_PDA_LEN + ModuleData::INIT_SPACE,     
-    //     payer = payer,
-    //     seeds = [
-    //         VBW_SEEDS_MODULE_DATA,
-    //         &index.to_le_bytes(),
-    //     ],
-    //     bump,
-    // )]
-    // pub module_data: Account<'info, ModuleData>,
+    #[account(
+        init_if_needed,
+        space = SOLANA_PDA_LEN + ModuleData::INIT_SPACE,     
+        payer = payer,
+        seeds = [
+            SPW_SEEDS_MODULE_DATA,
+            &index.to_le_bytes(),
+        ],
+        bump,
+    )]
+    pub module_data: Account<'info, ModuleData>,
 
-    // #[account(mut,seeds = [VBW_SEEDS_MODULE_COUNT],bump)]
-    // pub module_counter: Account<'info, ModuleCounter>,
+    #[account(mut,seeds = [SPW_SEEDS_MODULE_COUNT],bump)]
+    pub module_counter: Account<'info, ModuleCounter>,
 
     pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
@@ -135,7 +139,7 @@ pub struct ApproveModule<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_MODULE_DATA,
+        SPW_SEEDS_MODULE_DATA,
         &index.to_le_bytes()
     ],bump)]
     pub module_data: Account<'info, ModuleData>,
@@ -153,7 +157,7 @@ pub struct ComplainModule<'info> {
         space = SOLANA_PDA_LEN + ComplainData::INIT_SPACE,     
         payer = payer,
         seeds = [
-            VBW_SEEDS_COMPLAIN_MODULE,      //need to set [u8;4] to avoid error
+            SPW_SEEDS_COMPLAIN_MODULE,      //need to set [u8;4] to avoid error
             &index.to_le_bytes(),
         ],
         bump,
@@ -171,7 +175,7 @@ pub struct RecoverModule<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_MODULE_DATA,
+        SPW_SEEDS_MODULE_DATA,
         &index.to_le_bytes()
     ],bump)]
     pub module_data: Account<'info, ModuleData>,

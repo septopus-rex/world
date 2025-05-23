@@ -8,9 +8,9 @@ use crate::constants::{
     BlockData,
     TextureData,
     ModuleData,
-    VBW_SEEDS_BLOCK_DATA,
-    VBW_SEEDS_TEXTURE_DATA,
-    VBW_SEEDS_MODULE_DATA,
+    SPW_SEEDS_BLOCK_DATA,
+    SPW_SEEDS_TEXTURE_DATA,
+    SPW_SEEDS_MODULE_DATA,
     BlockStatus,
     ResoureStatus,
     ErrorCode,
@@ -76,7 +76,7 @@ pub struct BanBlock<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_BLOCK_DATA,
+        SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
         &y.to_le_bytes(),
         &world.to_le_bytes(),
@@ -93,7 +93,7 @@ pub struct BanTexture<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_TEXTURE_DATA,
+        SPW_SEEDS_TEXTURE_DATA,
         &index.to_le_bytes(),
     ],bump)]
     pub texture_data: Account<'info, TextureData>,
@@ -106,7 +106,7 @@ pub struct BanModule<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_MODULE_DATA,
+        SPW_SEEDS_MODULE_DATA,
         &index.to_le_bytes(),
     ],bump)]
     pub module_data: Account<'info, ModuleData>,

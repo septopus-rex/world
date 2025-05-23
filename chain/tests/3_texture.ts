@@ -11,9 +11,9 @@ const reqs={
   add:async (ipfs,index)=>{
     const users=await self.init({balance:false});
     self.output.start(`Add new texture.`);
-    await self.info.modulecounter();
+    await self.info.texturecounter();
     const sign_init= await program.methods
-      .newTexture(ipfs,index)
+      .addTexture(ipfs,index)
       .accounts({
         payer:users.manager.pair.publicKey,
       })
@@ -82,7 +82,7 @@ const reqs={
   },
 }
 
-describe("VBW texture functions test.",() => {
+describe("Septopus world texture functions test.",() => {
   // it("Add a new texture ( IPFS ).", async () => {
   //   const ipfs="bafkreicl7rl7d6bkgyzxc67jdfoythbthikk7bnt4m22zjd6e7jx5hoerb";
   //   const index=1;

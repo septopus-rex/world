@@ -25,9 +25,9 @@ pub mod septopus {
     /********************************* System setting functions *************************************/
     /************************************************************************************************/
 
-    ///init whole VBW system
+    ///init whole septopus world system
     pub fn init(
-        ctx: Context<InitVBW>,
+        ctx: Context<InitSPW>,
         root:String,
         recipient:String,
     ) -> Result<()> {
@@ -155,12 +155,12 @@ pub mod septopus {
     //     texture::texture_add(ctx,index,ipfs)
     // }
 
-    pub fn new_texture(
-        ctx: Context<NewTexture>,
+    pub fn add_texture(
+        ctx: Context<AddTexture>,
         ipfs: String,
         index: u32,
     )-> Result<()> {
-        texture::texture_new(ctx,index,ipfs)
+        texture::texture_add(ctx,index,ipfs)
     }
 
 

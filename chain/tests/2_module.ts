@@ -2,6 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Septopus } from "../target/types/septopus";
 import { PublicKey,SystemProgram,SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js";
 import self from "./preset";
+import { BN } from "bn.js";
 
 const program = anchor.workspace.Septopus as anchor.Program<Septopus>;
 const provider = anchor.AnchorProvider.env();
@@ -17,7 +18,8 @@ const reqs={
     n_index.writeUInt32LE(index);
     const seeds_data=[
       Buffer.from("m_yz"),
-      n_index,
+      //n_index,
+      new BN(index).toArrayLike(Buffer, "le", 4)
     ];
     const pda_data=self.getPDA(seeds_data,program.programId,true);
 
@@ -27,9 +29,10 @@ const reqs={
     const sign_init= await program.methods
       .addModule(ipfs,index)
       .accounts({
-        payer:users.manager.pair.publicKey,
+        payer:users.recipient.pair.publicKey,
+        //moduleData: pda_data.toString(),
       })
-      .signers([users.manager.pair])
+      .signers([users.recipient.pair])
       .rpc()
       .catch((err)=>{
         self.output.hr("Got Error");

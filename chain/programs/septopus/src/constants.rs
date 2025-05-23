@@ -8,37 +8,37 @@ use serde_json::{json, Value};
 ///Accounts space setting
 pub const ANCHOR_DESCRIMINATOR_SIZE: usize = 8;
 pub const SOLANA_PDA_LEN:usize=8;
-pub const VBW_WHITELIST_MAP_SIZE:usize=500;     //whitelist map size
-pub const VBW_WORLD_LIST_SIZE:usize=800; 
-pub const VBW_RESOURE_MAP_SIZE:usize=1200; 
-pub const VBW_TEXTURE_LIST_SIZE:usize=3000;
-pub const VBW_MODULE_LIST_SIZE:usize=3600;
+pub const SPW_WHITELIST_MAP_SIZE:usize=500;     //whitelist map size
+pub const SPW_WORLD_LIST_SIZE:usize=800; 
+pub const SPW_RESOURE_MAP_SIZE:usize=1200; 
+pub const SPW_TEXTURE_LIST_SIZE:usize=3000;
+pub const SPW_MODULE_LIST_SIZE:usize=3600;
 
 ///System setting
-pub const VBW_ROOT_ACCOUNT:&str="GTNgXEzmG2E2d9yX8fwueP4bD2WCgJ3mqvt7sQj6CYYr"; //root of VBW program
+pub const SPW_ROOT_ACCOUNT:&str="GTNgXEzmG2E2d9yX8fwueP4bD2WCgJ3mqvt7sQj6CYYr"; //root of VBW program
 
 ///World setting
-pub const VBW_WORLD_MAX:u32= 99;              //offset to get the block hash
+pub const SPW_WORLD_MAX:u32= 99;              //offset to get the block hash
 
 ///Block setting
-pub const VBW_BLOCK_INIT_PRICE:u64= 1_000_000;      // 0.01 SOL, the block init price.
+pub const SPW_BLOCK_INIT_PRICE:u64= 1_000_000;      // 0.01 SOL, the block init price.
 
 ///PDA accounts seeds
-pub const VBW_SEEDS_WHITE_LIST:&[u8;5]=b"white";
-pub const VBW_SEEDS_WORLD_LIST:&[u8;6]=b"worlds";
-pub const VBW_SEEDS_BLOCK_DATA:&[u8;4]=b"b_dt";
-pub const VBW_SEEDS_WORLD_COUNT:&[u8;4]=b"w_ct";
-pub const VBW_SEEDS_TEXTURE_COUNT:&[u8;4]=b"c_tx";
-pub const VBW_SEEDS_MODULE_COUNT:&[u8;4]=b"c_md";
-pub const VBW_SEEDS_TEXTURE_DATA:&[u8;4]=b"d_xx";
-pub const VBW_SEEDS_MODULE_DATA:&[u8;4]=b"m_yz";
-pub const VBW_SEEDS_COMPLAIN_TEXTURE:&[u8;4]=b"cptx";
-pub const VBW_SEEDS_COMPLAIN_MODULE:&[u8;4]=b"cpmd";
-pub const VBW_SEEDS_COMPLAIN_BLOCK:&[u8;4]=b"cpbk";
+pub const SPW_SEEDS_WHITE_LIST:&[u8;5]=b"white";
+pub const SPW_SEEDS_WORLD_LIST:&[u8;6]=b"worlds";
+pub const SPW_SEEDS_BLOCK_DATA:&[u8;4]=b"b_dt";
+pub const SPW_SEEDS_WORLD_COUNT:&[u8;4]=b"w_ct";
+pub const SPW_SEEDS_TEXTURE_COUNT:&[u8;4]=b"c_tx";
+pub const SPW_SEEDS_MODULE_COUNT:&[u8;4]=b"c_md";
+pub const SPW_SEEDS_TEXTURE_DATA:&[u8;4]=b"d_xx";
+pub const SPW_SEEDS_MODULE_DATA:&[u8;4]=b"m_yz";
+pub const SPW_SEEDS_COMPLAIN_TEXTURE:&[u8;4]=b"cptx";
+pub const SPW_SEEDS_COMPLAIN_MODULE:&[u8;4]=b"cpmd";
+pub const SPW_SEEDS_COMPLAIN_BLOCK:&[u8;4]=b"cpbk";
 
-pub const VBW_SEEDS_TEXTURE_LIST:&[u8;7]=b"texture";
-pub const VBW_SEEDS_MODULE_LIST:&[u8;6]=b"module";
-pub const VBW_SEEDS_RESOURE_MAP:&[u8;6]=b"resmap";
+pub const SPW_SEEDS_TEXTURE_LIST:&[u8;7]=b"texture";
+pub const SPW_SEEDS_MODULE_LIST:&[u8;6]=b"module";
+pub const SPW_SEEDS_RESOURE_MAP:&[u8;6]=b"resmap";
 
 /********************************************************************/
 /************************* World Related ****************************/
@@ -174,7 +174,7 @@ pub struct ResourceFootprint {
 #[account]
 #[derive(InitSpace)]
 pub struct ModuleData {
-    #[max_len(80)]
+    #[max_len(100)]
     pub ipfs:String,     //Module IPFS cid
     #[max_len(50)] 
     pub owner:String,    //creator of module 

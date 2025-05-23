@@ -7,9 +7,9 @@ use crate::constants::{
     TextureData,
     TextureCounter,
     ComplainData,
-    VBW_SEEDS_TEXTURE_COUNT,
-    VBW_SEEDS_TEXTURE_DATA,
-    VBW_SEEDS_COMPLAIN_TEXTURE,
+    SPW_SEEDS_TEXTURE_COUNT,
+    SPW_SEEDS_TEXTURE_DATA,
+    SPW_SEEDS_COMPLAIN_TEXTURE,
     ResoureStatus,
     ErrorCode,
 };
@@ -18,10 +18,10 @@ use crate::constants::{
 /************************ Public Functions **************************/
 /********************************************************************/
 
-pub fn texture_new(
-    ctx: Context<NewTexture>,
-    id:u32,
-    data:String,
+pub fn texture_add(
+    ctx: Context<AddTexture>,
+    _index:u32,
+    _ipfs:String,
 )-> Result<()> {
     
 
@@ -87,8 +87,8 @@ pub fn texture_recover(
 /********************************************************************/
 
 #[derive(Accounts)]
-#[instruction(id:u32)]
-pub struct NewTexture<'info> {
+#[instruction(index:u32)]
+pub struct AddTexture<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -97,14 +97,14 @@ pub struct NewTexture<'info> {
         space = SOLANA_PDA_LEN + TextureData::INIT_SPACE,     
         payer = payer,
         seeds = [
-            VBW_SEEDS_TEXTURE_DATA,
-            //&id.to_le_bytes(),              //FIXME, can work after ignore this
+            SPW_SEEDS_TEXTURE_DATA,
+            &index.to_le_bytes(),
         ],
         bump,
     )]
     pub texture_data: Account<'info, TextureData>,
 
-    #[account(mut,seeds = [VBW_SEEDS_TEXTURE_COUNT],bump)]
+    #[account(mut,seeds = [SPW_SEEDS_TEXTURE_COUNT],bump)]
     pub texture_counter: Account<'info, TextureCounter>,
 
     pub system_program: Program<'info, System>,
@@ -119,7 +119,7 @@ pub struct ApproveTexture<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_TEXTURE_DATA,
+        SPW_SEEDS_TEXTURE_DATA,
         //&index.to_le_bytes()
     ],bump)]
     pub texture_data: Account<'info, TextureData>,
@@ -133,7 +133,7 @@ pub struct ComplainTexture<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_TEXTURE_DATA,
+        SPW_SEEDS_TEXTURE_DATA,
         //&index.to_le_bytes()
     ],bump)]
     pub texture_data: Account<'info, TextureData>,
@@ -143,7 +143,7 @@ pub struct ComplainTexture<'info> {
         space = SOLANA_PDA_LEN + ComplainData::INIT_SPACE,     
         payer = payer,
         seeds = [
-            VBW_SEEDS_COMPLAIN_TEXTURE,      //need to set [u8;4] to avoid error
+            SPW_SEEDS_COMPLAIN_TEXTURE,      //need to set [u8;4] to avoid error
             //&index.to_le_bytes(),
         ],
         bump,
@@ -161,7 +161,7 @@ pub struct RecoverTexture<'info> {
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        VBW_SEEDS_TEXTURE_DATA,
+        SPW_SEEDS_TEXTURE_DATA,
         //&index.to_le_bytes()
     ],bump)]
     pub texture_data: Account<'info, TextureData>,

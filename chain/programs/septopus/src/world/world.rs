@@ -8,20 +8,20 @@ use {
 
 use crate::constants::{
     SOLANA_PDA_LEN,
-    VBW_WORLD_LIST_SIZE,
-    VBW_RESOURE_MAP_SIZE,
-    VBW_WHITELIST_MAP_SIZE,
+    SPW_WORLD_LIST_SIZE,
+    SPW_RESOURE_MAP_SIZE,
+    SPW_WHITELIST_MAP_SIZE,
     WorldList,
     WhiteList,
     WorldData,
     WorldCounter,
     ModuleCounter,
     TextureCounter,
-    VBW_SEEDS_WORLD_LIST,
-    VBW_SEEDS_WHITE_LIST,
-    VBW_SEEDS_WORLD_COUNT,
-    VBW_SEEDS_MODULE_COUNT,
-    VBW_SEEDS_TEXTURE_COUNT,
+    SPW_SEEDS_WORLD_LIST,
+    SPW_SEEDS_WHITE_LIST,
+    SPW_SEEDS_WORLD_COUNT,
+    SPW_SEEDS_MODULE_COUNT,
+    SPW_SEEDS_TEXTURE_COUNT,
     ErrorCode,
 };
 
@@ -31,7 +31,7 @@ use crate::constants::{
 
 
 pub fn init(
-    ctx: Context<InitVBW>,     //default from system
+    ctx: Context<InitSPW>,     //default from system
     root:String,               //root address
     recipient:String,
 ) -> Result<()> {   
@@ -49,12 +49,12 @@ pub fn init(
     white.recipient(recipient);
     white.replace(root);
 
-    let value:u64=33;
+    let value:u64=0;
     *ctx.accounts.module_counter= ModuleCounter{
         value
     };
 
-    let value:u64=12;
+    let value:u64=0;
     *ctx.accounts.texture_counter= TextureCounter{
         value
     };
@@ -141,7 +141,7 @@ pub fn adjunct(
 /********************************************************************/
 
 #[derive(Accounts)]
-pub struct InitVBW<'info> {
+pub struct InitSPW<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -151,9 +151,9 @@ pub struct InitVBW<'info> {
 
     #[account(
         init,
-        space = SOLANA_PDA_LEN + VBW_WHITELIST_MAP_SIZE, 
+        space = SOLANA_PDA_LEN + SPW_WHITELIST_MAP_SIZE, 
         payer = payer,
-        seeds = [VBW_SEEDS_WHITE_LIST],
+        seeds = [SPW_SEEDS_WHITE_LIST],
         bump,
     )]
     pub whitelist_account: Account<'info, WhiteList>,
@@ -161,9 +161,9 @@ pub struct InitVBW<'info> {
     //FIXME, need to relocate the size of `world_list` in final version
     #[account(
         init,
-        space = SOLANA_PDA_LEN + VBW_WORLD_LIST_SIZE,     
+        space = SOLANA_PDA_LEN + SPW_WORLD_LIST_SIZE,     
         payer = payer,
-        seeds = [VBW_SEEDS_WORLD_LIST],
+        seeds = [SPW_SEEDS_WORLD_LIST],
         bump,
     )]
     pub world_list: Account<'info, WorldList>,
@@ -172,7 +172,7 @@ pub struct InitVBW<'info> {
         init,
         space = SOLANA_PDA_LEN + ModuleCounter::INIT_SPACE,
         payer = payer,
-        seeds = [VBW_SEEDS_MODULE_COUNT],
+        seeds = [SPW_SEEDS_MODULE_COUNT],
         bump,
     )]
     pub module_counter: Account<'info, ModuleCounter>,
@@ -181,7 +181,7 @@ pub struct InitVBW<'info> {
         init,
         space = SOLANA_PDA_LEN + TextureCounter::INIT_SPACE,
         payer = payer,
-        seeds = [VBW_SEEDS_TEXTURE_COUNT],
+        seeds = [SPW_SEEDS_TEXTURE_COUNT],
         bump,
     )]
     pub texture_counter: Account<'info, TextureCounter>,
@@ -202,17 +202,17 @@ pub struct NewWorld<'info> {
         space = SOLANA_PDA_LEN + WorldCounter::INIT_SPACE, 
         payer = payer,
         seeds = [
-            VBW_SEEDS_WORLD_COUNT,
+            SPW_SEEDS_WORLD_COUNT,
             &index.to_le_bytes()
         ],
         bump,
     )]
     pub world_counter: Account<'info, WorldCounter>,
 
-    #[account(mut,seeds = [VBW_SEEDS_WHITE_LIST],bump)]
+    #[account(mut,seeds = [SPW_SEEDS_WHITE_LIST],bump)]
     pub whitelist_account: Account<'info, WhiteList>,
 
-    #[account(mut,seeds = [VBW_SEEDS_WORLD_LIST],bump)]
+    #[account(mut,seeds = [SPW_SEEDS_WORLD_LIST],bump)]
     pub world_list: Account<'info, WorldList>,
 
     pub system_program: Program<'info, System>,
@@ -225,9 +225,9 @@ pub struct WorldAdjunct<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account(mut,seeds = [VBW_SEEDS_WORLD_LIST],bump)]
+    #[account(mut,seeds = [SPW_SEEDS_WORLD_LIST],bump)]
     pub world_list: Account<'info, WorldList>,
 
-    #[account(mut,seeds = [VBW_SEEDS_WHITE_LIST],bump)]
+    #[account(mut,seeds = [SPW_SEEDS_WHITE_LIST],bump)]
     pub whitelist_account: Account<'info, WhiteList>,
 }
