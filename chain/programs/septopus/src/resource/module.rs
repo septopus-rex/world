@@ -105,7 +105,7 @@ pub fn module_recover(
 /********************************************************************/
 
 #[derive(Accounts)]
-#[instruction(index:u32)]
+#[instruction(index:u32,_ipfs:String)]
 pub struct AddModule<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,

@@ -1,5 +1,5 @@
 /* 
-*  VBW world entry
+*  2D controller for 2D map
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-25

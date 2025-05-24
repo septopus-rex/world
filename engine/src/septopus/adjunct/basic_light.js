@@ -1,5 +1,5 @@
 /* 
-*  VBW lights support
+*  Lights for block
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

@@ -1,6 +1,6 @@
 
 /* 
-*  VBW API gateway
+*  Septopus API gateway
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

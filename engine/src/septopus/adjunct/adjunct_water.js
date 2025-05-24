@@ -1,5 +1,5 @@
 /* 
-*  VBW water component
+*  Water component
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

@@ -1,5 +1,5 @@
 /* 
-*  VBW detector, confirm the system
+*  Running detector, confirm the system env
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

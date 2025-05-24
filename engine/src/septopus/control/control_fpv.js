@@ -1,5 +1,5 @@
 /* 
-*  VBW world entry
+*  3D FPV controller for PC
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-25

@@ -1,5 +1,5 @@
 /* 
-*  VBW sky
+*  Septopus World Sky
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-25

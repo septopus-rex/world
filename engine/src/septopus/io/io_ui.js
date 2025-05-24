@@ -1,5 +1,5 @@
 /* 
-*  VBW earth component
+*  Septopus World UI management
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

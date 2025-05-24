@@ -1,5 +1,5 @@
 /* 
-*  VBW world entry
+*  Septopus World Entry, group functions here.
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-25
@@ -396,6 +396,11 @@ const World={
         self.rebuild(mode,range,{},dom_id,()=>{
             return ck && ck(true);
         });
+    },  
+
+    //Edit entry,
+    modify:(tasks,dom_id,world,x,y,ck)=>{
+
     },
 }
 

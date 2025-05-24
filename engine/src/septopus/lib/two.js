@@ -1,5 +1,5 @@
 /* 
-*  VBW 2D create entry
+*  Septopus World 2D create entry
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-29

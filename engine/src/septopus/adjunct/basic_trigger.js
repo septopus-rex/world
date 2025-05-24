@@ -1,5 +1,5 @@
 /* 
-*  VBW trigger
+*  Basic components, trigger for logic
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

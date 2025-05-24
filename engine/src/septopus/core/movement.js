@@ -1,5 +1,5 @@
 /* 
-*  VBW avatar movement component
+*  Septopus world avatar movement component
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-29

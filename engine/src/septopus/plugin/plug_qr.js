@@ -1,5 +1,5 @@
 /* 
-*  VBW QR plugin
+*  Septopus World QR plugin
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-29

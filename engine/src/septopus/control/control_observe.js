@@ -1,5 +1,5 @@
 /* 
-*  VBW world entry
+*  3D observe controller
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-25

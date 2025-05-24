@@ -1,5 +1,5 @@
 /* 
-*  Module block, single block
+*  Adjunct box, single box
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

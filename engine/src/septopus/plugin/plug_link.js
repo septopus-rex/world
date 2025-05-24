@@ -1,5 +1,5 @@
 /* 
-*  VBW link plugin
+*  Septopus World Link plugin
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

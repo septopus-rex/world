@@ -1,5 +1,5 @@
 /* 
-*  VBW sky
+*  Septopus World Weather
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-25

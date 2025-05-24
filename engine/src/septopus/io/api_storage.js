@@ -1,5 +1,5 @@
 /* 
-*  VBW localstorage API
+*  Septopus World localstorage API
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23

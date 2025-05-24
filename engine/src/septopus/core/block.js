@@ -1,5 +1,5 @@
 /* 
-*  VBW block component
+*  VBW block component, all adjuncts
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23
