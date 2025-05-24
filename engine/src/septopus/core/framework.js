@@ -461,7 +461,7 @@ const self = {
         return true;
     },
 
-    //修改的入口，通过这里对raw数据进行修改，并标识是否要进行重构
+    //modify task entry. Change the "raw" data then rebuild all data.
     excute:(arr, dom_id, world, ck, failed) => {
         if(failed===undefined) failed=[];
         if (arr.length === 0) return ck && ck(failed);
@@ -469,12 +469,18 @@ const self = {
         console.log(JSON.stringify(task));
 
         //1.block task
-        if(task.adjunct==="block" && task.act==="remove"){
-            //1.1. remove function is special, need to isolate it.
-            const bks=[]
-            bks.push([task.param.x,task.param.y]);
-            self.cleanBlocks(bks,world, dom_id);
+        // if(task.adjunct==="block" && task.act==="unload"){
+        //     //1.1. remove function is special, need to isolate it.
+        //     const bks=[]
+        //     bks.push([task.param.x,task.param.y]);
+        //     self.cleanBlocks(bks,world, dom_id);
 
+        //     return self.excute(arr, dom_id, world, ck, failed);
+        // }
+
+        if(task.block!==undefined){
+
+            console.log(task);
             return self.excute(arr, dom_id, world, ck, failed);
         }
 
@@ -511,10 +517,7 @@ const self = {
             const raw_index=2;
             const raw=self.getRawByName(task.adjunct,block_raw[raw_index]);
             task.limit!==undefined?fun(task.param,raw,task.limit):fun(task.param,raw);
-            //console.log(`New Data:`,raw);
-            //block_raw[raw_index]=new_raw;
         }
-        
 
         //3.remove related block
         self.cleanBlocks([[task.x,task.y]],world, dom_id);
@@ -568,10 +571,10 @@ const Framework = {
     //main entry for update, any change then call this function
     update: (dom_id, world) => {
 
-        //1.处理todo的内容
+        //1.check modify task
         const tasks = self.cache.get(["task", dom_id, world]);
         if (!tasks.error && tasks.length !== 0) {
-            console.log(`Todo list:`, tasks);
+            console.log(`Todo list:`, JSON.stringify(tasks));
             self.excute(tasks, dom_id, world, (done) => {
                 
                 //self.structEntire();

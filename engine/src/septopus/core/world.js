@@ -299,14 +299,14 @@ const World={
         if(!self.struct(dom_id)) return  UI.show("toast",`Failed to struct html dom for running.`,{type:"error"});
 
         VBW.player.start(dom_id,(start)=>{
-            UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}].`);
+            UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
             VBW.api.world(start.world,(wd)=>{
                 UI.show("toast",`Data load from network successful.`);
 
                 //2.保存好所有的数据;
                 const index=start.world;
                 const [x,y]=start.block;
-                const ext=1;
+                const ext=!start.extend?1:start.extend;
 
                 VBW.api.view(x,y,ext,index,(list)=>{
 

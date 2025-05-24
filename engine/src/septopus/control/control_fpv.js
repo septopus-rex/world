@@ -119,12 +119,8 @@ const self = {
         }, {});
     },
     cross: (from, to, ext) => {
-        const delta=[
-            to[0]-from[0],
-            to[1]-from[1]
-        ];
-        console.log(JSON.stringify(from), JSON.stringify(to), JSON.stringify(delta), ext);
-
+        const delta=[to[0]-from[0],to[1]-from[1]];
+        //console.log(JSON.stringify(from), JSON.stringify(to), JSON.stringify(delta), ext);
         const dlist = [], glist = [], rg = ext + ext + 1;
         const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
         if (delta[0] != 0 && delta[1] == 0) {
@@ -170,14 +166,26 @@ const self = {
             //2.处理跨越block的数据获取
             const [bx, by] = player.location.block;
             if (bx !== x || by !== y) {
-                //console.log(player);
-                console.log(`Cross block from ${JSON.stringify(player.location)} to ${JSON.stringify([x, y])}`);
-
-                //const rms = self.getRemoveList(player.location, [x, y]);
+                //console.log(`Cross block from ${JSON.stringify(player.location)} to ${JSON.stringify([x, y])}`);
                 const change=self.cross(player.location.block, [x, y],player.location.extend);
                 const tasks = VBW.cache.get(["task", container, world]);
+                //console.log(JSON.stringify(change));
 
-                console.log(JSON.stringify(change));
+                if(change.load.length!==0){
+                    for(let i=0;i<change.load.length;i++){
+                        const bk=change.load[i];
+                        //tasks.push({adjunct:"block",action:"load",param:{x:bk[0],y:bk[1]}});
+                        tasks.push({block:bk,action:"load"});
+                    }
+                }
+
+                if(change.destroy.length!==0){
+                    for(let i=0;i<change.destroy.length;i++){
+                        const bk=change.destroy[i];
+                        //tasks.push({adjunct:"block",action:"unload",param:{x:bk[0],y:bk[1]}});
+                        tasks.push({block:bk,action:"unload"});
+                    }
+                }
 
                 //tasks.push({adjunct:"block",act:"remove",param:{x:bx,y:by}});
                 //tasks.push({adjunct:"block",act:"remove",param:{x:x+1,y:y}});
@@ -267,8 +275,6 @@ const self = {
         }
     },
 }
-
-//https://o370968.ingest.sentry.io/api/6260025/envelope/?sentry_key=c92db65910024196aa808ea164cd9ba3&sentry_version=7&sentry_client=sentry.javascript.react%2F7.61.0 net::ERR_INTERNET_DISCONNECTED
 
 const control_fpv = {
     hooks: self.hooks,

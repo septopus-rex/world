@@ -24,7 +24,6 @@ const CONFIG={
         stop:-1,						//player站立的stop的id
         position:[8,8,0],				//默认开始的位置[x,y,z],z为站立高度
         rotation:[0,0,0],				//默认的旋转位置
-        extend:1,						//周边扩展显示土地格数，第一人称的时候使用
         range:10,						//默认的显示范围，鸟瞰视图时候使用
         height:1.5,						//默认的人物高度
         shoulder:0.5,					//player的肩宽

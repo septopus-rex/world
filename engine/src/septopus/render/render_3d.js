@@ -281,12 +281,12 @@ const self={
     loadBlocks:(scene,dom_id)=>{
         const player_chain=["env","player"];
         const player=VBW.cache.get(player_chain);
-        const cfg=VBW.setting("player");
         const limit=VBW.setting("limit");
         const active=VBW.cache.get(["active"]);
 
         //1.根据block的数据，分离出texture和module，分别进行加载
-        const ext=cfg.extend;
+        //console.log(cfg);
+        const ext=player.location.extend;
         const [x,y]=player.location.block;
         const world=active.world;
 

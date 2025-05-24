@@ -16,7 +16,7 @@ const reg = {
 }
 
 const config = {
-    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], [0], [], 2025],       //2025为默认version
+    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, [], 2025],       //2025为默认version
     hole: [0.5, 0.6, 0.9, 0.6, 2025],        //[ offset,width,height,windowsill,version ]
     definition: {
         2025: [
@@ -27,7 +27,7 @@ const config = {
             ['rpx', 'rpy'],
             'animate',
             ["hole"],
-        ],		//2018版本的数据结构
+        ],
     },
     color: 0xf8f8f8,        //材质加载失败的替换颜色
     grid: {					//辅助定位格栅的配置
@@ -74,7 +74,7 @@ const self = {
             }
 			return raw;
         },
-        del: (p,raw) => {
+        remove: (p,raw) => {
             if(p.index===undefined) return false;
 			const rst=[];
 			for(let i in raw)if(i!=p.index)rst.push(raw[i]);

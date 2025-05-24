@@ -38,10 +38,15 @@ const self={
         },
     },
     attribute:{
-        //such as set elevation or set texture.
-        set:(p,raw)=>{
+        // load:()=>{
 
-        },
+        // },
+        // unload:()=>{
+
+        // },
+        // set:(p,raw)=>{
+
+        // },
     },
     transform:{
         raw_std:(obj,cvt,side)=>{

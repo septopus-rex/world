@@ -24,7 +24,7 @@ const config={
         position:[8,8,1.7],
         rotation:[Math.PI*0.5,0,0],
         headAx:"y",
-        extend:1,               //周边显示的扩展数
+        extend:2,               //周边显示的扩展数
     },
     body:{
         height:1.5,		//默认的人物高度
@@ -97,7 +97,7 @@ const vbw_player={
             //console.log(`Player status saved.`);
             //const active=VBW.cache.get(["active"]);
             const key="vbw_player";
-            console.log(JSON.stringify(player));
+            //console.log(JSON.stringify(player));
             localStorage.setItem(key,JSON.stringify(player));
             count=0;
         }else{
