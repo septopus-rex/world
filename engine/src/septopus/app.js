@@ -36,11 +36,25 @@ export default {
             if(done!==true) return ck && ck(done);
             World.first(container,ck,cfg);
 
+            /*********************************************************/
+            /************************* Test code *********************/
+            /*********************************************************/
             const wd_index=0;
             World.edit(container,wd_index,2025,500);
 
             const fs=["x","y","z","-x","-y","-z"];
-            World.select(container,wd_index,2025,500,"module",0,fs[Toolbox.rand(0,5)]);
+            World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);
+
+            const tasks=[
+                {mod:"wall",act:"set",param:{x:1.2}},
+                {mod:"wall",act:"add",param:{ox:3,oy:12}},
+                {mod:"wall",act:"del",param:{id:1}},
+                {mod:"wall",act:"copy",param:{id:0,ox:6}},
+                {mod:"module",act:"set",param:{id:0,oz:3}},
+            ]
+            World.modify(tasks,wd_index,2025,500,(done)=>{
+                console.log(done);
+            });
 
             // setInterval(()=>{
             //     const fs=["x","y","z","-x","-y","-z"];

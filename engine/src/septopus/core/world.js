@@ -400,7 +400,7 @@ const World={
 
     //Edit entry,
     modify:(tasks,dom_id,world,x,y,ck)=>{
-
+        console.log(tasks,dom_id,world,x,y);
     },
 }
 

@@ -24,6 +24,7 @@ const config={
         position:[8,8,1.7],
         rotation:[Math.PI*0.5,0,0],
         headAx:"y",
+        extend:1,               //周边显示的扩展数
     },
     body:{
         height:1.5,		//默认的人物高度
@@ -40,7 +41,6 @@ const config={
         speed:1.5,          //移动速度，m/s，测试时候用1.5
         strength:1,         //蓄力，用于跳跃
     },
-    extend:2,               //周边显示的扩展数
     autosave:60,            //多少帧进行自动位置保存
 }
 
