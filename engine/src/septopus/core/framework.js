@@ -16,22 +16,22 @@ import CONFIG from "./config";
 const cache = { setting: CONFIG };
 
 const config = {
-    keys: [
-        "component",    //挂载所有注册组件的信息
+    keys: [             //keys of cache
+        "component",    //component keyname
         "resource",     //module和texture等大型资源挂载位置
-        "queue",        //通用的队列方法
-        "block",        //原始数据挂载点
-        "map",          //short --> name
-        "env",          //整体运行环境
-        "active",       //编辑的活跃状态
-        "task",         //编辑的待处理列表
-        "modified",     //编辑后待保存的内容
+        "queue",        //queue for whole system, keyname
+        "block",        //block data keyname
+        "map",          //component map keyname,short --> component name
+        "env",          //runtime keyname
+        "active",       //edit active status keyname
+        "task",         //task list keyname
+        "modified",     //modified block data keyname
     ],
-    workflow: [
-        "update",       //修改数据，处理todo的部分
-        "struct",       //struct，重新构建数据，根据todo的结果来处理
-        "render"        //渲染数据，调用对应渲染器来实现
-    ],
+    // workflow: [
+    //     "update",       //修改数据，处理todo的部分
+    //     "struct",       //struct，重新构建数据，根据todo的结果来处理
+    //     "render"        //渲染数据，调用对应渲染器来实现
+    // ],
 }
 
 const self = {
@@ -152,6 +152,10 @@ const self = {
         clean: (chain, ignor) => {
 
         },
+        dump: (copy) => {
+            if (!copy) return console.log(cache);
+            return console.log(self.clone(cache));
+        },
     },
     queue: {
         get: (qu) => {
@@ -195,13 +199,13 @@ const self = {
             cache[key] = {};
         }
     },
-    initWorkflow: () => {
-        cache.workflow = {
-            modified: false,
-            todo: [],
-            block: [0, 0],
-        }
-    },
+    // initWorkflow: () => {
+    //     cache.workflow = {
+    //         modified: false,
+    //         todo: [],
+    //         block: [0, 0],
+    //     }
+    // },
     initActive: () => {
         cache.active = {
             world: 0,
@@ -436,30 +440,6 @@ const self = {
 
         return ck && ck(prefetch);
     },
-    cleanBlocks: (arr, world, dom_id) => {
-        const chain_std=["block",dom_id,world];
-        const bks=self.cache.get(chain_std);
-        for (let i = 0; i < arr.length; i++) {
-            const row = arr[i];
-            const key = `${row[0]}_${row[1]}`;
-            console.log(`Clean block: ${key}`);
-            delete bks[key];
-        }
-        return true;
-    },
-
-    backupBlock:(x,y,world,dom_id)=>{
-        const key=`${x}_${y}`;   
-        const chain=["modified",dom_id,world,key];
-        if(!self.cache.exsist(chain)) self.cache.set(chain,{final:null,backup:null});
-        const backup_data=self.cache.get(["block",dom_id,world,key,"raw"]);
-        if(!backup_data || backup_data.error) return {error:`No [ ${x}, ${y} ] raw data to backup`};
-
-        const backup=self.clone(backup_data);
-        chain.push("backup");
-        self.cache.set(chain,backup);
-        return true;
-    },
 
     //modify task entry. Change the "raw" data then rebuild all data.
     excute:(arr, dom_id, world, ck, failed) => {
@@ -479,7 +459,7 @@ const self = {
         // }
 
         if(task.block!==undefined){
-
+            
             console.log(task);
             return self.excute(arr, dom_id, world, ck, failed);
         }
@@ -502,7 +482,7 @@ const self = {
         }
 
         //2.2. backup the old raw data.
-        const backuped=self.backupBlock(task.x,task.y,world,dom_id);
+        const backuped=self.block.attribute.backup(task.x,task.y,world,dom_id);
         if(backuped!==true){
 
             return self.excute(arr, dom_id, world, ck, failed);
@@ -520,7 +500,7 @@ const self = {
         }
 
         //3.remove related block
-        self.cleanBlocks([[task.x,task.y]],world, dom_id);
+        self.block.attribute.unload([[task.x,task.y]],world, dom_id);
 
         //4.save modified block
         const m_chain=["modified",dom_id,world];
@@ -533,42 +513,76 @@ const self = {
     
 }
 
-//构建数据的不同模式
+//different way to struct data
 const worker = {
-    edit: self.structEdit,          //构建edit需要的数据
-    init: self.structEntire,        //构建完整的场景
-    active:self.structActive,       //构建3D中active需要的部分
+    edit: self.structEdit,          //struct data when editing
+    init: self.structEntire,        //struct whole scene data
+    active:self.structActive,       //struct active component of 3D
 }
 
 const Framework = {
-    //basic init function, run this before any actions.
+    /** 
+     * basic init function, run this before any actions.
+     * return 
+     * void
+     */
     init: () => {
         self.structCache();
-        self.initWorkflow();
+        //self.initWorkflow();
         self.initActive();
-        window.requestAnimationFrame(self.fresh)
-    },
-    //挂载组件的处理方法
-    component: self.component,
-    cache: self.cache,
-    queue: self.queue,
-    setting: (k) => {
-        if (k === undefined) return cache.setting;
-        if (cache.setting[k] === undefined) return false;
-        return cache.setting[k];
-    },
-    dump: (copy) => {
-        if (!copy) return console.log(cache);
-        return console.log(self.clone(cache));
+        window.requestAnimationFrame(self.fresh);
+        return true;
     },
 
+    /** 
+     * functions of component
+     */
+    component: self.component,
+
+    /** 
+     * functions of cache
+     */
+    cache: self.cache,
+
+    /** 
+     * functions of queue
+     */
+    queue: self.queue,
+
+    /** 
+     * get setting function
+     * @param {key}   string    //config key
+     * return 
+     * setting object | false
+     */
+    setting: (key) => {
+        if (key === undefined) return cache.setting;
+        if (cache.setting[key] === undefined) return false;
+        return cache.setting[key];
+    },
+
+    /** 
+     * struct data entry
+     * @param {mode}    string      //wether copy the cache
+     * @param {range}   object      //{x:2051,y:1247,ext:2,world:0,container:"DOM_ID"}
+     * @param {cfg}     object      //
+     * @param {ck}      callback	//callback function
+     * return 
+     * boolean      //wether done
+     */
     struct: (mode,range,cfg,ck) => {
         const {x, y, ext,world, container} = range;
         if(worker[mode]===undefined) return ck && ck({error:"Invalid struct mode"});
         worker[mode](x, y, ext,world, container,cfg,ck);
     },
 
-    //main entry for update, any change then call this function
+    /** 
+     * main entry for update, any change then call this function
+     * @param {dom_id}  string      //dom_id
+     * @param {world}   integer     //world index
+     * return 
+     * boolean      //wether done
+     */
     update: (dom_id, world) => {
 
         //1.check modify task
@@ -582,22 +596,27 @@ const Framework = {
         }
     },
 
+    /** 
+     * loop function for setAnimationLoop , then Frame Synchronization
+     * 1.animation here
+     * 2.frame synchronization queue
+     * void
+     */
     loop: () => {
-        //console.log(`Here to animate and update all action.`);
-        //1.获取到对应的scene
+        //1.get the active scene
         const current_chain = ["active", "current"];
         if (!self.cache.exsist(current_chain)) return false;
 
         const dom_id = self.cache.get(current_chain);
         const active = self.getActive(dom_id);
 
-        //2.整理 cache.block.id.world.animate 下的数据，进行分类
+        //2.group cache.block.id.world.animate
         const world = self.cache.get(["active", "world"]);
 
         const ans = self.getAnimateQueue(world, dom_id);
         const map = self.getAnimateMap(world, dom_id);         
 
-        //3.运行对应的animate方法，把scene当作参数传入
+        //3.animate here. scene as parameters to functions
         // `x_y_adj_index` --> ThreeObject[]
         for (let i = 0; i < ans.length; i++) {
             const row = ans[i];
@@ -609,7 +628,7 @@ const Framework = {
             Framework[name].hooks.animate(map[key]);      //给定threeObject的列表，处理动画效果
         }
 
-        //4.帧同步的队列执行
+        //4.frame synchronization queue
         const list = self.getLoopQueue(world, dom_id);
         if (!list.error) {
             for (let i = 0; i < list.length; i++) {
@@ -617,8 +636,8 @@ const Framework = {
             }
         }
 
-        //4.刷新场景
-        //FIXME,这里以后要处理成调用指定的渲染器里的方法
+        //4.fresh scene
+        //FIXME, need to fresh all active renders.
         active.render.render(active.scene, active.camera);
     },
 }

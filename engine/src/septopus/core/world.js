@@ -281,7 +281,7 @@ const World={
         //1.注册所有的组件
         self.register();
         UI.show("toast",`Virtual block world running env done.`,{});
-        VBW.dump();
+        VBW.cache.dump();
         return true;
     },
 
@@ -307,7 +307,7 @@ const World={
                 const index=start.world;
                 const [x,y]=start.block;
                 const ext=!start.extend?1:start.extend;
-
+                const limit=wd.size;
                 VBW.api.view(x,y,ext,index,(list)=>{
 
                     UI.show("toast",`Save data successful.`);
@@ -323,7 +323,7 @@ const World={
                         VBW[config.controller].start(dom_id);
                         return ck && ck(true);
                     });
-                });
+                },limit);
             });
         });
     },

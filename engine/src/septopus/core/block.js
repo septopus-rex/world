@@ -1,5 +1,5 @@
 /* 
-*  VBW block component, all adjuncts
+*  Septopus World block component, all adjuncts
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23
@@ -7,24 +7,59 @@
 *  1.
 */
 
+import Toolbox from "../lib/toolbox";
+import VBW from "./framework";  //need to modify raw data, VBW import
+
 const reg={
-    name:"block",
-    category:"system",
+    name:"block",           //register key name
+    category:"system",      //component category
 }
 
 const config={
     opacity:1,
-    texture:1,          //土地的texture的id
-    color:0xeeeee,    //不贴图时，block的颜色
-    repeat:[10,10],
-    active:{
-        height: 0.5,
+    texture:1,          //ground texture ID
+    color:0xeeeee,      //when no texture, ground color setting
+    repeat:[10,10],     //texture repeat parameters
+    active:{            //active ground cordon setting
+        height: 0.5,    //cordon height
         color:[
-            0xff0000,
-            0x00ff00,
-            0x0000ff,
-            0xffff00,
+            0xff0000,   //top?
+            0x00ff00,   //left?
+            0x0000ff,   //right?
+            0xffff00,   //bottom?
         ],
+    },
+};
+
+const funs={
+    clean:(arr, world, dom_id)=>{
+        const chain_std=["block",dom_id,world];
+        const bks=VBW.cache.get(chain_std);
+        for (let i = 0; i < arr.length; i++) {
+            const row = arr[i];
+            const key = `${row[0]}_${row[1]}`;
+            console.log(`Clean block: ${key}`);
+            delete bks[key];
+        }
+        return true;
+    },
+    backup:(x,y,world, dom_id)=>{
+        const key=`${x}_${y}`;   
+        const chain=["modified",dom_id,world,key];
+        if(!VBW.cache.exsist(chain)) VBW.cache.set(chain,{final:null,backup:null});
+        const backup_data=VBW.cache.get(["block",dom_id,world,key,"raw"]);
+        if(!backup_data || backup_data.error) return {error:`No [ ${x}, ${y} ] raw data to backup`};
+
+        const backup=Toolbox.clone(backup_data);
+        chain.push("backup");
+        VBW.cache.set(chain,backup);
+        return true;
+    },
+    load:(x,y)=>{
+        const ext=0;    //no extend, single block
+        VBW.api.view(x,y,ext,index,(list)=>{
+
+        });
     },
 };
 
@@ -38,15 +73,18 @@ const self={
         },
     },
     attribute:{
-        // load:()=>{
+        load:(x,y,world, dom_id)=>{
 
-        // },
-        // unload:()=>{
+        },
+        unload:(x,y, world, dom_id)=>{
 
-        // },
-        // set:(p,raw)=>{
+        },
+        set:(x,y,param, world, dom_id)=>{
 
-        // },
+        },
+        backup:(x,y,world,dom_id)=>{
+
+        },
     },
     transform:{
         raw_std:(obj,cvt,side)=>{
@@ -182,6 +220,7 @@ const vbw_block={
     hooks:self.hooks,
     transform:self.transform,  
     attribute:self.attribute,
+
 }
 
 export default vbw_block;
