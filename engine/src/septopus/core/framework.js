@@ -101,6 +101,16 @@ const self = {
             //2.attatch component functions to root
             if (Framework[cfg.name] !== undefined) return { error: `Invalid name "${cfg.name}" to add to framework.` };
             Framework[cfg.name] = component;
+
+            //3.filter out datasource API
+            if(cfg.type==="datasource"){
+                Framework.datasource=component;
+                cache.env.datasource={
+                    pending:false,       //set to `true`, when loading the data from network
+                    map:{},              //data need to load
+                };
+            }
+
             return true;
         },
 
@@ -588,7 +598,7 @@ const Framework = {
             console.log(`Todo list:`, JSON.stringify(tasks));
             self.excute(tasks, dom_id, world, (done) => {
                 
-                self.structEntire();
+                //self.structEntire();
             });
         }
     },

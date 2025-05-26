@@ -79,12 +79,15 @@ const self={
     attribute:{
         load:(x,y,param,world, dom_id)=>{
             console.log(`block load:`,x,y,param,world,dom_id);
+            //VBW.datasource.view
         },
         unload:(x,y,param,world, dom_id)=>{
             console.log(`block unload:`,x,y,param,world,dom_id);
+            //funs.clean();
         },
         set:(x,y,param, world, dom_id)=>{
             console.log(`set block parameter:`,x,y,param,world,dom_id);
+            //funs.clean();
         },
         backup:(x,y,param,world,dom_id)=>{
             console.log(`block backup:`,x,y,param,world, dom_id);

@@ -1,11 +1,18 @@
-/* 
-*  Septopus World Entry, group functions here.
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-25
-*  @functions
-*  1. 
-*/
+/**
+ * Septopus World Entry
+ *
+ * group functions here.
+ *
+ * @fileoverview Manages:
+ *   1. Start Septopus World from 0.
+ *   2. Set to edit module.
+ *   3. Modify the block or adjuncts.
+ *   4. Load component dynamic in the furture.
+ *   5. Exposed events 
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 import UI from "../io/io_ui";
 import CONFIG from "./config";
@@ -99,6 +106,7 @@ const config={
     render:"rd_three",
     controller:"con_first",
     //controller:"con_observe",
+    debug:true,
 };
 
 const self={
@@ -207,12 +215,12 @@ const self={
         return VBW.cache.get(["env","world","side"]);
     },
 
-    updatePlayer:(user,id)=>{
-        //1.设置player的位置
+    syncPlayer:(user,id)=>{
+        //1.set location of player;
         VBW.cache.set(["env","player","location"],user);
         //VBW.cache.set(["env","player","world"],user.world);
 
-        //2.设置相机的位置
+        //2.set camera as player view.
         const cam_chain=["active","containers",id,"camera"];
         const cam =  VBW.cache.get(cam_chain);
         const side = self.getSide();
@@ -226,13 +234,12 @@ const self={
     },
 
     fetchModules:(arr,ck)=>{
-        // if(failed===undefined) failed=[];
-        // if(arr.length===0) return ck && ck(failed);
-        // const id = arr.pop();
-
+        if(!VBW.datasource || !VBW.datasource.module){
+            return {eror:"No datasource method for module loading."};
+        } 
         const failed=[];
         //1.从IPFS获取到资源
-        API.module(arr,(map)=>{
+        VBW.datasource.module(arr,(map)=>{
             for(let id in map){
                 const chain=["resource","module",id];
                 VBW.cache.set(chain,map[id]);
@@ -243,8 +250,11 @@ const self={
         
     },
     fetchTextures:(arr,ck)=>{
+        if(!VBW.datasource || !VBW.datasource.texture){
+            return {eror:"No datasource method for texture loading."};
+        } 
         const failed=[];
-        API.texture(arr,(map)=>{
+        VBW.datasource.texture(arr,(map)=>{
             for(let id in map){
                 const chain=["resource","texture",id];
                 VBW.cache.set(chain,map[id]);
@@ -285,49 +295,57 @@ const self={
 
 const World={
     init:async ()=>{
-        //1.注册所有的组件
+        //1.register all components;
         self.register();
         UI.show("toast",`Septopus World running env done.`,{});
-        VBW.cache.dump();
+        if(config.debug) VBW.cache.dump();   //dump when debug
         return true;
     },
 
     /**
-     * Septopus World entry, start from 0
-     * @param	{id}    string		//container dom id
-     * @param   {cfg}   [object]    /config setting
+     * Septopus World entry, start from 0 to start the 3D world
+     * @param	{string}    id		- container DOM id
+     * @param   {function}  ck      - callback when loaded
+     * @param   {object}    [cfg]   - config setting
+     * @returns {boolean} - wether load successful
      * */
     first:(dom_id,ck,cfg)=>{
         UI.show("toast",`Start to struct world.`);
-        //0.设置当前的活动窗口
+        //0.set current active dom_id
         const current_chain=["active","current"];
         VBW.cache.set(current_chain,dom_id);
 
-        //1.获取到player的具体信息
+        //1.get the player status
         if(!self.struct(dom_id)) return  UI.show("toast",`Failed to struct html dom for running.`,{type:"error"});
-
+        console.log("Framework:",VBW)
+        if(!VBW.datasource) return UI.show("toast",`No datasource for the next step.`,{type:"error"});
         VBW.player.start(dom_id,(start)=>{
             UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
-            VBW.api.world(start.world,(wd)=>{
+            VBW.datasource.world(start.world,(wd)=>{
                 UI.show("toast",`Data load from network successful.`);
 
-                //2.保存好所有的数据;
+                //2.get blocks data;
                 const index=start.world;
                 const [x,y]=start.block;
                 const ext=!start.extend?1:start.extend;
                 const limit=wd.size;
-                VBW.api.view(x,y,ext,index,(list)=>{
+                VBW.datasource.view(x,y,ext,index,(list)=>{
+
+                    if(list.loading){
+                        return UI.show("toast",`Loading blocks data...`);
+                    }
 
                     UI.show("toast",`Save data successful.`);
                     const failed = self.save(dom_id,index,list,wd);
                     if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
                     
-                    self.updatePlayer(start,dom_id);
-                    //3.解析所有block数据到std
+                    //set the camera as player here, need the render is ready
+                    self.syncPlayer(start,dom_id);    
+
+                    //3.convert all block data to STD format
                     const range={x:x,y:y,ext:ext,world:index,container:dom_id};
                     const mode="init";
                     self.rebuild(mode,range,cfg,dom_id,()=>{
-                       
                         VBW[config.controller].start(dom_id);
                         return ck && ck(true);
                     });
@@ -343,18 +361,8 @@ const World={
         //window.cancelAnimationFrame(run.request);
     },
 
-    //修改活着更新之后，重新刷新内容的入口
-    fresh:(dom_id)=>{
-        //1.处理todo的任务，准备重构的原始数据
-
-        //2.reload threeObject
-        const modified=[2025,512]
-        VBW[config.render].show(dom_id,modified);
-    },
-
     //对block设置成edit状态
     edit:(dom_id,world,x,y,ck)=>{
-    
         //1.构建edit的临时数据结构
         const chain=["block",dom_id,world,"edit"];
         VBW.cache.set(chain,{

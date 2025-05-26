@@ -16,8 +16,12 @@ import Toolbox from "../lib/toolbox";
 import VBW from "../core/framework";
 
 const reg = {
-    name: "api",        //组件名称
-    type: 'system',     //组件分类
+    name: "api",
+    type: 'datasource',     //set API as datasource entry
+}
+
+const config={
+    debug:true,
 }
 
 const router = {
@@ -26,16 +30,16 @@ const router = {
 }
 
 const mock = {
-    world: (ck) => {
+    world: () => {
         return {
             name: "Septopus World",      //World name
-            desc: "Septopus world.",     //Description of world
-            size: [4096, 4096],           //#1～4096，可以买年份的数据，总约1677万块
-            side: [16, 16],               //block的边长
-            accuracy: 1000,              //数据精度，相当于1mm
+            desc: "Septopus world, a virtual block world on chain.",     //Description of world
+            size: [4096, 4096],           //limit of world 
+            side: [16, 16],             //size of block
+            accuracy: 1000,             //accuracy, 1000 as 1mm. Default data as "m"
             block: {
                 size: [16, 16, 20],
-                diff: 3,                     //周边4块的平均高度的升高值
+                diff: 3,                //周边4块的平均高度的升高值
                 status: ["raw", "public", "private", "locked"],
             },
             time: {                          //设计速度为正常的20倍，相当于现实世界1年，VBW里20年
@@ -52,29 +56,29 @@ const mock = {
                 category: ["cloud", "rain", "snow"],
                 grading: 8,                  //每种气候里面的分级
             },
-            address: "SOLANA_ACCOUNT_ADDRESS",       //数据合约地址
-            blockheight: 1123456,                    //世界启动的slot                   
+            address: "SOLANA_ACCOUNT_ADDRESS",      //数据合约地址
+            blockheight: 1123456,                   //世界启动的slot                 
         };
     },
-    block: (x, y, world, ck) => {
+    block: (x, y, world) => {
         const rand = Toolbox.rand;
         return {
             x: x,
             y: y,
             world: world,
             data: [
-                0.2,        //block的高度
-                1,          //block的状态
+                0.2,        //block elevation
+                1,          //block status
                 [
                     ["a1", [[[1.5, 0.2, rand(2, 5)], [2, 6, 0], [0, 0, 0], rand(60, 90), [1, 1], 1, [], 2025]]],
                     ["a2", [[[rand(1, 3), rand(1, 3), rand(1, 3)], [8, 8, 2], [0, 0, 0], rand(100, 300), [1, 1], 0, 2025]]],
                     ["a4", [[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], rand(1, 30), 0, 2025]]]
                 ]
-            ],        //链上的block数据
+            ],
             owner: "SOLANA_ADDRESS",
         };
     },
-    texture: (id, ck) => {
+    texture: (id) => {
         const arr = [
             "texture/vbw.png",
             "texture/grass.jpg",
@@ -88,7 +92,7 @@ const mock = {
             repeat: [1, 1]
         }
     },
-    module: (id, ck) => {
+    module: (id) => {
         return {
             index: id,
             type: ["3DS", "DAE", "FBX", "MMD"][Toolbox.rand(0, 3)],
@@ -115,9 +119,6 @@ const self = {
             };
         },
     },
-    call: () => {
-
-    },
     getExtBlocks: (x, y, ext, limit) => {
         const arr = [];
         for (let i = -ext; i < ext + 1; i++) {
@@ -133,10 +134,17 @@ const self = {
     getBlocks: (arr, world, ck, map) => {
         if (map === undefined) map = {};
         if (arr.length === 0) return ck && ck(map);
+
+        if(config.debug){
+            const [x, y] = arr.pop();
+            const key = `${x}_${y}`;
+            map[key] = mock.block(x, y, world);
+            return self.getBlocks(arr, world, ck, map);
+        }
+
         const [x, y] = arr.pop();
         const key = `${x}_${y}`;
-        map[key] = mock.block(x, y, world);
-
+        map[key] ={};
         return self.getBlocks(arr, world, ck, map);
     },
 }
@@ -149,19 +157,24 @@ const API = {
 
     /** 
      * get single world setting
+     * !important no need to fresh dynamic, wait the data back then rebuild the world
      * @param {number}      index   - world index
      * @param {function}    ck      -callback function
      * @returns
      * @return {object}  - world setting
      */
-    world: (index, ck) => {
-        const data = mock.world();
+    world: (index, ck, cfg) => {
+        if(config.debug) return ck && ck(mock.world());
 
+        const data={};
         return ck && ck(data);
     },
 
     /** 
      * get blocks data by coordinate
+     * !important, here to solve the delay of network.
+     * !important, set tag first, the system will check the result then rebuild all data
+     * !important, here to implement the frontend cache, can get data from indexedDB
      * @param {number}      x       - coordinate X
      * @param {number}      y       - coordinate y
      * @param {number}      world   - world index
@@ -171,20 +184,30 @@ const API = {
      * object key(`${x}_${y}`) --> BLOCK_DATA
      */
     view: (x, y, ext, world, ck, limit) => {
-        console.log(limit);
-        const arr = self.getExtBlocks(x, y, ext, limit);
+        //0. input check
+        //0.1. check limit of x,y
 
+        //0.2.check limit of world
+
+        //1. set loading status;
+
+        ck && ck({loading:true});
+
+        //2. ready to get data;
+
+        const arr = self.getExtBlocks(x, y, ext, limit);
         return self.getBlocks(arr, world, ck);
     },
 
     /** 
      * get modules data by IDs
+     * !important, here to implement the frontend cache for module, can get data from indexedDB
      * @param   {number[]}    IDs   //module ids.
      * @param   {function}    ck	//callback function
      * @returns 
      * @return {object} key(`${id}`) --> MODULE_DATA
      */
-    module: (ids, ck) => {
+    module: (ids, ck, cfg) => {
         if (Array.isArray(ids)) {
             const map = {};
             for (let i = 0; i < ids.length; i++) {
@@ -201,13 +224,14 @@ const API = {
 
     /** 
      * get texture data by IDs
+     * !important, here to implement the frontend cache for texture, can get data from indexedDB
      * @public
      * @param {number[]}    ids     //module ids.
      * @param {function}    ck      //callback function
      * @returns
      * @return {object}  key(`${id}`) --> TEXTURE_DATA
      */
-    texture: (ids, ck) => {
+    texture: (ids, ck, cfg) => {
         if (Array.isArray(ids)) {
             const map = {};
             for (let i = 0; i < ids.length; i++) {
