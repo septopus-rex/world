@@ -1,6 +1,6 @@
 # World Details
 
-* Virtual Block World instance sample data.
+* Septopus World instance sample data.
 
 ```Javascript
     {

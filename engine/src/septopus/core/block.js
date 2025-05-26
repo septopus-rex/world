@@ -1,10 +1,11 @@
-/* 
+/** 
 *  Septopus World block component, all adjuncts
 *  @auth [ Fuu ]
 *  @creator Fuu
 *  @date 2025-04-23
 *  @functions
-*  1.
+*  1.block management
+*  2.transform methods
 */
 
 import Toolbox from "../lib/toolbox";
@@ -55,11 +56,14 @@ const funs={
         VBW.cache.set(chain,backup);
         return true;
     },
-    load:(x,y)=>{
+    load:(x,y,world)=>{
         const ext=0;    //no extend, single block
-        VBW.api.view(x,y,ext,index,(list)=>{
+        VBW.api.view(x,y,ext,world,(list)=>{
 
         });
+    },
+    unload:(x,y,world,dom_id)=>{
+
     },
 };
 
@@ -73,26 +77,23 @@ const self={
         },
     },
     attribute:{
-        load:(x,y,world, dom_id)=>{
-
+        load:(x,y,param,world, dom_id)=>{
+            console.log(`block load:`,x,y,param,world,dom_id);
         },
-        unload:(x,y, world, dom_id)=>{
-
+        unload:(x,y,param,world, dom_id)=>{
+            console.log(`block unload:`,x,y,param,world,dom_id);
         },
         set:(x,y,param, world, dom_id)=>{
-
+            console.log(`set block parameter:`,x,y,param,world,dom_id);
         },
-        backup:(x,y,world,dom_id)=>{
-
+        backup:(x,y,param,world,dom_id)=>{
+            console.log(`block backup:`,x,y,param,world, dom_id);
         },
     },
     transform:{
+        //convert raw data to standard septopus world object format
         raw_std:(obj,cvt,side)=>{
-            const va=obj[0];
-            const status=obj[1];
-
-            //FIXME,这里需要去获取到block的边长.
-            
+            const [va,status]=obj;
             const s=side[0],hs=0.5*s;
 			const data={
 				x:s,y:s,z:va*cvt,
@@ -108,7 +109,7 @@ const self={
             return [data];
         },
 
-        //std中间体，转换成3D需要的object
+        //convert standard object to 3D render object
         std_3d:(bks)=>{
             const arr=[];
             for(let i=0;i<bks.length;i++){
@@ -197,19 +198,14 @@ const self={
 
         },
 
-        
-
-        //std中间体，转换成2D需要的数据
         std_2d:(arr,face)=>{
 
         },
 
-        //3D高亮时候，需要的3D的object
         acitve_3d:()=>{
 
         },
 
-        //2D高亮时候，需要的2D的object
         active_2d:()=>{
 
         },
@@ -220,7 +216,6 @@ const vbw_block={
     hooks:self.hooks,
     transform:self.transform,  
     attribute:self.attribute,
-
 }
 
 export default vbw_block;

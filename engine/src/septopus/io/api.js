@@ -107,9 +107,10 @@ const self = {
         },
         init: () => {
             return {
-                chain: ["env", "blockchain"],
+                chain: ["env", "api"],
                 value: {
-                    default: "solana",
+                    network: "solana",
+                    loading: false,
                 }
             };
         },
@@ -148,10 +149,10 @@ const API = {
 
     /** 
      * get single world setting
-     * @param {index}   integer	    //world index
-     * @param {ck}      callback	//callback function
-     * return 
-     * object, world setting
+     * @param {number}      index   - world index
+     * @param {function}    ck      -callback function
+     * @returns
+     * @return {object}  - world setting
      */
     world: (index, ck) => {
         const data = mock.world();
@@ -161,12 +162,12 @@ const API = {
 
     /** 
      * get blocks data by coordinate
-     * @param {x}       integer	    //coordinate X
-     * @param {y}       integer	    //coordinate y
-     * @param {world}   integer	    //world index
-     * @param {ck}      callback	//callback function
-     * @param {limit}   integer[]	//[ X_MAX,Y_MAX ], world size limit
-     * return 
+     * @param {number}      x       - coordinate X
+     * @param {number}      y       - coordinate y
+     * @param {number}      world   - world index
+     * @param {function}    ck      - callback function
+     * @param {number[]}    limit   - [ X_MAX,Y_MAX ], world size limit
+     * @returns 
      * object key(`${x}_${y}`) --> BLOCK_DATA
      */
     view: (x, y, ext, world, ck, limit) => {
@@ -178,10 +179,10 @@ const API = {
 
     /** 
      * get modules data by IDs
-     * @param {ids}     integer[]	    //module ids.
-     * @param {ck}      callback	//callback function
-     * return 
-     * object key(`${id}`) --> MODULE_DATA
+     * @param   {number[]}    IDs   //module ids.
+     * @param   {function}    ck	//callback function
+     * @returns 
+     * @return {object} key(`${id}`) --> MODULE_DATA
      */
     module: (ids, ck) => {
         if (Array.isArray(ids)) {
@@ -200,10 +201,11 @@ const API = {
 
     /** 
      * get texture data by IDs
-     * @param {ids}     integer[]   //module ids.
-     * @param {ck}      callback    //callback function
-     * return 
-     * object key(`${id}`) --> TEXTURE_DATA
+     * @public
+     * @param {number[]}    ids     //module ids.
+     * @param {function}    ck      //callback function
+     * @returns
+     * @return {object}  key(`${id}`) --> TEXTURE_DATA
      */
     texture: (ids, ck) => {
         if (Array.isArray(ids)) {

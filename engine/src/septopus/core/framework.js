@@ -1,24 +1,27 @@
-/* 
-*  Septopu World Framework
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.resource control
-*  2.running workflow
-*  3.setting manage
-*  4.edit workflow
-*/
+/**
+ * Septopus World Framework
+ *
+ * A core module managing components, resources, and workflows
+ * in the Septopus decentralized operating system.
+ *
+ * @fileoverview Manages:
+ *   1. Component lifecycle
+ *   2. Resource registration and usage control
+ *   3. Workflow execution and editing
+ *   4. Settings and configuration
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
-import Toolbox from "../lib/toolbox";
 import CONFIG from "./config";
+import Toolbox from "../lib/toolbox";
 
 const cache = { setting: CONFIG };
-
 const config = {
     keys: [             //keys of cache
         "component",    //component keyname
-        "resource",     //module和texture等大型资源挂载位置
+        "resource",     //module and texture large file
         "queue",        //queue for whole system, keyname
         "block",        //block data keyname
         "map",          //component map keyname,short --> component name
@@ -27,11 +30,6 @@ const config = {
         "task",         //task list keyname
         "modified",     //modified block data keyname
     ],
-    // workflow: [
-    //     "update",       //修改数据，处理todo的部分
-    //     "struct",       //struct，重新构建数据，根据todo的结果来处理
-    //     "render"        //渲染数据，调用对应渲染器来实现
-    // ],
 }
 
 const self = {
@@ -83,7 +81,7 @@ const self = {
         return JSON.parse(JSON.stringify(obj));
     },
     component: {
-        //注册组件
+        //component registion
         reg: (cfg, component) => {
             if (!cache.component) return { error: "Framework is not init yet." };
             if (!cfg.name) return { error: "Invalid component register information." };
@@ -91,7 +89,7 @@ const self = {
             cache.component[cfg.name] = cfg;
             //cache.component[cfg.name].func=component;
 
-            //1.全部加载到cache下,生成map
+            //1.attatch to cache,and create map
             if (cfg.short !== undefined) {
                 if (cache.map[cfg.short] !== undefined) return { error: `Componet "${cfg.name}" short name conflict with "${cache.map[cfg.short]}", ignore it.` };
                 cache.map[cfg.short] = cfg.name;
@@ -100,13 +98,13 @@ const self = {
                 cache.map[cfg.name] = cfg.short;
             }
 
-            //2.挂载组件的方法
+            //2.attatch component functions to root
             if (Framework[cfg.name] !== undefined) return { error: `Invalid name "${cfg.name}" to add to framework.` };
             Framework[cfg.name] = component;
             return true;
         },
 
-        // short --> name 的映射关系
+        // short --> name relationship
         map: () => {
             return self.clone(cache.map);
         },
@@ -148,7 +146,6 @@ const self = {
             return true;
         },
 
-        //清理掉除ignore（string[]类型）之外的数据
         clean: (chain, ignor) => {
 
         },
@@ -192,31 +189,27 @@ const self = {
     fresh: () => {
         console.log(`ticktok, fresh system.`);
     },
+    
     structCache: () => {
         const keys = config.keys;
         for (let k in keys) {
             const key = keys[k];
             cache[key] = {};
         }
+        return true;
     },
-    // initWorkflow: () => {
-    //     cache.workflow = {
-    //         modified: false,
-    //         todo: [],
-    //         block: [0, 0],
-    //     }
-    // },
     initActive: () => {
         cache.active = {
-            world: 0,
-            block: [2025, 423],   //默认启动的block
-            containers: {},      //3D实例挂载的地方
-            current: "",         //当前活动的主窗口实例
+            world: 0,           // default world
+            block: [0, 0],      // default start block
+            containers: {},     // dom_id -->  raw data and structed data here
+            current: "",        // current active render
         }
+        return true;
     },
     
 
-    //TODO,需要处理好time和weather的关系
+    //TODO, here to connect time and weather. 
     structSky: (world, dom_id) => {
         console.log(`Here to struct sky by weather and time`);
         const sky_chain = ["block", dom_id, world, "sky"];
@@ -224,8 +217,19 @@ const self = {
         self.cache.set(sky_chain, sky);
     },
 
+    /**
+     * construct sinlge block raw data to STD data
+     * @param {integer} x       //block X
+     * @param {integer} y       //block Y
+     * @param {integer} world   //world index
+     * @param {string}  dom_id  //container dom ID
+     * @returns 
+     * void
+     * 1.attatch formatted STD data to BLOCK_KEY.std
+     * 2.set block parameters, such as elevation
+     */
     structSingle: (x, y, world, dom_id) => {
-        //1.检测数据是否已经处理了, 更新都是单块数据更新的
+        //1.check wether constructed block;
         const key = `${x}_${y}`;
         const cvt = self.getConvert();
         const std_chain = ["block", dom_id, world, key, "std"];
@@ -235,16 +239,17 @@ const self = {
         const bk = self.cache.get(raw_chain);
 
         const std = {};
-        //1.构建block的数据;
+
+        //1.construct block data;
         const side = self.getSide();
         std.block = Framework.block.transform.raw_std(bk.data, cvt, side);
 
-        //1.1.设置elevation高度
+        //1.1.set block elevation;
         const va = std.block[0].z;
         const va_chain = ["block", dom_id, world, key, "elevation"];
         self.cache.set(va_chain, va);
 
-        //2.构建所有的组件
+        //2.construct all adjuncts;
         const adjs = bk.data[2];
         for (let i = 0; i < adjs.length; i++) {
             const [short, list] = adjs[i];
@@ -254,6 +259,7 @@ const self = {
         self.cache.set(std_chain, std);
         return true;
     },
+
     structRenderData: (x, y, world, dom_id) => {
         const key = `${x}_${y}`;
         const std_chain = ["block", dom_id, world, key, "std"];
@@ -278,20 +284,19 @@ const self = {
         return preload;
     },
     
-    editBlock:(x,y,world,dom_id)=>{
+    toEdit:(x,y,world,dom_id)=>{
         const preload={module:[],texture:[]};
 
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std"];
         const map = self.cache.get(raw_chain);
-        //console.log(map);
 
-        //0.准备基础的参数
+        //0.prepare basic parameters
         const stds = {};
         const cvt = self.getConvert();
         const va = self.getElevation(x, y, world, dom_id);
 
-        //1. block部分的数据
-        //1.1. 拆分出模型和材质
+        //1. block data
+        //1.1. filter out module or texture for preload
         const bk=Framework.block.transform.std_active(map.block, va, cvt);
         const edit_chain = ["block", dom_id, world, "edit"];
         const edit=self.cache.get(edit_chain);
@@ -301,21 +306,21 @@ const self = {
                 if (row.material && row.material.texture) preload.texture.push(row.material.texture);
                 if (row.module) preload.module.push(row.module);
 
-                //1.2. 挂载到对应
+                //1.2. attatch border objects
                 edit.border.push(row);
             }
         }
 
-        //2.构建block上的adjunct数据;
+        //2.restruct block adjunct, including the active highlight
         for (let name in map) {
             const data = Framework[name].transform.std_active(map[name], va);
 
-            //2.构建stop的数据
+            //2.isolate basic component stop
             if(data.stop && data.stop.length!==0){
 
             }
 
-            //3.构建helper的数据(灯光等);
+            //3.isolate object helper
             if(data.helper && data.helper.length!==0){
                 
             }
@@ -324,18 +329,10 @@ const self = {
         return preload;
     },
     structEntire: (x, y, ext, world, dom_id, cfg, ck) => {
-        //1.处理编辑的内容，删除修改过的block的数据
-        const modified_chain = ["cache", "task", world];
-        const ups = self.cache.get(modified_chain);
-        if (!ups.error && !Toolbox.empty(ups)) {
-            console.log(`Modified block.`, ups);
-            self.cleanBlocks(ups, world, dom_id);
-        }
-
-        //2.构建sky,根据weather和time
+        //1.construct sky and weather
         self.structSky(world, dom_id);
 
-        //3.构建所有的block上的数据
+        //2.construct all blocks data
         const limit = self.cache.get(["setting", "limit"]);
         const fun_single = self.structSingle;
         for (let i = -ext; i < ext + 1; i++) {
@@ -347,7 +344,7 @@ const self = {
             }
         }
 
-        //4.构建渲染器需要的数据
+        //4.construct render data
         const fun_render = self.structRenderData;
         const prefetch = { module: [], texture: [] };
         for (let i = -ext; i < ext + 1; i++) {
@@ -361,20 +358,21 @@ const self = {
             }
         }
 
-        //5.去重module和texture的id
+        //5.unique module and texture IDs
         prefetch.module = Toolbox.unique(prefetch.module);
         prefetch.texture = Toolbox.unique(prefetch.texture);
         return ck && ck(prefetch);
     },
+
     structEdit: (x, y, ext, world, dom_id, cfg, ck) => {
-        //1.处理不需要的block
+        //1.clean block data when force to
         if(cfg && cfg.force){
             console.log(`Force to clean blocks here`);
         }
         
-        //2.构建渲染器需要的数据
+        //2.construct render data
         const limit = self.cache.get(["setting", "limit"]);
-        const fun_render = self.editBlock;
+        const fun_render = self.toEdit;
         const prefetch = { module: [], texture: [] };
         for (let i = -ext; i < ext + 1; i++) {
             for (let j = -ext; j < ext + 1; j++) {
@@ -387,7 +385,7 @@ const self = {
             }
         }
 
-        //3.去重module和texture的id
+        //3.unique module and texture IDs.
         prefetch.module = Toolbox.unique(prefetch.module);
         prefetch.texture = Toolbox.unique(prefetch.texture);
         
@@ -400,7 +398,7 @@ const self = {
 
         const prefetch = { module: [], texture: [] };
 
-        //1.调用std_active方法，计算组件需要显示的部分
+        //1.call `std_active`，construct active adjunct highlight
         const selected = self.cache.get(s_chain);
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std", selected.adjunct, selected.index];
         if(!self.cache.exsist(raw_chain)) return ck && ck({error:"Invalid adjunct to highlight."});
@@ -415,12 +413,12 @@ const self = {
                 if (row.material && row.material.texture) preload.texture.push(row.material.texture);
                 if (row.module) preload.module.push(row.module);
 
-                //1.2. 挂载到对应位置
+                //1.2. attatch to `helper` key
                 edit.helper.push(row);
             }
         }
         
-        //2.create grid raw data
+        //2.create grid raw data, used to create grid helper. Attatch to `grid` key
         edit.grid.raw={
             x:x,
             y:y,
@@ -444,35 +442,35 @@ const self = {
     //modify task entry. Change the "raw" data then rebuild all data.
     excute:(arr, dom_id, world, ck, failed) => {
         if(failed===undefined) failed=[];
-        if (arr.length === 0) return ck && ck(failed);
+        if (arr.length === 0){
+            //before exit, clean all blocks need  fresh.
+            const modified_chain = ["cache", "task", world];
+            const ups = self.cache.get(modified_chain);
+            if (!ups.error && !Toolbox.empty(ups)) {
+                console.log(`Modified block.`, ups);
+                //Framework.block.attribute.clean();
+            }
+            return ck && ck(failed);
+        } 
+
         const task = arr.pop();
-        console.log(JSON.stringify(task));
-
         //1.block task
-        // if(task.adjunct==="block" && task.act==="unload"){
-        //     //1.1. remove function is special, need to isolate it.
-        //     const bks=[]
-        //     bks.push([task.param.x,task.param.y]);
-        //     self.cleanBlocks(bks,world, dom_id);
-
-        //     return self.excute(arr, dom_id, world, ck, failed);
-        // }
-
         if(task.block!==undefined){
-            
-            console.log(task);
+            if(Framework.block.attribute && Framework.block.attribute[task.action]);
+            const [x,y]=task.block;
+            Framework.block.attribute[task.action](x,y,!task.param?{}:task.param,world,dom_id);
             return self.excute(arr, dom_id, world, ck, failed);
         }
 
         //2.adjunct task;
         if(!Framework[task.adjunct] ||
             !Framework[task.adjunct].attribute ||
-            !Framework[task.adjunct].attribute[task.act]
+            !Framework[task.adjunct].attribute[task.action]
         ){  
             failed.push({error:`Todo task failed, raw: ${JSON.stringify(task)}`});
             return self.excute(arr, dom_id, world, ck, failed); 
         }
-        const fun=Framework[task.adjunct].attribute[task.act];
+        const fun=Framework[task.adjunct].attribute[task.action];
 
         //2.1. get raw data of adjunct
         const key=`${task.x}_${task.y}`;
@@ -482,7 +480,7 @@ const self = {
         }
 
         //2.2. backup the old raw data.
-        const backuped=self.block.attribute.backup(task.x,task.y,world,dom_id);
+        const backuped=self.block.attribute.backup(task.x,task.y,{},world,dom_id);
         if(backuped!==true){
 
             return self.excute(arr, dom_id, world, ck, failed);
@@ -523,12 +521,11 @@ const worker = {
 const Framework = {
     /** 
      * basic init function, run this before any actions.
-     * return 
+     * @returns 
      * void
      */
     init: () => {
         self.structCache();
-        //self.initWorkflow();
         self.initActive();
         window.requestAnimationFrame(self.fresh);
         return true;
@@ -552,7 +549,7 @@ const Framework = {
     /** 
      * get setting function
      * @param {key}   string    //config key
-     * return 
+     * @returns 
      * setting object | false
      */
     setting: (key) => {
@@ -567,7 +564,7 @@ const Framework = {
      * @param {range}   object      //{x:2051,y:1247,ext:2,world:0,container:"DOM_ID"}
      * @param {cfg}     object      //
      * @param {ck}      callback	//callback function
-     * return 
+     * @returns 
      * boolean      //wether done
      */
     struct: (mode,range,cfg,ck) => {
@@ -580,7 +577,7 @@ const Framework = {
      * main entry for update, any change then call this function
      * @param {dom_id}  string      //dom_id
      * @param {world}   integer     //world index
-     * return 
+     * @returns 
      * boolean      //wether done
      */
     update: (dom_id, world) => {
@@ -591,7 +588,7 @@ const Framework = {
             console.log(`Todo list:`, JSON.stringify(tasks));
             self.excute(tasks, dom_id, world, (done) => {
                 
-                //self.structEntire();
+                self.structEntire();
             });
         }
     },
@@ -600,6 +597,7 @@ const Framework = {
      * loop function for setAnimationLoop , then Frame Synchronization
      * 1.animation here
      * 2.frame synchronization queue
+     * @returns
      * void
      */
     loop: () => {

@@ -285,7 +285,6 @@ const self={
         const active=VBW.cache.get(["active"]);
 
         //1.根据block的数据，分离出texture和module，分别进行加载
-        //console.log(cfg);
         const ext=player.location.extend;
         const [x,y]=player.location.block;
         const world=active.world;

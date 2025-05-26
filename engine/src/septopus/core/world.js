@@ -102,6 +102,13 @@ const config={
 };
 
 const self={
+    /**
+     * world component register management
+     * !important, group components here, can load dynamic in the furture.
+     * @functions
+     * 1. reg all components and init
+     */
+    
     register:()=>{
         const regKey=CONFIG.hooks.register;
         const initKey=CONFIG.hooks.initialize;
@@ -112,18 +119,17 @@ const self={
                 const component=coms[i];
                 if(component.hooks===undefined) continue;
 
-                //1.load VBW parts to Framework
+                //1.load Septopus World components to Framework
                 if(component.hooks[regKey]!==undefined){
                     const cfg=component.hooks[regKey]();
                     const result=VBW.component.reg(cfg,component);
                     if(result.error!==undefined) UI.show("toast",result.error,{type:"error"});
-                }   
+                }
 
                 //2.init the parts component
                 if(component.hooks[initKey]!==undefined){
                     const res=component.hooks[initKey]();
                     if(!res.chain || !res.value){
-                        //console.log(component);
                         UI.show("toast",`Invalid init data from "${cat}" component.`,{type:"error"});
                     } 
                     VBW.cache.set(res.chain,res.value);
@@ -134,6 +140,7 @@ const self={
     //构建需要的dom,都放在container下
     struct:(container)=>{
         if(VBW.block===undefined) return UI.show("toast",`No more component.`,{type:"error"});
+
         //0.设备检测
         const dt=VBW.detect.check(container);
 
@@ -260,7 +267,7 @@ const self={
         VBW.struct(mode,range,cfg,(pre)=>{
             UI.show("toast",`Struct all components, ready to show.`);
             //3.1.3D物体构建完毕，可以计算用户的位置了
-            //self.updatePlayer(start,dom_id);
+            
             //3.2.获取网络的资源，用于构建3D。以后这部分可以使用服务进行加速
             self.prefetch(pre.texture,pre.module,(failed)=>{                            
                 UI.show("toast",`Fetch texture and module successful.`);
@@ -280,14 +287,15 @@ const World={
     init:async ()=>{
         //1.注册所有的组件
         self.register();
-        UI.show("toast",`Virtual block world running env done.`,{});
+        UI.show("toast",`Septopus World running env done.`,{});
         VBW.cache.dump();
         return true;
     },
 
-    /* VBW系统的入口，正常运行这个即可
-     * @param	id          string		//container dom id
-     * @param   [cfg]       object      //配置部分
+    /**
+     * Septopus World entry, start from 0
+     * @param	{id}    string		//container dom id
+     * @param   {cfg}   [object]    /config setting
      * */
     first:(dom_id,ck,cfg)=>{
         UI.show("toast",`Start to struct world.`);
@@ -339,7 +347,7 @@ const World={
     fresh:(dom_id)=>{
         //1.处理todo的任务，准备重构的原始数据
 
-        //2.重新加载threeObject
+        //2.reload threeObject
         const modified=[2025,512]
         VBW[config.render].show(dom_id,modified);
     },
@@ -400,7 +408,7 @@ const World={
 
     //Edit entry,
     modify:(tasks,dom_id,world,x,y,ck)=>{
-        console.log(tasks,dom_id,world,x,y);
+        //console.log(tasks,dom_id,world,x,y);
     },
 }
 
