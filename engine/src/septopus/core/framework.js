@@ -558,9 +558,10 @@ const Framework = {
 
     /** 
      * get setting function
-     * @param {key}   string    //config key
-     * @returns 
-     * setting object | false
+     * @param {key}   string   - config key
+     * @returns
+     * @return  {object}    - the setting result
+     * @return  {boolean}   - false, failed to get the setting
      */
     setting: (key) => {
         if (key === undefined) return cache.setting;
@@ -570,12 +571,12 @@ const Framework = {
 
     /** 
      * struct data entry
-     * @param {mode}    string      //wether copy the cache
-     * @param {range}   object      //{x:2051,y:1247,ext:2,world:0,container:"DOM_ID"}
-     * @param {cfg}     object      //
-     * @param {ck}      callback	//callback function
-     * @returns 
-     * boolean      //wether done
+     * @param {string}   mode   - rebuild mode, ["edit","init","active"]
+     * @param {object}   range  - {x:2051,y:1247,ext:2,world:0,container:"DOM_ID"}
+     * @param {object}   cfg    - more setting for rebuild
+     * @param {function} ck     - callback function
+     * @returns
+     * @return void
      */
     struct: (mode,range,cfg,ck) => {
         const {x, y, ext,world, container} = range;
@@ -585,10 +586,11 @@ const Framework = {
 
     /** 
      * main entry for update, any change then call this function
-     * @param {dom_id}  string      //dom_id
-     * @param {world}   integer     //world index
-     * @returns 
-     * boolean      //wether done
+     * @param {string}  dom_id  - container DOM id
+     * @param {number}  world   - world index
+     * @returns
+     * @callback - wether update successful
+     * @param {boolean} - update result
      */
     update: (dom_id, world) => {
 
@@ -605,10 +607,11 @@ const Framework = {
 
     /** 
      * loop function for setAnimationLoop , then Frame Synchronization
+     * @functions
      * 1.animation here
      * 2.frame synchronization queue
      * @returns
-     * void
+     * @return void
      */
     loop: () => {
         //1.get the active scene

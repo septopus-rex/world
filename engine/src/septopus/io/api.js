@@ -133,7 +133,14 @@ const self = {
     },
     getBlocks: (arr, world, ck, map) => {
         if (map === undefined) map = {};
-        if (arr.length === 0) return ck && ck(map);
+        if (arr.length === 0){
+            if(config.debug){
+                return setTimeout(()=>{
+                    return ck && ck(map);
+                },Toolbox.rand(5000,15000));
+            }
+            return ck && ck(map);
+        } 
 
         if(config.debug){
             const [x, y] = arr.pop();
@@ -190,7 +197,6 @@ const API = {
         //0.2.check limit of world
 
         //1. set loading status;
-
         ck && ck({loading:true});
 
         //2. ready to get data;

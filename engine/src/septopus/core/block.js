@@ -132,6 +132,7 @@ const self={
 
         //!important, active is struct from "std" to "3d"
         std_active:(obj,va,cvt)=>{
+            //console.log(obj);
             const ds={stop:[],helper:[]};
             const cfg=config.active;
             const h=cfg.height*cvt;

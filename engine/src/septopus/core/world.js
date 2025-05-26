@@ -115,8 +115,8 @@ const self={
      * !important, group components here, can load dynamic in the furture.
      * @functions
      * 1. reg all components and init
+     * @returns void
      */
-    
     register:()=>{
         const regKey=CONFIG.hooks.register;
         const initKey=CONFIG.hooks.initialize;
@@ -145,43 +145,66 @@ const self={
             }
         }
     },
-    //构建需要的dom,都放在container下
+
+    /**
+     * DOM struct function
+     * @functions
+     * 1. detect device;
+     * 2. clean DOM already exsist;
+     * 3. create DOM needed;
+     * @param {string}  container - container DOM id
+     * @return {boolean}
+     */
     struct:(container)=>{
         if(VBW.block===undefined) return UI.show("toast",`No more component.`,{type:"error"});
 
-        //0.设备检测
+        //0.device detect
         const dt=VBW.detect.check(container);
 
-        //1.1.构建3D需要的dom
+        //1.1.struct dom for render
         const dom_render=VBW[config.render].construct(dt.width,dt.height,container);
 
-        //1.2.构建controller需要的dom;
+        //1.2.struct dom for controller
         const dom_controller=VBW[config.controller].construct();
 
-        //2.构建所有需要的dom
+        //2.construct the DOM
         const target=document.getElementById(container);
-        //2.1.清理所有的dom
+
+        //FIXME, need to clean all DOM to avoid new screen of system
+        //2.1.clean DOM already exsist
         
-        //2.2.增加需要的dom;
+        //2.2.add new DOM needed
         target.appendChild(dom_render);
         target.appendChild(dom_controller);
 
         return true;
     },
+
+    /**
+     * Save the data of world and block from Datasource ( API )
+     * @functions
+     * 1. save world data;
+     * 2. save blocks raw data;
+     * @param {string}  dom_id  - container DOM id
+     * @param {number}  world   - world index
+     * @param {object}  map     - blocks map, `${x}_${y}` --> BLOCK_RAW_DATA
+     * @param {object}  world_info  - world information object
+     * @return {boolean}    - wether saved successful
+     */
     save:(dom_id,world,map,world_info)=>{
         const fun=VBW.cache.set;
 
-        //1.处理world的数据;
+        //1.save the world data;
         const w_chain=["env","world"];
         world_info.index=world;
         const wd=self.formatWorld(world_info);
         fun(w_chain,wd);
 
-        //1.1.设置modified的位置
+        //1.1.set `modified` cache key
         const m_chain=["task",dom_id,world];
         fun(m_chain,[]);
         
-        //2.处理blockd的raw数据保存
+        //2.deal withe the block raw data
         let failed=false;
         for(let k in map){
             const chain=["block",dom_id,world,k,"raw"];
@@ -190,7 +213,8 @@ const self={
                 UI.show("toast",res.error,{type:"error"})
                 failed=true;
             }else{
-                //设置recover数据
+
+                //set recover data
                 const recover_chain=["block",dom_id,world,k,"recover"];
                 const dt=fun(recover_chain,Toolbox.clone(map[k]));
                 if(dt!==true && dt.error){
@@ -200,12 +224,12 @@ const self={
         }
         return failed;
     },
+
     formatWorld:(wd)=>{
         wd.side=[
             wd.side[0]*wd.accuracy,
             wd.side[1]*wd.accuracy,
         ];
-
         return wd;
     },
     getConvert:()=>{
@@ -218,8 +242,6 @@ const self={
     syncPlayer:(user,id)=>{
         //1.set location of player;
         VBW.cache.set(["env","player","location"],user);
-        //VBW.cache.set(["env","player","world"],user.world);
-
         //2.set camera as player view.
         const cam_chain=["active","containers",id,"camera"];
         const cam =  VBW.cache.get(cam_chain);
@@ -294,6 +316,10 @@ const self={
 }   
 
 const World={
+    /**
+     * Septopus World system initalization
+     * @return {boolean} - wether init successful
+     * */
     init:async ()=>{
         //1.register all components;
         self.register();
@@ -302,12 +328,21 @@ const World={
         return true;
     },
 
+    stop:(dom_id)=>{
+        //window.cancelAnimationFrame(run.request);
+    },
+
+    start:(dom_id)=>{
+        //window.cancelAnimationFrame(run.request);
+    },
+
+
     /**
      * Septopus World entry, start from 0 to start the 3D world
      * @param	{string}    id		- container DOM id
      * @param   {function}  ck      - callback when loaded
      * @param   {object}    [cfg]   - config setting
-     * @returns {boolean} - wether load successful
+     * @return {boolean} - wether load successful
      * */
     first:(dom_id,ck,cfg)=>{
         UI.show("toast",`Start to struct world.`);
@@ -353,22 +388,23 @@ const World={
             });
         });
     },
-
-    stop:(dom_id)=>{
-        //window.cancelAnimationFrame(run.request);
-    },
-    start:(dom_id)=>{
-        //window.cancelAnimationFrame(run.request);
-    },
-
-    //对block设置成edit状态
+    /**
+     * set block to edit mode
+     * @param	{string}    dom_id  - container DOM id
+     * @param   {number}    world   - world index
+     * @param   {number}    x       - coordination X
+     * @param   {number}    y       - coordination y
+     * @param   {function}  ck      - callback function
+     * @callback - wether done callback
+     * @param {boolean} result
+     * */
     edit:(dom_id,world,x,y,ck)=>{
         //1.构建edit的临时数据结构
         const chain=["block",dom_id,world,"edit"];
         VBW.cache.set(chain,{
             x:x,y:y,world:world,
-            border:[],          //block的边框的threeObject
-            raycast:[],         //取出所有[x,y]的threeObject供检测
+            border:[],          //threeObject of block border
+            raycast:[],         //threeObjects need to check selection status
             helper:[],          //所有的helper
             grid:{
                 raw:null,       //grid raw parameters,
@@ -390,14 +426,35 @@ const World={
         });
     },
 
-    //切换回非编辑模式
-    normal:(dom_id,world)=>{
-        //0.删除edit数据，用于自动回收
+    /**
+     * set block back to normal mode
+     * @param	{string}    dom_id  - container DOM id
+     * @param   {number}    world   - world index
+     * @param   {function}  ck      - callback function
+     * @callback - wether done callback
+     * @param {boolean} result
+     * */
+    normal:(dom_id,world,ck)=>{
+        //0.remove edit data
         const chain=["block",dom_id,world];
         const cur=VBW.cache.get(chain);
         delete cur.edit;
+        return ck && ck(true);
     },
 
+    /**
+     * select single adjunct in a editing block
+     * @param	{string}    dom_id  - container DOM id
+     * @param   {number}    world   - world index
+     * @param   {number}    x       - coordination X
+     * @param   {number}    y       - coordination y
+     * @param	{string}    name    - selected adjunct name
+     * @param   {number}    index   - selected adjunct index
+     * @param   {number}    face    - selected adjunct face in ["x","y","z","-x","-y","-z"]
+     * @param   {function}  ck      - callback function
+     * @callback - wether done callback
+     * @param {boolean} result
+     * */
     select:(dom_id,world,x,y,name,index,face,ck)=>{
         //1. set selected adjunct
         const chain=["block",dom_id,world,"edit","selected"];
@@ -414,7 +471,17 @@ const World={
         });
     },  
 
-    //Edit entry,
+    /**
+     * excute modify tasks entry
+     * @param	{object[]}  tasks   - modify tasks need to do
+     * @param	{string}    dom_id  - container DOM id
+     * @param   {number}    world   - world index
+     * @param   {number}    x       - coordination X
+     * @param   {number}    y       - coordination y
+     * @param   {function}  ck      - callback function
+     * @callback - wether done callback
+     * @param {boolean} result
+     * */
     modify:(tasks,dom_id,world,x,y,ck)=>{
         //console.log(tasks,dom_id,world,x,y);
     },
