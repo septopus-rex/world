@@ -364,7 +364,7 @@ const self={
         objs=objs.concat(data.object);
         ans=ans.concat(data.animate);
 
-        //console.log(objs);
+        console.log(ans);
         self.parse(txs,mds,world,dom_id,(failed)=>{
             //console.log(failed);
             UI.show("toast",`Farse resource for rendering.`);
@@ -404,17 +404,33 @@ const self={
 
             //4.2.添加到动画队列里
             const ani_chain=["block",dom_id,world,"queue"];
-            VBW.cache.set(ani_chain,ans);
+            const ani_queue=VBW.cache.get(ani_chain);
+            for(let i=0;i<ans.length;i++){
+                ani_queue.push(ans[i]);
+            }
         });
 
     },
-    clean:(scene,x,y)=>{
+    clean:(scene,x,y,world,dom_id)=>{
+        //1. remove related objects from scene
         for(let i=0;i<scene.children.length;i++){
             const row=scene.children[i];
             if(row.userData.x===x && row.userData.y===y){
                 scene.remove(row);
             }
         }
+
+        //TODO, clean animate 3D objects
+        //2.remove related animate object from scene and aniamte queue
+        const ani_chain=["block",dom_id,world,"queue"];
+        const list=VBW.cache.get(ani_chain);
+        const arr=[];
+        for(let i=0;i<list.length;i++){
+            const row=list[i];
+            if(row.x===x && row.y===0) continue;
+            arr.push(row);
+        }
+        VBW.cache.set(ani_chain,arr);
     }
 };
 
@@ -451,16 +467,9 @@ export default {
 
         //1.清除指定的block数据，用于刷新场景
         if(block!==undefined){
-            //console.log(`Fresh target block`);
             const [x,y,world]=block;
-            self.clean(scene,x,y);
+            self.clean(scene,x,y,world,dom_id);
             self.fresh(scene,x,y,world,dom_id);
-            
-        }
-
-        //2.强制清除所有的数据
-        if(force){
-
         }
 
         if(first || force){
