@@ -199,10 +199,12 @@ const self={
 
         //1.save the world data;
         const w_chain=["env","world"];
-        world_info.index=world;
-        const wd=self.formatWorld(world_info);
-        fun(w_chain,wd);
-
+        if(!VBW.cache.exsist(w_chain)){
+            world_info.index=world;
+            const wd=self.formatWorld(world_info);
+            fun(w_chain,wd);        
+        }
+        
         //1.1.set `modified` cache key
         const m_chain=["task",dom_id,world];
         fun(m_chain,[]);
@@ -229,6 +231,7 @@ const self={
     },
 
     formatWorld:(wd)=>{
+        console.log("format world....",JSON.stringify(wd.side));
         wd.side=[
             wd.side[0]*wd.accuracy,
             wd.side[1]*wd.accuracy,
@@ -428,30 +431,28 @@ const World={
                             delete map.loaded;
                             self.loadingBlockQueue(map,dom_id);
                             UI.show("toast",`Loading data, show block holder.`);
+                            const failed = self.save(dom_id,index,map,wd);
+                            if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
+            
+                            const range={x:x,y:y,ext:ext,world:index,container:dom_id};
+                            const mode="init";  
+                            VBW.struct(mode,range,cfg,(pre)=>{
+                                UI.show("toast",`Struct all components, ready to show.`);
+                                self.syncPlayer(start,dom_id);  //set the camera as player here, need the render is ready
+                                self.prefetch(pre.texture,pre.module,(failed)=>{                            
+                                    UI.show("toast",`Fetch texture and module successful.`);
+                                    VBW[config.render].show(dom_id);
+                                    VBW[config.controller].start(dom_id);
+                                    return ck && ck(true);
+                                });
+                            });
                         }else{
                             delete map.loaded;
                             UI.show("toast",`Load block data successful.`);
+                            const failed = self.save(dom_id,index,map,wd);
+                            if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
                         }
                     }
-                    
-    
-                    const failed = self.save(dom_id,index,map,wd);
-                    if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
-    
-                    const range={x:x,y:y,ext:ext,world:index,container:dom_id};
-                    const mode="init";  
-                    VBW.struct(mode,range,cfg,(pre)=>{
-                        UI.show("toast",`Struct all components, ready to show.`);
-                        self.syncPlayer(start,dom_id);  //set the camera as player here, need the render is ready
-                        self.prefetch(pre.texture,pre.module,(failed)=>{                            
-                            UI.show("toast",`Fetch texture and module successful.`);
-                            VBW[config.render].show(dom_id);
-                            VBW[config.controller].start(dom_id);
-                            
-                            return ck && ck(true);
-                        });
-                    });
-                    
 
                     //3.convert all block data to STD format
                     // const range={x:x,y:y,ext:ext,world:index,container:dom_id};

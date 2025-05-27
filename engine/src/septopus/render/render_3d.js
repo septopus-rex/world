@@ -39,9 +39,6 @@ const self={
     getSide:()=>{
         return VBW.cache.get(["env","world","side"]);
     },
-    freshBlock:(x,y,world,scene)=>{
-
-    },
 
     parseTexture:(arr,world,dom_id,ck)=>{
         const failed=[]
@@ -349,6 +346,76 @@ const self={
             VBW.cache.set(ani_chain,ans);
         });
     },
+    fresh:(scene,x,y,world,dom_id)=>{
+
+        // const player_chain=["env","player"];
+        // const player=VBW.cache.get(player_chain);
+        // const limit=VBW.setting("limit");
+        // const active=VBW.cache.get(["active"]);
+
+
+        let mds=[],txs=[],objs=[],ans=[];
+        const data_chain=["block",dom_id,world,`${x}_${y}`,"three"];
+        const tdata=VBW.cache.get(data_chain);
+
+        const data=self.singleBlock(x,y,world,tdata);
+        if(data.texture.length!==0) txs=txs.concat(data.texture);
+        if(data.module.length!==0) mds=mds.concat(data.module);
+        objs=objs.concat(data.object);
+        ans=ans.concat(data.animate);
+
+        //console.log(objs);
+        self.parse(txs,mds,world,dom_id,(failed)=>{
+            //console.log(failed);
+            UI.show("toast",`Farse resource for rendering.`);
+            
+            //3.创建所有的ThreeObject，并加入到scene
+            const exsist=VBW.cache.exsist;
+            for(let i=0;i<objs.length;i++){
+
+                //3.1.创建对应的three object,并设置three object的基础参数，符合[x,y]的数据
+                const single=objs[i];
+                //console.log(JSON.stringify(single));
+                const side=self.getSide();
+                const ms=self.getThree(single,world,dom_id,side);
+                
+                //3.2.如果有animate的话，建立`x_y_adj_index` --> ThreeObject[]的关系
+                if(single.animate!==undefined){
+                    const key=`${single.x}_${single.y}_${single.adjunct}_${single.index}`;
+                    const chain=["block",dom_id,world,"animate"];
+                    if(!VBW.cache.exsist(chain)) VBW.cache.set(chain,{});
+                    const map=VBW.cache.get(chain);
+                    if(map[key]===undefined) map[key]=[];
+                    for(let i=0;i<ms.length;i++){
+                        if(ms[i].error) continue;
+                        map[key].push(ms[i]);
+                    }
+                }
+
+                //3.4.添加到scene里进行处理
+                for(let i=0;i<ms.length;i++){
+                    if(ms[i].error){
+                        UI.show("toast",ms[i].error,{type:"error"});
+                        continue;
+                    } 
+                    scene.add(ms[i]);
+                }
+            }
+
+            //4.2.添加到动画队列里
+            const ani_chain=["block",dom_id,world,"queue"];
+            VBW.cache.set(ani_chain,ans);
+        });
+
+    },
+    clean:(scene,x,y)=>{
+        for(let i=0;i<scene.children.length;i++){
+            const row=scene.children[i];
+            if(row.userData.x===x && row.userData.y===y){
+                scene.remove(row);
+            }
+        }
+    }
 };
 
 export default {
@@ -384,11 +451,11 @@ export default {
 
         //1.清除指定的block数据，用于刷新场景
         if(block!==undefined){
-            console.log(`Fresh target block`);
-            //const [x,y,world]=block;
-            //self.freshBlock(x,y,world,scene);
-            //1.3.尝试添加Edit部分的组件
-            //self.loadEdit(scene,dom_id);
+            //console.log(`Fresh target block`);
+            const [x,y,world]=block;
+            self.clean(scene,x,y);
+            self.fresh(scene,x,y,world,dom_id);
+            
         }
 
         //2.强制清除所有的数据

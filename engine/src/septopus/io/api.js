@@ -148,15 +148,13 @@ const self = {
         return map;
     },
     getBlocks: (arr, world, ck, map) => {
-        if (map === undefined){
-            ck && ck(self.getHolder(arr,world));      //return holder immediately
-            map = {};
-        }
+        if (map === undefined)  map = {};
         if (arr.length === 0){
             if(config.debug){
+                //return ck && ck(map);
                 return setTimeout(()=>{
                     return ck && ck(map);
-                },Toolbox.rand(12000,15000));
+                },Toolbox.rand(1000,3000));
             }
             return ck && ck(map);
         } 
@@ -210,6 +208,7 @@ const API = {
      * object key(`${x}_${y}`) --> BLOCK_DATA
      */
     view: (x, y, ext, world, ck, limit) => {
+        console.log(x, y, ext, world, limit);
         //0. input check
         //0.1. check limit of x,y
 
@@ -222,7 +221,7 @@ const API = {
 
         return self.getBlocks(arr, world, (map)=>{
             map.loaded=true;
-            //return ck && ck(map);       //got data successful, callbackf
+            return ck && ck(map);       //got data successful, callbackf
         });
     },
 

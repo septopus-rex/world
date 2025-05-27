@@ -37,7 +37,7 @@ export default function Demo() {
       
     };
     World.launch("three_demo",cfg,(done)=>{
-      console.log(done);
+      console.log(`App loaded:`, done);
     });
   }, []);
 
