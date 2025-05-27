@@ -243,7 +243,7 @@ const self = {
         const key = `${x}_${y}`;
         const cvt = self.getConvert();
         const std_chain = ["block", dom_id, world, key, "std"];
-        if (self.cache.exsist(std_chain)) return true;
+        // if (self.cache.exsist(std_chain)) return true;
 
         const raw_chain = ["block", dom_id, world, key, "raw"];
         const bk = self.cache.get(raw_chain);
@@ -582,6 +582,40 @@ const Framework = {
         const {x, y, ext,world, container} = range;
         if(worker[mode]===undefined) return ck && ck({error:"Invalid struct mode"});
         worker[mode](x, y, ext,world, container,cfg,ck);
+    },
+
+    prepair:(range,cfg,ck)=>{
+        const {x, y, ext,world, container} = range;
+
+        const limit = self.cache.get(["setting", "limit"]);
+        const fun_single = self.structSingle;
+        for (let i = -ext; i < ext + 1; i++) {
+            for (let j = -ext; j < ext + 1; j++) {
+                const cx = x + i, cy = y + j
+                if (cx < 1 || cy < 1) continue;
+                if (cx > limit[0] || cy > limit[1]) continue;
+                fun_single(cx, cy, world, container);
+            }
+        }
+
+        //4.construct render data
+        const fun_render = self.structRenderData;
+        const prefetch = { module: [], texture: [] };
+        for (let i = -ext; i < ext + 1; i++) {
+            for (let j = -ext; j < ext + 1; j++) {
+                const cx = x + i, cy = y + j
+                if (cx < 1 || cy < 1) continue;
+                if (cx > limit[0] || cy > limit[1]) continue;
+                const sub = fun_render(cx, cy, world, container);
+                if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
+                if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
+            }
+        }
+
+        //5.unique module and texture IDs
+        prefetch.module = Toolbox.unique(prefetch.module);
+        prefetch.texture = Toolbox.unique(prefetch.texture);
+        return ck && ck(prefetch);
     },
 
     /** 

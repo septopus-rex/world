@@ -1,4 +1,4 @@
-/* 
+/**
 *  VBW application instance
 *  @auth [ Fuu ]
 *  @creator Fuu
@@ -45,16 +45,16 @@ export default {
             // const fs=["x","y","z","-x","-y","-z"];
             // World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);
 
-            const tasks=[
-                {adjunct:"wall",action:"set",param:{x:1.2}},
-                {adjunct:"wall",action:"add",param:{ox:3,oy:12}},
-                {adjunct:"wall",action:"del",param:{id:1}},
-                //{adjunct:"wall",action:"copy",param:{id:0,ox:6}},
-                {adjunct:"module",action:"set",param:{id:0,oz:3}},
-            ]
-            World.modify(tasks,wd_index,2025,500,(done)=>{
-                console.log(done);
-            });
+            // const tasks=[
+            //     {adjunct:"wall",action:"set",param:{x:1.2}},
+            //     {adjunct:"wall",action:"add",param:{ox:3,oy:12}},
+            //     {adjunct:"wall",action:"del",param:{id:1}},
+            //     //{adjunct:"wall",action:"copy",param:{id:0,ox:6}},
+            //     {adjunct:"module",action:"set",param:{id:0,oz:3}},
+            // ]
+            // World.modify(tasks,wd_index,2025,500,(done)=>{
+            //     console.log(done);
+            // });
 
             // setInterval(()=>{
             //     const fs=["x","y","z","-x","-y","-z"];

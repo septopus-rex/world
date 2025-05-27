@@ -105,8 +105,11 @@ const def={
 const config={
     render:"rd_three",
     controller:"con_first",
-    //controller:"con_observe",
     debug:true,
+    queue:{
+        block:"block_loading",
+        resource:"resource_loading",
+    }
 };
 
 const self={
@@ -313,6 +316,53 @@ const self={
             });
         });
     },
+
+    checkBlock:()=>{
+        //1. get the block loading queue.
+        const name=config.queue.block;
+        const queue=VBW.queue.get(name);
+        if(queue.error) return false;
+        if(queue.length===0) return false;
+
+        //2. check the first wether loaded
+        const todo=queue[0];
+        //console.log(JSON.stringify(todo));
+        const world=todo.world;
+        const chain=["block",todo.container,world,todo.key,"raw"];
+        const dt=VBW.cache.get(chain);
+        if(dt.error) return false;
+
+        //3. if loaded, deal with the restruct and get the resource list
+        if(!dt.loading){
+            //console.log(`Restruct the whole system here.`);
+
+            //3.1. add the resource to loading queue.
+            const arr=todo.key.split("_");
+            const x=parseInt(arr[0]),y=parseInt(arr[1]);
+            const range={x:x,y:y,ext:0,world:world,container:todo.container};
+            VBW.prepair(range,{},(pre)=>{
+                //console.log(pre);
+                VBW[config.render].show(todo.container,[x,y,world]);
+            });
+            queue.shift();
+        }
+    },
+    checkResource:()=>{
+        //console.log(`check resource here.`);
+    },
+
+    loadingBlockQueue:(map,dom_id)=>{
+        const qu=config.queue.block;
+        const push=VBW.queue.push;
+        for(let key in map){
+            push(qu,{
+                key:key,
+                world:map[key].world,
+                container:dom_id,
+            });
+        }
+        return true;
+    },
 }   
 
 const World={
@@ -356,34 +406,60 @@ const World={
         if(!VBW.datasource) return UI.show("toast",`No datasource for the next step.`,{type:"error"});
         VBW.player.start(dom_id,(start)=>{
             UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
+            const world=start.world;
             VBW.datasource.world(start.world,(wd)=>{
-                UI.show("toast",`Data load from network successful.`);
+                UI.show("toast",`World data load from network successful.`);
+                //1.2. set `block checker` and `resource check`.
+                const chain = ["block", dom_id, world, "loop"];
+                const queue = VBW.cache.get(chain);
+                queue.push({ name: "block_checker", fun:self.checkBlock});
+                queue.push({ name: "resource_checker", fun:self.checkResource});
 
                 //2.get blocks data;
                 const index=start.world;
                 const [x,y]=start.block;
                 const ext=!start.extend?1:start.extend;
                 const limit=wd.size;
-                VBW.datasource.view(x,y,ext,index,(list)=>{
-
-                    if(list.loading){
-                        return UI.show("toast",`Loading blocks data...`);
+                VBW.datasource.view(x,y,ext,index,(map)=>{
+                    console.log(map);
+                    if(map.loaded!==undefined){
+                        if(!map.loaded){
+                            //2.1. add loading queue
+                            delete map.loaded;
+                            self.loadingBlockQueue(map,dom_id);
+                            UI.show("toast",`Loading data, show block holder.`);
+                        }else{
+                            delete map.loaded;
+                            UI.show("toast",`Load block data successful.`);
+                        }
                     }
-
-                    UI.show("toast",`Save data successful.`);
-                    const failed = self.save(dom_id,index,list,wd);
-                    if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
                     
-                    //set the camera as player here, need the render is ready
-                    self.syncPlayer(start,dom_id);    
+    
+                    const failed = self.save(dom_id,index,map,wd);
+                    if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
+    
+                    const range={x:x,y:y,ext:ext,world:index,container:dom_id};
+                    const mode="init";  
+                    VBW.struct(mode,range,cfg,(pre)=>{
+                        UI.show("toast",`Struct all components, ready to show.`);
+                        self.syncPlayer(start,dom_id);  //set the camera as player here, need the render is ready
+                        self.prefetch(pre.texture,pre.module,(failed)=>{                            
+                            UI.show("toast",`Fetch texture and module successful.`);
+                            VBW[config.render].show(dom_id);
+                            VBW[config.controller].start(dom_id);
+                            
+                            return ck && ck(true);
+                        });
+                    });
+                    
 
                     //3.convert all block data to STD format
-                    const range={x:x,y:y,ext:ext,world:index,container:dom_id};
-                    const mode="init";
-                    self.rebuild(mode,range,cfg,dom_id,()=>{
-                        VBW[config.controller].start(dom_id);
-                        return ck && ck(true);
-                    });
+                    // const range={x:x,y:y,ext:ext,world:index,container:dom_id};
+                    // const mode="init";
+                    // self.rebuild(mode,range,cfg,dom_id,()=>{
+                    //     VBW[config.controller].start(dom_id);
+                    //     return ck && ck(true);
+                    // });
                 },limit);
             });
         });

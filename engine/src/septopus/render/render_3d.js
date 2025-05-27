@@ -367,7 +367,7 @@ export default {
         return dt.render.domElement;
     },
 
-    /* renderer的渲染方法
+    /**  renderer的渲染方法
      * @param	id          string		//container dom id
      * @param   [block]     array       //需要刷新的block的坐标[ x,y,world ]
      * @param	[force]     bool		//是否强制刷新scene
@@ -384,10 +384,11 @@ export default {
 
         //1.清除指定的block数据，用于刷新场景
         if(block!==undefined){
+            console.log(`Fresh target block`);
             //const [x,y,world]=block;
             //self.freshBlock(x,y,world,scene);
             //1.3.尝试添加Edit部分的组件
-            self.loadEdit(scene,dom_id);
+            //self.loadEdit(scene,dom_id);
         }
 
         //2.强制清除所有的数据
@@ -408,8 +409,6 @@ export default {
 
             //2.渲染放在了loop里进行,动画的支持也在loop里
             render.setAnimationLoop(VBW.loop);
-        }else{
-            UI.toast(`First: ${first}, no need to setAnimationLoop.`);
         }
     },
 }

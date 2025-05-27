@@ -30,6 +30,7 @@ const config={
             0xffff00,   //bottom?
         ],
     },
+    default:[0.2,1,[]],
 };
 
 const funs={
@@ -217,6 +218,9 @@ const self={
 }
 
 const vbw_block={
+    format:()=>{
+        return Toolbox.clone(config.default);
+    },
     hooks:self.hooks,
     transform:self.transform,  
     attribute:self.attribute,

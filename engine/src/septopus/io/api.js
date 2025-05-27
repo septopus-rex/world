@@ -131,13 +131,32 @@ const self = {
         }
         return arr;
     },
+    getHolder:(arr,world)=>{
+        const map={};
+        for(let i=0;i<arr.length;i++){
+            const [x,y]=arr[i];
+            const key = `${x}_${y}`;
+            map[key]={
+                x:x,
+                y:y,
+                world:world,
+                data:VBW.block.format(),
+                owner:"DEFAULT_DATA_NO_OWNER",
+                loading:true,
+            }
+        }
+        return map;
+    },
     getBlocks: (arr, world, ck, map) => {
-        if (map === undefined) map = {};
+        if (map === undefined){
+            ck && ck(self.getHolder(arr,world));      //return holder immediately
+            map = {};
+        }
         if (arr.length === 0){
             if(config.debug){
                 return setTimeout(()=>{
                     return ck && ck(map);
-                },Toolbox.rand(5000,15000));
+                },Toolbox.rand(12000,15000));
             }
             return ck && ck(map);
         } 
@@ -178,7 +197,7 @@ const API = {
     },
 
     /** 
-     * get blocks data by coordinate
+     * get blocks data by coordination
      * !important, here to solve the delay of network.
      * !important, set tag first, the system will check the result then rebuild all data
      * !important, here to implement the frontend cache, can get data from indexedDB
@@ -196,13 +215,15 @@ const API = {
 
         //0.2.check limit of world
 
-        //1. set loading status;
-        ck && ck({loading:true});
-
-        //2. ready to get data;
-
         const arr = self.getExtBlocks(x, y, ext, limit);
-        return self.getBlocks(arr, world, ck);
+        const holder=self.getHolder(arr,world);
+        holder.loaded=false;
+        ck && ck(holder);        //callback holder
+
+        return self.getBlocks(arr, world, (map)=>{
+            map.loaded=true;
+            //return ck && ck(map);       //got data successful, callbackf
+        });
     },
 
     /** 

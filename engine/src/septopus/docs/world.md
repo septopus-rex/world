@@ -43,7 +43,7 @@
     }
 ```
 
-* 数据在链上的保存方式，用index来进行访问
+* World on chain
 
 ```javascript
     [
@@ -52,3 +52,29 @@
         ...
     ]
 ```
+
+## Render Workflow
+
+### Normal steps
+
+* Need 2 functions in framesync queue to check the status of `block loading` and `resource loading`
+
+1. `Datasource.view` to get raw data.
+    1.1. Return default blocks data as `Holder`.
+    1.2. Create `Loading Blocks` queue.
+    1.3. Set framesync function `Block Checker`.
+    1.4. Normal flow to render scene.
+2. When `Datasource` get all raw blocks data.
+    2.1. Attatch raw data to block node.
+    2.2. `Block Checker` filter out all `Module` and `Texture`.
+    2.3. Create `Loading Modules` and `Loading Textures` queues.
+    2.4. Set the block to `Loading Blocks` queue again.
+    2.5. Set framesync function `Resource Checker`.
+    2.6. Rebuild target block on every frame to avoid multi tasks.
+    2.7. Normal flow to render scene. `Module` and `Texture` holder will take the place of resource.
+3. When `Module` and `Texture` is ready.
+    3.1. Attatch raw data to `Module` and `Texture` node.
+    3.2. Rebuild target block on every frame.
+    3.3. Remove target block form `Loading Blocks`.
+
+* Block restruct in a single function to make Septopus World Engine easy to understand.

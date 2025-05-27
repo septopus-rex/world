@@ -289,24 +289,26 @@ const control_fpv = {
     },
 
     start: (dom_id) => {
+        if(container!==null) return false;
         console.log(`Start to get the input from outside, bind html events.`);
-        //0.设置dom_id和控制器的关联
+        
+        //0.set controller and DOM id.
         container = dom_id
 
-        //1.增加键盘的操作
+        //1.add keyboard listener.
         self.keyboard(dom_id);
 
-        //2.增加screen的操作;
+        //2.add screen control pannel.
         self.screen(dom_id);
 
-        //3.设置帧同步处理
+        //3.set frame sync function
         world = VBW.cache.get(["active", "world"]);
         const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
         queue.push({ name: "movement", fun: self.action });
 
-        //4.获取到对应的变量，方便操作
+        //4.set the related link
         self.active(world, dom_id);
 
         //5.flip the code --> key to key --> code, run once.
