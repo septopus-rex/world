@@ -133,7 +133,8 @@ const self={
                     adjunct:name,
                     geometry:{
                         type:row.type,
-                        params:row.params,
+                        //!importrant, need to clone, when calc the position, will effect `raw data`
+                        params:Toolbox.clone(row.params),   
                     },
                 }
                 if(row.material!==undefined) obj3.material =row.material
@@ -318,7 +319,6 @@ const self={
                 const single=objs[i];
                 const side=self.getSide();
                 const ms=self.getThree(single,world,dom_id,side);
-                //console.log(JSON.stringify(ms[0].position));
                 
                 //3.3. if there is animation, create the relasionship as `x_y_adj_index` --> ThreeObject[]
                 if(single.animate!==undefined){
@@ -374,11 +374,13 @@ const self={
         if(todo.length!==0){
             todo.forEach((row)=>{
                 scene.remove(row);
-                if (row.material.map) {
-                    row.material.map.dispose();
+                if(row.isMesh){
+                    if(row.material.map) {
+                        row.material.map.dispose();
+                    }
+                    row.geometry.dispose();
+                    row.material.dispose();
                 }
-                row.geometry.dispose();
-                row.material.dispose();
             });
         }
 
@@ -456,5 +458,13 @@ export default {
             self.fresh(scene,x,y,world,dom_id);
             self.loadEdit(scene,dom_id);
         }
+    },
+
+    clean:(dom_id,world,x,y)=>{
+        const chain=["active","containers",dom_id];
+        const data=VBW.cache.get(chain);
+        const {render,scene,camera} = data;
+
+        self.clean(scene,x,y,world,dom_id);
     },
 }

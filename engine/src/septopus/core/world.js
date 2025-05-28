@@ -198,16 +198,20 @@ const self={
         const fun=VBW.cache.set;
 
         //1.save the world data;
-        const w_chain=["env","world"];
-        if(!VBW.cache.exsist(w_chain)){
-            world_info.index=world;
-            const wd=self.formatWorld(world_info);
-            fun(w_chain,wd);        
+        if(world_info!==undefined){
+            const w_chain=["env","world"];
+            if(!VBW.cache.exsist(w_chain)){
+                world_info.index=world;
+                const wd=self.formatWorld(world_info);
+                fun(w_chain,wd);        
+            }
         }
         
         //1.1.set `modified` cache key
         const m_chain=["task",dom_id,world];
-        fun(m_chain,[]);
+        if(!VBW.cache.exsist(m_chain)){
+            fun(m_chain,[]);
+        }
         
         //2.deal withe the block raw data
         let failed=false;
@@ -497,6 +501,47 @@ const World={
         });
     },
 
+    load:(dom_id,world,x,y)=>{
+        
+
+        const chain=["block",dom_id,world,`${x}_${y}`];
+        if(VBW.cache.exsist(chain)){
+            VBW[config.render].show(dom_id,[x,y,world]);
+            return true;
+        }
+
+        const ext=0;
+        const limit=[4096,4096];
+        //check wether exsist first.
+        VBW.datasource.view(x,y,ext,world,(map)=>{
+            console.log(map);
+            if(map.loaded!==undefined){
+                if(!map.loaded){
+                    delete map.loaded;
+                    self.loadingBlockQueue(map,dom_id);
+                    const failed = self.save(dom_id,world,map);
+                    if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
+                    const range={x:x,y:y,ext:ext,world:world,container:dom_id};
+
+                    VBW.load(range,{},(pre)=>{
+                        self.prefetch(pre.texture,pre.module,(failed)=>{
+                            VBW[config.render].show(dom_id);
+                        });
+                    })
+
+                }else{
+                    delete map.loaded;
+                    const failed = self.save(dom_id,world,map);
+                    if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});    
+                }
+            }
+        },limit);
+    },
+
+    unload:(dom_id,world,x,y)=>{
+        VBW[config.render].clean(dom_id,world,x,y);
+    },
+
     /**
      * set block to edit mode
      * @param	{string}    dom_id  - container DOM id
@@ -608,6 +653,8 @@ const World={
     modify:(tasks,dom_id,world,x,y,ck)=>{
         //console.log(tasks,dom_id,world,x,y);
     },
+
+
 }
 
 export default World;

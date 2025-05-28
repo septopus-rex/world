@@ -10,6 +10,7 @@
 
 import Toolbox from "../lib/toolbox";
 import VBW from "./framework";  //need to modify raw data, VBW import
+import World from "./world";
 
 const reg={
     name:"block",           //register key name
@@ -79,12 +80,12 @@ const self={
     },
     attribute:{
         load:(x,y,param,world, dom_id)=>{
-            console.log(`block load:`,x,y,param,world,dom_id);
-            //VBW.datasource.view
+            //console.log(`block load:`,x,y,param,world,dom_id);
+            World.load(dom_id,world,x,y);
         },
         unload:(x,y,param,world, dom_id)=>{
-            console.log(`block unload:`,x,y,param,world,dom_id);
-            //funs.clean();
+            //console.log(`block unload:`,x,y,param,world,dom_id);
+            World.unload(dom_id,world,x,y);
         },
         set:(x,y,param, world, dom_id)=>{
             console.log(`set block parameter:`,x,y,param,world,dom_id);
