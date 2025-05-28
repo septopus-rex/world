@@ -301,25 +301,6 @@ const self={
         });
     },
 
-    rebuild:(mode,range,cfg,dom_id,ck)=>{
-        VBW.struct(mode,range,cfg,(pre)=>{
-            UI.show("toast",`Struct all components, ready to show.`);
-            //3.1.3D物体构建完毕，可以计算用户的位置了
-            
-            //3.2.获取网络的资源，用于构建3D。以后这部分可以使用服务进行加速
-            self.prefetch(pre.texture,pre.module,(failed)=>{                            
-                UI.show("toast",`Fetch texture and module successful.`);
-
-                if(failed.module.length!==0) UI.show("toast",`Failed to frefetch module ${JSON.stringify(failed.module)}`,{type:"error"});
-                if(failed.texture.length!==0) UI.show("toast",`Failed to frefetch module ${JSON.stringify(failed.texture)}`,{type:"error"});
-
-                //5.加载渲染器和控制器
-                VBW[config.render].show(dom_id);
-                return ck && ck();
-            });
-        });
-    },
-
     checkBlock:()=>{
         //1. get the block loading queue.
         const name=config.queue.block;
@@ -343,11 +324,11 @@ const self={
             //3.1. add the resource to loading queue.
             const arr=todo.key.split("_");
             const x=parseInt(arr[0]),y=parseInt(arr[1]);
-            const range={x:x,y:y,ext:0,world:world,container:dom_id};
-            VBW.prepair(range,{},(pre)=>{
+            const range={x:x,y:y,world:world,container:dom_id};
+            VBW.prepair(range,(pre)=>{
                 self.loadingResourceQueue(pre,x,y,world,dom_id);
                 VBW[config.render].show(dom_id,[x,y,world]);
-            });
+            },{});
             queue.shift();
         }
     },
@@ -365,10 +346,10 @@ const self={
             queue.shift();
 
             //rebuild 3D data then render
-            const range={x:x,y:y,ext:0,world:world,container:container};
-            VBW.prepair(range,{},(pre)=>{
+            const range={x:x,y:y,world:world,container:container};
+            VBW.prepair(range,(pre)=>{
                 VBW[config.render].show(container,[x,y,world]);
-            });
+            },{});
         }
     },
 
@@ -383,7 +364,6 @@ const self={
         for(let i=0;i<mds.length;i++){
             const id=mds[i];
             const chain=["resource","module",id];
-            //console.log(`Module: ${JSON.stringify(chain)}`);
             if(!exsist(chain)) return false;
         }
 
@@ -478,9 +458,10 @@ const World={
                 const ext=!start.extend?1:start.extend;
                 const limit=wd.size;
                 VBW.datasource.view(x,y,ext,index,(map)=>{
-                    console.log(map);
+                    //console.log(map);
                     if(map.loaded!==undefined){
                         if(!map.loaded){
+
                             //2.1. add loading queue
                             delete map.loaded;
                             self.loadingBlockQueue(map,dom_id);
@@ -490,14 +471,18 @@ const World={
             
                             const range={x:x,y:y,ext:ext,world:index,container:dom_id};
                             const mode="init";  
+
+                            //2.2. struct holder
                             VBW.struct(mode,range,cfg,(pre)=>{
                                 UI.show("toast",`Struct all components, ready to show.`);
                                 self.syncPlayer(start,dom_id);  //set the camera as player here, need the render is ready
                                 self.prefetch(pre.texture,pre.module,(failed)=>{  
 
                                     UI.show("toast",`Fetch texture and module successful.`);
-                                    VBW[config.render].show(dom_id);
+
+                                    //2.3.bind controller and show
                                     VBW[config.controller].start(dom_id);
+                                    VBW[config.render].show(dom_id);
                                     return ck && ck(true);
                                 });
                             });
@@ -508,14 +493,6 @@ const World={
                             if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
                         }
                     }
-
-                    //3.convert all block data to STD format
-                    // const range={x:x,y:y,ext:ext,world:index,container:dom_id};
-                    // const mode="init";
-                    // self.rebuild(mode,range,cfg,dom_id,()=>{
-                    //     VBW[config.controller].start(dom_id);
-                    //     return ck && ck(true);
-                    // });
                 },limit);
             });
         });
@@ -532,7 +509,7 @@ const World={
      * @param {boolean} result
      * */
     edit:(dom_id,world,x,y,ck)=>{
-        //1.构建edit的临时数据结构
+        //1.create edit temp data
         const chain=["block",dom_id,world,"edit"];
         VBW.cache.set(chain,{
             x:x,y:y,world:world,
@@ -551,11 +528,15 @@ const World={
             },      
         });
 
-        //2.生成threeObject
-        const range={x:x,y:y,ext:0,world:world,container:dom_id};
+        //2.create three objects
+        const target={x:x,y:y,world:world,container:dom_id}
         const mode="edit";
-        self.rebuild(mode,range,{},dom_id,()=>{
-            return ck && ck(true);
+        console.log(`Switch to edit mode.`);
+        VBW.mode(mode,target,(pre)=>{
+            self.prefetch(pre.texture,pre.module,(failed)=>{
+
+                return ck && ck(true);
+            });
         });
     },
 
@@ -597,11 +578,11 @@ const World={
         target.face=face;
 
         //2. fresh 
-        const range={x:x,y:y,ext:0,world:world,container:dom_id};
-        const mode="active";
-        self.rebuild(mode,range,{},dom_id,()=>{
-            return ck && ck(true);
-        });
+        // const range={x:x,y:y,ext:0,world:world,container:dom_id};
+        // const mode="active";
+        // self.rebuild(mode,range,{},dom_id,()=>{
+        //     return ck && ck(true);
+        // });
     },  
 
     /**

@@ -293,6 +293,10 @@ const self = {
         self.cache.set(render_chain, rdata);
         return preload;
     },
+
+    toSelect:()=>{
+
+    },
     
     toEdit:(x,y,world,dom_id)=>{
         const preload={module:[],texture:[]};
@@ -339,6 +343,7 @@ const self = {
         return preload;
     },
     structEntire: (x, y, ext, world, dom_id, cfg, ck) => {
+        console.log(`structEntire done.`);
         //1.construct sky and weather
         self.structSky(world, dom_id);
 
@@ -584,35 +589,47 @@ const Framework = {
         worker[mode](x, y, ext,world, container,cfg,ck);
     },
 
-    prepair:(range,cfg,ck)=>{
-        const {x, y, ext,world, container} = range;
+    /** 
+     * set range mode
+     * @param {string}   mode   - block mode, ["edit","normal"]
+     * @param {object}   target - {x:2051,y:1247,world:0,container:"DOM_ID"}
+     * @param {object}   cfg    - more setting for rebuild
+     * @param {function} ck     - callback function
+     * @returns
+     * @return void
+     */
+    mode:(mode,target,ck,cfg)=>{
+        //console.log(mode,target,ck,cfg);
+        const {x,y,world,container}=target;
+        switch (mode) {
+            case "edit":
+                const pre=self.toEdit(x,y,world,container);
+                ck && ck(pre);
+                break;
 
+            case "normal":
+                //const pre=self.toEdit(x,y,world,container);
+                //ck && ck(pre);
+                break;
+            default:
+                break;
+        }
+
+    },
+
+
+    prepair:(target,ck,cfg)=>{
+        //1.struct data from RAW to STD
+        const {x, y,world, container} = target;
         const limit = self.cache.get(["setting", "limit"]);
-        const fun_single = self.structSingle;
-        for (let i = -ext; i < ext + 1; i++) {
-            for (let j = -ext; j < ext + 1; j++) {
-                const cx = x + i, cy = y + j
-                if (cx < 1 || cy < 1) continue;
-                if (cx > limit[0] || cy > limit[1]) continue;
-                fun_single(cx, cy, world, container);
-            }
-        }
+        self.structSingle(x,y,world,container);
 
-        //4.construct render data
-        const fun_render = self.structRenderData;
+        //2.struct render data, filter out resource IDs
         const prefetch = { module: [], texture: [] };
-        for (let i = -ext; i < ext + 1; i++) {
-            for (let j = -ext; j < ext + 1; j++) {
-                const cx = x + i, cy = y + j
-                if (cx < 1 || cy < 1) continue;
-                if (cx > limit[0] || cy > limit[1]) continue;
-                const sub = fun_render(cx, cy, world, container);
-                if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
-                if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
-            }
-        }
+        const sub = self.structRenderData(x, y, world, container);
+        if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
+        if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
 
-        //5.unique module and texture IDs
         prefetch.module = Toolbox.unique(prefetch.module);
         prefetch.texture = Toolbox.unique(prefetch.texture);
         return ck && ck(prefetch);

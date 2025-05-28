@@ -40,7 +40,11 @@ export default {
             /************************* Test code *********************/
             /*********************************************************/
             const wd_index=0;
-            // World.edit(container,wd_index,2025,500);
+
+            setTimeout(()=>{
+                World.edit(container,wd_index,2025,500);
+            },6000);
+            
 
             // const fs=["x","y","z","-x","-y","-z"];
             // World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);

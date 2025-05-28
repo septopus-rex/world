@@ -200,12 +200,6 @@ const self={
 
         return arr;
     },
-    //从构建好的three的组件定义，转换成渲染器能处理的对象，用于创建threeObject并放入scene
-    singleEdit:(world,dom_id)=>{
-        const edit_chain=["block",dom_id,world,"edit"];
-        const dt=VBW.cache.get(edit_chain);
-        console.log(dt);
-    },
     loadBasic:(scene,dom_id)=>{
         const sun=ThreeObject.get("light","sun",{colorSky:0xfffff,colorGround:0xeeeee,intensity:1});
         const player=VBW.cache.get(["env","player"]);
@@ -226,11 +220,10 @@ const self={
         //const player=VBW.cache.get(["env","player"]);
         const world=VBW.cache.get(["active","world"]);
         const chain=["block",dom_id, world,"edit"];
-        if(!VBW.cache.exsist(chain)){
-            return  UI.show("toast",`No edit data to render.`,{type:"error"});
-        }
+        if(!VBW.cache.exsist(chain)) return false;
+
+        UI.show("toast",`Ready to show edit data.`);
         const edit=VBW.cache.get(chain);
-        //console.log(edit);
         
         //1.对应的helper
         let objs=[];
@@ -277,80 +270,26 @@ const self={
             gs.position[1]+=(edit.y-1)*side[1];
             scene.add(gs);
         }
-
-        
     },
     loadBlocks:(scene,dom_id)=>{
         const player_chain=["env","player"];
         const player=VBW.cache.get(player_chain);
         const limit=VBW.setting("limit");
         const active=VBW.cache.get(["active"]);
-
-        //1.根据block的数据，分离出texture和module，分别进行加载
         const ext=player.location.extend;
         const [x,y]=player.location.block;
         const world=active.world;
 
-        let mds=[],txs=[],objs=[],ans=[];
         for(let i=-ext;i<ext+1;i++){
             for(let j=-ext;j<ext+1;j++){
                 const cx=x+i,cy=y+j
                 if(cx<1 || cy<1) continue;
                 if(cx>limit[0] || cy>limit[1]) continue;
-
-                const data_chain=["block",dom_id,world,`${cx}_${cy}`,"three"];
-                const tdata=VBW.cache.get(data_chain);
-                const data=self.singleBlock(cx,cy,world,tdata);
-                if(data.texture.length!==0) txs=txs.concat(data.texture);
-                if(data.module.length!==0) mds=mds.concat(data.module);
-                objs=objs.concat(data.object);
-                ans=ans.concat(data.animate);
+                self.fresh(scene,cx,cy,world,dom_id);
             }
         }
-
-        //2.准备renderer需要的材质和模型（将资源实例化成renderer可使用的）
-        self.parse(txs,mds,world,dom_id,(failed)=>{
-            console.log(failed);
-            UI.show("toast",`Farse resource for rendering.`);
-            
-            //3.创建所有的ThreeObject，并加入到scene
-            const exsist=VBW.cache.exsist;
-            for(let i=0;i<objs.length;i++){
-
-                //3.1.创建对应的three object,并设置three object的基础参数，符合[x,y]的数据
-                const single=objs[i];
-                //console.log(JSON.stringify(single));
-                const side=self.getSide();
-                const ms=self.getThree(single,world,dom_id,side);
-                
-                //3.2.如果有animate的话，建立`x_y_adj_index` --> ThreeObject[]的关系
-                if(single.animate!==undefined){
-                    const key=`${single.x}_${single.y}_${single.adjunct}_${single.index}`;
-                    const chain=["block",dom_id,world,"animate"];
-                    if(!VBW.cache.exsist(chain)) VBW.cache.set(chain,{});
-                    const map=VBW.cache.get(chain);
-                    if(map[key]===undefined) map[key]=[];
-                    for(let i=0;i<ms.length;i++){
-                        if(ms[i].error) continue;
-                        map[key].push(ms[i]);
-                    }
-                }
-
-                //3.4.添加到scene里进行处理
-                for(let i=0;i<ms.length;i++){
-                    if(ms[i].error){
-                        UI.show("toast",ms[i].error,{type:"error"});
-                        continue;
-                    } 
-                    scene.add(ms[i]);
-                }
-            }
-
-            //4.2.添加到动画队列里
-            const ani_chain=["block",dom_id,world,"queue"];
-            VBW.cache.set(ani_chain,ans);
-        });
     },
+
     fresh:(scene,x,y,world,dom_id)=>{
         let mds=[],txs=[],objs=[],ans=[];
         const data_chain=["block",dom_id,world,`${x}_${y}`,"three"];
@@ -361,7 +300,7 @@ const self={
         if(data.module.length!==0) mds=mds.concat(data.module);
         objs=objs.concat(data.object);
         ans=ans.concat(data.animate);
-        //console.log(`Fresh block [${x},${y}], ${objs.length} objects added.`);
+
         self.parse(txs,mds,world,dom_id,(failed)=>{
             //console.log(failed);
             //3.创建所有的ThreeObject，并加入到scene
@@ -401,8 +340,10 @@ const self={
             //4.2.group animation queue
             const ani_chain=["block",dom_id,world,"queue"];
             const ani_queue=VBW.cache.get(ani_chain);
-            for(let i=0;i<ans.length;i++){
-                ani_queue.push(ans[i]);
+            if(!ani_queue.error){
+                for(let i=0;i<ans.length;i++){
+                    ani_queue.push(ans[i]);
+                }
             }
         });
 
@@ -477,11 +418,10 @@ export default {
     },
 
     /**  renderer的渲染方法
-     * @param	id          string		//container dom id
-     * @param   [block]     array       //需要刷新的block的坐标[ x,y,world ]
-     * @param	[force]     bool		//是否强制刷新scene
+     * @param	{string}    dom_id		//container dom id
+     * @param   {number[]}  block       //block coordinaration,[ x,y,world ]
      * */
-    show:(dom_id,block,force)=>{
+    show:(dom_id,block)=>{
         const chain=["active","containers",dom_id];
         if(!VBW.cache.exsist(chain))return UI.show(`Construct the renderer before rendering.`,{type:"error"});
         //if(!map[id]) 
@@ -491,15 +431,7 @@ export default {
         const info=render.info.render;
         const first=info.frame===0?true:false;  //检查渲染器的帧数，确认第一次运行
 
-        //1.清除指定的block数据，用于刷新场景
-        if(block!==undefined){
-            const [x,y,world]=block;
-            //console.log(x,y,world,dom_id);
-            self.clean(scene,x,y,world,dom_id);
-            self.fresh(scene,x,y,world,dom_id);
-        }
-
-        if(first || force){
+        if(first){
             //1.加载不同的3D内容
             //1.1加载基础的3D组件(灯光、天空、气候等)
             self.loadBasic(scene,dom_id);
@@ -507,11 +439,16 @@ export default {
             //1.2.加载需要的3D组件（按需处理)
             self.loadBlocks(scene,dom_id);
 
-            //1.3.尝试添加Edit部分的组件
-            self.loadEdit(scene,dom_id);
-
             //2.渲染放在了loop里进行,动画的支持也在loop里
             render.setAnimationLoop(VBW.loop);
+        }
+
+        //1.清除指定的block数据，用于刷新场景
+        if(block!==undefined){
+            const [x,y,world]=block;
+            self.clean(scene,x,y,world,dom_id);
+            self.fresh(scene,x,y,world,dom_id);
+            self.loadEdit(scene,dom_id);
         }
     },
 }

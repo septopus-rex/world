@@ -244,7 +244,7 @@ const API = {
             if(config.debug){
                 setTimeout(()=>{
                     return ck && ck(map);
-                },Toolbox.rand(500,1500));
+                },Toolbox.rand(100,300));
             }else{
                 return ck && ck(map);
             }
@@ -253,7 +253,7 @@ const API = {
             if(config.debug){
                 setTimeout(()=>{
                     return ck && ck(dt);
-                },Toolbox.rand(500,1500));
+                },Toolbox.rand(100,300));
             }else{
                 return ck && ck(dt);
             }
@@ -280,7 +280,7 @@ const API = {
             if(config.debug){
                 setTimeout(()=>{
                     return ck && ck(map);
-                },Toolbox.rand(500,1500));
+                },Toolbox.rand(100,300));
             }else{
                 return ck && ck(map);
             }
@@ -290,7 +290,7 @@ const API = {
             if(config.debug){
                 setTimeout(()=>{
                     return ck && ck(dt);
-                },Toolbox.rand(500,1500));
+                },Toolbox.rand(100,300));
             }else{
                 return ck && ck(dt);
             }
