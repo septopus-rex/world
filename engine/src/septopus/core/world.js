@@ -331,7 +331,8 @@ const self={
         const todo=queue[0];
         //console.log(JSON.stringify(todo));
         const world=todo.world;
-        const chain=["block",todo.container,world,todo.key,"raw"];
+        const dom_id=todo.container;
+        const chain=["block",dom_id,world,todo.key,"raw"];
         const dt=VBW.cache.get(chain);
         if(dt.error) return false;
 
@@ -342,23 +343,76 @@ const self={
             //3.1. add the resource to loading queue.
             const arr=todo.key.split("_");
             const x=parseInt(arr[0]),y=parseInt(arr[1]);
-            const range={x:x,y:y,ext:0,world:world,container:todo.container};
+            const range={x:x,y:y,ext:0,world:world,container:dom_id};
             VBW.prepair(range,{},(pre)=>{
                 //console.log(pre);
-                VBW[config.render].show(todo.container,[x,y,world]);
+                self.loadingResourceQueue(pre,x,y,world,dom_id);
+                VBW[config.render].show(dom_id,[x,y,world]);
             });
             queue.shift();
         }
     },
+    
     checkResource:()=>{
-        //console.log(`check resource here.`);
+        const name=config.queue.resource;
+        const queue=VBW.queue.get(name);
+        if(queue.error) return false;
+        if(queue.length===0) return false;
+
+        const todo=queue[0];
+        const {x,y,world,container,preload}=todo;
+        if(self.checkLoaded(preload.texture,preload.module)){
+            console.log(`Rerender [ ${x}, ${y} ]`);
+            queue.shift();
+
+            const range={x:x,y:y,ext:0,world:world,container:container};
+            VBW.prepair(range,{},(pre)=>{
+                VBW[config.render].show(container,[x,y,world]);
+            });
+        }
     },
 
+    checkLoaded:(txs,mds)=>{
+        const exsist=VBW.cache.exsist;
+        for(let i=0;i<txs.length;i++){
+            const id=txs[i];
+            const chain=["resource","texture",id];
+            if(!exsist(chain)) return false;
+        }
+
+        for(let i=0;i<mds.length;i++){
+            const id=mds[i];
+            const chain=["resource","module",id];
+            //console.log(`Module: ${JSON.stringify(chain)}`);
+            if(!exsist(chain)) return false;
+        }
+
+        return true;
+    },
+    loadingResourceQueue:(pre,x,y,world,dom_id)=>{
+        //1. set resource queue;
+        const name=config.queue.resource;
+        const push=VBW.queue.push;
+        push(name,{
+            x:x,
+            y:y,
+            world:world,
+            container:dom_id,
+            preload:pre,
+        });
+
+        //2. start to load resource
+        self.prefetch(pre.texture,pre.module,(failed)=>{
+
+        });
+        return true;
+    },
     loadingBlockQueue:(map,dom_id)=>{
-        const qu=config.queue.block;
+        
+        const name=config.queue.block;
         const push=VBW.queue.push;
         for(let key in map){
-            push(qu,{
+            push(name,{
                 key:key,
                 world:map[key].world,
                 container:dom_id,
@@ -439,7 +493,8 @@ const World={
                             VBW.struct(mode,range,cfg,(pre)=>{
                                 UI.show("toast",`Struct all components, ready to show.`);
                                 self.syncPlayer(start,dom_id);  //set the camera as player here, need the render is ready
-                                self.prefetch(pre.texture,pre.module,(failed)=>{                            
+                                self.prefetch(pre.texture,pre.module,(failed)=>{  
+
                                     UI.show("toast",`Fetch texture and module successful.`);
                                     VBW[config.render].show(dom_id);
                                     VBW[config.controller].start(dom_id);
@@ -465,6 +520,7 @@ const World={
             });
         });
     },
+
     /**
      * set block to edit mode
      * @param	{string}    dom_id  - container DOM id

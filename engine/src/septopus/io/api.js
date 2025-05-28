@@ -208,7 +208,7 @@ const API = {
      * object key(`${x}_${y}`) --> BLOCK_DATA
      */
     view: (x, y, ext, world, ck, limit) => {
-        console.log(x, y, ext, world, limit);
+        //console.log(x, y, ext, world, limit);
         //0. input check
         //0.1. check limit of x,y
 
@@ -241,10 +241,22 @@ const API = {
                 const dt = mock.module(id);
                 map[id] = dt;
             }
-            return ck && ck(map);
+            if(config.debug){
+                setTimeout(()=>{
+                    return ck && ck(map);
+                },Toolbox.rand(500,1500));
+            }else{
+                return ck && ck(map);
+            }
         } else {
             const dt = mock.module(ids);
-            return ck && ck(dt);
+            if(config.debug){
+                setTimeout(()=>{
+                    return ck && ck(dt);
+                },Toolbox.rand(500,1500));
+            }else{
+                return ck && ck(dt);
+            }
         }
     },
 
@@ -265,10 +277,23 @@ const API = {
                 const dt = mock.texture(id);
                 map[id] = dt;
             }
-            return ck && ck(map);
+            if(config.debug){
+                setTimeout(()=>{
+                    return ck && ck(map);
+                },Toolbox.rand(500,1500));
+            }else{
+                return ck && ck(map);
+            }
+            
         } else {
             const dt = mock.texture(ids);
-            return ck && ck(dt);
+            if(config.debug){
+                setTimeout(()=>{
+                    return ck && ck(dt);
+                },Toolbox.rand(500,1500));
+            }else{
+                return ck && ck(dt);
+            }
         }
     },
 }

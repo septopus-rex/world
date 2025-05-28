@@ -69,7 +69,6 @@ const self={
         return ck && ck(failed);
     },
 
-    //TODO,将module资源转换成渲染器可用的3D模型
     parseModule:(arr,world,dom_id,ck)=>{
         const failed=[]
         const set=VBW.cache.set;
@@ -85,9 +84,12 @@ const self={
     },
     parse:(texture,module,world,dom_id,ck)=>{
         const failed={module:[],texture:[]};
+        //console.log(`3D Render to parse: ${JSON.stringify(texture)}, ${JSON.stringify(module)}`);
         self.parseTexture(texture,world,dom_id,(tx_failed)=>{
+            //console.log(`Texture parsed.`);
             failed.texture=tx_failed;
             self.parseModule(module,world,dom_id,(md_failed)=>{
+                //console.log(`Module parsed.`);
                 failed.module=md_failed;
                 return ck && ck(failed);
             });
@@ -247,6 +249,7 @@ const self={
         const side=self.getSide();
         for(let i=0;i<data.object.length;i++){
             const single=data.object[i];
+            
             const ms=self.getThree(single,world,dom_id,side);
             for(let j=0;j<ms.length;j++){
                 if(ms[j].error){
@@ -305,7 +308,7 @@ const self={
 
         //2.准备renderer需要的材质和模型（将资源实例化成renderer可使用的）
         self.parse(txs,mds,world,dom_id,(failed)=>{
-            //console.log(failed);
+            console.log(failed);
             UI.show("toast",`Farse resource for rendering.`);
             
             //3.创建所有的ThreeObject，并加入到scene
@@ -348,12 +351,6 @@ const self={
     },
     fresh:(scene,x,y,world,dom_id)=>{
 
-        // const player_chain=["env","player"];
-        // const player=VBW.cache.get(player_chain);
-        // const limit=VBW.setting("limit");
-        // const active=VBW.cache.get(["active"]);
-
-
         let mds=[],txs=[],objs=[],ans=[];
         const data_chain=["block",dom_id,world,`${x}_${y}`,"three"];
         const tdata=VBW.cache.get(data_chain);
@@ -364,11 +361,8 @@ const self={
         objs=objs.concat(data.object);
         ans=ans.concat(data.animate);
 
-        console.log(ans);
         self.parse(txs,mds,world,dom_id,(failed)=>{
             //console.log(failed);
-            UI.show("toast",`Farse resource for rendering.`);
-            
             //3.创建所有的ThreeObject，并加入到scene
             const exsist=VBW.cache.exsist;
             for(let i=0;i<objs.length;i++){
@@ -378,12 +372,13 @@ const self={
                 //console.log(JSON.stringify(single));
                 const side=self.getSide();
                 const ms=self.getThree(single,world,dom_id,side);
+                //console.log(JSON.stringify(ms[0].position));
                 
                 //3.2.如果有animate的话，建立`x_y_adj_index` --> ThreeObject[]的关系
                 if(single.animate!==undefined){
                     const key=`${single.x}_${single.y}_${single.adjunct}_${single.index}`;
                     const chain=["block",dom_id,world,"animate"];
-                    if(!VBW.cache.exsist(chain)) VBW.cache.set(chain,{});
+                    if(!exsist(chain)) VBW.cache.set(chain,{});
                     const map=VBW.cache.get(chain);
                     if(map[key]===undefined) map[key]=[];
                     for(let i=0;i<ms.length;i++){
@@ -392,7 +387,7 @@ const self={
                     }
                 }
 
-                //3.4.添加到scene里进行处理
+                //3.4.add threeObjects to scene
                 for(let i=0;i<ms.length;i++){
                     if(ms[i].error){
                         UI.show("toast",ms[i].error,{type:"error"});
@@ -402,7 +397,7 @@ const self={
                 }
             }
 
-            //4.2.添加到动画队列里
+            //4.2.group animation queue
             const ani_chain=["block",dom_id,world,"queue"];
             const ani_queue=VBW.cache.get(ani_chain);
             for(let i=0;i<ans.length;i++){
@@ -420,7 +415,6 @@ const self={
             }
         }
 
-        //TODO, clean animate 3D objects
         //2.remove related animate object from scene and aniamte queue
         const ani_chain=["block",dom_id,world,"queue"];
         const list=VBW.cache.get(ani_chain);
@@ -468,6 +462,7 @@ export default {
         //1.清除指定的block数据，用于刷新场景
         if(block!==undefined){
             const [x,y,world]=block;
+            //console.log(x,y,world,dom_id);
             self.clean(scene,x,y,world,dom_id);
             self.fresh(scene,x,y,world,dom_id);
         }

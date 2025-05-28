@@ -156,7 +156,7 @@ const self = {
 
         //std中间体，转换成3D需要的object
         std_3d: (stds, va) => {
-            //console.log(`Elevation: ${va}`);
+            //console.log(`Wall: ${JSON.stringify(stds)}`);
             const arr = [];
             for (let i = 0; i < stds.length; i++) {
                 const row = stds[i];
