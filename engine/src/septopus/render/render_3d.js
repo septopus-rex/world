@@ -225,7 +225,7 @@ const self={
         UI.show("toast",`Ready to show edit data.`);
         const edit=VBW.cache.get(chain);
         
-        //1.对应的helper
+        //1.get related helper
         let objs=[];
         if(edit.selected.adjunct){
             if(edit.helper.length!==0){
@@ -233,7 +233,7 @@ const self={
             }
         }
 
-        //2.加载边框
+        //2.load border
         objs=objs.concat(edit.border);
         const data=self.singleBlock(
             edit.x,
@@ -244,7 +244,6 @@ const self={
         const side=self.getSide();
         for(let i=0;i<data.object.length;i++){
             const single=data.object[i];
-            
             const ms=self.getThree(single,world,dom_id,side);
             for(let j=0;j<ms.length;j++){
                 if(ms[j].error){
@@ -300,21 +299,18 @@ const self={
         if(data.module.length!==0) mds=mds.concat(data.module);
         objs=objs.concat(data.object);
         ans=ans.concat(data.animate);
-
         self.parse(txs,mds,world,dom_id,(failed)=>{
-            //console.log(failed);
             //3.创建所有的ThreeObject，并加入到scene
             const exsist=VBW.cache.exsist;
             for(let i=0;i<objs.length;i++){
 
                 //3.1.创建对应的three object,并设置three object的基础参数，符合[x,y]的数据
                 const single=objs[i];
-                //console.log(JSON.stringify(single));
                 const side=self.getSide();
                 const ms=self.getThree(single,world,dom_id,side);
                 //console.log(JSON.stringify(ms[0].position));
                 
-                //3.2.如果有animate的话，建立`x_y_adj_index` --> ThreeObject[]的关系
+                //3.3. if there is animation, create the relasionship as `x_y_adj_index` --> ThreeObject[]
                 if(single.animate!==undefined){
                     const key=`${single.x}_${single.y}_${single.adjunct}_${single.index}`;
                     const chain=["block",dom_id,world,"animate"];

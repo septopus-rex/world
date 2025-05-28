@@ -534,8 +534,10 @@ const World={
         console.log(`Switch to edit mode.`);
         VBW.mode(mode,target,(pre)=>{
             self.prefetch(pre.texture,pre.module,(failed)=>{
-
-                return ck && ck(true);
+                VBW.prepair(target,(pre)=>{
+                    VBW[config.render].show(dom_id,[x,y,world]);
+                    return ck && ck(true);
+                });
             });
         });
     },
