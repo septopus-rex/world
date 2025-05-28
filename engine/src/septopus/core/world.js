@@ -345,7 +345,6 @@ const self={
             const x=parseInt(arr[0]),y=parseInt(arr[1]);
             const range={x:x,y:y,ext:0,world:world,container:dom_id};
             VBW.prepair(range,{},(pre)=>{
-                //console.log(pre);
                 self.loadingResourceQueue(pre,x,y,world,dom_id);
                 VBW[config.render].show(dom_id,[x,y,world]);
             });
@@ -362,9 +361,10 @@ const self={
         const todo=queue[0];
         const {x,y,world,container,preload}=todo;
         if(self.checkLoaded(preload.texture,preload.module)){
-            console.log(`Rerender [ ${x}, ${y} ]`);
+            //console.log(`---- Rerender [ ${x}, ${y} ]`);
             queue.shift();
 
+            //rebuild 3D data then render
             const range={x:x,y:y,ext:0,world:world,container:container};
             VBW.prepair(range,{},(pre)=>{
                 VBW[config.render].show(container,[x,y,world]);

@@ -128,7 +128,9 @@ const self={
 
                 //4.创建three的object的标准转换数据
                 const obj3={
-                    x:x,y:y,adjunct:name,
+                    x:x,
+                    y:y,
+                    adjunct:name,
                     geometry:{
                         type:row.type,
                         params:row.params,
@@ -181,8 +183,8 @@ const self={
             const mesh=res.mesh;
             //2.设置mesh的useData用于检索
             const data={
-                x:single.x,
-                y:single.y,
+                x:parseInt(single.x),
+                y:parseInt(single.y),
                 name:single.adjunct
             }
             if(single.index!==undefined) data.index=single.index;
@@ -350,7 +352,6 @@ const self={
         });
     },
     fresh:(scene,x,y,world,dom_id)=>{
-
         let mds=[],txs=[],objs=[],ans=[];
         const data_chain=["block",dom_id,world,`${x}_${y}`,"three"];
         const tdata=VBW.cache.get(data_chain);
@@ -360,7 +361,7 @@ const self={
         if(data.module.length!==0) mds=mds.concat(data.module);
         objs=objs.concat(data.object);
         ans=ans.concat(data.animate);
-
+        //console.log(`Fresh block [${x},${y}], ${objs.length} objects added.`);
         self.parse(txs,mds,world,dom_id,(failed)=>{
             //console.log(failed);
             //3.创建所有的ThreeObject，并加入到scene
@@ -407,21 +408,52 @@ const self={
 
     },
     clean:(scene,x,y,world,dom_id)=>{
+        //console.log(`Cleaning...`,x,y,world,dom_id);
+
+        //console.log(`Scene before lenght: ${scene.children.length}`);
+
         //1. remove related objects from scene
-        for(let i=0;i<scene.children.length;i++){
-            const row=scene.children[i];
+        //1.1. filter out Mesh to remove
+        const todo=[];
+        scene.children.forEach((row)=>{
             if(row.userData.x===x && row.userData.y===y){
-                scene.remove(row);
+                todo.push(row);
             }
+        });
+
+        //1.2. remove Meshes
+        //!important, if remove mesh in `scene.children.forEach`,
+        //!important, the length will change, then miss Meshes what needed to remove.
+        if(todo.length!==0){
+            todo.forEach((row)=>{
+                scene.remove(row);
+                if (row.material.map) {
+                    row.material.map.dispose();
+                }
+                row.geometry.dispose();
+                row.material.dispose();
+            });
         }
+
+        //console.log(`Scene after lenght: ${scene.children.length}`);
 
         //2.remove related animate object from scene and aniamte queue
         const ani_chain=["block",dom_id,world,"queue"];
+        const map_chain = ["block", dom_id, world, "animate"];
         const list=VBW.cache.get(ani_chain);
+        const map=VBW.cache.get(map_chain);
         const arr=[];
         for(let i=0;i<list.length;i++){
             const row=list[i];
-            if(row.x===x && row.y===0) continue;
+
+            //2.1.remove animate object from map
+            if(row.x===x && row.y===y){
+                const key=`${x}_${y}_${row.adjunct}_${row.index}`;
+                delete map[key];
+                continue;
+            } 
+
+            //2.2. add not related to new queue
             arr.push(row);
         }
         VBW.cache.set(ani_chain,arr);
