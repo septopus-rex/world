@@ -43,6 +43,10 @@ export default {
 
             setTimeout(()=>{
                 World.edit(container,wd_index,2025,500);
+
+                // setTimeout(()=>{
+                //     World.normal(container,wd_index)
+                // },3000);
             },6000);
             
 

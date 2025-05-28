@@ -554,8 +554,13 @@ const World={
         //0.remove edit data
         const chain=["block",dom_id,world];
         const cur=VBW.cache.get(chain);
+        const x=cur.edit.x,y=cur.edit.y;
         delete cur.edit;
-        return ck && ck(true);
+        const target={x:x,y:y,world:world,container:dom_id}
+        VBW.prepair(target,(pre)=>{
+            VBW[config.render].show(dom_id,[x,y,world]);
+            return ck && ck(true);
+        });
     },
 
     /**
