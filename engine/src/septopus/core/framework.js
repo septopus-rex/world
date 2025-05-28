@@ -293,12 +293,42 @@ const self = {
         self.cache.set(render_chain, rdata);
         return preload;
     },
+    structEntire: (x, y, ext, world, dom_id, ck, cfg) => {
+        //1.construct sky and weather
+        self.structSky(world, dom_id);
 
-    toSelect:()=>{
+        //2.construct all blocks data
+        const limit = self.cache.get(["setting", "limit"]);
+        const fun_single = self.structSingle;
+        for (let i = -ext; i < ext + 1; i++) {
+            for (let j = -ext; j < ext + 1; j++) {
+                const cx = x + i, cy = y + j
+                if (cx < 1 || cy < 1) continue;
+                if (cx > limit[0] || cy > limit[1]) continue;
+                fun_single(cx, cy, world, dom_id);
+            }
+        }
 
+        //4.construct render data
+        const fun_render = self.structRenderData;
+        const prefetch = { module: [], texture: [] };
+        for (let i = -ext; i < ext + 1; i++) {
+            for (let j = -ext; j < ext + 1; j++) {
+                const cx = x + i, cy = y + j
+                if (cx < 1 || cy < 1) continue;
+                if (cx > limit[0] || cy > limit[1]) continue;
+                const sub = fun_render(cx, cy, world, dom_id);
+                if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
+                if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
+            }
+        }
+
+        //5.unique module and texture IDs
+        prefetch.module = Toolbox.unique(prefetch.module);
+        prefetch.texture = Toolbox.unique(prefetch.texture);
+        return ck && ck(prefetch);
     },
-    
-    toEdit:(x,y,world,dom_id)=>{
+        toEdit:(x,y,world,dom_id)=>{
         const preload={module:[],texture:[]};
 
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std"];
@@ -342,83 +372,16 @@ const self = {
 
         return preload;
     },
-    structEntire: (x, y, ext, world, dom_id, cfg, ck) => {
-        console.log(`structEntire done.`);
-        //1.construct sky and weather
-        self.structSky(world, dom_id);
-
-        //2.construct all blocks data
-        const limit = self.cache.get(["setting", "limit"]);
-        const fun_single = self.structSingle;
-        for (let i = -ext; i < ext + 1; i++) {
-            for (let j = -ext; j < ext + 1; j++) {
-                const cx = x + i, cy = y + j
-                if (cx < 1 || cy < 1) continue;
-                if (cx > limit[0] || cy > limit[1]) continue;
-                fun_single(cx, cy, world, dom_id);
-            }
-        }
-
-        //4.construct render data
-        const fun_render = self.structRenderData;
-        const prefetch = { module: [], texture: [] };
-        for (let i = -ext; i < ext + 1; i++) {
-            for (let j = -ext; j < ext + 1; j++) {
-                const cx = x + i, cy = y + j
-                if (cx < 1 || cy < 1) continue;
-                if (cx > limit[0] || cy > limit[1]) continue;
-                const sub = fun_render(cx, cy, world, dom_id);
-                if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
-                if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
-            }
-        }
-
-        //5.unique module and texture IDs
-        prefetch.module = Toolbox.unique(prefetch.module);
-        prefetch.texture = Toolbox.unique(prefetch.texture);
-        return ck && ck(prefetch);
-    },
-
-    structEdit: (x, y, ext, world, dom_id, cfg, ck) => {
-        //1.clean block data when force to
-        if(cfg && cfg.force){
-            console.log(`Force to clean blocks here`);
-        }
-        
-        //2.construct render data
-        const limit = self.cache.get(["setting", "limit"]);
-        const fun_render = self.toEdit;
-        const prefetch = { module: [], texture: [] };
-        for (let i = -ext; i < ext + 1; i++) {
-            for (let j = -ext; j < ext + 1; j++) {
-                const cx = x + i, cy = y + j
-                if (cx < 1 || cy < 1) continue;
-                if (cx > limit[0] || cy > limit[1]) continue;
-                const sub = fun_render(cx, cy, world, dom_id);
-                if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
-                if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
-            }
-        }
-
-        //3.unique module and texture IDs.
-        prefetch.module = Toolbox.unique(prefetch.module);
-        prefetch.texture = Toolbox.unique(prefetch.texture);
-        
-        return ck && ck(prefetch);
-    },
-
-    structActive:(x, y, ext, world, dom_id, cfg, ck)=>{
+    toSelect:(x,y,world,dom_id)=>{
         const s_chain=["block",dom_id,world,"edit","selected"];
         if(!self.cache.exsist(s_chain)) return ck && ck({error:"No selected adjuct to highlight."});
-
         const prefetch = { module: [], texture: [] };
 
-        //1.call `std_active`，construct active adjunct highlight
         const selected = self.cache.get(s_chain);
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std", selected.adjunct, selected.index];
         if(!self.cache.exsist(raw_chain)) return ck && ck({error:"Invalid adjunct to highlight."});
         const obj=self.cache.get(raw_chain);
-        
+
         const va = self.getElevation(x, y, world, dom_id);
         const act=Framework[selected.adjunct].transform.std_active(obj, va);
         const edit=self.cache.get(["block", dom_id, world, "edit"]);
@@ -432,7 +395,7 @@ const self = {
                 edit.helper.push(row);
             }
         }
-        
+
         //2.create grid raw data, used to create grid helper. Attatch to `grid` key
         edit.grid.raw={
             x:x,
@@ -451,7 +414,7 @@ const self = {
             side:self.getSide(),
         }
 
-        return ck && ck(prefetch);
+        return prefetch;
     },
 
     //modify task entry. Change the "raw" data then rebuild all data.
@@ -526,13 +489,6 @@ const self = {
     
 }
 
-//different way to struct data
-const worker = {
-    edit: self.structEdit,          //struct data when editing
-    init: self.structEntire,        //struct whole scene data
-    active:self.structActive,       //struct active component of 3D
-}
-
 const Framework = {
     /** 
      * basic init function, run this before any actions.
@@ -583,10 +539,9 @@ const Framework = {
      * @returns
      * @return void
      */
-    struct: (mode,range,cfg,ck) => {
+    load: (range,cfg,ck) => {
         const {x, y, ext,world, container} = range;
-        if(worker[mode]===undefined) return ck && ck({error:"Invalid struct mode"});
-        worker[mode](x, y, ext,world, container,cfg,ck);
+        self.structEntire(x, y, ext,world, container,ck,cfg);
     },
 
     /** 
@@ -604,7 +559,12 @@ const Framework = {
         switch (mode) {
             case "edit":
                 const pre=self.toEdit(x,y,world,container);
+                if(cfg && cfg.selected){
+                    console.log(cfg);
+                    const more=self.toSelect(x,y,world,container);
+                }
                 ck && ck(pre);
+                
                 break;
 
             case "normal":
@@ -650,8 +610,7 @@ const Framework = {
         if (!tasks.error && tasks.length !== 0) {
             console.log(`Todo list:`, JSON.stringify(tasks));
             self.excute(tasks, dom_id, world, (done) => {
-                
-                //self.structEntire();
+
             });
         }
     },

@@ -44,10 +44,15 @@ export default {
             setTimeout(()=>{
                 World.edit(container,wd_index,2025,500);
 
+                setTimeout(()=>{
+                    const fs=["x","y","z","-x","-y","-z"];
+                    World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);
+                },3000);
+                
                 // setTimeout(()=>{
                 //     World.normal(container,wd_index)
                 // },3000);
-            },6000);
+            },5000);
             
 
             // const fs=["x","y","z","-x","-y","-z"];

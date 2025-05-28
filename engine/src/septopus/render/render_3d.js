@@ -254,9 +254,11 @@ const self={
             }
         }
 
-        //3.加载边框
+        //3.load grid
         if(edit.grid.raw!==null){
             const params=Toolbox.clone(edit.grid.raw);
+
+            //TODO, the parameters for grid can be modified and load dynamic
             params.density={
                 offsetX:1000,
                 offsetY:1000,
@@ -267,6 +269,14 @@ const self={
 
             gs.position[0]+=(edit.x-1)*side[0];
             gs.position[1]+=(edit.y-1)*side[1];
+
+            gs.userData={
+                x:edit.x,
+                y:edit.y,
+                name:"grid",
+            }
+
+
             scene.add(gs);
         }
     },

@@ -470,10 +470,9 @@ const World={
                             if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
             
                             const range={x:x,y:y,ext:ext,world:index,container:dom_id};
-                            const mode="init";  
 
                             //2.2. struct holder
-                            VBW.struct(mode,range,cfg,(pre)=>{
+                            VBW.load(range,cfg,(pre)=>{
                                 UI.show("toast",`Struct all components, ready to show.`);
                                 self.syncPlayer(start,dom_id);  //set the camera as player here, need the render is ready
                                 self.prefetch(pre.texture,pre.module,(failed)=>{  
@@ -579,17 +578,20 @@ const World={
     select:(dom_id,world,x,y,name,index,face,ck)=>{
         //1. set selected adjunct
         const chain=["block",dom_id,world,"edit","selected"];
-        const target=VBW.cache.get(chain);
-        target.adjunct=name;
-        target.index=index;
-        target.face=face;
+        const selected=VBW.cache.get(chain);
+        selected.adjunct=name;
+        selected.index=index;
+        selected.face=face;
 
         //2. fresh 
-        // const range={x:x,y:y,ext:0,world:world,container:dom_id};
-        // const mode="active";
-        // self.rebuild(mode,range,{},dom_id,()=>{
-        //     return ck && ck(true);
-        // });
+        const target={x:x,y:y,world:world,container:dom_id}
+        const cfg={selected:true};
+        VBW.mode("edit",target,(pre)=>{
+            VBW.prepair(target,(pre)=>{
+                VBW[config.render].show(dom_id,[x,y,world]);
+                return ck && ck(true);
+            });
+        },cfg);
     },  
 
     /**
