@@ -26,23 +26,24 @@ pub fn module_add(
     index:u32,                  //module index
     ipfs:String,                //IPFS cid          
 ) -> Result<()> {
+    msg!("index: {:?}", index);
+    msg!("seed: {:?}", SPW_SEEDS_MODULE_DATA);
+    msg!("index LE: {:?}", index.to_le_bytes());
 
-    msg!("ipfs len: {}", ipfs.len());
+    let clock = &ctx.accounts.clock;
+    let payer_pubkey = ctx.accounts.payer.key();
+    let owner=payer_pubkey.to_string();
+    let create=clock.slot;
+    let status=ResoureStatus::Created as u32;
 
-    // let clock = &ctx.accounts.clock;
-    // let payer_pubkey = ctx.accounts.payer.key();
-    // let owner=payer_pubkey.to_string();
-    // let create=clock.slot;
-    // let status=ResoureStatus::Created as u32;
+    msg!("ipfs len: {}, owner len: {}", ipfs.len(), owner.len());
 
-    // msg!("ipfs len: {}, owner len: {}", ipfs.len(), owner.len());
-
-    // *ctx.accounts.module_data=ModuleData{
-    //     ipfs,
-    //     owner,
-    //     create,
-    //     status,
-    // };
+    *ctx.accounts.module_data=ModuleData{
+        ipfs,
+        owner,
+        create,
+        status,
+    };
 
     Ok(())
 }
@@ -105,7 +106,28 @@ pub fn module_recover(
 /********************************************************************/
 
 #[derive(Accounts)]
-#[instruction(index:u32,_ipfs:String)]
+#[instruction(index:u32)]
+pub struct ReplaceModule<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(
+        init_if_needed,
+        space = SOLANA_PDA_LEN + ModuleData::INIT_SPACE,     
+        payer = payer,
+        seeds = [
+            SPW_SEEDS_MODULE_DATA,
+            &index.to_le_bytes(),
+        ],
+        bump,
+    )]
+    pub module_data: Account<'info, ModuleData>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(index:u32)]
 pub struct AddModule<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,

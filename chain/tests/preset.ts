@@ -194,7 +194,7 @@ const self={
           n_index.writeUInt32LE(index);
           
           const pda_counter=self.getPDA([
-            Buffer.from("d_md"),
+            Buffer.from("m_yz"),
             n_index,
           ],PID);
           const raw=await self.getAccount(pda_counter);

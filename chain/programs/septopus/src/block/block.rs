@@ -29,9 +29,12 @@ pub fn mint(
     x:u32,                      
     y:u32,
     world:u32,
-    //_bump:u8,
 ) -> Result<()> {
     msg!("world {} localtion: [{},{}]", world,x,y);
+    msg!("seed: {:?}", SPW_SEEDS_BLOCK_DATA);
+    msg!("x: {:?}", x.to_le_bytes());
+    msg!("y: {:?}", y.to_le_bytes());
+    msg!("world: {:?}", world.to_le_bytes());
     //1. input check
     //1.1 wether world is on sell
     let world_list=&mut ctx.accounts.world_list;

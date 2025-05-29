@@ -16,27 +16,39 @@ const reqs={
 
     const n_index=Buffer.alloc(4);
     n_index.writeUInt32LE(index);
+    //const n_index=Buffer.alloc(4);
+    //n_index.writeUInt32LE(index);
     const seeds_data=[
       Buffer.from("m_yz"),
-      //n_index,
-      new BN(index).toArrayLike(Buffer, "le", 4)
+      n_index,
+      //new BN(index).toArrayLike(Buffer,"le",4)
     ];
     const pda_data=self.getPDA(seeds_data,program.programId,true);
 
     console.log(pda_data);
     
     //await self.info.modulecounter();
+    const moduleData = new PublicKey("FJDwuFjqpSTqd2pJAgCDeDQRdK5SPqXZPdwpqUyHFZre");
     const sign_init= await program.methods
       .addModule(ipfs,index)
       .accounts({
         payer:users.recipient.pair.publicKey,
-        //moduleData: pda_data.toString(),
+        moduleData:moduleData,
+        systemProgram: SystemProgram.programId
       })
       .signers([users.recipient.pair])
       .rpc()
-      .catch((err)=>{
+      .catch((e)=>{
         self.output.hr("Got Error");
-        console.log(err);
+        console.error("Transaction failed");
+        if (e.logs) {
+          console.log("Program logs:");
+          for (const line of e.logs) console.log(line);
+        } else if (e instanceof anchor.AnchorError) {
+          console.log(e.logs);
+        } else {
+          console.log(e);
+        }
       });
       //await self.info.moduledata(index);
       self.output.end(`Signature of "addModule": ${sign_init}`);
@@ -101,7 +113,7 @@ describe("VBW module functions test.",() => {
 
   it("Add a new module ( IPFS ).", async () => {
     const ipfs="bafkreicl7rl7d6bkgyzxc67jdfoythbthikk7bnt4m22zjd6e7jx5hoerb";
-    const index=1;
+    const index=3;
     await reqs.add(ipfs,index);
   });
 
