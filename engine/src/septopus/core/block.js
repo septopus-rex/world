@@ -93,6 +93,10 @@ const self={
         },
         backup:(x,y,param,world,dom_id)=>{
             console.log(`block backup:`,x,y,param,world, dom_id);
+            return true;
+        },
+        recover:(x,y,param, world, dom_id)=>{
+
         },
     },
     transform:{

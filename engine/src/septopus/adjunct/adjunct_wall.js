@@ -64,6 +64,7 @@ const self = {
 			return raw;
         },
         set: (p,raw,limit) => {
+            //console.log(p,raw,limit);
             if(p.index===undefined) return false;
 			const index=p.index;
             if(limit===undefined){

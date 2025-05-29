@@ -500,10 +500,10 @@ const World={
             });
         });
     },
-
+    /**
+     * Load block[x,y]
+    */
     load:(dom_id,world,x,y)=>{
-        
-
         const chain=["block",dom_id,world,`${x}_${y}`];
         if(VBW.cache.exsist(chain)){
             VBW[config.render].show(dom_id,[x,y,world]);
@@ -512,6 +512,8 @@ const World={
 
         const ext=0;
         const limit=[4096,4096];
+        //const limit = VBW.cache.get(["setting", "limit"]);
+
         //check wether exsist first.
         VBW.datasource.view(x,y,ext,world,(map)=>{
             console.log(map);
@@ -538,6 +540,9 @@ const World={
         },limit);
     },
 
+    /**
+     * clean the target block[x,y] in render
+    */
     unload:(dom_id,world,x,y)=>{
         VBW[config.render].clean(dom_id,world,x,y);
     },
@@ -578,10 +583,10 @@ const World={
         console.log(`Switch to edit mode.`);
         VBW.mode(mode,target,(pre)=>{
             self.prefetch(pre.texture,pre.module,(failed)=>{
-                VBW.prepair(target,(pre)=>{
+                //VBW.prepair(target,(pre)=>{
                     VBW[config.render].show(dom_id,[x,y,world]);
                     return ck && ck(true);
-                });
+                //});
             });
         });
     },
@@ -601,10 +606,8 @@ const World={
         const x=cur.edit.x,y=cur.edit.y;
         delete cur.edit;
         const target={x:x,y:y,world:world,container:dom_id}
-        VBW.prepair(target,(pre)=>{
-            VBW[config.render].show(dom_id,[x,y,world]);
-            return ck && ck(true);
-        });
+        VBW[config.render].show(dom_id,[x,y,world]);
+        return ck && ck(true);
     },
 
     /**
@@ -632,10 +635,8 @@ const World={
         const target={x:x,y:y,world:world,container:dom_id}
         const cfg={selected:true};
         VBW.mode("edit",target,(pre)=>{
-            VBW.prepair(target,(pre)=>{
-                VBW[config.render].show(dom_id,[x,y,world]);
-                return ck && ck(true);
-            });
+            VBW[config.render].show(dom_id,[x,y,world]);
+            return ck && ck(true);
         },cfg);
     },  
 
@@ -644,17 +645,33 @@ const World={
      * @param	{object[]}  tasks   - modify tasks need to do
      * @param	{string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
-     * @param   {number}    x       - coordination X
-     * @param   {number}    y       - coordination y
      * @param   {function}  ck      - callback function
      * @callback - wether done callback
      * @param {boolean} result
      * */
-    modify:(tasks,dom_id,world,x,y,ck)=>{
-        //console.log(tasks,dom_id,world,x,y);
+    modify:(tasks,dom_id,world,ck)=>{
+        const chain = ["block", dom_id,world, "edit"];
+        const active = VBW.cache.get(chain);
+        const x=active.x,y=active.y;
+
+        const queue=VBW.cache.get(["task", dom_id, world]);
+        for(let i=0;i<tasks.length;i++){
+            const task=tasks[i];
+            task.x=x;
+            task.y=y;
+            queue.push(task);
+        }
+        VBW.update(dom_id, world);
+
+        
+        const target={x:x,y:y,world:world,container:dom_id}
+        VBW.prepair(target,(pre)=>{
+            console.log(pre);
+            VBW[config.render].show(dom_id,[x,y,world]);
+            return ck && ck(true);
+        });
+        
     },
-
-
 }
 
 export default World;

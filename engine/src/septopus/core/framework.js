@@ -68,7 +68,7 @@ const self = {
         return self.cache.get(["block", dom_id, world, `${x}_${y}`, "elevation"]);
     },
     getRawByName:(name,list)=>{
-        console.log(name,list);
+        //console.log(name,list);
         if(!cache.map[name]) return {error:"Invalid adjunct name"};
         const short=cache.map[name];
         for(let i=0;i<list.length;i++){
@@ -422,16 +422,15 @@ const self = {
         if(failed===undefined) failed=[];
         if (arr.length === 0){
             //before exit, clean all blocks need  fresh.
-            const modified_chain = ["cache", "task", world];
+            const modified_chain = ["modified",dom_id,world];
             const ups = self.cache.get(modified_chain);
             if (!ups.error && !Toolbox.empty(ups)) {
                 console.log(`Modified block.`, ups);
-                //Framework.block.attribute.clean();
             }
             return ck && ck(failed);
-        } 
-
+        }
         const task = arr.pop();
+
         //1.block task
         if(task.block!==undefined){
             if(Framework.block.attribute && Framework.block.attribute[task.action]);
@@ -439,6 +438,7 @@ const self = {
             Framework.block.attribute[task.action](x,y,!task.param?{}:task.param,world,dom_id);
             return self.excute(arr, dom_id, world, ck, failed);
         }
+        //console.log(`Not block, ready to adjunct modification.`)
 
         //2.adjunct task;
         if(!Framework[task.adjunct] ||
@@ -451,38 +451,38 @@ const self = {
         const fun=Framework[task.adjunct].attribute[task.action];
 
         //2.1. get raw data of adjunct
+        //console.log(`Ready to get adjunct data.`)
         const key=`${task.x}_${task.y}`;
         const d_chain=["block",dom_id,world,key,"raw","data"];
+        //console.log(d_chain);
         if(!self.cache.exsist(d_chain)){
             return self.excute(arr, dom_id, world, ck, failed);
         }
 
         //2.2. backup the old raw data.
-        const backuped=self.block.attribute.backup(task.x,task.y,{},world,dom_id);
-        if(backuped!==true){
-
-            return self.excute(arr, dom_id, world, ck, failed);
-        }
+        // console.log(`Ready to backup`);
+        // const backuped=self.block.attribute.backup(task.x,task.y,{},world,dom_id);
+        // if(backuped!==true){
+        //     return self.excute(arr, dom_id, world, ck, failed);
+        // }
 
         //2.3. get new raw data
+        //console.log(`Ready to get raw`)
         const block_raw=self.cache.get(d_chain);
-        //console.log(block_raw);
-        if(task.adjunct==="block"){
-
-        }else{
-            const raw_index=2;
-            const raw=self.getRawByName(task.adjunct,block_raw[raw_index]);
-            task.limit!==undefined?fun(task.param,raw,task.limit):fun(task.param,raw);
-        }
+        const raw_index=2;
+        const raw=self.getRawByName(task.adjunct,block_raw[raw_index]);
+        //console.log(`Raw data of wall`,raw);
+        task.limit!==undefined?fun(task.param,raw,task.limit):fun(task.param,raw);
+        
 
         //3.remove related block
-        self.block.attribute.unload([[task.x,task.y]],world, dom_id);
+        //self.block.attribute.unload([[task.x,task.y]],world, dom_id);
 
         //4.save modified block
         const m_chain=["modified",dom_id,world];
         if(!self.cache.exsist(m_chain)) self.cache.set(m_chain,{});
-
-        const mlist=self.cache.get(m_chain);
+        const md_map=self.cache.get(m_chain);
+        md_map[key]=Toolbox.stamp();
 
         return self.excute(arr, dom_id, world, ck, failed);
     },

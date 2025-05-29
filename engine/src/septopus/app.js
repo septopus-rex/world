@@ -41,18 +41,24 @@ export default {
             /*********************************************************/
             const wd_index=0;
 
-            // setTimeout(()=>{
-            //     World.edit(container,wd_index,2025,500);
+            setTimeout(()=>{
+                World.edit(container,wd_index,2025,500);
 
-            //     setTimeout(()=>{
-            //         const fs=["x","y","z","-x","-y","-z"];
-            //         World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);
-            //         setTimeout(()=>{
-            //             World.normal(container,wd_index)
-            //         },3000);
-            //     },3000);
+                // setTimeout(()=>{
+                //     const fs=["x","y","z","-x","-y","-z"];
+                //     World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);
+                //     setTimeout(()=>{
+                //         World.normal(container,wd_index)
+                //     },3000);
+                // },3000);
+                const tasks=[
+                    {adjunct:"wall",action:"set",param:{z:8,index:0}}
+                ]
+                World.modify(tasks,container,wd_index,(done)=>{
+
+                });
                 
-            // },5000);
+            },5000);
             
             // const tasks=[
             //     {adjunct:"wall",action:"set",param:{x:1.2}},
