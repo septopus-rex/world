@@ -17,7 +17,10 @@
 import CONFIG from "./config";
 import Toolbox from "../lib/toolbox";
 
-const cache = { setting: CONFIG };
+const cache = {
+    setting:CONFIG
+};
+
 const config = {
     keys: [             //keys of cache
         "component",    //component keyname

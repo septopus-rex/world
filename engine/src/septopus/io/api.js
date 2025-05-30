@@ -4,6 +4,7 @@
  * @fileoverview
  *  1.API router, manage all access to different network
  *  2.mock data to test quickly.
+ *  3.events support and mock.
  *
  * @author Fuu
  * @date 2025-04-29
@@ -24,9 +25,15 @@ const config={
     debug:true,
 }
 
+
 const router = {
     solana: api_solana,
     sui: api_sui,
+}
+
+//Events queue
+const events={
+    onChange:[],
 }
 
 const mock = {
@@ -295,6 +302,13 @@ const API = {
                 return ck && ck(dt);
             }
         }
+    },
+    /**
+     * Set listener of events.
+     * 
+    */
+    listener:()=>{
+
     },
 }
 
