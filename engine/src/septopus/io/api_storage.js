@@ -1,11 +1,13 @@
-/* 
-*  Septopus World localstorage API
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.storage basic information on local
-*/
+/**
+ * IO - IPFS Storage
+ *
+ * @fileoverview
+ *  1. get IPFS from network
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
+
 
 const config={
     type:"localstorage",        //[1,storage; 2.cookie; 3.RPC ]

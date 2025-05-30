@@ -1,22 +1,27 @@
-/* 
-*  Septopus Engine framework
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-05-24
-*  @functions
-*  1. default format
-*/
+/**
+ * Core - definition
+ *
+ * @fileoverview
+ *  1. definition keys here
+ *  2. formats of engine
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const def={
+    format:{
+        "std":{},
+        "raw":[],
+        "stop":[],
+    },
+    key:{
 
+    }
 }
 
-const self={
-
-}
-
-const Format=()=>{
-
+const Definition=(name,type)=>{
+    
 };
 
-export default Format;
+export default Definition;

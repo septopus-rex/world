@@ -1,11 +1,12 @@
-/* 
-*  2D Render
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * Render - 2D Render
+ *
+ * @fileoverview
+ *  1. 2D render from `3D STD` data
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const reg={
     name:"rd_two",

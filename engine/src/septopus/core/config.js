@@ -1,3 +1,13 @@
+/**
+ * Config file
+ *
+ * @fileoverview
+ *  1. basic setting fo system
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
+
 const CONFIG={
     convert:1,					//convert to meter, can set this to show in inch
 	precision:1000,				//3 digtal, to 0.001

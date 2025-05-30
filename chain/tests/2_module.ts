@@ -28,6 +28,8 @@ const reqs={
     console.log(pda_data);
     
     //await self.info.modulecounter();
+    //!important, here is a bug, the PDA account calculated at frontend is not the same as contract
+    //!important, need to check on Devnet
     const moduleData = new PublicKey("FJDwuFjqpSTqd2pJAgCDeDQRdK5SPqXZPdwpqUyHFZre");
     const sign_init= await program.methods
       .addModule(ipfs,index)

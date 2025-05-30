@@ -1,18 +1,19 @@
-/* 
-*  3D observe controller
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-25
-*  @functions
-*  1. 
-*/
+/**
+ * 3D observe controller
+ *
+ * @fileoverview
+ *  1. screen interaction support
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import VBW from "../core/framework";
 
 const reg={
-    name:"con_observe",        //组件名称
-    category:'controller',     //组件分类
+    name:"con_observe",
+    category:'controller',
 }
 
 const config={

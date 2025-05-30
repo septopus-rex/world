@@ -1,11 +1,12 @@
-/* 
-*  Septopus world avatar movement component
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @functions
-*  1.convert the action in 3D to player status;
-*/
+/**
+ * Core - movement
+ *
+ * @fileoverview
+ *  1. player movement calculation
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
 import VBW from "./framework";
 

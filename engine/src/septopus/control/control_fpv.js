@@ -1,11 +1,13 @@
-/* 
-*  3D FPV controller for PC
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-25
-*  @functions
-*  1. 
-*/
+/**
+ * 3D FPV controller for PC
+ *
+ * @fileoverview
+ *  1. keyboard support
+ *  2. block cross checking
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 import Movment from "../core/movement";
 import VBW from "../core/framework";

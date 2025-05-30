@@ -1,15 +1,16 @@
-/* 
-*  Septopus World Sky
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * Core - sky
+ *
+ * @fileoverview
+ *  1. struct sky by time and weather
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const reg={
-    name:"sky",       //组件名称
-    category:'system',    //组件分类
+    name:"sky",
+    category:'system',
 }
 
 const self={

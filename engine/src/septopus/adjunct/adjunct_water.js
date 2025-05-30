@@ -1,16 +1,18 @@
-/* 
-*  Water component
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * Adjunct - water
+ *
+ * @fileoverview
+ *  1. water component
+ *  2. can go cross in
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const reg={
     name:"water",
     category:"adjunct",
-    short:"a3",         //key的缩写，用于减少链上数据
+    short:"a3",
     desc:"Water adjunct, used to create special landscape.",
     version:"1.0.0",
 }

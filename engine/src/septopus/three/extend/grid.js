@@ -1,5 +1,4 @@
 import * as THREE from "three";
-
 const self = {
     get:(params)=>{
         const {x,y,elevation,size,offset,face,side,density} = params;

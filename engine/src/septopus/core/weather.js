@@ -1,15 +1,16 @@
-/* 
-*  Septopus World Weather
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-25
-*  @functions
-*  1.
-*/
+/**
+ * Core - weather
+ *
+ * @fileoverview
+ *  1. calc weather by slot hash ( right now Solana height )
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 const reg={
-    name:"wealth",       //组件名称
-    category:'system',      //组件分类
+    name:"wealth",
+    category:'system',
 }
 
 const self={

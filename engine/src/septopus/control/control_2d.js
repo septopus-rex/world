@@ -1,15 +1,17 @@
-/* 
-*  2D controller for 2D map
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-25
-*  @functions
-*  1. 
-*/
+/**
+ * 2D controller for 2D map
+ *
+ * @fileoverview
+ *  1. screen interaction support
+ *  2. 
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 const reg={
-    name:"con_two",        //组件名称
-    category:'controller',     //组件分类
+    name:"con_two",
+    category:'controller',
     desc:"",
     version:"1.0.0",
 }

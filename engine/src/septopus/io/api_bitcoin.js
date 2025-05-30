@@ -1,13 +1,15 @@
-/* 
-*  Septopus World Bitcoin API
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @functions
-*  1.
-*/
+/**
+ * IO - Bitcoin Network
+ *
+ * @fileoverview
+ *  1. get the latest block height and hash
+ *  2. get block information
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
-const map={};       // world_x_y --> block data,    cache block data
+const map={};
 const self={
 
 }

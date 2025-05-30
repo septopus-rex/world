@@ -1,16 +1,17 @@
-/* 
-*  Running detector, confirm the system env
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.check device
-*/
-
+/**
+ * Core - detector
+ *
+ * @fileoverview
+ *  1. check device
+ *  2. confirm the system env
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const reg={
-    name:"detect",       //组件名称
-    category:'system',      //组件分类
+    name:"detect",
+    category:'system',
 }
 
 const self={

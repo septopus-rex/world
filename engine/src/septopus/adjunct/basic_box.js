@@ -1,11 +1,12 @@
-/* 
-*  Adjunct box, single box
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * Adjunct - box
+ *
+ * @fileoverview
+ *  1. box with texture
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const reg={
     name:"box",         //组件名称
@@ -28,8 +29,8 @@ const config={
         ],
     },
     color:0xf3f5f6,
-    animate:[               //支持的动画效果
-        {way:"rotate",param:{speed:0.2,ax:"x"}},        //动画效果
+    animate:[
+        {way:"rotate",param:{speed:0.2,ax:"x"}},
     ],
 }
 
@@ -38,9 +39,10 @@ const self={
         reg:()=>{
             return reg;
         },
-        animate:(ms)=>{
-            for(let i=0;i<ms.length;i++){
-                const mesh=ms[i];
+        //`cfg` to support more complex animation
+        animate:(meshes,cfg)=>{
+            for(let i=0;i<meshes.length;i++){
+                const mesh=meshes[i];
                 mesh.rotation.x+=0.1;
                 mesh.rotation.y+=0.1;
                 mesh.rotation.z+=0.1;
@@ -48,13 +50,10 @@ const self={
         },
     },
     transform:{
-        //链上数据转换成std的中间体
-        //return [objs, preload]
         raw_std:(arr,cvt)=>{
             const rst=[]
             for(let i in arr){
                 const d=arr[i],s=d[0],p=d[1],r=d[2],tid=d[3],rpt=d[4];
-                //root.core.setTextureQueue(tid);		//推送材质队列
                 const dt={
                     x:s[0]*cvt,y:s[1]*cvt,z:s[2]*cvt,
                     ox:p[0]*cvt,oy:p[1]*cvt,oz:p[2]*cvt+s[2]*cvt*0.5,
@@ -76,7 +75,6 @@ const self={
             return rst;
         },
 
-        //std中间体，转换成3D需要的object
         std_3d:(stds,va)=>{
             const arr=[];
             for(let i=0;i<stds.length;i++){
@@ -96,8 +94,6 @@ const self={
             }
             return arr;
         },
-
-        //3D高亮时候，需要的3D的object
         std_active:(stds,va,index)=>{
             const ds={stop:[],helper:[]};
             return ds;
@@ -111,15 +107,9 @@ const self={
         std_box:(obj)=>{
 
         },
-
-        //std中间体，转换成2D需要的数据
         std_2d:(arr,face)=>{
 
         },
-
-        
-
-        //2D高亮时候，需要的2D的object
         active_2d:()=>{
 
         },

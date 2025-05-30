@@ -192,6 +192,7 @@ const self={
         moduledata:async (index)=>{
           const n_index=Buffer.alloc(4);
           n_index.writeUInt32LE(index);
+          //new BN(index).toArrayLike(Buffer,"le",index)
           
           const pda_counter=self.getPDA([
             Buffer.from("m_yz"),

@@ -1,11 +1,13 @@
-/* 
-*  Septopus World Sky
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-25
-*  @functions
-*  1.
-*/
+/**
+ * Core - time
+ *
+ * @fileoverview
+ *  1. calc time by slot height ( right now Solana height )
+ *  2. calc by Bitcoin block height in the furture
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 const reg={
     name:"time",        //组件名称

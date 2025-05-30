@@ -1,12 +1,14 @@
-/** 
-*  Septopus World block component, all adjuncts
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
+/**
+ * Core - block
+ *
+ * @fileoverview
 *  1.block management
 *  2.transform methods
-*/
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
+
 
 import Toolbox from "../lib/toolbox";
 import VBW from "./framework";  //need to modify raw data, VBW import

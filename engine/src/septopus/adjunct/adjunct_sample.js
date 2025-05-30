@@ -1,18 +1,19 @@
-/* 
-*  Module block, single block
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-25
-*  @functions
-*  1.
-*/
+/**
+ * Component Sample
+ *
+ * @fileoverview
+ *  1. struct of adjunct
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 const reg={
-    name:"box",        //组件名称
-    category:'adjunct',     //组件分类
-    short:"a0",         //key的缩写，用于减少链上数据
-    desc:"Sample adjunct.",
-    version:"1.0.0",
+    name:"NAME",        //Name of adjunct
+    category:'adjunct', //category of adjunct
+    short:0x6666,       //Unique index of adjunct, u32
+    desc:"Sample adjunct.",     //Desription of adjunct
+    version:"1.0.0",            //Version
 }
 
 const config={
@@ -22,7 +23,7 @@ const config={
             ['x','y','z'],
             ['ox','oy','oz'],
             ['rx','ry','rz'],
-            'texture_id',
+            'TEXTURE_ID',
             ['rpx','rpy'],
         ],
     }
@@ -33,52 +34,47 @@ const self={
         reg:()=>{
             return reg;
         },
-        init:()=>{
+        init:()=>{          //create cache by return result {chain:[PATH_OF_CACHE],value:VALUE} 
             // return{
             //     chain:["env","player"],
-            //     value:{
-            //     }
+            //     value:{}
             // };
         },
+
+        //`cfg` to support more complex animation. Rewrite the parameters for animation.
+        animate:(meshes,cfg)=>{
+
+        },
+    },
+    attribute:{
+        add:(p,raw) => {},
+        remove: (p,raw) => {},
+        set:(p,raw,limit)=>{},
+        combine: (p,row) => {},
     },
     transform:{
-        //链上数据转换成std的中间体
-        //return [objs, preload]
         raw_std:(arr,cvt)=>{
-
+            // return STD[]
         },
-
         std_raw:(arr,cvt)=>{
-
+            // return RAW[]
         },
-
-        std_box:(obj)=>{
-
-        },
-
-        //std中间体，转换成3D需要的object
         std_3d:(arr,va)=>{
-
+            // return 3D_STD[]
         },
-
-        //std中间体，转换成2D需要的数据
-        std_2d:(arr,face)=>{
-
+        std_acitve:(std, va)=>{
+            // return 3D_STD[]
         },
-
-        //3D高亮时候，需要的3D的object
-        acitve_3d:()=>{
-
-        },
-
-        //2D高亮时候，需要的2D的object
-        active_2d:()=>{
-
+        std_box:(std)=>{
+            // return STD
         },
     },
 };
 
-export default {
+const adj_sample={
     hooks:self.hooks,
     transform:self.transform,
+    attribute:attribute,
 }
+
+export default adj_sample;

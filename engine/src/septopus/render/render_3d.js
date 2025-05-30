@@ -1,11 +1,15 @@
-/* 
-*  3D Render
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * 3D Render for Septopus World
+ *
+ * @fileoverview Manages:
+ *  1. parse resource such as texture and 3D module from other application.
+ *  2. create 3D objects from `three` standard json.
+ *  3. manage 3D objects in scene. 
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
+
 
 import VBW from "../core/framework";
 import ThreeObject from "../three/entry";

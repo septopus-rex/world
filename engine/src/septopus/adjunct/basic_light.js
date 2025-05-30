@@ -1,16 +1,18 @@
-/* 
-*  Lights for block
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * Adjunct - light
+ *
+ * @fileoverview
+ *  1. light for improving render result
+ *  2. support off/on in the furtuer
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const reg={
     name:"light",
     category:"basic",
-    short:"b3",         //key的缩写，用于减少链上数据
+    short:"b3",
     desc:"",
     version:"1.0.0",
 }
@@ -25,16 +27,6 @@ const self={
 
 const basic_light={
     hooks:self.hooks,
-
-    //from raw data on chain to standard action data
-    decode:(arr)=>{
-
-    },
-
-    //
-    render:(x,y,std)=>{
-
-    },
 }
 
 export default basic_light;

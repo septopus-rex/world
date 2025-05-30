@@ -4,7 +4,7 @@
  * A core module managing components, resources, and workflows
  * in the Septopus decentralized operating system.
  *
- * @fileoverview Manages:
+ * @fileoverview
  *   1. Component lifecycle
  *   2. Resource registration and usage control
  *   3. Workflow execution and editing

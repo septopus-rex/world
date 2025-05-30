@@ -3,7 +3,7 @@
  *
  * group functions here.
  *
- * @fileoverview Manages:
+ * @fileoverview
  *   1. Start Septopus World from 0.
  *   2. Set to edit module.
  *   3. Modify the block or adjuncts.

@@ -1,12 +1,12 @@
-/* 
-*  Septopus World 2D create entry
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @functions
-*  1.convert standard 2D points for rendering.
-*/
-
+/**
+ * Lib - 2D calculation
+ *
+ * @fileoverview
+ *  1. 2d convert and calcultion points
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
 const self={
     line:()=>{

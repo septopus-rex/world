@@ -1,11 +1,13 @@
-/* 
-*  Basic components, trigger for logic
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * Basic component - Trigger
+ *
+ * @fileoverview
+ *  1. Trigger event in 3D env.
+ *  2. Interact with 3D Objects.
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 const reg={
     name:"trigger",
@@ -21,11 +23,19 @@ const self={
         reg:()=>{
             return reg;
         }
-    }
+    },
+    attribute:{
+
+    },
+    transform:{
+
+    },
 }
 
 const basic_trigger={
     hooks:self.hooks,
+    transform:self.transform,  
+    attribute:self.attribute,
 }
 
 export default basic_trigger;

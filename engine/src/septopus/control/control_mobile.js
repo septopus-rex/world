@@ -1,15 +1,17 @@
-/* 
-*  3D FPV controller for mobile
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @functions
-*  1. 
-*/
+/**
+ * 3D FPV controller for mobile
+ *
+ * @fileoverview
+ *  1. screen interaction support
+ *  2. control panel support
+ *
+ * @author Fuu
+ * @date 2025-04-25
+ */
 
 const reg={
-    name:"con_mobile",        //组件名称
-    category:'controller',     //组件分类
+    name:"con_mobile",
+    category:'controller',
 }
 
 const self={

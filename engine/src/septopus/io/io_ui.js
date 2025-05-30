@@ -1,11 +1,12 @@
-/* 
-*  Septopus World UI management
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.
-*/
+/**
+ * IO - UI components
+ *
+ * @fileoverview
+ *  1. basic UI components, can be rewritten 
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 import Toolbox from "../lib/toolbox";
 

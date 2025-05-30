@@ -1,40 +1,42 @@
-/* 
-*  Module wall
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-24
-*  @functions
-*  1.single wall
-*/
+/**
+ * Adjunct - wall
+ *
+ * @fileoverview
+ *  1. basic wall
+ *  2. hole support in the furture
+ *
+ * @author Fuu
+ * @date 2025-04-24
+ */
 
 const reg = {
-    name: "wall",        //组件名称
-    category: "adjunct",     //组件分类
-    short: "a1",         //key的缩写，用于减少链上数据
+    name: "wall", 
+    category: "adjunct",
+    short: "a1",
     desc: "Wall with texture. Hole on it support.",
     version: "1.0.0",
 }
 
 const config = {
-    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, [], 2025],       //2025为默认version
+    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, [], 2025],
     hole: [0.5, 0.6, 0.9, 0.6, 2025],        //[ offset,width,height,windowsill,version ]
     definition: {
         2025: [
             ['x', 'y', 'z'],
             ['ox', 'oy', 'oz'],
             ['rx', 'ry', 'rz'],
-            'texture_id',           //由链上合约管理，可以控制被版权问题封禁的
+            'texture_id', 
             ['rpx', 'rpy'],
             'animate',
             ["hole"],
         ],
     },
-    color: 0xf8f8f8,        //材质加载失败的替换颜色
-    grid: {					//辅助定位格栅的配置
-        offsetX: 0.5,		//相对x轴的偏移
-        offsetY: 0.5,		//相对y轴的偏移
+    color: 0xf8f8f8,        //color for pending
+    grid: {					//grid setting
+        offsetX: 0.5,		//offset of X
+        offsetY: 0.5,		//offset of Y
     },
-    animate: [               //支持的动画效果
+    animate: [              //support animation list
         { way: "fadeout" },
         { way: "fadein" },
         { way: "moveup" },
@@ -64,7 +66,6 @@ const self = {
 			return raw;
         },
         set: (p,raw,limit) => {
-            //console.log(p,raw,limit);
             if(p.index===undefined) return false;
 			const index=p.index;
             if(limit===undefined){

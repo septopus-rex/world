@@ -1,16 +1,18 @@
-/* 
-*  Module loader
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @functions
-*  1. load static module to block
-*/
+/**
+ * Adjunct - module
+ *
+ * @fileoverview
+ *  1. load static module to block.
+ *  2. import from different applications.
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
 const reg={
-    name:"module",        //组件名称
-    category:'basic',     //组件分类
-    short:"a4",         //key的缩写，用于减少链上数据
+    name:"module",
+    category:'basic',
+    short:"a4",
     desc:"Load 3D module to locate on block",
     version:"1.0.0",
 }
@@ -22,20 +24,20 @@ const config={
             ['x','y','z'],
             ['ox','oy','oz'],
             ['rx','ry','rz'],
-            'module_id',                //只保存mid，设置module的标准格式，数据放到IPFS上
-            "animate",                  //模型的动画，整体的动画效果
+            'module_id',
+            "animate",
         ],
     },
-    color:0x3456f3,
-    animate:[               //支持的动画效果
-        {way:"rotate",param:{speed:0.2,ax:"x"}},        //动画效果
+    color:0x3456f3,     
+    animate:[
+        {way:"rotate",param:{speed:0.2,ax:"x"}},
     ],
 }
 
 const self={
     hooks:{
         reg:()=>{return reg;},
-        animate:()=>{
+        animate:(meshes,cfg)=>{
 
         },
     },

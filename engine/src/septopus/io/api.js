@@ -1,13 +1,13 @@
-
-/* 
-*  Septopus API router
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @functions
-*  1.API router, manage all access to different network
-*  2.mock data to test quickly.
-*/
+/**
+ * IO - API Router
+ *
+ * @fileoverview
+ *  1.API router, manage all access to different network
+ *  2.mock data to test quickly.
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
 import api_solana from "./api_solana";
 import api_sui from "./api_sui";

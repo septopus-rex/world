@@ -1,14 +1,14 @@
-/* 
-*  Three.js object entry 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-24
-*  @there.js R175
-*  @functions
+/**
+ * Three.js object entry 
+ * @there.js R175
+ * @fileoverview
 *  1. group all three.js functions
 *  2. check valid of input
 *  3. modify the default parameters of three objects.
-*/
+ *
+ * @author Fuu
+ * @date 2025-04-24
+ */
 
 import Scene from "./basic/scene";
 import Camera from "./basic/camera";
