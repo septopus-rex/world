@@ -12,7 +12,7 @@
 const reg = {
     name: "wall", 
     category: "adjunct",
-    short: "a1",
+    short: 0x00a1,
     desc: "Wall with texture. Hole on it support.",
     version: "1.0.0",
 }

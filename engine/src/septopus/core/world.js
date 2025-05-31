@@ -138,6 +138,7 @@ const self={
                 }
 
                 //2.init the parts component
+                console.log(cat);
                 if(component.hooks[initKey]!==undefined){
                     const res=component.hooks[initKey]();
                     if(!res.chain || !res.value){

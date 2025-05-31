@@ -12,7 +12,7 @@
 const reg={
     name:"module",
     category:'basic',
-    short:"a4",
+    short:0x00a4,
     desc:"Load 3D module to locate on block",
     version:"1.0.0",
 }

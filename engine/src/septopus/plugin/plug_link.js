@@ -11,7 +11,7 @@
 const reg={
     name:"qr",
     type:"plugin",
-    short:"e1",
+    short:0x00e1,
 };
 
 const self={
@@ -19,12 +19,12 @@ const self={
         reg:()=>{
             return reg;
         },
-        init:()=>{          //create cache by return result {chain:[PATH_OF_CACHE],value:VALUE} 
+        //init:()=>{          //create cache by return result {chain:[PATH_OF_CACHE],value:VALUE} 
             // return{
             //     chain:["env","player"],
             //     value:{}
             // };
-        },
+        //},
 
         //`cfg` to support more complex animation. Rewrite the parameters for animation.
         animate:(meshes,cfg)=>{
@@ -59,7 +59,7 @@ const self={
 const plug_link={
     hooks:self.hooks,
     transform:self.transform,
-    attribute:attribute,
+    attribute:self.attribute,
 }
 
 export default plug_link;

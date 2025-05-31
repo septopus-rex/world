@@ -74,7 +74,7 @@ const self={
 const adj_sample={
     hooks:self.hooks,
     transform:self.transform,
-    attribute:attribute,
+    attribute:self.attribute,
 }
 
 export default adj_sample;

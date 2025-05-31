@@ -11,7 +11,7 @@
 const reg={
     name:"box",         //组件名称
     category:'basic',       //组件分类
-    short:"a2",         //key的缩写，用于减少链上数据
+    short:0x00a2,         //key的缩写，用于减少链上数据
     desc:"",
     version:"1.0.0",
 }

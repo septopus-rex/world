@@ -12,7 +12,7 @@
 const reg={
     name:"water",
     category:"adjunct",
-    short:"a3",
+    short:0x00a3,
     desc:"Water adjunct, used to create special landscape.",
     version:"1.0.0",
 }

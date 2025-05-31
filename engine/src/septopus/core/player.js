@@ -53,11 +53,11 @@ const self={
             return reg;
         },
         init:()=>{
-            
             const py=Toolbox.clone(config);
             py.avatar="";
             py.address="";
             py.stamp=Toolbox.stamp();
+            
             return {
                 chain:["env","player"],
                 value:py,
