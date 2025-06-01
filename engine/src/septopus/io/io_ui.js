@@ -14,38 +14,8 @@ import Toolbox from "../lib/toolbox";
 const config={
     prefix:"vbw_",
 }
-const replace={}            
-const router={
-    dialog:(ctx,cfg)=>{
-        console.log(`[UI.dialog]:`+ctx);
-    },
-    toast:(ctx,cfg)=>{
-        const msg=`[UI.toast]:`+ctx;
-        if(cfg && cfg.type==="error") return console.error(msg);
-        console.log(msg);
-        const id=`${config.prefix}toast`;
-        const container=document.getElementById(id);
-        container.textContent = ctx;
-        container.hidden = false;
-    },
-    load:(ctx,cfg)=>{
-
-    },
-    menu:(ctx,cfg)=>{
-
-    },
-    pop:(ctx,cfg)=>{
-
-    },
-    compass:(val,cfg)=>{
-
-    },
-    /******************************************/
-    /*************** Form group ***************/
-    /******************************************/
-    form:(arr,cfg)=>{
-
-    },
+const replace={} 
+const inputs={
     number:(val,cfg)=>{
 
     },
@@ -58,27 +28,76 @@ const router={
     select:(val,cfg)=>{
 
     },
+    text:(val,cfg)=>{
+
+    },
+};           
+const router={
+    dialog:(ctx,cfg)=>{
+        console.log(`[UI.dialog]:`+ctx);
+    },
+    toast:(ctx,cfg)=>{
+        const msg=`[UI.toast]:`+ctx;
+        if(cfg && cfg.type==="error") return console.error(msg);
+        //console.log(msg);
+        const id=`${config.prefix}toast`;
+        const container=document.getElementById(id);
+        container.textContent = ctx;
+        container.hidden = false;
+    },
+    menu:(arr,cfg)=>{
+        const id=`${config.prefix}menu`;
+        const container=document.getElementById(id);
+        container.textContent = `<ul><li>1</li><li>2</li></ul>`;
+    },
+    pop:(ctx,cfg)=>{
+
+    },
+    compass:(val,cfg)=>{
+        const id=`${config.prefix}compass`;
+        const container=document.getElementById(id);
+    },
+    status:(val,cfg)=>{
+        const id=`${config.prefix}status`;
+        const container=document.getElementById(id);
+        container.textContent = val;
+    },
+    form:(arr,cfg)=>{
+
+    },
+    load:(ctx,cfg)=>{
+
+    },
 };
 
 const doms={
     toast:{
-        "index":99,
-        "text-align":"center",
+        events:{},
     },
     dialog:{
-        "size":"md",
+        events:{
+            close:null,
+            show:null,
+        },
     },
     menu:{
-
+        events:{
+            show:null,
+            close:null,
+        },
     },
     pop:{
 
     },
     compass:{       //compass for player
-
+        events:{
+            click:null,
+        },
     },
-    status:{        //3D status
-
+    status:{        //3D status 
+        events:{
+            click:null,
+        },
     },
 }
 
@@ -91,16 +110,16 @@ const self={
         }
         return true;
     },
-    getCSS:(obj)=>{
-        let str="";
-        for(let k in obj) str+=`${k}:${obj[k]};`;
-        return str;
-    },
+    // getCSS:(obj)=>{
+    //     let str="";
+    //     for(let k in obj) str+=`${k}:${obj[k]};`;
+    //     return str;
+    // },
     appendDom:(type,cfg,container)=>{
         const id=`${config.prefix}${type}`;
         const check=document.getElementById(id);
         if(check===null){
-            const css=self.getCSS(cfg.css);
+            //const css=self.getCSS(cfg.css);
             const str=`<div id="${id}" class="${type}"></div>`;
 
             const parser = new DOMParser();
@@ -138,6 +157,11 @@ const UI={
         if(!router[type]) return console.error(`There is no UI component called "${type}", please check system.`);
         if(replace[type]!==undefined) return replace[type](ctx,cfg);
         return router[type](ctx,cfg);
+    },
+    //bind UI event
+    //not React way, pure JS way to deal with UI component
+    bind:(type,name,event)=>{
+
     },
 }
 

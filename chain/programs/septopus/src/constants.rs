@@ -60,7 +60,7 @@ impl WorldList {
         
     }
 
-    pub fn adjunct(&mut self, index:u32, short:String, name:String, format:String) {
+    pub fn adjunct(&mut self, index:u32, short:u32, name:String, format:String) {
 
         //1.get adjunct data;
         let world_data = &mut self.list[index as usize];

@@ -405,6 +405,11 @@ const self={
         }
         return true;
     },
+    layout:()=>{
+        UI.show("menu",[
+            {lalbe:"Buy",action:()=>{}}
+        ]);
+    },
 }   
 
 const World={
@@ -441,6 +446,9 @@ const World={
         //0.set current active dom_id
         const current_chain=["active","current"];
         VBW.cache.set(current_chain,dom_id);
+
+        //0.1. set UI layout
+        self.layout();
 
         //1.get the player status
         if(!self.struct(dom_id)) return  UI.show("toast",`Failed to struct html dom for running.`,{type:"error"});

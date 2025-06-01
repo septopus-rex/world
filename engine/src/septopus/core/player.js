@@ -11,6 +11,7 @@
 
 import Toolbox from "../lib/toolbox";
 import VBW  from "./framework";
+import UI from "../io/io_ui";
 
 const reg={
     name:"player",
@@ -100,6 +101,8 @@ const vbw_player={
             //console.log(JSON.stringify(player));
             localStorage.setItem(key,JSON.stringify(player));
             count=0;
+
+            UI.show("status",JSON.stringify(player.block));
         }else{
             count++;
         }

@@ -112,8 +112,8 @@ pub fn start(
 pub fn adjunct(
     ctx: Context<WorldAdjunct>,    //default from system
     index: u32,                    //index of world to  start
-    short: String,
-    name: String,
+    short: u32,                    //adjunct unique index
+    name: String,                  //adjunct name
     format: String,
 ) -> Result<()> {
     //0. input check

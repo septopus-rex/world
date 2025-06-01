@@ -39,7 +39,7 @@ pub mod septopus {
     pub fn adjunct_world(
         ctx: Context<WorldAdjunct>,
         index:u32,
-        short:String,
+        short:u32,
         name:String,
         format:String,
     ) -> Result<()> {

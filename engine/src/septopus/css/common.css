@@ -30,3 +30,39 @@
     transform: translateX(100%);
   }
 }
+
+.compass{
+  width: 90px;
+  height: 90px;
+  background-color: #333;
+  position:fixed;
+  top:20px;
+  left:20px;
+  border-radius: 50%;
+}
+
+.status{
+  width: 90px;
+  height: 24px;
+  line-height: 24px;
+  font-size:12px;
+  background-color: #333;
+  position: fixed;
+  top:120px;
+  left:20px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.menu{
+  width: 90px;
+  height: 24px;
+  line-height: 24px;
+  font-size:12px;
+  background-color: #333;
+  position: fixed;
+  top:150px;
+  left:20px;
+  text-align: center;
+  color: #ffffff;
+}
