@@ -14,6 +14,30 @@ const self={
 
 }
 
+const mocker={
+    height:(agent)=>{
+        let height=Toolbox.rand(80000,31000);
+        const salt=Toolbox.char(5);
+        setInterval(()=>{
+            const obj={
+                network:"bitcoin",
+                height:height,
+                salt:salt,
+                //hash:,
+                stamp:Toolbox.stamp(),
+            };
+            agent(obj);
+            height++;
+        },3000);
+    },
+    transaction:(addr)=>{
+
+    },
+    block:(n)=>{
+
+    },
+}
+
 const api_bitcoin={
     world:()=>{
 

@@ -12,7 +12,7 @@
 
 import api_solana from "./api_solana";
 import api_sui from "./api_sui";
-import IPFS from "../lib/ipfs";
+
 import Toolbox from "../lib/toolbox";
 import VBW from "../core/framework";
 

@@ -11,9 +11,10 @@
 import Toolbox from "../lib/toolbox";
 
 //UI replacement. Rewrite the output UI here.
-const replace={
-
-}            
+const config={
+    prefix:"vbw_",
+}
+const replace={}            
 const router={
     dialog:(ctx,cfg)=>{
         console.log(`[UI.dialog]:`+ctx);
@@ -21,8 +22,11 @@ const router={
     toast:(ctx,cfg)=>{
         const msg=`[UI.toast]:`+ctx;
         if(cfg && cfg.type==="error") return console.error(msg);
-        
-        return console.log(msg);
+        console.log(msg);
+        const id=`${config.prefix}toast`;
+        const container=document.getElementById(id);
+        container.textContent = ctx;
+        container.hidden = false;
     },
     load:(ctx,cfg)=>{
 
@@ -56,25 +60,35 @@ const router={
     },
 };
 
+const doms={
+    toast:{
+        "index":99,
+        "text-align":"center",
+    },
+    dialog:{
+        "size":"md",
+    },
+    menu:{
+
+    },
+    pop:{
+
+    },
+    compass:{       //compass for player
+
+    },
+    status:{        //3D status
+
+    },
+}
+
 const self={
     struct:(id)=>{
         const container=document.getElementById(id);
         if(container===null) return {error:"Invalid container to init system."}
-        const doms={
-            toast:{
-                "index":99,
-                "text-align":"center",
-            },
-            dialog:{},
-            menu:{},
-            compass:{},
-        };
-
         for(let type in doms){
             self.appendDom(type,doms[type],container);
         }
-        //console.log(container);
-
         return true;
     },
     getCSS:(obj)=>{
@@ -83,12 +97,12 @@ const self={
         return str;
     },
     appendDom:(type,cfg,container)=>{
-        const id=`vbw_${type}`;
+        const id=`${config.prefix}${type}`;
         const check=document.getElementById(id);
         if(check===null){
-            //const css=self.getCSS(cfg);
-            const css="";
-            const str=`<div id=${id} style="${css}"></div>`;
+            const css=self.getCSS(cfg.css);
+            const str=`<div id="${id}" class="${type}"></div>`;
+
             const parser = new DOMParser();
             const doc = parser.parseFromString(str, 'text/html');
             container.appendChild(doc.body.firstChild);
@@ -97,7 +111,6 @@ const self={
 };
 
 const UI={
-    //TODO,增加toast和dialog部分来显示信息
     init:async (id)=>{
         const done=self.struct(id);
         if(done!==true && done.error) return done;

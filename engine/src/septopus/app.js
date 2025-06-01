@@ -11,7 +11,7 @@
 import Framework from "./core/framework";
 import UI from "./io/io_ui";
 import World from "./core/world";
-import Toolbox from "./lib/toolbox";
+import "./css/common.css";
 
 const self={
     init:async (container,ck)=>{
