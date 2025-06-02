@@ -39,6 +39,15 @@
   top:20px;
   left:20px;
   border-radius: 50%;
+  background-image: url(./compass.png);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.4;
+}
+
+.pointer{
+  opacity: 1;
 }
 
 .status{

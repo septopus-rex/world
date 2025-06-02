@@ -405,9 +405,15 @@ const self={
         }
         return true;
     },
+    //menu of layout, basic action
     layout:()=>{
         UI.show("menu",[
             {label:"Buy",icon:"",action:()=>{}},
+            {label:"Edit",icon:"",action:()=>{
+                const dom_id="three_demo";
+                const world=0;
+                World.edit(dom_id,world,2025,500);
+            }},
             {label:"Detail",icon:"",action:()=>{}}
         ]);
     },

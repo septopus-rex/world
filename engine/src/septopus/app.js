@@ -42,7 +42,7 @@ export default {
             const wd_index=0;
 
             setTimeout(()=>{
-                World.edit(container,wd_index,2025,500);
+                
 
                 // setTimeout(()=>{
                 //     const fs=["x","y","z","-x","-y","-z"];
@@ -51,12 +51,14 @@ export default {
                 //         World.normal(container,wd_index)
                 //     },3000);
                 // },3000);
-                const tasks=[
-                    {adjunct:"wall",action:"set",param:{z:8,index:0}}
-                ]
-                World.modify(tasks,container,wd_index,(done)=>{
 
-                });
+                // World.edit(container,wd_index,2025,500);
+                // const tasks=[
+                //     {adjunct:"wall",action:"set",param:{z:8,index:0}}
+                // ]
+                // World.modify(tasks,container,wd_index,(done)=>{
+
+                // });
                 
             },5000);
             

@@ -15,6 +15,39 @@ const config={
     prefix:"vbw_",
 }
 const replace={} 
+const doms={
+    pop:{
+        events:{
+            show:null,
+            close:null,
+        },
+    },
+    toast:{
+        events:{},
+    },
+    dialog:{
+        events:{
+            close:null,
+            show:null,
+        },
+    },
+    menu:{
+        events:{
+            show:null,
+            close:null,
+        },
+    },
+    compass:{       //compass for player
+        events:{
+            click:null,
+        },
+    },
+    status:{        //3D status 
+        events:{
+            click:null,
+        },
+    },
+}
 const self={
     struct:(id)=>{
         const el=document.getElementById(id);
@@ -36,16 +69,33 @@ const self={
             el.appendChild(doc.body.firstChild);
         }
     },
-    domMenu:(arr)=>{
+    hide:(type)=>{
+        const id=`${config.prefix}${type}`;
+        const container=document.getElementById(id);
+        container.hidden = true;
+    },
+    domMenu:(arr,name)=>{
         let ctx=`<ul class="buttons">`;
         for(let i=0;i<arr.length;i++){
             const row=arr[i];
-            ctx+=`<li>${row.label}</li>`;
+            ctx+=`<li id="${name}_${i}">${row.label}</li>`;
         }
         const parser = new DOMParser();
         const doc = parser.parseFromString(ctx, 'text/html');
         
         return doc.body.firstChild;
+    },
+    bindActions:(arr,name)=>{
+        for(let i=0;i<arr.length;i++){
+            const row=arr[i];
+            const id=`${name}_${i}`;
+            const el=document.getElementById(id);
+            el.addEventListener("click",(ev)=>{
+                ev.stopPropagation();
+                if(row.action) row.action(ev);
+                self.hide("pop");
+            });
+        }
     },
 };
 
@@ -80,28 +130,40 @@ const router={
         el.hidden = false;
     },
     menu:(arr,cfg)=>{
-        console.log(arr);
         const id=`${config.prefix}menu`;
-        const dom=self.domMenu(arr);
+        const name="menu";
+        const dom=self.domMenu(arr,name);
         const el=document.getElementById(id);
         el.appendChild(dom);
+        self.bindActions(arr,name);
     },
     pop:(arr,cfg)=>{
-        console.log(arr,cfg);
         const id=`${config.prefix}pop`;
-        const dom=self.domMenu(arr);
+        const name="pop";
+        const dom=self.domMenu(arr,name);
 
         const el=document.getElementById(id);
         el.innerHTML="";
         el.appendChild(dom);
-        //el.style.position = 'absolute';
         el.style.top=`${cfg.offset[0]}px`;
         el.style.left=`${cfg.offset[1]}px`;
         el.hidden=false;
+        self.bindActions(arr,name);
     },
     compass:(val,cfg)=>{
         const id=`${config.prefix}compass`;
         const el=document.getElementById(id);
+        el.innerHTML="";
+        const pointer=`<svg viewBox="0 0 100 100" width="100%" height="100%"  class="pointer">
+                <g transform="rotate(${val}, 50, 50)">
+                    <circle cx="50%" cy="50%" r="2.5%" fill="black" />
+                    <polygon points="50,10 45,50 55,50" fill="red" />
+                    <polygon points="50,90 45,50 55,50" fill="gray" />
+                </g>
+            </svg>`;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(pointer, 'text/html');
+        el.appendChild(doc.body.firstChild);    
     },
     status:(val,cfg)=>{
         const id=`${config.prefix}status`;
@@ -116,45 +178,11 @@ const router={
     },
 };
 
-const doms={
-    toast:{
-        events:{},
-    },
-    dialog:{
-        events:{
-            close:null,
-            show:null,
-        },
-    },
-    menu:{
-        events:{
-            show:null,
-            close:null,
-        },
-    },
-    pop:{
-        events:{
-            show:null,
-            close:null,
-        },
-    },
-    compass:{       //compass for player
-        events:{
-            click:null,
-        },
-    },
-    status:{        //3D status 
-        events:{
-            click:null,
-        },
-    },
-}
-
 const UI={
     init:async (id)=>{
         const done=self.struct(id);
         if(done!==true && done.error) return done;
-
+        UI.show("compass",0);
         UI.show("toast",`UI ready.`);
         return true;
     },
@@ -182,10 +210,9 @@ const UI={
 
     hide:(type)=>{
         if(!router[type]) return console.error(`No UI component called "${type}" to hide, please check system.`);
-        const id=`${config.prefix}${type}`;
-        const container=document.getElementById(id);
-        container.hidden = true;
+        self.hide(type);
     },
+    
     //bind UI event
     //not React way, pure JS way to deal with UI component
     bind:(type,name,event)=>{

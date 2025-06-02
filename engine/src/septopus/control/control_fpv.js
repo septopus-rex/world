@@ -86,6 +86,7 @@ const self = {
     keyboard: (dom_id) => {
         VBW.queue.init(config.queue);
         self.bind('keydown', (ev) => {
+            UI.hide("pop");         //hide popup menu when moving 
             const code = ev.which;
             if (config.keyboard[code]) VBW.queue.insert(config.queue, config.keyboard[code]);
         });
@@ -208,7 +209,10 @@ const self = {
 
         player.location.rotation[0] = player.location.rotation[0] + total.rotation[0];
         player.location.rotation[1] = player.location.rotation[1] + total.rotation[1];
-        player.location.rotation[2] = player.location.rotation[2] + total.rotation[2];
+        player.location.rotation[2] = player.location.rotation[2] + total.rotation[2]; 
+        
+        //4.update compass value
+        UI.show("compass",-180*player.location.rotation[1]/Math.PI,{});
     },
 
 
@@ -274,7 +278,6 @@ const self = {
         }
     },
     getClickPosition:(ev)=>{
-        console.log(ev);
         return [ev.clientY,ev.clientX];
     },
     screen:(dom_id)=>{
@@ -283,10 +286,16 @@ const self = {
         el.addEventListener('click', (ev)=>{
             const mouse=self.getClickPosition(ev);
             UI.show("pop",[
-                {label:"Size",icon:"",type:"button",action:()=>{}},
-                {label:"Position",icon:"",type:"button",action:()=>{}},
+                {label:"Size",icon:"",type:"button",action:(ev)=>{
+                    console.log(ev);
+                }},
+                {label:"Position",icon:"",type:"button",action:(ev)=>{
+
+                }},
                 //{label:"Detail",icon:"",type:"hr",action:()=>{}},
-                {label:"Detail",icon:"",type:"button",action:()=>{}},
+                {label:"Detail",icon:"",type:"button",action:(ev)=>{
+
+                }},
                 //{label:"Version",icon:"",type:"info",action:()=>{}}
             ],{offset:mouse});
         });

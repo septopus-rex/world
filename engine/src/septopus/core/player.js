@@ -91,12 +91,12 @@ const vbw_player={
 
     },
     autosave:()=>{
+        if(player===null){
+            player=VBW.cache.get(["env","player","location"]);
+        }
+        //UI.show("compass",player.rotation[0]*180);
+
         if(count>config.autosave.interval){
-            if(player===null){
-                player=VBW.cache.get(["env","player","location"]);
-            }
-            //console.log(`Player status saved.`);
-            //const active=VBW.cache.get(["active"]);
             const key=config.autosave.key;
             //console.log(JSON.stringify(player));
             localStorage.setItem(key,JSON.stringify(player));
