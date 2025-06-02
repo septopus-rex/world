@@ -611,7 +611,7 @@ const Framework = {
         //1.check modify task
         const tasks = self.cache.get(["task", dom_id, world]);
         if (!tasks.error && tasks.length !== 0) {
-            console.log(`Todo list:`, JSON.stringify(tasks));
+            //console.log(`Todo list:`, JSON.stringify(tasks));
             self.excute(tasks, dom_id, world, (done) => {
 
             });

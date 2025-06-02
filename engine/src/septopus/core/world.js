@@ -407,7 +407,8 @@ const self={
     },
     layout:()=>{
         UI.show("menu",[
-            {lalbe:"Buy",action:()=>{}}
+            {label:"Buy",icon:"",action:()=>{}},
+            {label:"Detail",icon:"",action:()=>{}}
         ]);
     },
 }   

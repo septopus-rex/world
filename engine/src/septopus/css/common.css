@@ -35,7 +35,7 @@
   width: 90px;
   height: 90px;
   background-color: #333;
-  position:fixed;
+  position:absolute;
   top:20px;
   left:20px;
   border-radius: 50%;
@@ -47,7 +47,7 @@
   line-height: 24px;
   font-size:12px;
   background-color: #333;
-  position: fixed;
+  position: absolute;
   top:120px;
   left:20px;
   text-align: center;
@@ -56,13 +56,53 @@
 
 .menu{
   width: 90px;
-  height: 24px;
   line-height: 24px;
   font-size:12px;
   background-color: #333;
-  position: fixed;
+  position: absolute;
   top:150px;
   left:20px;
   text-align: center;
   color: #ffffff;
+}
+
+.pop{
+  width: 90px;
+  line-height: 24px;
+  background-color: #333;
+  position: absolute;
+  top:0px;
+  left:0px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.buttons{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;   /* 垂直排列 */
+  gap: 0.1rem;              /* 按钮间距 */
+  width: 90px;             /* 可选固定宽度 */
+}
+
+.buttons li{
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+  padding: 0.2rem 0rem 0.2rem 0rem;
+  font-size: 1rem;
+  text-align: center;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.buttons li:hover{
+  background-color: #1e40af;      /* hover 效果 */
+}
+
+.buttons li:active {
+  background-color: #1d4ed8;      /* 点击效果 */
 }

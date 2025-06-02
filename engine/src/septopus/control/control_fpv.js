@@ -11,6 +11,7 @@
 
 import Movment from "../core/movement";
 import VBW from "../core/framework";
+import UI from "../io/io_ui";
 
 const reg = {
     name: "con_first",       //组件名称
@@ -93,10 +94,6 @@ const self = {
             const code = ev.which;
             if (config.keyboard[code]) VBW.queue.remove(config.queue, config.keyboard[code]);
         });
-    },
-
-    screen: (dom_id) => {
-
     },
     active: (world, dom_id) => {
         if (actions === null) actions = VBW.queue.get(config.queue);
@@ -275,6 +272,24 @@ const self = {
         if (!status.lock) {
             self.updateLocation(camera, total, moved, rotated);
         }
+    },
+    getClickPosition:(ev)=>{
+        console.log(ev);
+        return [ev.clientY,ev.clientX];
+    },
+    screen:(dom_id)=>{
+        const el = document.getElementById(dom_id);
+        if (!el) return;
+        el.addEventListener('click', (ev)=>{
+            const mouse=self.getClickPosition(ev);
+            UI.show("pop",[
+                {label:"Size",icon:"",type:"button",action:()=>{}},
+                {label:"Position",icon:"",type:"button",action:()=>{}},
+                //{label:"Detail",icon:"",type:"hr",action:()=>{}},
+                {label:"Detail",icon:"",type:"button",action:()=>{}},
+                //{label:"Version",icon:"",type:"info",action:()=>{}}
+            ],{offset:mouse});
+        });
     },
 }
 
