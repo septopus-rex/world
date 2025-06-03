@@ -214,9 +214,9 @@ const self = {
     initActive: () => {
         cache.active = {
             world: 0,           // default world
-            block: [0, 0],      // default start block
             containers: {},     // dom_id -->  raw data and structed data here
             current: "",        // current active render
+            mode:1,             // [1.normal; 2.edit; 3.game; ]
         }
         return true;
     },
@@ -274,13 +274,16 @@ const self = {
     },
 
     structRenderData: (x, y, world, dom_id) => {
+        //1.get STD map from cache
         const key = `${x}_${y}`;
         const std_chain = ["block", dom_id, world, key, "std"];
         const map = self.cache.get(std_chain);
 
         const rdata = {};
-        const preload = { module: [], texture: [] };
+        const stops=[];
+        const preload = {module: [],texture: []};
 
+        //2.filter out special components
         const va = self.getElevation(x, y, world, dom_id);
         for (let name in map) {
             const data = Framework[name].transform.std_3d(map[name], va);
@@ -288,12 +291,27 @@ const self = {
                 const row = data[i];
                 if (row.material && row.material.texture) preload.texture.push(row.material.texture);
                 if (row.module) preload.module.push(row.module);
+                if (row.stop){
+                    const obj=Toolbox.clone(row.params);
+                    obj.orgin={
+                        adjunct:name,
+                        index:i,
+                        type:row.type,
+                    }
+                    stops.push(obj);
+                }
             }
             rdata[name] = data;
         }
-
+        //3.save stop data;
+        //3.1.set THREE data;
         const render_chain = ["block", dom_id, world, key, "three"];
         self.cache.set(render_chain, rdata);
+
+        //3.2.set STOP data
+        const stop_chain = ["block", dom_id, world, key, "stop"];
+        self.cache.set(stop_chain, stops);
+
         return preload;
     },
     structEntire: (x, y, ext, world, dom_id, ck, cfg) => {

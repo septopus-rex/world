@@ -9,23 +9,24 @@
  */
 
 const reg={
-    name:"box",         //组件名称
-    category:'basic',       //组件分类
-    short:0x00a2,         //key的缩写，用于减少链上数据
+    name:"box",
+    category:'basic',
+    short:0x00a2,
     desc:"",
     version:"1.0.0",
 }
 
 const config={
-    default:[[1.2,1.2,1.2],[8,8,2],[0,0,0],2,[1,1],0,0,2025],
+    default:[[1.2,1.2,1.2],[8,8,2],[0,0,0],2,[1,1],0,0,1,2025],
     definition:{
         2025:[
-            ['x','y','z'],
-            ['ox','oy','oz'],
-            ['rx','ry','rz'],
-            'texture_id',
-            ['rpx','rpy'],
-            "animate",
+            ['x','y','z'],      //0.
+            ['ox','oy','oz'],   //1.
+            ['rx','ry','rz'],   //2.
+            'texture_id',       //3.
+            ['rpx','rpy'],      //4.
+            "animate",          //5.
+            "stop",             //6.
         ],
     },
     color:0xf3f5f6,
@@ -49,6 +50,9 @@ const self={
             }
         },
     },
+    attribute:{
+
+    },
     transform:{
         raw_std:(arr,cvt)=>{
             const rst=[]
@@ -63,7 +67,7 @@ const self={
                         repeat:rpt,
                         color:config.color,
                     },
-                    stop:d[6],
+                    stop:!d[6]?false:true,
                 }
                 
                 if(d[5]!==undefined && config.animate[d[5]]!==undefined){
@@ -89,6 +93,7 @@ const self={
                     },
                     material:row.material,
                     animate:row.animate,
+                    stop:row.stop,
                 }
                 arr.push(single);
             }
@@ -119,6 +124,7 @@ const self={
 const basic_box={
     hooks:self.hooks,
     transform:self.transform,
+    attribute:self.attribute,
 }
 
 export default basic_box;

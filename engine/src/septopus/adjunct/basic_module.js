@@ -18,14 +18,15 @@ const reg={
 }
 
 const config={
-    default:[[3,4,3],[8,12,0],[0,0,0],27,0,2025],
+    default:[[3,4,3],[8,12,0],[0,0,0],27,0,1,2025],
     definition:{
         2025:[
-            ['x','y','z'],
-            ['ox','oy','oz'],
-            ['rx','ry','rz'],
-            'module_id',
-            "animate",
+            ['x','y','z'],      //0.
+            ['ox','oy','oz'],   //1.
+            ['rx','ry','rz'],   //2.
+            'module_id',        //3.
+            "animate",          //4.
+            "stop",             //5.
         ],
     },
     color:0x3456f3,     
@@ -57,6 +58,7 @@ const self={
                     material:{
                         color:config.color,
                     },
+                    stop:!d[5]?false:true,
                 }
                 
                 if(d[5]!==undefined && config.animate[d[5]]!==undefined){
@@ -84,6 +86,7 @@ const self={
                     material:row.material,                      //用于处理没有加载时候的显示color的材质
                     animate:row.animate,
                     module:row.module,
+                    stop:row.stop,
                 }
                 arr.push(single);
             }

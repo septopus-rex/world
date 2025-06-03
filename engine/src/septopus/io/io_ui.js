@@ -156,9 +156,10 @@ const router={
         el.innerHTML="";
         const pointer=`<svg viewBox="0 0 100 100" width="100%" height="100%"  class="pointer">
                 <g transform="rotate(${val}, 50, 50)">
-                    <circle cx="50%" cy="50%" r="2.5%" fill="black" />
+                    
                     <polygon points="50,10 45,50 55,50" fill="red" />
-                    <polygon points="50,90 45,50 55,50" fill="gray" />
+                    <!-- <polygon points="50,90 45,50 55,50" fill="gray" /> -->
+                    <circle cx="50%" cy="50%" r="2%" fill="black" />
                 </g>
             </svg>`;
         const parser = new DOMParser();

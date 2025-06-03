@@ -18,17 +18,18 @@ const reg = {
 }
 
 const config = {
-    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, [], 2025],
+    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, 1,[], 2025],
     hole: [0.5, 0.6, 0.9, 0.6, 2025],        //[ offset,width,height,windowsill,version ]
     definition: {
         2025: [
-            ['x', 'y', 'z'],
-            ['ox', 'oy', 'oz'],
-            ['rx', 'ry', 'rz'],
-            'texture_id', 
-            ['rpx', 'rpy'],
-            'animate',
-            ["hole"],
+            ['x', 'y', 'z'],        //0.
+            ['ox', 'oy', 'oz'],     //1.
+            ['rx', 'ry', 'rz'],     //2.
+            'texture_id',           //3.
+            ['rpx', 'rpy'],         //4.
+            'animate',              //5.
+            'stop',                 //6.wether stop
+            ["hole"],               //7.hole arr
         ],
     },
     color: 0xf8f8f8,        //color for pending
@@ -149,20 +150,18 @@ const self = {
                         color: config.color,
                     },
                     animate: Array.isArray(d[5]) ? d[5] : null,
-                    //stop:d[6],
+                    stop:!d[6]?false:true,
                 }
                 rst.push(dt);
             }
             return rst;
         },
-
-        //std中间体，转换成3D需要的object
         std_3d: (stds, va) => {
             //console.log(`Wall: ${JSON.stringify(stds)}`);
             const arr = [];
             for (let i = 0; i < stds.length; i++) {
                 const row = stds[i];
-                const three = {
+                const obj = {
                     type: "box",
                     index: i,
                     params: {
@@ -171,15 +170,18 @@ const self = {
                         rotation: [row.rx, row.ry, row.rz],
                     },
                     material: row.material,
+                    stop:!row.stop?false:true,
+                    // stop:{
+                    //     exsist:!row.stop?false:true,
+                    //     type:1,
+                    // }
                 }
-                if (row.animate !== null) three.animate = row.animate;
-                arr.push(three);
+                if (row.animate !== null) obj.animate = row.animate;
+                arr.push(obj);
             }
             return arr;
         },
 
-
-        //3D高亮时候，需要的3D的object
         std_active: (std, va) => {
             const ds = { stop: [], helper: [] };
             return ds;
@@ -192,15 +194,9 @@ const self = {
         std_box: (obj) => {
 
         },
-
-        //std中间体，转换成2D需要的数据
         std_2d: (arr, face) => {
 
         },
-
-
-
-        //2D高亮时候，需要的2D的object
         active_2d: () => {
 
         },
