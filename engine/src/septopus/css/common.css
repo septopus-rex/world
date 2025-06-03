@@ -1,4 +1,4 @@
-.dialog{
+/* .dialog{
   background-color: #333333;
   position: absolute;
   color: white;
@@ -10,9 +10,9 @@
   display: none;
   border-radius: 1rem;
   padding: 0.5rem;
-}
+} */
 
-.form{
+/* .form{
   background-color: #444444;
   color: white;
   width: 80%;
@@ -24,9 +24,9 @@
   z-index: 6666;
   display: none;
   border-radius: 1rem;
-}
+} */
 
-.form input{
+/* .form input{
   width: 80%;
   height: 2rem;
   padding: 0.2rem 1rem 0.2rem 1rem;
@@ -44,9 +44,9 @@
 
 .form button:hover{
   background-color: #1e40af;
-}
+} */
 
-.row{
+/* .row{
   width: 100%;
   padding: 0.2rem 1rem 0.2rem 1rem;
 }
@@ -58,9 +58,9 @@
   height: 3rem;
   bottom: 1rem;
   left: 0rem;
-}
+} */
 
-.left{
+/* .left{
   float: left;
 }
 
@@ -79,7 +79,7 @@
 .close:hover{
   color: white;
   cursor: pointer;
-}
+}2. */
 
 .toast {
   position: absolute;

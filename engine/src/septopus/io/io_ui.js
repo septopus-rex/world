@@ -3,6 +3,7 @@
  *
  * @fileoverview
  *  1. basic UI components, can be rewritten 
+ *  2. form to set parameters of objects.
  *
  * @author Fuu
  * @date 2025-04-23
@@ -15,7 +16,11 @@ const config={
     prefix:"vbw_",
     dialog:{
         close:"dialog_close",
-        form:"form_close",
+    },
+    form:{
+        close:"form_close",
+        save:"form_save",
+        recover:"form_recover",
     }
 }
 const replace={} 
@@ -29,12 +34,12 @@ const doms={
     toast:{
         events:{},
     },
-    dialog:{
-        events:{
-            close:null,
-            show:null,
-        },
-    },
+    // dialog:{
+    //     events:{
+    //         close:null,
+    //         show:null,
+    //     },
+    // },
     menu:{
         events:{
             show:null,
@@ -51,12 +56,12 @@ const doms={
             click:null,
         },
     },
-    form:{
-        events:{
-            save:null,
-            close:null,
-        },
-    },
+    // form:{
+    //     events:{
+    //         save:null,
+    //         close:null,
+    //     },
+    // },
 }
 
 const inputs={
@@ -148,6 +153,25 @@ const self={
         ctx+='</div>';
         return ctx;
     },
+    setErrorInfo:(key,info,type)=>{
+        const id=`${key}_info`;
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`Invalid dom to show error message.`);
+        el.innerHTML=info;
+
+        switch (type) {
+            case "error":
+                    el.style.color="#FF0000";
+                break;
+
+            case "info":
+                
+                break;
+        
+            default:
+                break;
+        }
+    },
 }; 
 
 const router={
@@ -160,7 +184,7 @@ const router={
         el.innerHTML="";
         const data=`
             <div class="title">${cfg.title}</div>
-            <svg class="close" id="${config.dialog.form}" viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <svg class="close" id="${config.form.close}" viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                 <line x1="5" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
                 <line x1="19" y1="5" x2="5" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
             </svg>
@@ -169,8 +193,8 @@ const router={
                 ${ctx}
             </div>
             <div class="foot">
-                <button class="left">Recover</button>
-                <button class="right">Save</button>
+                <button class="left" id="${config.form.recover}">Recover</button>
+                <button class="right" id="${config.form.save}">Save</button>
             </div>`;
         const parser = new DOMParser();
         const doc = parser.parseFromString(data, 'text/html');
@@ -179,14 +203,46 @@ const router={
         el.style.display="block";
         el.hidden=false;
 
-        //2. basic binding
-        const close=document.getElementById(config.dialog.form);
+        const result={};
+
+        //2. function binding
+        //2.1 basic function
+        const close=document.getElementById(config.form.close);
         close.addEventListener("click",(ev)=>{
             el.style.display="none";
             el.hidden=true;
         });
 
-        //3. binding input check
+        //2.2 buttons function
+        const save=document.getElementById(config.form.save);
+        save.addEventListener("click",(ev)=>{
+            console.log(`save button`);
+            if(!cfg || !cfg.events || !cfg.events.save) return console.error("Saving event function missed.");
+            cfg.events.save({hello:"world"});
+        });
+
+        const recover=document.getElementById(config.form.recover);
+        recover.addEventListener("click",(ev)=>{
+            console.log(`recover button`);
+            //el.style.display="none";
+            //el.hidden=true;
+        });
+
+        //2.3 binding input check
+        for(let i=0;i<arr.length;i++){
+            const row=arr[i];
+            const single=document.getElementById(row.key);
+            if(single===null) continue;
+            single.addEventListener("change",(ev)=>{
+                ((key)=>{
+                    //console.log(key);
+                    const res=row.valid(ev.target.value);
+                    if(res!==true){
+                        self.setErrorInfo(key,res,"error");
+                    }
+                })(row.key);
+            });
+        }
     },
     dialog:(ctx,cfg)=>{
         const id=`${config.prefix}dialog`;

@@ -436,7 +436,11 @@ const self={
                         value:"",
                         desc:"Description of this Septopus Worlod",
                         placeholder:"200 max",
-                        valid:(val)=>{}
+                        valid:(val)=>{
+                            if(!val) return "Invalid description.";
+                            if(val.length>200) return "200 bytes max";
+                            return true;
+                        }
                     },
                     {
                         type:"integer",
@@ -444,7 +448,11 @@ const self={
                         value:1,
                         desc:"World index on chain",
                         placeholder:"Index of world",
-                        valid:(val)=>{}
+                        valid:(val)=>{
+                            console.log(val);
+                            if(val!==2) return "Invalid World Index, please check."
+                            return true;
+                        }
                     },
                 ];
                 const cfg={
@@ -452,7 +460,7 @@ const self={
                     buttons:{save:true,recover:false},
                     events:{
                         save:(obj)=>{
-
+                            console.log(obj);
                         },
                         close:()=>{
 
