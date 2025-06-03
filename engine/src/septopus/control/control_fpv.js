@@ -285,19 +285,22 @@ const self = {
         if (!el) return;
         el.addEventListener('click', (ev)=>{
             const mouse=self.getClickPosition(ev);
-            UI.show("pop",[
-                {label:"Size",icon:"",type:"button",action:(ev)=>{
-                    console.log(ev);
-                }},
-                {label:"Position",icon:"",type:"button",action:(ev)=>{
+            const mode=VBW.cache.get(["active","mode"]);
+            if(mode===2){
+                UI.show("pop",[
+                    {label:"Size",icon:"",type:"button",action:(ev)=>{
+                        console.log(ev);
+                    }},
+                    {label:"Position",icon:"",type:"button",action:(ev)=>{
 
-                }},
-                //{label:"Detail",icon:"",type:"hr",action:()=>{}},
-                {label:"Detail",icon:"",type:"button",action:(ev)=>{
+                    }},
+                    //{label:"Detail",icon:"",type:"hr",action:()=>{}},
+                    {label:"Detail",icon:"",type:"button",action:(ev)=>{
 
-                }},
-                //{label:"Version",icon:"",type:"info",action:()=>{}}
-            ],{offset:mouse});
+                    }},
+                    //{label:"Version",icon:"",type:"info",action:()=>{}}
+                ],{offset:mouse});
+            }
         });
     },
 }

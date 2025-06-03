@@ -72,6 +72,10 @@ const self={
             }
             return arr;
         },
+        std_active:(stds,va,index)=>{
+            const ds={stop:[],helper:[]};
+            return ds;
+        },
     },
 }
 

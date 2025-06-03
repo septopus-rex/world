@@ -15,6 +15,7 @@ import Camera from "./basic/camera";
 import Render from "./basic/renderer";
 import Mesh from "./basic/mesh";
 import Group from "./basic/group";
+import Sky from "./basic/sky";
 
 import light_direct from "./light/light_direct";
 import light_point from "./light/light_point";
@@ -40,7 +41,8 @@ const router={
         camera:Camera,
         scene:Scene,
         mesh:Mesh,
-        group:Group,             //成组的功能
+        group:Group,
+        sky:Sky,             
     },
     light:{
         spot:light_spot,
@@ -49,8 +51,8 @@ const router={
         point:light_point
     },
     texture:{
-        basic:texture_basic,    //贴图的材质
-        cube:null,              //做全景用的
+        basic:texture_basic, 
+        cube:null,
     },
     material:{
         meshbasic:material_meshbasic,

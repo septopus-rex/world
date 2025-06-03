@@ -292,7 +292,7 @@ const self = {
                 if (row.material && row.material.texture) preload.texture.push(row.material.texture);
                 if (row.module) preload.module.push(row.module);
                 if (row.stop){
-                    const obj=Toolbox.clone(row.params);
+                    const obj=self.clone(row.params);
                     obj.orgin={
                         adjunct:name,
                         index:i,
@@ -349,7 +349,7 @@ const self = {
         prefetch.texture = Toolbox.unique(prefetch.texture);
         return ck && ck(prefetch);
     },
-        toEdit:(x,y,world,dom_id)=>{
+    toEdit:(x,y,world,dom_id)=>{
         const preload={module:[],texture:[]};
 
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std"];
@@ -567,7 +567,7 @@ const Framework = {
 
     /** 
      * set range mode
-     * @param {string}   mode   - block mode, ["edit","normal"]
+     * @param {string}   mode   - block mode, ["edit","normal","game"]
      * @param {object}   target - {x:2051,y:1247,world:0,container:"DOM_ID"}
      * @param {object}   cfg    - more setting for rebuild
      * @param {function} ck     - callback function
@@ -577,8 +577,22 @@ const Framework = {
     mode:(mode,target,ck,cfg)=>{
         //console.log(mode,target,ck,cfg);
         const {x,y,world,container}=target;
+        //console.log(cache.active);
+        console.log(mode);
         switch (mode) {
+            case "normal":
+                cache.active.mode=1;
+                if(cache.block[container] &&
+                    cache.block[container][world] && 
+                    cache.block[container][world].edit
+                ){
+                    delete cache.block[container][world].edit;
+                }
+                ck && ck();
+                break;
+
             case "edit":
+                cache.active.mode=2;
                 const pre=self.toEdit(x,y,world,container);
                 if(cfg && cfg.selected){
                     console.log(cfg);
@@ -588,9 +602,9 @@ const Framework = {
                 
                 break;
 
-            case "normal":
-                //const pre=self.toEdit(x,y,world,container);
-                //ck && ck(pre);
+            case "game":
+                cache.active.mode=3;
+
                 break;
             default:
                 break;

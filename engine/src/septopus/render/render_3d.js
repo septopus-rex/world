@@ -1,7 +1,7 @@
 /**
  * 3D Render for Septopus World
  *
- * @fileoverview Manages:
+ * @fileoverview
  *  1. parse resource such as texture and 3D module from other application.
  *  2. create 3D objects from `three` standard json.
  *  3. manage 3D objects in scene. 
@@ -205,18 +205,36 @@ const self={
 
         return arr;
     },
-    loadBasic:(scene,dom_id)=>{
-        const sun=ThreeObject.get("light","sun",{colorSky:0xfffff,colorGround:0xeeeee,intensity:1});
+    setSun:(scene,dom_id)=>{
         const player=VBW.cache.get(["env","player"]);
         const [x,y]=player.location.block;
         const side=self.getSide();
         const cvt=self.getConvert();
+
+        const sun=ThreeObject.get("light","sun",{colorSky:0xfffff,colorGround:0xeeeee,intensity:1});
         sun.position.set(
             x*side[0],
             y*side[1],
             20*cvt,
         )
         scene.add(sun);
+    },
+    setSky:(scene,dom_id)=>{
+        const player=VBW.cache.get(["env","player"]);
+        const [x,y]=player.location.block;
+        const side=self.getSide();
+        const cvt=self.getConvert();
+        const sky=ThreeObject.get("basic","sky",{scale:side[0]*20*cvt});
+        sky.position.set(
+            x*side[0],
+            y*side[1],
+            0
+        );
+        scene.add(sky);
+    },
+    loadBasic:(scene,dom_id)=>{
+        self.setSun(scene,dom_id);
+        self.setSky(scene,dom_id);
     },
 
     //FIXME, player can go out of editing block, this can effect the active block
@@ -308,18 +326,20 @@ const self={
         let mds=[],txs=[],objs=[],ans=[];
         const data_chain=["block",dom_id,world,`${x}_${y}`,"three"];
         const tdata=VBW.cache.get(data_chain);
-
+        //1.get data of target block[x,y]
         const data=self.singleBlock(x,y,world,tdata);
         if(data.texture.length!==0) txs=txs.concat(data.texture);
         if(data.module.length!==0) mds=mds.concat(data.module);
         objs=objs.concat(data.object);
         ans=ans.concat(data.animate);
+        //2.parse texture and module for 3D renders
         self.parse(txs,mds,world,dom_id,(failed)=>{
-            //3.创建所有的ThreeObject，并加入到scene
+
+            //3.create ThreeObject, then add to scene
             const exsist=VBW.cache.exsist;
             for(let i=0;i<objs.length;i++){
 
-                //3.1.创建对应的three object,并设置three object的基础参数，符合[x,y]的数据
+                //3.1.create three object via three.js lib
                 const single=objs[i];
                 const side=self.getSide();
                 const ms=self.getThree(single,world,dom_id,side);
@@ -415,9 +435,9 @@ const self={
 
 export default {
     hooks:self.hooks,
-    //构建需要的组件
-    construct:(width,height,id)=>{
-        const chain=["active","containers",id];
+
+    construct:(width,height,dom_id)=>{
+        const chain=["active","containers",dom_id];
         if(!VBW.cache.exsist(chain)){
             const scene=ThreeObject.get("basic","scene",{});
             const render=ThreeObject.get("basic","render",{width:width,height:height});
@@ -429,33 +449,37 @@ export default {
         return dt.render.domElement;
     },
 
-    /**  renderer的渲染方法
+    /**  renderer entry
      * @param	{string}    dom_id		//container dom id
      * @param   {number[]}  block       //block coordinaration,[ x,y,world ]
      * */
     show:(dom_id,block)=>{
         const chain=["active","containers",dom_id];
         if(!VBW.cache.exsist(chain))return UI.show(`Construct the renderer before rendering.`,{type:"error"});
-        //if(!map[id]) 
+        
         const data=VBW.cache.get(chain);
         const {render,scene,camera} = data;
 
         const info=render.info.render;
-        const first=info.frame===0?true:false;  //检查渲染器的帧数，确认第一次运行
+        const first=info.frame===0?true:false;  //check frames to confirm wether first running.
 
+        //first running functions
         if(first){
-            //1.加载不同的3D内容
-            //1.1加载基础的3D组件(灯光、天空、气候等)
-            self.loadBasic(scene,dom_id);
+            //1.load basic component
+            //1.1. set sun light
+            self.setSun(scene,dom_id);
 
-            //1.2.加载需要的3D组件（按需处理)
+            //1.1. set cube sky
+            self.setSky(scene,dom_id);
+
+            //1.3.load range of blocks
             self.loadBlocks(scene,dom_id);
 
-            //2.渲染放在了loop里进行,动画的支持也在loop里
+            //2.set the loop to support animation
             render.setAnimationLoop(VBW.loop);
         }
 
-        //1.清除指定的block数据，用于刷新场景
+        //update target block and fresh scene
         if(block!==undefined){
             const [x,y,world]=block;
             self.clean(scene,x,y,world,dom_id);

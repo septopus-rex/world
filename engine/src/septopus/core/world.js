@@ -407,14 +407,20 @@ const self={
     },
     //menu of layout, basic action
     layout:()=>{
+        const dom_id="three_demo";
+        const world=0;
         UI.show("menu",[
             {label:"Buy",icon:"",action:()=>{}},
             {label:"Edit",icon:"",action:()=>{
-                const dom_id="three_demo";
-                const world=0;
-                World.edit(dom_id,world,2025,500);
+
+                World.edit(dom_id,world,2023,504);
             }},
-            {label:"Detail",icon:"",action:()=>{}}
+            {label:"Normal",icon:"",action:()=>{
+                World.normal(dom_id,world)
+            }},
+            {label:"Detail",icon:"",action:()=>{
+
+            }}
         ]);
     },
 }   
@@ -620,9 +626,13 @@ const World={
         const chain=["block",dom_id,world];
         const cur=VBW.cache.get(chain);
         const x=cur.edit.x,y=cur.edit.y;
-        delete cur.edit;
         const target={x:x,y:y,world:world,container:dom_id}
-        VBW[config.render].show(dom_id,[x,y,world]);
+
+        const mode="normal";
+        VBW.mode(mode,target,()=>{
+            VBW[config.render].show(dom_id,[x,y,world]);
+        });
+        
         return ck && ck(true);
     },
 

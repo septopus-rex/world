@@ -12,6 +12,7 @@ import Framework from "./core/framework";
 import UI from "./io/io_ui";
 import World from "./core/world";
 import "./css/common.css";
+import Toolbox from "./lib/toolbox";
 
 const self={
     init:async (container,ck)=>{
@@ -42,8 +43,9 @@ export default {
             const wd_index=0;
 
             setTimeout(()=>{
-                
 
+                /*********** Mode Switch Demo ***********/
+                // World.edit(container,wd_index,2025,500);
                 // setTimeout(()=>{
                 //     const fs=["x","y","z","-x","-y","-z"];
                 //     World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);
@@ -52,7 +54,7 @@ export default {
                 //     },3000);
                 // },3000);
 
-                // World.edit(container,wd_index,2025,500);
+                /*********** Adjunct Modification Demo ***********/
                 // const tasks=[
                 //     {adjunct:"wall",action:"set",param:{z:8,index:0}}
                 // ]
