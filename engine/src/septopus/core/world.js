@@ -412,18 +412,54 @@ const self={
         UI.show("menu",[
             {label:"Buy",icon:"",action:()=>{}},
             {label:"Edit",icon:"",action:()=>{
-
                 World.edit(dom_id,world,2023,504);
             }},
+
             {label:"Normal",icon:"",action:()=>{
                 World.normal(dom_id,world)
             }},
+
+            //UI.dialog Sample
             {label:"Detail",icon:"",action:()=>{
                 const ctx={
                     title:"Hello",
                     content:"This a dailog to show more details.",
                 }
                 UI.show("dialog",ctx,{position:"center"});
+            }},
+            //UI.form Sample
+            {label:"World",icon:"",action:()=>{
+                const inputs=[
+                    {
+                        type:"string",
+                        key:"desc",
+                        value:"",
+                        desc:"Description of this Septopus Worlod",
+                        placeholder:"200 max",
+                        valid:(val)=>{}
+                    },
+                    {
+                        type:"integer",
+                        key:"index",
+                        value:1,
+                        desc:"World index on chain",
+                        placeholder:"Index of world",
+                        valid:(val)=>{}
+                    },
+                ];
+                const cfg={
+                    title:"World Setting",
+                    buttons:{save:true,recover:false},
+                    events:{
+                        save:(obj)=>{
+
+                        },
+                        close:()=>{
+
+                        },
+                    }
+                }
+                UI.show("form",inputs,cfg);
             }}
         ]);
     },

@@ -15,6 +15,7 @@ const config={
     prefix:"vbw_",
     dialog:{
         close:"dialog_close",
+        form:"form_close",
     }
 }
 const replace={} 
@@ -50,7 +51,35 @@ const doms={
             click:null,
         },
     },
+    form:{
+        events:{
+            save:null,
+            close:null,
+        },
+    },
 }
+
+const inputs={
+    number:(val,key,placeholder)=>{
+        return `<input type="number" value="${val}" id="${key}" placeholder="${placeholder}">`;
+    },
+    integer:(val,key,placeholder)=>{
+        return `<input type="number" value="${val}" id="${key}" placeholder="${placeholder}">`;
+    },
+    string:(val,key,placeholder)=>{
+        return `<input type="text" value="${val}" id="${key}" placeholder="${placeholder}">`;
+    },
+    boolean:(val,key,placeholder)=>{
+
+    },
+    select:(val,key,placeholder)=>{
+
+    },
+    text:(val,key,placeholder)=>{
+        return `<input type="text" value="${val}" id="${key}" placeholder="${placeholder}">`;
+    },
+};
+
 const self={
     struct:(id)=>{
         const el=document.getElementById(id);
@@ -100,26 +129,65 @@ const self={
             });
         }
     },
-};
-
-const inputs={
-    number:(val,cfg)=>{
-
+    getForm:(arr)=>{
+        let ctx='<div>';
+        for(let i=0;i<arr.length;i++){
+            const row=arr[i];
+            if(!row.type || !inputs[row.type]){
+                console.error(`Error input: ${JSON.stringify(row)}`)
+                continue;
+            }
+            const input=inputs[row.type](row.value,row.key,row.placeholder);
+            ctx+=`<div class="row">
+                    <small id="${row.key}_info">${row.desc}</small>
+                </div>
+                <div class="row">
+                    ${input}
+                </div>`;
+        }
+        ctx+='</div>';
+        return ctx;
     },
-    string:(val,cfg)=>{
+}; 
 
-    },
-    boolean:(val,cfg)=>{
-
-    },
-    select:(val,cfg)=>{
-
-    },
-    text:(val,cfg)=>{
-
-    },
-};           
 const router={
+    form:(arr,cfg)=>{
+        //1. create DOM
+        const ctx=self.getForm(arr);
+        const id=`${config.prefix}form`;
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "form"`);
+        el.innerHTML="";
+        const data=`
+            <div class="title">${cfg.title}</div>
+            <svg class="close" id="${config.dialog.form}" viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <line x1="5" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <line x1="19" y1="5" x2="5" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <hr />
+            <div class="body">
+                ${ctx}
+            </div>
+            <div class="foot">
+                <button class="left">Recover</button>
+                <button class="right">Save</button>
+            </div>`;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, 'text/html');
+
+        el.appendChild(doc.body); 
+        el.style.display="block";
+        el.hidden=false;
+
+        //2. basic binding
+        const close=document.getElementById(config.dialog.form);
+        close.addEventListener("click",(ev)=>{
+            el.style.display="none";
+            el.hidden=true;
+        });
+
+        //3. binding input check
+    },
     dialog:(ctx,cfg)=>{
         const id=`${config.prefix}dialog`;
 
@@ -212,15 +280,7 @@ const router={
 
         el.textContent = val;
     },
-    form:(arr,cfg)=>{
-        const id=`${config.prefix}form`;
-        
-        const el=document.getElementById(id);
-        if(el===null) return console.error(`No container to show "form"`);
-    },
-    // load:(ctx,cfg)=>{
-
-    // },
+    
 };
 
 const UI={
