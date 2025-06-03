@@ -11,6 +11,10 @@
 import * as THREE from "three";
 import { Sky } from 'three/addons/objects/Sky.js';
 
+const config={
+    scale:10000,
+}
+
 const Space={
     create:(cfg)=>{
         const type=!cfg.type?"basic":cfg.type;
@@ -19,7 +23,7 @@ const Space={
         switch (type) {
             case "basic":
                 sky = new Sky();
-                sky.scale.setScalar(!cfg.scale?450000:cfg.scale);
+                sky.scale.setScalar(!cfg.scale?config.scale:cfg.scale);
 
                 const skyUniforms = sky.material.uniforms;
                 skyUniforms['turbidity'].value = 10;

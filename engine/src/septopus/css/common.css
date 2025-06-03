@@ -1,5 +1,32 @@
+.dialog{
+  background-color: #333;
+  position: absolute;
+  color: white;
+  width: 80%;
+  min-height: 20rem;
+  left:10%;
+  top:40px;
+  z-index: 8888;
+  display: none;
+  border-radius: 1rem;
+  padding: 0.5rem;
+}
+
+.close{
+  width: 1.5rem;
+  height: 1.5rem;
+  position: absolute;
+  right: 1rem;
+  top:1rem;
+  color: gray;
+}
+.close:hover{
+  color: white;
+  cursor: pointer;
+}
+
 .toast {
-  position: fixed;
+  position: absolute;
   top: 20px;
   right: 20px;
   background-color: #333;

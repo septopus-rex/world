@@ -13,6 +13,9 @@ import Toolbox from "../lib/toolbox";
 //UI replacement. Rewrite the output UI here.
 const config={
     prefix:"vbw_",
+    dialog:{
+        close:"dialog_close",
+    }
 }
 const replace={} 
 const doms={
@@ -118,14 +121,40 @@ const inputs={
 };           
 const router={
     dialog:(ctx,cfg)=>{
-        console.log(`[UI.dialog]:`+ctx);
+        const id=`${config.prefix}dialog`;
+
+        const el=document.getElementById(id);
+        el.innerHTML="";
+        const data=`<div class="title">${ctx.title}</div>
+            <svg class="close" id="${config.dialog.close}" viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <line x1="5" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                <line x1="19" y1="5" x2="5" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <hr />
+            <div class="body">${ctx.content}</div>`;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, 'text/html');
+
+        el.appendChild(doc.body); 
+        el.style.display="block";
+        el.hidden=false;
+
+        const close=document.getElementById(config.dialog.close);
+        close.addEventListener("click",(ev)=>{
+            el.style.display="none";
+            el.hidden=true;
+        });
+
+        if(cfg.auto) cfg.auto();
     },
     toast:(ctx,cfg)=>{
         const msg=`[UI.toast]:`+ctx;
         if(cfg && cfg.type==="error") return console.error(msg);
-        //console.log(msg);
         const id=`${config.prefix}toast`;
+
         const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "toast"`);
+
         el.textContent = ctx;
         el.hidden = false;
     },
@@ -133,7 +162,10 @@ const router={
         const id=`${config.prefix}menu`;
         const name="menu";
         const dom=self.domMenu(arr,name);
+
         const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "menu"`);
+
         el.appendChild(dom);
         self.bindActions(arr,name);
     },
@@ -143,6 +175,8 @@ const router={
         const dom=self.domMenu(arr,name);
 
         const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "pop"`);
+
         el.innerHTML="";
         el.appendChild(dom);
         el.style.top=`${cfg.offset[0]}px`;
@@ -152,8 +186,12 @@ const router={
     },
     compass:(val,cfg)=>{
         const id=`${config.prefix}compass`;
+
         const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "compass"`);
+
         el.innerHTML="";
+        //SVG pointer
         const pointer=`<svg viewBox="0 0 100 100" width="100%" height="100%"  class="pointer">
                 <g transform="rotate(${val}, 50, 50)">
                     
@@ -168,15 +206,21 @@ const router={
     },
     status:(val,cfg)=>{
         const id=`${config.prefix}status`;
+
         const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "status"`);
+
         el.textContent = val;
     },
     form:(arr,cfg)=>{
-
+        const id=`${config.prefix}form`;
+        
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "form"`);
     },
-    load:(ctx,cfg)=>{
+    // load:(ctx,cfg)=>{
 
-    },
+    // },
 };
 
 const UI={

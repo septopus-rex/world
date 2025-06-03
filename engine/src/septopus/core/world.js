@@ -419,7 +419,11 @@ const self={
                 World.normal(dom_id,world)
             }},
             {label:"Detail",icon:"",action:()=>{
-
+                const ctx={
+                    title:"Hello",
+                    content:"This a dailog to show more details.",
+                }
+                UI.show("dialog",ctx,{position:"center"});
             }}
         ]);
     },
@@ -538,7 +542,7 @@ const World={
 
         //check wether exsist first.
         VBW.datasource.view(x,y,ext,world,(map)=>{
-            console.log(map);
+            //console.log(map);
             if(map.loaded!==undefined){
                 if(!map.loaded){
                     delete map.loaded;

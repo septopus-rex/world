@@ -220,11 +220,10 @@ const self = {
         }
         return true;
     },
-    
 
     //TODO, here to connect time and weather. 
     structSky: (world, dom_id) => {
-        console.log(`Here to struct sky by weather and time`);
+        //console.log(`Here to struct sky by weather and time`);
         const sky_chain = ["block", dom_id, world, "sky"];
         const sky = { desc: "Already run Framework self.structSky, but no real three object yet" };
         self.cache.set(sky_chain, sky);
@@ -575,10 +574,7 @@ const Framework = {
      * @return void
      */
     mode:(mode,target,ck,cfg)=>{
-        //console.log(mode,target,ck,cfg);
         const {x,y,world,container}=target;
-        //console.log(cache.active);
-        console.log(mode);
         switch (mode) {
             case "normal":
                 cache.active.mode=1;
@@ -609,7 +605,6 @@ const Framework = {
             default:
                 break;
         }
-
     },
 
 
