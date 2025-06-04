@@ -35,6 +35,9 @@ const Space={
                 const phi = THREE.MathUtils.degToRad(90-0);     //sun rising setting 
                 const theta = THREE.MathUtils.degToRad(90);     //sun rising setting
                 sun.setFromSphericalCoords(1, phi, theta);
+
+                //console.log(phi,theta,sun);
+
                 sky.material.uniforms['sunPosition'].value.copy(sun);
                 break;
         

@@ -228,15 +228,45 @@ const self={
     setSky:(scene,dom_id)=>{
         const player=VBW.cache.get(["env","player"]);
         const [x,y]=player.location.block;
+        const world=player.location.world;
         const side=self.getSide();
         const cvt=self.getConvert();
+
+        //1.get sky raw data.
         const sky=ThreeObject.get("basic","sky",{scale:side[0]*20*cvt});
         sky.position.set(
             x*side[0],
             y*side[1],
             0
         );
+
+        const chain=["block",dom_id,world,"sky"];
+        VBW.cache.set(chain,sky);
+
+        //3.add sky to scene
         scene.add(sky);
+
+        //4.add frame loop to update sky
+        const frame_chain = ["block", dom_id, world, "loop"];
+        const queue = VBW.cache.get(frame_chain);
+        queue.push({ name: "sky_checker", fun:self.updateSky});
+    },
+
+    updateSky:()=>{
+        const dom_id=VBW.cache.get(["active","current"]);
+        const player=VBW.cache.get(["env","player"]);
+        const world=player.location.world;
+        const sky=VBW.cache.get(["block",dom_id,world,"sky"]);
+
+        if(sky.counter===undefined) sky.counter=0;
+        if(sky.counter>200){
+            const deg=Math.PI/180;
+            const now=Toolbox.rand(0,180);
+            sky.material.uniforms['sunPosition'].value.setFromSphericalCoords(1,(90-now)*deg,90*0.5);
+            sky.counter=0;
+        }else{
+            sky.counter++;
+        }
     },
 
     //FIXME, player can go out of editing block, this can effect the active block
