@@ -25,21 +25,21 @@ const config={
 }
 const replace={} 
 const doms={
+    toast:{
+        events:{},
+    },
     pop:{
         events:{
             show:null,
             close:null,
         },
     },
-    toast:{
-        events:{},
+    dialog:{
+        events:{
+            close:null,
+            show:null,
+        },
     },
-    // dialog:{
-    //     events:{
-    //         close:null,
-    //         show:null,
-    //     },
-    // },
     menu:{
         events:{
             show:null,
@@ -56,12 +56,12 @@ const doms={
             click:null,
         },
     },
-    // form:{
-    //     events:{
-    //         save:null,
-    //         close:null,
-    //     },
-    // },
+    form:{
+        events:{
+            save:null,
+            close:null,
+        },
+    },
 }
 
 const inputs={

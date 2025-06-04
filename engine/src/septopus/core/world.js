@@ -413,7 +413,9 @@ const self={
         UI.show("menu",[
             {label:"Buy",icon:"",action:()=>{}},
             {label:"Edit",icon:"",action:()=>{
-                World.edit(dom_id,world,2023,504);
+                const bk=VBW.cache.get(["env","player","location","block"]);
+                if(bk.error) return UI.show("toast",bk.error,{type:"error"});
+                World.edit(dom_id,world,bk[0],bk[1]);
             }},
 
             {label:"Normal",icon:"",action:()=>{
@@ -653,6 +655,10 @@ const World={
         const mode="edit";
         console.log(`Switch to edit mode.`);
         VBW.mode(mode,target,(pre)=>{
+            if(pre.error){
+                UI.show("toast",pre.error,{type:"error"});
+                return ck && ck(false);
+            }
             self.prefetch(pre.texture,pre.module,(failed)=>{
                 //VBW.prepair(target,(pre)=>{
                     VBW[config.render].show(dom_id,[x,y,world]);
@@ -710,6 +716,11 @@ const World={
         const target={x:x,y:y,world:world,container:dom_id}
         const cfg={selected:true};
         VBW.mode("edit",target,(pre)=>{
+            if(pre.error){
+                UI.show("toast",pre.error,{type:"error"});
+
+                return ck && ck(false);
+            }
             VBW[config.render].show(dom_id,[x,y,world]);
             return ck && ck(true);
         },cfg);

@@ -32,7 +32,7 @@ const Space={
                 skyUniforms['mieDirectionalG'].value = 0.8;
                 
                 const sun = new THREE.Vector3();
-                const phi = THREE.MathUtils.degToRad(90-180);     //sun rising setting 
+                const phi = THREE.MathUtils.degToRad(90-0);     //sun rising setting 
                 const theta = THREE.MathUtils.degToRad(90);     //sun rising setting
                 sun.setFromSphericalCoords(1, phi, theta);
                 sky.material.uniforms['sunPosition'].value.copy(sun);

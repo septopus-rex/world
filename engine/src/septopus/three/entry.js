@@ -123,10 +123,10 @@ const ThreeObject = {
         const mesh=ThreeObject.get("basic","mesh",{geometry:gg,material:mm});
 
         //mesh.position.set(...position);
-        
+        //mesh.rotation.set(...rotation); 
 
         mesh.position.set(...self.transform(position));
-        mesh.rotation.set(...rotation);
+        mesh.rotation.set(...self.transform(rotation));
 
         return {mesh:mesh,material:mm};
     },

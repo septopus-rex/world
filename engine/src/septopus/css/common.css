@@ -1,4 +1,4 @@
-/* .dialog{
+.dialog{
   background-color: #333333;
   position: absolute;
   color: white;
@@ -10,9 +10,9 @@
   display: none;
   border-radius: 1rem;
   padding: 0.5rem;
-} */
+}
 
-/* .form{
+.form{
   background-color: #444444;
   color: white;
   width: 80%;
@@ -24,9 +24,9 @@
   z-index: 6666;
   display: none;
   border-radius: 1rem;
-} */
+}
 
-/* .form input{
+.form input{
   width: 80%;
   height: 2rem;
   padding: 0.2rem 1rem 0.2rem 1rem;
@@ -44,9 +44,9 @@
 
 .form button:hover{
   background-color: #1e40af;
-} */
+}
 
-/* .row{
+.row{
   width: 100%;
   padding: 0.2rem 1rem 0.2rem 1rem;
 }
@@ -58,9 +58,9 @@
   height: 3rem;
   bottom: 1rem;
   left: 0rem;
-} */
+}
 
-/* .left{
+.left{
   float: left;
 }
 
@@ -79,38 +79,38 @@
 .close:hover{
   color: white;
   cursor: pointer;
-}2. */
+}
 
 .toast {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background-color: #333333;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 1rem 2rem;
+  background-color: #1f2937; /* dark gray */
   color: white;
-  padding: 16px 24px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  border-radius: 0.5rem;
+  font-size: 1rem;
   opacity: 0;
-  animation: slideIn 0.5s ease-out forwards, fadeOut 0.5s 3s forwards;
-  font-family: sans-serif;
+  pointer-events: none;
   z-index: 9999;
+  transition: opacity 0.3s ease;
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to{
-    transform: translateX(0);
+.toast.show {
+  opacity: 1;
+  pointer-events: auto;
+  animation: slideUpFade 2.5s ease forwards;
+}
+
+@keyframes slideUpFade {
+  0% {
+    transform: translate(-50%, -50%);
     opacity: 1;
   }
-}
-
-@keyframes fadeOut {
-  to {
+  100% {
+    transform: translate(-50%, -80%);
     opacity: 0;
-    transform: translateX(100%);
   }
 }
 

@@ -353,6 +353,8 @@ const self = {
 
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std"];
         const map = self.cache.get(raw_chain);
+        if(map.error) return map;
+        //console.log(map);
 
         //0.prepare basic parameters
         const stds = {};
@@ -574,6 +576,7 @@ const Framework = {
      * @return void
      */
     mode:(mode,target,ck,cfg)=>{
+        //console.log(mode,target);
         const {x,y,world,container}=target;
         switch (mode) {
             case "normal":
