@@ -87,12 +87,23 @@ const self = {
     valid:()=>{
 
     },
+    transform:(arr)=>{
+        return [arr[0],arr[2],-arr[1]];
+    },
+
 };
 
 const ThreeObject = {
     //Entry to get geometry, material
     get: (cat, mod, params) => {
         if(!router[cat] || !router[cat][mod]) return {error:`Invalid three object: ${cat} ${mod}`}
+
+        //console.log(params);
+        if(params.size) params.size=[
+            params.size[0],
+            params.size[2],
+            params.size[1]
+        ];
         return router[cat][mod].create(params);
     },
 
@@ -110,8 +121,13 @@ const ThreeObject = {
         if(mm.error) return {error:mm.error};
 
         const mesh=ThreeObject.get("basic","mesh",{geometry:gg,material:mm});
-        mesh.position.set(...position);
+
+        //mesh.position.set(...position);
+        
+
+        mesh.position.set(...self.transform(position));
         mesh.rotation.set(...rotation);
+
         return {mesh:mesh,material:mm};
     },
 

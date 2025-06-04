@@ -3,6 +3,7 @@
  *
  * @fileoverview
  *  1. player movement calculation
+ *  2. base on Septopus World coordinate system
  *
  * @author Fuu
  * @date 2025-04-29
@@ -40,21 +41,27 @@ const vbw_movement={
     body:{
         forward:(diff,ak)=>{
             return { position: [ -diff[0]*Math.sin(ak), diff[0]*Math.cos(ak), 0] }
+            //return { position: [ diff[0]*Math.sin(ak),0, -diff[0]*Math.cos(ak)] }
         },
         backward:(diff,ak)=>{
             return { position: [ diff[0]*Math.sin(ak), -diff[0]*Math.cos(ak), 0] }
+            //return { position: [ -diff[0]*Math.sin(ak),0, diff[0]*Math.cos(ak)] }
         },
         leftward:(diff,ak)=>{
             return { position: [ -diff[0]*Math.cos(ak), -diff[0]*Math.sin(ak), 0] }
+            //return { position: [ -diff[0]*Math.cos(ak), 0,-diff[0]*Math.sin(ak)] }
         },
         rightward:(diff,ak)=>{
             return { position: [ diff[0]*Math.cos(ak), diff[0]*Math.sin(ak), 0] }
+            //return { position: [ diff[0]*Math.cos(ak),0, diff[0]*Math.sin(ak)] }
         },
         rise:(diff,ak)=>{
             return { position: [ 0,0, diff[0]] }
+            //return { position: [ 0,diff[0],0 ] }
         },
         fall:(diff,ak)=>{
             return { position: [ 0,0, -diff[0]] }
+            //return { position: [ 0,-diff[0],0 ] }
         },
 
         //返回jump运动的数组，模拟运动操作

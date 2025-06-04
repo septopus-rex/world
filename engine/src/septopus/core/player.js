@@ -95,7 +95,6 @@ const vbw_player={
         if(player===null){
             player=VBW.cache.get(["env","player","location"]);
         }
-        //UI.show("compass",player.rotation[0]*180);
 
         if(count>config.autosave.interval){
             const key=config.autosave.key;

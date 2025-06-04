@@ -44,6 +44,11 @@ const self={
         return VBW.cache.get(["env","world","side"]);
     },
 
+    //convert to satisfy the Three.js system
+    transform:(arr)=>{
+        return [arr[0],arr[2],-arr[1]];
+    },
+
     parseTexture:(arr,world,dom_id,ck)=>{
         const failed=[]
         const set=VBW.cache.set;
@@ -180,6 +185,7 @@ const self={
             //1.设置mesh的位置
             position[0]+=(single.x-1)*side[0];
             position[1]+=(single.y-1)*side[1];
+
             const res=ThreeObject.mesh(geometry,material,position,rotation);
 
             //2.处理生成的材质
@@ -205,7 +211,7 @@ const self={
 
         return arr;
     },
-    setSun:(scene,dom_id)=>{
+    setSunLight:(scene,dom_id)=>{
         const player=VBW.cache.get(["env","player"]);
         const [x,y]=player.location.block;
         const side=self.getSide();
@@ -231,10 +237,6 @@ const self={
             0
         );
         scene.add(sky);
-    },
-    loadBasic:(scene,dom_id)=>{
-        self.setSun(scene,dom_id);
-        self.setSky(scene,dom_id);
     },
 
     //FIXME, player can go out of editing block, this can effect the active block
@@ -289,7 +291,7 @@ const self={
             }
             const gs=ThreeObject.get("extend","grid",params);
             edit.grid.line=gs;
-
+            
             gs.position[0]+=(edit.x-1)*side[0];
             gs.position[1]+=(edit.y-1)*side[1];
 
@@ -467,7 +469,7 @@ export default {
         if(first){
             //1.load basic component
             //1.1. set sun light
-            self.setSun(scene,dom_id);
+            self.setSunLight(scene,dom_id);
 
             //1.1. set cube sky
             self.setSky(scene,dom_id);

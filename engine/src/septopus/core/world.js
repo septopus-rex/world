@@ -258,11 +258,12 @@ const self={
         const cam =  VBW.cache.get(cam_chain);
         const side = self.getSide();
         const cvt = self.getConvert();
-        cam.position.set(
+        const pos=[
             cam.position.x+(user.block[0]-1)*side[0]+user.position[0]*cvt,
             cam.position.y+(user.block[1]-1)*side[1]+user.position[1]*cvt,
             user.position[2]*cvt
-        );
+        ]
+        cam.position.set(pos[0],pos[2],-pos[1]);
         cam.rotation.set(...user.rotation);
     },
 

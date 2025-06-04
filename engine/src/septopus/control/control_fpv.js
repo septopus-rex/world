@@ -4,7 +4,8 @@
  * @fileoverview
  *  1. keyboard support
  *  2. block cross checking
- *
+ *  3. base on three.js coordinate system
+ * 
  * @author Fuu
  * @date 2025-04-25
  */
@@ -155,7 +156,7 @@ const self = {
 
     updateLocation: (camera, total, moved, rotated) => {
         const px = camera.position.x;
-        const py = camera.position.y;
+        const py = -camera.position.z;
 
         //1.set player position
         if (moved) {
@@ -203,9 +204,14 @@ const self = {
 
         //3.player sync
         const cvt = self.getConvert();
+        // player.location.position[0] = px % side[0] / cvt;
+        // player.location.position[1] = py % side[1] / cvt;
+        // player.location.position[2] = player.location.position[2] + total.position[2] / cvt;
+
         player.location.position[0] = px % side[0] / cvt;
         player.location.position[1] = py % side[1] / cvt;
-        player.location.position[2] = player.location.position[2] + total.position[2] / cvt;
+        //!important, total is base on three.js coordinaration
+        player.location.position[2] = player.location.position[2] + total.position[1] / cvt;
 
         player.location.rotation[0] = player.location.rotation[0] + total.rotation[0];
         player.location.rotation[1] = player.location.rotation[1] + total.rotation[1];
@@ -235,8 +241,8 @@ const self = {
                 //1.2.对位置进行移动处理
                 moved = true;
                 total.position[0] += diff.position[0];
-                total.position[1] += diff.position[1];
-                total.position[2] += diff.position[2];
+                total.position[1] += diff.position[2];
+                total.position[2] += -diff.position[1];
 
                 camera.position.set(
                     camera.position.x + total.position[0],
