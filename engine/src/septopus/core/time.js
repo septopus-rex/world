@@ -14,6 +14,11 @@ const reg={
     category:'system',      //组件分类
 }
 
+const config={
+    start:78000,
+    network:"solana",
+}
+
 const self={
     hooks:{
         reg:()=>{
@@ -35,7 +40,12 @@ const self={
 }
 
 const vbw_time={
-    hooks:self.hooks
+    hooks:self.hooks,
+
+    //calc septopus world 
+    calc:(data)=>{
+        console.log(`weather`,data);
+    },
 }
 
 export default vbw_time;

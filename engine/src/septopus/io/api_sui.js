@@ -21,6 +21,9 @@ const api_sui={
     block:(bs)=>{
 
     },
+    auto:(disposer)=>{
+        
+    },
 }
 
 export default api_sui;

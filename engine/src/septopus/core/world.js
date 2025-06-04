@@ -474,6 +474,12 @@ const self={
             }}
         ]);
     },
+    autoBind:()=>{
+        API.bind("height","getSlot",(data)=>{
+            VBW.time.calc(data);
+            VBW.weather.calc(data);
+        });
+    },
 }   
 
 const World={
@@ -513,6 +519,9 @@ const World={
 
         //0.1. set UI layout
         self.layout();
+
+        //02.2. start listener.
+        self.autoBind();
 
         //1.get the player status
         if(!self.struct(dom_id)) return  UI.show("toast",`Failed to struct html dom for running.`,{type:"error"});

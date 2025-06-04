@@ -10,6 +10,7 @@
  * @date 2025-04-29
  */
 
+import api_bitcoin from "./api_bitcoin";
 import api_solana from "./api_solana";
 import api_sui from "./api_sui";
 
@@ -27,13 +28,17 @@ const config={
 
 
 const router = {
+    bitcoin:api_bitcoin,
     solana: api_solana,
     sui: api_sui,
 }
 
 //Events queue
+let listener=null;
 const events={
-    onChange:[],
+    height:{},      //block height change event
+    price:{},       //price change event
+    block:{},       //block data update event
 }
 
 const mock = {
@@ -179,6 +184,24 @@ const self = {
         map[key] ={};
         return self.getBlocks(arr, world, ck, map);
     },
+    listenerStart:()=>{
+        console.log(`Listener start...`);
+        for(let network in router){
+            if(!router[network].auto){
+                console.error(`${network} API not support auto bind.`);
+                continue;
+            }
+            router[network].auto(self.dispose);
+        }
+    },
+    dispose:(data)=>{
+        if(!data.event || !events[data.event]) return console.error(`Invalid event data.`,data);
+
+        for(let name in events[data.event]){
+            const agent=events[data.event][name];
+            agent(data);
+        }
+    },
 }
 
 const API = {
@@ -308,9 +331,23 @@ const API = {
      * Set listener of events.
      * 
     */
-    listener:()=>{
-
+    bind:(event,key,fun)=>{
+        if(!events[event]) return {error:`"${event}" is not support yet.`}
+        if(listener===null){
+            self.listenerStart();
+        }
+        events[event][key]=fun;
     },
+
+    /**
+     * Remove listener of events.
+     * 
+    */
+    unbind:(event,key)=>{
+        if(!events[event]) return {error:`Invalid event.`};
+        delete events[event][key];
+        return true;
+    }
 }
 
 export default API;

@@ -14,6 +14,7 @@ const self={
 
 }
 
+let agent=null;
 const mocker={
     height:(agent)=>{
         let height=Toolbox.rand(80000,31000);
@@ -44,6 +45,9 @@ const api_bitcoin={
     },
     block:(bs)=>{
 
+    },
+    auto:(disposer)=>{
+        
     },
 }
 

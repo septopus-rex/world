@@ -9,9 +9,13 @@
  */
 
 const reg={
-    name:"wealth",
+    name:"weather",
     category:'system',
 }
+
+const config={
+    network:"solana",
+};
 
 const self={
     hooks:{
@@ -23,7 +27,7 @@ const self={
                 chain:["env","weather"],
                 value:{
                     hash:"",
-                    depth:"",
+                    depth:0,
                 }
             };
         },
@@ -32,6 +36,9 @@ const self={
 
 const vbw_weather={
     hooks:self.hooks,
+    calc:(data)=>{
+        console.log(`weather`,data);
+    },
 }
 
 export default vbw_weather;

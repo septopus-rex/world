@@ -26,8 +26,8 @@ const Toolbox = {
     for (let i = 0; i < n; i++)
       pre +=
         i % 2
-          ? String.fromCharCode(Tools.rand(65, 90))
-          : String.fromCharCode(Tools.rand(97, 122));
+          ? String.fromCharCode(Toolbox.rand(65, 90))
+          : String.fromCharCode(Toolbox.rand(97, 122));
     return pre;
   },
   shorten: (addr, n) => {

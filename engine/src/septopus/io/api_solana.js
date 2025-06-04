@@ -26,7 +26,7 @@ const mocker={
                 type:"devnet",
                 height:slot,
                 salt:salt,
-                //hash:,
+                event:"height",
                 stamp:Toolbox.stamp(),
             };
             agent(obj);
@@ -50,6 +50,9 @@ const api_solana={
     },
     block:(bs)=>{
 
+    },
+    auto:(disposer)=>{
+        mocker.height(disposer);
     },
 }
 
