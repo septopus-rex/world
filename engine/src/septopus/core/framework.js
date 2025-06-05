@@ -403,6 +403,7 @@ const self = {
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std", selected.adjunct, selected.index];
         if(!self.cache.exsist(raw_chain)) return ck && ck({error:"Invalid adjunct to highlight."});
         const obj=self.cache.get(raw_chain);
+        if(obj.error) return console.error(`Invalid object to select, ${JSON.stringify(raw_chain)}`);
 
         const va = self.getElevation(x, y, world, dom_id);
         const act=Framework[selected.adjunct].transform.std_active(obj, va);
@@ -423,10 +424,11 @@ const self = {
             x:x,
             y:y,
             elevation:va,
-            size:{
+            adjunct:{
                 x:obj.x,
                 y:obj.y,
-                z:obj.z},
+                z:obj.z
+            },
             offset:{
                 ox:obj.ox,
                 oy:obj.oy,
@@ -594,7 +596,6 @@ const Framework = {
                 cache.active.mode=2;
                 const pre=self.toEdit(x,y,world,container);
                 if(cfg && cfg.selected){
-                    console.log(cfg);
                     const more=self.toSelect(x,y,world,container);
                 }
                 ck && ck(pre);

@@ -1,16 +1,22 @@
 import * as THREE from "three";
+
+const config={
+    color:{
+        x:0x990000,
+        y:0x009900,
+        z:0x000099,
+    }
+}
+
 const self = {
     get:(params)=>{
-        const {x,y,elevation,size,offset,face,side,density} = params;
-        //getFaceConfig:  (x,y, elevation, size, offset, face, side , density)
-        const gd=self.getFaceConfig(x,y,elevation,size,offset,face,side,density);
+        const {x,y,elevation,adjunct,offset,face,side,density} = params;
+        const gd=self.getFaceConfig(x,y,elevation,adjunct,offset,face,side,density);
         if(gd.error) return {error:gd.error};
-
-        //{"ax":"x","cen":[32385750,7984000,200],"color":10027008,"points":[],"countX":17,"countY":13,"cornor":true}
+        
         const {ax,cen,color,me,countX,countY,cornor,material}=gd;
         const {offsetX,offsetY,limitZ}=density;
         const  lines=self.grid(cen,ax,offsetX,offsetY,countX,countY,cornor,material);
-        //console.log(lines);
         return lines;
     },
     /* Location grid create
@@ -27,7 +33,7 @@ const self = {
      * three.group		//three.js的group对象
      * */
     grid: (cen, ax, dv, dp, cv, cp, cornor, material) => {
-        //计算获取的格栅的左下角坐标点
+        //get the start at left-bottom
         let start = [0, 0, 0]
         if (!cornor) {
             switch (ax) {
@@ -53,7 +59,7 @@ const self = {
             start = cen;
         }
 
-        const lines = new THREE.Group();			//所有的line放到一个group里,方便操作
+        const lines = new THREE.Group();
         const mz = (cp - 1) * dp, my = (cv - 1) * dv;
         let pa = [0, 0, 0], pb = [0, 0, 0];
         for (let i = 0; i < cv; i++) {
@@ -99,9 +105,14 @@ const self = {
     },
 
     line:(pa,pb,material)=>{
+        //console.log(pa,pb,material);
         const points = [];
-        points.push( new THREE.Vector3( pa[0], pa[1], pa[2]) );
-        points.push( new THREE.Vector3( pb[0], pb[1], pb[2]) );
+
+        //!important, here to transform the coordination points
+        //points.push( new THREE.Vector3( pa[0], pa[1], pa[2]) );
+        //points.push( new THREE.Vector3( pb[0], pb[1], pb[2]) );
+        points.push( new THREE.Vector3( pa[0], pa[2], -pa[1]) );
+        points.push( new THREE.Vector3( pb[0], pb[2], -pb[1]) );
         const geometry = new THREE.BufferGeometry().setFromPoints( points );
         const line=new THREE.Line(geometry,material);
         return line;
@@ -140,9 +151,9 @@ const self = {
                     s * (y - 1),
                     elevation
                 ]
-                color = 0x990000;
-                countX = s / offsetX + 1;       //相对轴数量的计算
-                countY = limitZ / offsetY + 1;  //相对轴数量的计算
+                color = config.color.x;
+                countX = s / offsetX + 1;
+                countY = limitZ / offsetY + 1;
                 break;
             case 'y':
                 cen = [
@@ -150,9 +161,9 @@ const self = {
                     len == 2 ? s * (y - 1) + offset.oy - 0.5 * size.y : s * (y - 1) + offset.oy + 0.5 * size.y,
                     elevation
                 ];
-                color = 0x009900;
-                countY = s / offsetY + 1;       //相对轴数量的计算
-                countX = limitZ / offsetX + 1;  //相对轴数量的计算
+                color = config.color.y;
+                countY = s / offsetY + 1;
+                countX = limitZ / offsetX + 1;
                 break;
             case 'z':
                 cen = [
@@ -160,9 +171,9 @@ const self = {
                     s * (y - 1),
                     len == 2 ? elevation + offset.oz - 0.5 * size.z : elevation + offset.oz + 0.5 * size.z
                 ]
-                color = 0x000099;
-                countX = s / offsetX + 1;       //相对轴数量的计算
-                countY = s / offsetY + 1;       //相对轴数量
+                color = config.color.z;
+                countX = s / offsetX + 1;
+                countY = s / offsetY + 1;
                 break;
             default:
                 break;
@@ -185,7 +196,7 @@ const self = {
 
 const extend_grid = {
     create: (params) => {
-        if (!self.valid(params)) return { error: "Invalid parameters to create BOX." };
+        if (!self.valid(params)) return { error: "Invalid parameters to create GRID." };
         return self.get(params);
     },
     standard: () => {

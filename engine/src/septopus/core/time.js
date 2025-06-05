@@ -44,7 +44,7 @@ const vbw_time={
 
     //calc septopus world 
     calc:(data)=>{
-        console.log(`weather`,data);
+        //console.log(`weather`,data);
     },
 }
 

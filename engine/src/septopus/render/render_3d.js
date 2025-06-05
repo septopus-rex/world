@@ -259,11 +259,14 @@ const self={
         const sky=VBW.cache.get(["block",dom_id,world,"sky"]);
 
         if(sky.counter===undefined) sky.counter=0;
+        if(sky.angle===undefined) sky.angle=0;
+        if(sky.angle>180) sky.angle=0;
+        
         if(sky.counter>200){
             const deg=Math.PI/180;
-            const now=Toolbox.rand(0,180);
-            sky.material.uniforms['sunPosition'].value.setFromSphericalCoords(1,(90-now)*deg,90*0.5);
+            sky.material.uniforms['sunPosition'].value.setFromSphericalCoords(1,(90-sky.angle)*deg,90*0.5);
             sky.counter=0;
+            sky.angle++;
         }else{
             sky.counter++;
         }
@@ -310,9 +313,9 @@ const self={
         }
 
         //3.load grid
+        //console.log(JSON.stringify(edit.grid.raw));
         if(edit.grid.raw!==null){
             const params=Toolbox.clone(edit.grid.raw);
-
             //TODO, the parameters for grid can be modified and load dynamic
             params.density={
                 offsetX:1000,
@@ -320,8 +323,8 @@ const self={
                 limitZ:12000,
             }
             const gs=ThreeObject.get("extend","grid",params);
+
             edit.grid.line=gs;
-            
             gs.position[0]+=(edit.x-1)*side[0];
             gs.position[1]+=(edit.y-1)*side[1];
 

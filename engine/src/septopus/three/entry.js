@@ -96,14 +96,18 @@ const self = {
 const ThreeObject = {
     //Entry to get geometry, material
     get: (cat, mod, params) => {
+        //console.log(JSON.stringify(params));
+
         if(!router[cat] || !router[cat][mod]) return {error:`Invalid three object: ${cat} ${mod}`}
 
-        //console.log(params);
+        //!important,change size of 3D object
         if(params.size) params.size=[
             params.size[0],
             params.size[2],
             params.size[1]
         ];
+
+        //console.log(JSON.stringify(params));
         return router[cat][mod].create(params);
     },
 

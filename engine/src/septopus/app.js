@@ -45,14 +45,16 @@ export default {
             setTimeout(()=>{
 
                 /*********** Mode Switch Demo ***********/
-                // World.edit(container,wd_index,2025,500);
-                // setTimeout(()=>{
-                //     const fs=["x","y","z","-x","-y","-z"];
-                //     World.select(container,wd_index,2025,500,"wall",0,fs[Toolbox.rand(0,5)]);
-                //     setTimeout(()=>{
-                //         World.normal(container,wd_index)
-                //     },3000);
-                // },3000);
+                World.edit(container,wd_index,2025,501);
+                setTimeout(()=>{
+                    const fs=["x","y","z","-x","-y","-z"];
+
+                    //World.select(container,wd_index,2025,501,"wall",0,fs[Toolbox.rand(0,5)]);
+                    World.select(container,wd_index,2025,501,"wall",0,"z");
+                    // setTimeout(()=>{
+                    //     World.normal(container,wd_index)
+                    // },3000);
+                },3000);
 
                 /*********** Adjunct Modification Demo ***********/
                 // const tasks=[

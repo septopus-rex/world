@@ -37,7 +37,7 @@ const self={
 const vbw_weather={
     hooks:self.hooks,
     calc:(data)=>{
-        console.log(`weather`,data);
+        //console.log(`weather`,data);
     },
 }
 
