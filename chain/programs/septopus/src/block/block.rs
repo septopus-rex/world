@@ -157,8 +157,8 @@ pub fn buy(
 }
 
 
-pub fn revoke(
-    ctx: Context<RevokeBlock>,      //default from system
+pub fn withdraw(
+    ctx: Context<WithdrawBlock>,      //default from system
     _x:u32,                      
     _y:u32,
     _world:u32,
@@ -178,47 +178,6 @@ pub fn revoke(
     Ok(())
 }
 
-pub fn complain(
-    ctx: Context<ComplainBlock>,      //default from system
-    _x:u32,                      
-    _y:u32,
-    _world:u32,
-    complain:String,                     //complain JSON string
-) -> Result<()> {
-
-    //1. input check
-    let clock = &ctx.accounts.clock;
-    let category=1;
-    let result=String::from("{}");
-    let create=clock.slot;
-    *ctx.accounts.complain_data= ComplainData{
-        category,
-        complain,
-        result,
-        create,
-    };
-
-
-    Ok(())
-}
-
-pub fn recover(
-    ctx: Context<RecoverBlock>,      //default from system
-    _x:u32,                      
-    _y:u32,
-    _world:u32,
-) -> Result<()> {
-
-    //1. input check
-
-    let clock = &ctx.accounts.clock;
-    let bk= &mut ctx.accounts.block_data;
-    bk.update=clock.slot;
-    bk.status=BlockStatus::Public as u32;
-    
-
-    Ok(())
-}
 
 /********************************************************************/
 /*********************** Private Functions **************************/
@@ -358,57 +317,7 @@ pub struct BuyBlock<'info> {
 
 #[derive(Accounts)]
 #[instruction(x:u32,y:u32,world:u32)]
-pub struct RevokeBlock<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(mut,seeds = [
-        SPW_SEEDS_BLOCK_DATA,
-        &x.to_le_bytes(),
-        &y.to_le_bytes(),
-        &world.to_le_bytes(),
-    ],bump)]
-    pub block_data: Account<'info, BlockData>,
-
-    pub clock: Sysvar<'info, Clock>,
-}
-
-#[derive(Accounts)]
-#[instruction(x:u32,y:u32,world:u32)]
-pub struct ComplainBlock<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(mut,seeds = [
-        SPW_SEEDS_BLOCK_DATA,
-        &x.to_le_bytes(),
-        &y.to_le_bytes(),
-        &world.to_le_bytes(),
-    ],bump)]
-    pub block_data: Account<'info, BlockData>,
-
-    #[account(
-        init,
-        space = SOLANA_PDA_LEN + ComplainData::INIT_SPACE,     
-        payer = payer,
-        seeds = [
-            SPW_SEEDS_COMPLAIN_BLOCK,    //need to set [u8;4] to avoid error
-            &x.to_le_bytes(),
-            &y.to_le_bytes(),
-            &world.to_le_bytes(),
-        ],
-        bump,
-    )]
-    pub complain_data: Account<'info, ComplainData>,
-
-    pub system_program: Program<'info, System>,
-
-    pub clock: Sysvar<'info, Clock>,
-}
-
-#[derive(Accounts)]
-#[instruction(x:u32,y:u32,world:u32)]
-pub struct RecoverBlock<'info> {
+pub struct WithdrawBlock<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 

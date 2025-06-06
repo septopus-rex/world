@@ -8,18 +8,19 @@ use serde_json::{json, Value};
 ///Accounts space setting
 pub const ANCHOR_DESCRIMINATOR_SIZE: usize = 8;
 pub const SOLANA_PDA_LEN:usize=8;
-pub const SPW_WHITELIST_MAP_SIZE:usize=500;     //whitelist map size
+pub const SPW_WHITELIST_MAP_SIZE:usize=500;
 pub const SPW_WORLD_LIST_SIZE:usize=800; 
 pub const SPW_RESOURE_MAP_SIZE:usize=1200;
 
 ///System setting
-pub const SPW_ROOT_ACCOUNT:&str="GTNgXEzmG2E2d9yX8fwueP4bD2WCgJ3mqvt7sQj6CYYr"; //root of VBW program
+pub const SPW_ROOT_ACCOUNT:&str="GTNgXEzmG2E2d9yX8fwueP4bD2WCgJ3mqvt7sQj6CYYr";  //root of VBW program
+pub const SPW_RECIPIENT:&str="GTNgXEzmG2E2d9yX8fwueP4bD2WCgJ3mqvt7sQj6CYYr";     //block mint fee recipient
 
 ///World setting
-pub const SPW_WORLD_MAX:u32= 99;              //offset to get the block hash
+pub const SPW_WORLD_MAX:u32= 10;    //max worlds to publish
 
 ///Block setting
-pub const SPW_BLOCK_INIT_PRICE:u64= 1_000_000;      // 0.01 SOL, the block init price.
+pub const SPW_BLOCK_INIT_PRICE:u64= 10_000_000;      // 0.1 SOL, the block init price.
 
 ///PDA accounts seeds
 pub const SPW_SEEDS_WHITE_LIST:&[u8;5]=b"white";
@@ -146,9 +147,9 @@ impl WorldCounter {
 #[account]
 #[derive(InitSpace)]
 pub struct BlockData {
-    #[max_len(80)] 
+    #[max_len(200)]                 //block data, adjunct data. Support IPFS in the furture
     pub data: String,
-    #[max_len(50)] 
+    #[max_len(50)]
     pub owner: String,              //owner of block 
     pub price: u64,                 //selling price
     pub create: u64,                //create slot height

@@ -12,7 +12,7 @@ self.setENV(provider,program.programId);
 const reqs={
   add:async (ipfs,index)=>{
     const users=await self.init({balance:true});
-    self.output.start(`Add new module.`);
+    self.output.start(`Add new resource.`);
 
     const n_index=Buffer.alloc(4);
     n_index.writeUInt32LE(index);
@@ -32,11 +32,11 @@ const reqs={
     //!important, need to check on Devnet
     const moduleData = new PublicKey("FJDwuFjqpSTqd2pJAgCDeDQRdK5SPqXZPdwpqUyHFZre");
     const sign_init= await program.methods
-      .addModule(ipfs,index)
+      .addResource(ipfs,index)
       .accounts({
         payer:users.recipient.pair.publicKey,
-        moduleData:moduleData,
-        systemProgram: SystemProgram.programId
+        //resourceData:moduleData,
+        //systemProgram: SystemProgram.programId
       })
       .signers([users.recipient.pair])
       .rpc()
@@ -60,7 +60,7 @@ const reqs={
     self.output.start(`Approve new module.`);
     //await self.info.modulecounter();
     const sign_init= await program.methods
-      .approveModule(index)
+      .approveResource(index)
       .accounts({
         payer:users.manager.pair.publicKey,
       })
@@ -78,7 +78,7 @@ const reqs={
     self.output.start(`Complain the module.`);
 
     const sign_init= await program.methods
-      .complainModule(ctxt,index)
+      .complainResource(ctxt,index)
       .accounts({
         payer:users.manager.pair.publicKey,
       })
@@ -96,7 +96,7 @@ const reqs={
     self.output.start(`Recover the module from banning.`);
 
     const sign_init= await program.methods
-      .recoverModule(index)
+      .recoverResource(index)
       .accounts({
         payer:users.manager.pair.publicKey,
       })

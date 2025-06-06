@@ -1,16 +1,15 @@
 use {
-    //std::str::FromStr,
     anchor_lang::prelude::*,
-    //anchor_lang::system_program,
 };
+
 
 use crate::constants::{
     BlockData,
     ResourceData,
     SPW_SEEDS_BLOCK_DATA,
     SPW_SEEDS_RESOURCE_DATA,
-    BlockStatus,
     ResoureStatus,
+    BlockStatus,
     ErrorCode,
 };
 
@@ -19,30 +18,32 @@ use crate::constants::{
 /********************************************************************/
 
 pub fn block(
-    ctx: Context<BanBlock>,      //default from system
-    _x:u32,
+    ctx: Context<RecoverBlock>,      //default from system
+    _x:u32,                      
     _y:u32,
     _world:u32,
-) -> Result<()> { 
+) -> Result<()> {
+
+    //1. input check
 
     let clock = &ctx.accounts.clock;
     let bk= &mut ctx.accounts.block_data;
     bk.update=clock.slot;
-    bk.status=BlockStatus::Banned as u32;
-
+    bk.status=BlockStatus::Public as u32;
+    
     Ok(())
 }
 
 pub fn resource(
-    ctx: Context<BanResource>,      //default from system
-    _index: u32,
-) -> Result<()> {  
+    ctx: Context<RecoverResource>,      //default from system                   
+    index:u32,
+) -> Result<()> {
+
     let res= &mut ctx.accounts.resource_data;
-    res.status=ResoureStatus::Banned as u32;
+    res.status=ResoureStatus::Approved as u32;
 
     Ok(())
 }
-
 
 /********************************************************************/
 /*********************** Private Functions **************************/
@@ -59,7 +60,7 @@ pub fn resource(
 
 #[derive(Accounts)]
 #[instruction(x:u32,y:u32,world:u32)]
-pub struct BanBlock<'info> {
+pub struct RecoverBlock<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -76,13 +77,13 @@ pub struct BanBlock<'info> {
 
 #[derive(Accounts)]
 #[instruction(index:u32)]
-pub struct BanResource<'info> {
+pub struct RecoverResource<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
         SPW_SEEDS_RESOURCE_DATA,
-        &index.to_le_bytes(),
+        &index.to_le_bytes()
     ],bump)]
     pub resource_data: Account<'info, ResourceData>,
 }

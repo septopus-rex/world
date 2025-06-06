@@ -102,13 +102,13 @@ pub mod septopus {
     }
 
     ///buy the on-sell block
-    pub fn revoke_block(
-        ctx: Context<RevokeBlock>,
+    pub fn withdraw_block(
+        ctx: Context<WithdrawBlock>,
         x: u32,
         y: u32,
         world: u32,
     ) -> Result<()> {
-        block::revoke(ctx,x,y,world)
+        block::withdraw(ctx,x,y,world)
     }
 
     ///complain when block content is illeagale
@@ -119,7 +119,7 @@ pub mod septopus {
         y: u32,
         world: u32,
     ) -> Result<()> {
-        block::complain(ctx,x,y,world,json)
+        complain::block(ctx,x,y,world,json)
     }
 
     ///recover the banned block, manage operation
@@ -129,7 +129,7 @@ pub mod septopus {
         y: u32,
         world: u32,
     ) -> Result<()> {
-        block::recover(ctx,x,y,world)
+        recover::block(ctx,x,y,world)
     }
 
     ///ban the target block, manage operation
@@ -139,7 +139,7 @@ pub mod septopus {
         y: u32,
         world: u32,
     ) -> Result<()> {
-        manage::block(ctx,x,y,world)
+        ban::block(ctx,x,y,world)
     }
 
     /************************************************************************************************/
@@ -160,7 +160,7 @@ pub mod septopus {
         ctx: Context<ApproveResource>,
         index: u32,
     ) -> Result<()> {
-        ipfs::resource_approve(ctx,index)
+        approve::resource(ctx,index)
     }
 
     ///complain when resource content is illeagale
@@ -169,7 +169,7 @@ pub mod septopus {
         data:String,
         index: u32,
     ) -> Result<()> {
-        ipfs::resource_complain(ctx,index,data)
+        complain::resource(ctx,index,data)
     }
 
     ///recover the banned resource, manage operation
@@ -177,7 +177,7 @@ pub mod septopus {
         ctx: Context<RecoverResource>,
         index: u32,
     ) -> Result<()> {
-        ipfs::resource_recover(ctx,index)
+        recover::resource(ctx,index)
     }
 
     ///ban the target resource, manage operation
@@ -185,6 +185,6 @@ pub mod septopus {
         ctx: Context<BanResource>,
         index: u32,
     ) -> Result<()> {
-        manage::resource(ctx,index)
+        ban::resource(ctx,index)
     }
 }

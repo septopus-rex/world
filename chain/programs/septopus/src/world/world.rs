@@ -138,10 +138,6 @@ pub struct InitSPW<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    /**************************************/
-    /************ PDA accounts ************/
-    /**************************************/
-
     #[account(
         init,
         space = SOLANA_PDA_LEN + SPW_WHITELIST_MAP_SIZE, 

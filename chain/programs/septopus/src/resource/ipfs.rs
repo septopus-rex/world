@@ -7,10 +7,8 @@ use crate::constants::{
     ResourceData,
     ResourceCounter,
     ResoureStatus,
-    ComplainData,
     SPW_SEEDS_RESOURCE_DATA,
     SPW_SEEDS_RESOURCE_COUNT,
-    SPW_SEEDS_COMPLAIN_RESOURCE,
 };
 
 /********************************************************************/
@@ -42,49 +40,6 @@ pub fn resource_add(
         create,
         status,
     };
-
-    Ok(())
-}
-
-pub fn resource_approve(
-    ctx: Context<ApproveResource>,      //default from system                   
-    _index:u32,
-) -> Result<()> {
-
-    let res= &mut ctx.accounts.resource_data;
-    res.status=ResoureStatus::Approved as u32;
-
-    Ok(())
-}
-
-pub fn resource_complain(
-    ctx: Context<ComplainResource>,      //default from system
-    index:u32,
-    complain:String,                   //complain JSON string        
-) -> Result<()> {
-
-    // let clock = &ctx.accounts.clock;
-    // let category=1;
-    // let result=String::from("{}");
-    // let create=clock.slot;
-    // *ctx.accounts.complain_data= ComplainData{
-    //     category,
-    //     complain,
-    //     result,
-    //     create,
-    // };
-    
-    Ok(())
-}
-
-
-pub fn resource_recover(
-    ctx: Context<RecoverResource>,      //default from system                   
-    _index:u32,
-) -> Result<()> {
-
-    let res= &mut ctx.accounts.resource_data;
-    res.status=ResoureStatus::Approved as u32;
 
     Ok(())
 }
@@ -128,53 +83,4 @@ pub struct AddResource<'info> {
 
     pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
-}
-
-
-#[derive(Accounts)]
-#[instruction(index:u32)]
-pub struct ApproveResource<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(mut,seeds = [
-        SPW_SEEDS_RESOURCE_DATA,
-        &index.to_le_bytes()
-    ],bump)]
-    pub resource_data: Account<'info, ResourceData>,
-}
-
-#[derive(Accounts)]
-#[instruction(index:u32)]
-pub struct ComplainResource<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(
-        init_if_needed,
-        space = SOLANA_PDA_LEN + ComplainData::INIT_SPACE,     
-        payer = payer,
-        seeds = [
-            SPW_SEEDS_COMPLAIN_RESOURCE,      //need to set [u8;4] to avoid error
-            &index.to_le_bytes(),
-        ],
-        bump,
-    )]
-    pub complain_data: Account<'info, ComplainData>,
-
-    pub system_program: Program<'info, System>,
-    pub clock: Sysvar<'info, Clock>,
-}
-
-#[derive(Accounts)]
-#[instruction(index:u32)]
-pub struct RecoverResource<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(mut,seeds = [
-        SPW_SEEDS_RESOURCE_DATA,
-        &index.to_le_bytes()
-    ],bump)]
-    pub resource_data: Account<'info, ResourceData>,
 }
