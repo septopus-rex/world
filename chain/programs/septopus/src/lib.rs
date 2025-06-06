@@ -143,103 +143,48 @@ pub mod septopus {
     }
 
     /************************************************************************************************/
-    /************************************* Texture Management ***************************************/
+    /************************************* Resource Management ****************************************/
     /************************************************************************************************/
 
-    ///add new IPFS texture, need to approve
-    // pub fn add_texture(
-    //     ctx: Context<AddTexture>,
-    //     ipfs: String,
-    //     index: u32,
-    // ) -> Result<()> {
-    //     texture::texture_add(ctx,index,ipfs)
-    // }
-
-    pub fn add_texture(
-        ctx: Context<AddTexture>,
-        ipfs: String,
-        index: u32,
-    )-> Result<()> {
-        texture::texture_add(ctx,index,ipfs)
-    }
-
-
-    ///complain when texture content is illeagale
-    pub fn complain_texture(
-        ctx: Context<ComplainTexture>,
-        data: String,
-        index: u32,
-    ) -> Result<()> {
-        texture::texture_complain(ctx,index,data)
-    }
-
-    ///approve to allow texture for VBW, manage operation
-    pub fn approve_texture(
-        ctx: Context<ApproveTexture>,
-        index: u32,
-    ) -> Result<()> {
-        texture::texture_approve(ctx,index)
-    }  
-
-    ///recover the banned texture, manage operation
-    pub fn recover_texture(
-        ctx: Context<RecoverTexture>,
-        index: u32,
-    ) -> Result<()> {
-        texture::texture_recover(ctx,index)
-    }
-
-    ///ban the target texture, manage operation
-    pub fn ban_texture(
-        ctx: Context<BanTexture>,
-        index: u32,
-    ) -> Result<()> {
-        manage::texture(ctx,index)
-    }
-
-    /************************************************************************************************/
-    /************************************* Module Management ****************************************/
-    /************************************************************************************************/
-
-    ///add new IPFS module, need to approve
-    pub fn add_module(
-        ctx: Context<AddModule>,
+    ///add new IPFS resource, need to approve
+    pub fn add_resource(
+        ctx: Context<AddResource>,
         ipfs: String,
         index: u32,
     ) -> Result<()> {
-        module::module_add(ctx,index,ipfs)
+        ipfs::resource_add(ctx,index,ipfs)
     }
 
-    ///complain when texture content is illeagale
-    pub fn complain_module(
-        ctx: Context<ComplainModule>,
+    ///approve to allow resource (module, texture ...) for Septopus World, manage operation
+    pub fn approve_resource(
+        ctx: Context<ApproveResource>,
+        index: u32,
+    ) -> Result<()> {
+        ipfs::resource_approve(ctx,index)
+    }
+
+    ///complain when resource content is illeagale
+    pub fn complain_resource(
+        ctx: Context<ComplainResource>,
         data:String,
         index: u32,
     ) -> Result<()> {
-        module::module_complain(ctx,index,data)
+        ipfs::resource_complain(ctx,index,data)
     }
 
-    ///approve to allow module for VBW, manage operation
-    pub fn approve_module(
-        ctx: Context<ApproveModule>,
+    ///recover the banned resource, manage operation
+    pub fn recover_resource(
+        ctx: Context<RecoverResource>,
         index: u32,
     ) -> Result<()> {
-        module::module_approve(ctx,index)
+        ipfs::resource_recover(ctx,index)
     }
 
-    ///recover the banned module, manage operation
-    pub fn recover_module(
-        ctx: Context<RecoverModule>,
+    ///ban the target resource, manage operation
+    pub fn ban_resource(
+        ctx: Context<BanResource>,
         index: u32,
     ) -> Result<()> {
-        module::module_recover(ctx,index)
-    }
-
-    ///ban the target module, manage operation
-    pub fn ban_module(
-        ctx: Context<BanModule>,
-        index: u32,
-    ) -> Result<()> {
-        manage::module(ctx,index)
+        manage::resource(ctx,index)
     }
 }

@@ -2,9 +2,9 @@ import * as THREE from "three";
 
 const config={
     color:{
-        x:0x990000,
-        y:0x009900,
-        z:0x000099,
+        x:0xef4444,     //red
+        y:0x10b981,     //green
+        z:0x3b82f6,     //blue
     }
 }
 
@@ -14,9 +14,9 @@ const self = {
         const gd=self.getFaceConfig(x,y,elevation,adjunct,offset,face,side,density);
         if(gd.error) return {error:gd.error};
         
-        const {ax,cen,color,me,countX,countY,cornor,material}=gd;
+        const {ax,cen,color,me,countX,countY,cornor}=gd;
         const {offsetX,offsetY,limitZ}=density;
-        const  lines=self.grid(cen,ax,offsetX,offsetY,countX,countY,cornor,material);
+        const  lines=self.grid(cen,ax,offsetX,offsetY,countX,countY,cornor,color);
         return lines;
     },
     /* Location grid create
@@ -32,7 +32,7 @@ const self = {
      * return 
      * three.group		//three.js的group对象
      * */
-    grid: (cen, ax, dv, dp, cv, cp, cornor, material) => {
+    grid: (cen, ax, dv, dp, cv, cp, cornor, color) => {
         //get the start at left-bottom
         let start = [0, 0, 0]
         if (!cornor) {
@@ -79,7 +79,7 @@ const self = {
                 default:
                     break;
             }
-            lines.add(self.line(pa, pb, material));
+            lines.add(self.line(pa, pb, color));
         }
         for (let i = 0; i < cp; i++) {
             switch (ax) {
@@ -98,13 +98,14 @@ const self = {
                 default:
                     break;
             }
-            lines.add(self.line(pa, pb, material));
+            lines.add(self.line(pa, pb, color));
         }
 
         return lines;
     },
 
-    line:(pa,pb,material)=>{
+    line:(pa,pb,color)=>{
+        //console.log();
         //console.log(pa,pb,material);
         const points = [];
 
@@ -114,6 +115,7 @@ const self = {
         points.push( new THREE.Vector3( pa[0], pa[2], -pa[1]) );
         points.push( new THREE.Vector3( pb[0], pb[2], -pb[1]) );
         const geometry = new THREE.BufferGeometry().setFromPoints( points );
+        const material = new THREE.LineBasicMaterial({ color: color});
         const line=new THREE.Line(geometry,material);
         return line;
     },

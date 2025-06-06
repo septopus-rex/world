@@ -45,25 +45,24 @@ export default {
             setTimeout(()=>{
 
                 /*********** Mode Switch Demo ***********/
-                World.edit(container,wd_index,2025,501);
-                setTimeout(()=>{
-                    const fs=["x","y","z","-x","-y","-z"];
+                // World.edit(container,wd_index,2025,501);
+                // setTimeout(()=>{
+                //     const fs=["x","y","z","-x","-y","-z"];
 
-                    //World.select(container,wd_index,2025,501,"wall",0,fs[Toolbox.rand(0,5)]);
-                    World.select(container,wd_index,2025,501,"wall",0,"z");
-                    // setTimeout(()=>{
-                    //     World.normal(container,wd_index)
-                    // },3000);
-                },3000);
+                //     World.select(container,wd_index,2025,501,"wall",0,fs[Toolbox.rand(0,5)]);
+                //     setTimeout(()=>{
+                //         World.normal(container,wd_index)
+                //     },3000);
+                // },3000);
 
                 /*********** Adjunct Modification Demo ***********/
-                // const tasks=[
-                //     {adjunct:"wall",action:"set",param:{z:8,index:0}}
-                // ]
-                // World.modify(tasks,container,wd_index,(done)=>{
-
-                // });
-                
+                World.edit(container,wd_index,2025,502);
+                setTimeout(()=>{
+                    const tasks=[
+                        {adjunct:"wall",action:"set",param:{z:8,index:0}}
+                    ]
+                    World.modify(tasks,container,wd_index,(done)=>{});
+                },1000);
             },5000);
             
             // const tasks=[

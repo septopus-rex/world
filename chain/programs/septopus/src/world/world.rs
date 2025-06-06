@@ -15,13 +15,11 @@ use crate::constants::{
     WhiteList,
     WorldData,
     WorldCounter,
-    ModuleCounter,
-    TextureCounter,
+    ResourceCounter,
     SPW_SEEDS_WORLD_LIST,
     SPW_SEEDS_WHITE_LIST,
     SPW_SEEDS_WORLD_COUNT,
-    SPW_SEEDS_MODULE_COUNT,
-    SPW_SEEDS_TEXTURE_COUNT,
+    SPW_SEEDS_RESOURCE_COUNT,
     ErrorCode,
 };
 
@@ -50,12 +48,7 @@ pub fn init(
     white.replace(root);
 
     let value:u64=0;
-    *ctx.accounts.module_counter= ModuleCounter{
-        value
-    };
-
-    let value:u64=0;
-    *ctx.accounts.texture_counter= TextureCounter{
+    *ctx.accounts.resource_counter= ResourceCounter{
         value
     };
 
@@ -170,21 +163,12 @@ pub struct InitSPW<'info> {
 
     #[account(
         init,
-        space = SOLANA_PDA_LEN + ModuleCounter::INIT_SPACE,
+        space = SOLANA_PDA_LEN + ResourceCounter::INIT_SPACE,
         payer = payer,
-        seeds = [SPW_SEEDS_MODULE_COUNT],
+        seeds = [SPW_SEEDS_RESOURCE_COUNT],
         bump,
     )]
-    pub module_counter: Account<'info, ModuleCounter>,
-
-    #[account(
-        init,
-        space = SOLANA_PDA_LEN + TextureCounter::INIT_SPACE,
-        payer = payer,
-        seeds = [SPW_SEEDS_TEXTURE_COUNT],
-        bump,
-    )]
-    pub texture_counter: Account<'info, TextureCounter>,
+    pub resource_counter: Account<'info, ResourceCounter>,
 
     pub system_program: Program<'info, System>,
     

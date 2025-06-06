@@ -221,14 +221,6 @@ const self = {
         return true;
     },
 
-    //TODO, here to connect time and weather. 
-    structSky: (world, dom_id) => {
-        //console.log(`Here to struct sky by weather and time`);
-        const sky_chain = ["block", dom_id, world, "sky"];
-        const sky = { desc: "Already run Framework self.structSky, but no real three object yet" };
-        self.cache.set(sky_chain, sky);
-    },
-
     /**
      * construct sinlge block raw data to STD data
      * @param {integer} x       //block X
@@ -314,9 +306,6 @@ const self = {
         return preload;
     },
     structEntire: (x, y, ext, world, dom_id, ck, cfg) => {
-        //1.construct sky and weather
-        self.structSky(world, dom_id);
-
         //2.construct all blocks data
         const limit = self.cache.get(["setting", "limit"]);
         const fun_single = self.structSingle;
@@ -367,6 +356,7 @@ const self = {
         const edit_chain = ["block", dom_id, world, "edit"];
         const edit=self.cache.get(edit_chain);
         if(bk.helper && bk.helper.length!==0){
+            edit.border.length=0;
             for (let i = 0; i < bk.helper.length; i++) {
                 const row = bk.helper[i];
                 if (row.material && row.material.texture) preload.texture.push(row.material.texture);
@@ -510,7 +500,6 @@ const self = {
 
         return self.excute(arr, dom_id, world, ck, failed);
     },
-    
 }
 
 const Framework = {

@@ -1,44 +1,42 @@
 use {
-    //std::str::FromStr,
     anchor_lang::prelude::*,
-    //anchor_lang::system_program,
 };
-use md5;
 
 use crate::constants::{
     SOLANA_PDA_LEN,
-    ModuleData,
-    ComplainData,
-    ModuleCounter,
-    SPW_SEEDS_MODULE_DATA,
-    SPW_SEEDS_COMPLAIN_MODULE,
-    SPW_SEEDS_MODULE_COUNT,
+    ResourceData,
+    ResourceCounter,
     ResoureStatus,
-    ErrorCode,
+    ComplainData,
+    SPW_SEEDS_RESOURCE_DATA,
+    SPW_SEEDS_RESOURCE_COUNT,
+    SPW_SEEDS_COMPLAIN_RESOURCE,
 };
 
 /********************************************************************/
 /************************ Public Functions **************************/
 /********************************************************************/
 
-pub fn module_add(
-    ctx: Context<AddModule>,    //default from system
+pub fn resource_add(
+    ctx: Context<AddResource>,    //default from system
     index:u32,                  //module index
     ipfs:String,                //IPFS cid          
 ) -> Result<()> {
     msg!("index: {:?}", index);
-    msg!("seed: {:?}", SPW_SEEDS_MODULE_DATA);
+    msg!("seed: {:?}", SPW_SEEDS_RESOURCE_DATA);
     msg!("index LE: {:?}", index.to_le_bytes());
 
     let clock = &ctx.accounts.clock;
+    let create=clock.slot;
+
     let payer_pubkey = ctx.accounts.payer.key();
     let owner=payer_pubkey.to_string();
-    let create=clock.slot;
+    
     let status=ResoureStatus::Created as u32;
 
     msg!("ipfs len: {}, owner len: {}", ipfs.len(), owner.len());
 
-    *ctx.accounts.module_data=ModuleData{
+    *ctx.accounts.resource_data=ResourceData{
         ipfs,
         owner,
         create,
@@ -48,22 +46,21 @@ pub fn module_add(
     Ok(())
 }
 
-
-pub fn module_approve(
-    ctx: Context<ApproveModule>,      //default from system                   
+pub fn resource_approve(
+    ctx: Context<ApproveResource>,      //default from system                   
     _index:u32,
 ) -> Result<()> {
 
-    let module= &mut ctx.accounts.module_data;
-    module.status=ResoureStatus::Approved as u32;
+    let res= &mut ctx.accounts.resource_data;
+    res.status=ResoureStatus::Approved as u32;
 
     Ok(())
 }
 
-pub fn module_complain(
-    ctx: Context<ComplainModule>,      //default from system
-    _index:u32,
-    complain:String,                     //complain JSON string        
+pub fn resource_complain(
+    ctx: Context<ComplainResource>,      //default from system
+    index:u32,
+    complain:String,                   //complain JSON string        
 ) -> Result<()> {
 
     // let clock = &ctx.accounts.clock;
@@ -80,17 +77,17 @@ pub fn module_complain(
     Ok(())
 }
 
-pub fn module_recover(
-    ctx: Context<RecoverModule>,      //default from system                   
+
+pub fn resource_recover(
+    ctx: Context<RecoverResource>,      //default from system                   
     _index:u32,
 ) -> Result<()> {
 
-    let module= &mut ctx.accounts.module_data;
-    module.status=ResoureStatus::Approved as u32;
+    let res= &mut ctx.accounts.resource_data;
+    res.status=ResoureStatus::Approved as u32;
 
     Ok(())
 }
-
 
 /********************************************************************/
 /*********************** Private Functions **************************/
@@ -107,28 +104,7 @@ pub fn module_recover(
 
 #[derive(Accounts)]
 #[instruction(index:u32)]
-pub struct ReplaceModule<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(
-        init_if_needed,
-        space = SOLANA_PDA_LEN + ModuleData::INIT_SPACE,     
-        payer = payer,
-        seeds = [
-            SPW_SEEDS_MODULE_DATA,
-            &index.to_le_bytes(),
-        ],
-        bump,
-    )]
-    pub module_data: Account<'info, ModuleData>,
-
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-#[instruction(index:u32)]
-pub struct AddModule<'info> {
+pub struct AddResource<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -137,40 +113,40 @@ pub struct AddModule<'info> {
 
     #[account(
         init_if_needed,
-        space = SOLANA_PDA_LEN + ModuleData::INIT_SPACE,     
+        space = SOLANA_PDA_LEN + ResourceData::INIT_SPACE,     
         payer = payer,
         seeds = [
-            SPW_SEEDS_MODULE_DATA,
+            SPW_SEEDS_RESOURCE_DATA,
             &index.to_le_bytes(),
         ],
         bump,
     )]
-    pub module_data: Account<'info, ModuleData>,
+    pub resource_data: Account<'info, ResourceData>,
 
-    #[account(mut,seeds = [SPW_SEEDS_MODULE_COUNT],bump)]
-    pub module_counter: Account<'info, ModuleCounter>,
+    #[account(mut,seeds = [SPW_SEEDS_RESOURCE_COUNT],bump)]
+    pub module_counter: Account<'info, ResourceCounter>,
 
     pub system_program: Program<'info, System>,
     pub clock: Sysvar<'info, Clock>,
 }
 
+
 #[derive(Accounts)]
 #[instruction(index:u32)]
-pub struct ApproveModule<'info> {
+pub struct ApproveResource<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        SPW_SEEDS_MODULE_DATA,
+        SPW_SEEDS_RESOURCE_DATA,
         &index.to_le_bytes()
     ],bump)]
-    pub module_data: Account<'info, ModuleData>,
+    pub resource_data: Account<'info, ResourceData>,
 }
-
 
 #[derive(Accounts)]
 #[instruction(index:u32)]
-pub struct ComplainModule<'info> {
+pub struct ComplainResource<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -179,7 +155,7 @@ pub struct ComplainModule<'info> {
         space = SOLANA_PDA_LEN + ComplainData::INIT_SPACE,     
         payer = payer,
         seeds = [
-            SPW_SEEDS_COMPLAIN_MODULE,      //need to set [u8;4] to avoid error
+            SPW_SEEDS_COMPLAIN_RESOURCE,      //need to set [u8;4] to avoid error
             &index.to_le_bytes(),
         ],
         bump,
@@ -192,13 +168,13 @@ pub struct ComplainModule<'info> {
 
 #[derive(Accounts)]
 #[instruction(index:u32)]
-pub struct RecoverModule<'info> {
+pub struct RecoverResource<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
     #[account(mut,seeds = [
-        SPW_SEEDS_MODULE_DATA,
+        SPW_SEEDS_RESOURCE_DATA,
         &index.to_le_bytes()
     ],bump)]
-    pub module_data: Account<'info, ModuleData>,
+    pub resource_data: Account<'info, ResourceData>,
 }

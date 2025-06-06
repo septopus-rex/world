@@ -10,9 +10,7 @@ pub const ANCHOR_DESCRIMINATOR_SIZE: usize = 8;
 pub const SOLANA_PDA_LEN:usize=8;
 pub const SPW_WHITELIST_MAP_SIZE:usize=500;     //whitelist map size
 pub const SPW_WORLD_LIST_SIZE:usize=800; 
-pub const SPW_RESOURE_MAP_SIZE:usize=1200; 
-pub const SPW_TEXTURE_LIST_SIZE:usize=3000;
-pub const SPW_MODULE_LIST_SIZE:usize=3600;
+pub const SPW_RESOURE_MAP_SIZE:usize=1200;
 
 ///System setting
 pub const SPW_ROOT_ACCOUNT:&str="GTNgXEzmG2E2d9yX8fwueP4bD2WCgJ3mqvt7sQj6CYYr"; //root of VBW program
@@ -28,17 +26,16 @@ pub const SPW_SEEDS_WHITE_LIST:&[u8;5]=b"white";
 pub const SPW_SEEDS_WORLD_LIST:&[u8;6]=b"worlds";
 pub const SPW_SEEDS_BLOCK_DATA:&[u8;4]=b"b_dt";
 pub const SPW_SEEDS_WORLD_COUNT:&[u8;4]=b"w_ct";
-pub const SPW_SEEDS_TEXTURE_COUNT:&[u8;4]=b"c_tx";
-pub const SPW_SEEDS_MODULE_COUNT:&[u8;4]=b"c_md";
-pub const SPW_SEEDS_TEXTURE_DATA:&[u8;4]=b"d_xx";
-pub const SPW_SEEDS_MODULE_DATA:&[u8;4]=b"m_yz";
-pub const SPW_SEEDS_COMPLAIN_TEXTURE:&[u8;4]=b"cptx";
-pub const SPW_SEEDS_COMPLAIN_MODULE:&[u8;4]=b"cpmd";
-pub const SPW_SEEDS_COMPLAIN_BLOCK:&[u8;4]=b"cpbk";
 
-pub const SPW_SEEDS_TEXTURE_LIST:&[u8;7]=b"texture";
-pub const SPW_SEEDS_MODULE_LIST:&[u8;6]=b"module";
+/******************************/
+pub const SPW_SEEDS_COMPLAIN_BLOCK:&[u8;4]=b"cpbk";
 pub const SPW_SEEDS_RESOURE_MAP:&[u8;6]=b"resmap";
+/******************************/
+
+pub const SPW_SEEDS_RESOURCE_DATA:&[u8;4]=b"d_rs";
+pub const SPW_SEEDS_RESOURCE_COUNT:&[u8;4]=b"c_rs";
+pub const SPW_SEEDS_COMPLAIN_COUNT:&[u8;4]=b"c_cp";
+pub const SPW_SEEDS_COMPLAIN_RESOURCE:&[u8;4]=b"cprs";
 
 /********************************************************************/
 /************************* World Related ****************************/
@@ -173,7 +170,7 @@ pub struct ResourceFootprint {
 //single module data struct
 #[account]
 #[derive(InitSpace)]
-pub struct ModuleData {
+pub struct ResourceData {
     #[max_len(100)]
     pub ipfs:String,     //Module IPFS cid
     #[max_len(50)] 
@@ -182,47 +179,13 @@ pub struct ModuleData {
     pub status: u32,      //block status  ["created","approved","banned"]
 }
 
+
 #[account]
 #[derive(InitSpace)]
-pub struct ModuleCounter {
+pub struct ResourceCounter {
     pub value: u64,
 }
-impl ModuleCounter {
-    pub fn inc(&mut self, amount:u64) {
-        self.value += amount
-    }
-
-    ///!important, only on Devnet
-    //FIXME, DEBUG only, need to remove when deploy on mainnet
-    pub fn set(&mut self, amount:u64) {
-        self.value = amount
-    }
-
-    ///!important, only on Devnet
-    //FIXME, DEBUG only, need to remove when deploy on mainnet
-    pub fn max(&mut self) {
-        self.value = 4096 * 4096
-    }
-}
-
-//single texture data struct
-#[account]
-#[derive(InitSpace)]
-pub struct TextureData {
-    #[max_len(80)] 
-    pub ipfs: String,     //JSON world setting
-    #[max_len(50)] 
-    pub owner: String,    //creator of gene to accept token
-    pub create: u64,      //create slot height
-    pub status: u32,      //block status  ["created","approved","banned"]
-}
-
-#[account]
-#[derive(InitSpace)]
-pub struct TextureCounter {
-    pub value: u64,
-}
-impl TextureCounter {
+impl ResourceCounter {
     pub fn inc(&mut self, amount:u64) {
         self.value += amount
     }
