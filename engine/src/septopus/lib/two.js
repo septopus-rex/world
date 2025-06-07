@@ -2,7 +2,7 @@
  * Lib - 2D calculation
  *
  * @fileoverview
- *  1. 2d convert and calcultion points
+ *  1. 2D convert and calcultion points
  *
  * @author Fuu
  * @date 2025-04-29

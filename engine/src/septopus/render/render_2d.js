@@ -20,15 +20,18 @@ const config={
 const self={
     hooks:{
         reg:()=>{return reg},
+        init:()=>{
+
+        },
     }
 };
 
 export default {
     hooks:self.hooks,
-    construct:(id)=>{
+    construct:(dom_id)=>{
 
     },
-    auto:(id)=>{
+    auto:(dom_id)=>{
 
     },
 }

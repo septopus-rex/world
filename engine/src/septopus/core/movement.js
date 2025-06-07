@@ -12,11 +12,11 @@
 import VBW from "./framework";
 
 const reg={
-    name:"movement",       //组件名称
-    category:'system',      //组件分类
+    name:"movement",
+    category:'system',
 }
 
-let player=null;                //player的信息位置
+let player=null;
 const self={
     getPlayer:()=>{
         if(player!==null) return true;

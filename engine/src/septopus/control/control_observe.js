@@ -10,6 +10,7 @@
 
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import VBW from "../core/framework";
+import ThreeObject from '../three/entry';
 
 const reg={
     name:"con_observe",
@@ -40,7 +41,9 @@ const control_observe={
     start:(id)=>{
         const chain=["active","containers",id]
         const {camera, render}=VBW.cache.get(chain);
-        const controls = new OrbitControls( camera, render.domElement );
+        //const controls = new OrbitControls( camera, render.domElement );
+
+        const controls=ThreeObject.get("basic","controller",{type:"orbit",params:{}});
         controls.update();
     },
 }

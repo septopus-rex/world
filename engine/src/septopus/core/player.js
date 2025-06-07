@@ -23,7 +23,6 @@ const config={
         block:[2025,501],
         world:0,
         position:[8,8,1.7],
-        //rotation:[Math.PI*0.5,0,0],
         rotation:[0,0,0],
         headAx:"y",
         extend:2,

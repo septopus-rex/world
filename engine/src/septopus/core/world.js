@@ -272,7 +272,7 @@ const self={
             return {eror:"No datasource method for module loading."};
         } 
         const failed=[];
-        //1.从IPFS获取到资源
+        //1.get data from IPFS
         VBW.datasource.module(arr,(map)=>{
             for(let id in map){
                 const chain=["resource","module",id];
@@ -646,16 +646,16 @@ const World={
             x:x,y:y,world:world,
             border:[],          //threeObject of block border
             raycast:[],         //threeObjects need to check selection status
-            helper:[],          //所有的helper
+            helper:[],          //helper of all object
             grid:{
                 raw:null,       //grid raw parameters,
-                line:[],        //格栅的线的threeObject
-                point:[],       //格栅定位点的threeObject
+                line:[],        //
+                points:[],      //location points here
             },
-            selected:{          //被选中的物品
-                adjunct:"",     //选中组件名称
-                index:0,        //选中的组件序列号
-                face:"",        //选中的3D物体的面
+            selected:{          //selection information
+                adjunct:"",     //selected adjunct
+                index:0,        //selected adjunct index
+                face:"",        //selected adjunct face ["x","y","z","-x","-y","-z"]
             },      
         });
 
@@ -669,10 +669,8 @@ const World={
                 return ck && ck(false);
             }
             self.prefetch(pre.texture,pre.module,(failed)=>{
-                //VBW.prepair(target,(pre)=>{
-                    VBW[config.render].show(dom_id,[x,y,world]);
-                    return ck && ck(true);
-                //});
+                VBW[config.render].show(dom_id,[x,y,world]);
+                return ck && ck(true);
             });
         });
     },
@@ -727,7 +725,6 @@ const World={
         VBW.mode("edit",target,(pre)=>{
             if(pre.error){
                 UI.show("toast",pre.error,{type:"error"});
-
                 return ck && ck(false);
             }
             VBW[config.render].show(dom_id,[x,y,world]);
@@ -757,7 +754,6 @@ const World={
             queue.push(task);
         }
         VBW.update(dom_id, world);
-
         
         const target={x:x,y:y,world:world,container:dom_id}
         VBW.prepair(target,(pre)=>{

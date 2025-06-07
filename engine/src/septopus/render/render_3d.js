@@ -105,7 +105,7 @@ const self={
         });
     },
 
-    //从构建好的three的组件定义，转换成渲染器能处理的对象，用于创建threeObject并放入scene
+    //construct STD data to render data.
     singleBlock:(x,y,world,dt)=>{
         const result={object:[],module:[],texture:[],animate:[]};
         for(let name in dt){
@@ -113,21 +113,21 @@ const self={
             for(let i=0;i<list.length;i++){
                 const row=list[i];
 
-                //1.筛选出材质的信息
+                //1.filter out texture and material for preload
                 if(row.material &&  row.material.texture){
                     if(!result.texture.includes(row.material.texture)){
                         result.texture.push(row.material.texture);
                     } 
                 }
 
-                //2.筛选出模型的信息
+                //2.filter out module for preload
                 if(row.module){
                     if(!result.module.includes(row.module)){
                         result.module.push(row.module);
                     } 
                 }
 
-                //3.分离出动画的信息
+                //3.filter out animation
                 if(row.animate!==undefined){
                     result.animate.push({
                         x:x,y:y,world:world,index:row.index,
@@ -135,7 +135,7 @@ const self={
                     });
                 }
 
-                //4.创建three的object的标准转换数据
+                //4.create ThreeObject format data from STD data.
                 const obj3={
                     x:x,
                     y:y,
@@ -182,17 +182,14 @@ const self={
             //console.log(single.material);
             const material=self.checkMaterial(single.material,world,id);
 
-            //1.设置mesh的位置
+            //1.set position of 3D object
             position[0]+=(single.x-1)*side[0];
             position[1]+=(single.y-1)*side[1];
 
             const res=ThreeObject.mesh(geometry,material,position,rotation);
 
-            //2.处理生成的材质
-            //TODO,这里需要对材质也进行复用,减少内存占用
-
+            //2.set mesh useData before adding to scene for searching.
             const mesh=res.mesh;
-            //2.设置mesh的useData用于检索
             const data={
                 x:parseInt(single.x),
                 y:parseInt(single.y),
@@ -204,7 +201,7 @@ const self={
             arr.push(mesh);
         }   
         
-        //TODO,这里实现加载模型到scene里
+        //TODO, add parsed module to scene
         if(single.module){
             //console.log(`Load module.`);
         }
@@ -273,7 +270,8 @@ const self={
     },
 
     //FIXME, player can go out of editing block, this can effect the active block
-    //!important,因为在编辑状态下，player会走出编辑的block，定位的时候不能用player的数据
+    
+    //!important, in edit mode, player can go out the editing block, so the info of editing is isolated.
     loadEdit:(scene,dom_id)=>{
         //const player=VBW.cache.get(["env","player"]);
         const world=VBW.cache.get(["active","world"]);

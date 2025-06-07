@@ -231,13 +231,12 @@ const self = {
         UI.show("compass",-180*player.location.rotation[1]/Math.PI,{});
     },
 
-
-    //帧同步里的方法，在这里进行运动
+    //Frame Synchronization, movement here to imply
     action: () => {
         const dis = [config.move.distance, config.move.angle];
         const ak = camera.rotation.y;
 
-        //1.根据键盘操作获取移动参数
+        //1.deal with keyboard inputs.
         let moved = false, rotated = false;
         const total = { position: [0, 0, 0], rotation: [0, 0, 0] }
         for (let i = 0; i < actions.length; i++) {
@@ -246,9 +245,9 @@ const self = {
             const diff = todo[act](dis, ak);
 
             if (diff.position) {
-                //1.1.检查会不会被stop阻挡
+                //1.1.check wether stop by stops
 
-                //1.2.对位置进行移动处理
+                //1.2.movement here
                 moved = true;
                 total.position[0] += diff.position[0];
                 total.position[1] += diff.position[2];
@@ -274,21 +273,21 @@ const self = {
                 );
             }
 
-            //TODO,这里对判断是否为数组，如果是的话，连续运动，lock住再动。这样就可以支持jump等操作
-            //2.对连续动作的支持处理 [{position:[0,0,0],rotation:[0,0,0]},...]类型的数据
+            //TODO, here to check movementp[]. if so, lock and do act. Support more actions, such as JUMP
+            //2.[{position:[0,0,0],rotation:[0,0,0]},...], action array
             if (diff.group) {
                 self.lock();
                 for (let i = 0; i < diff.group.length; i++) {
                     const single = diff.group[i];
 
-                    //2.1.处理位置信息，并检测是否被阻挡
+                    //2.1.check wether stopped.
 
-                    //2.2.处理旋转信息
+                    //2.2.rotation
                 }
             }
         }
 
-        //2.检测是否移动出了block位置
+        //2.update player location
         if (!status.lock) {
             self.updateLocation(camera, total, moved, rotated);
         }
