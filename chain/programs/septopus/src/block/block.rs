@@ -90,13 +90,16 @@ pub fn update(
         return Err(error!(ErrorCode::InvalidBlockIndex));
     }
 
-    //1.3 wether owner of block
+    //2. wether owner of block
     let check_key = ctx.accounts.payer.key();
     if is_owner(check_key,&ctx.accounts.block_data.owner) {
         return Err(error!(ErrorCode::NotOwnerOfBlock));
     }
 
-    //2. update the account address on block
+    //3. check data format
+    //TODO, here to check block data carefully.
+
+    //4. update the account address on block
     let clock = &ctx.accounts.clock;
     let bk= &mut ctx.accounts.block_data;
     bk.data=data;

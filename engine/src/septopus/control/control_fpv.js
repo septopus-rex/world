@@ -13,6 +13,7 @@
 import Movment from "../core/movement";
 import VBW from "../core/framework";
 import UI from "../io/io_ui";
+import ThreeObject from "../three/entry";
 
 const reg = {
     name: "con_first",       //组件名称
@@ -21,6 +22,7 @@ const reg = {
 
 let player = null;            //player information
 let camera = null;            //FPV camera object
+let scene=null;               //scene for raycast checking
 let actions = null;           //Pressed key queue
 let side = null;              //Block size
 let container = null;         //init DOM id
@@ -99,10 +101,16 @@ const self = {
     },
     active: (world, dom_id) => {
         if (actions === null) actions = VBW.queue.get(config.queue);
+        
         if (camera === null) {
             const chain = ["active", "containers", dom_id, "camera"];
             camera = VBW.cache.get(chain);
         }
+        if(scene===null){
+            const chain = ["active", "containers", dom_id, "scene"];
+            scene = VBW.cache.get(chain);
+        }
+
         if (player === null) {
             const chain = ["env", "player"];
             player = VBW.cache.get(chain);
@@ -286,10 +294,27 @@ const self = {
     getClickPosition:(ev)=>{
         return [ev.clientY,ev.clientX];
     },
+
+    selection:(ev)=>{
+        const ray=ThreeObject.get("basic","raycast",{});
+        ray.mouse.x = (ev.clientX / window.innerWidth) * 2 - 1;
+        ray.mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+        ray.checker.setFromCamera(ray.mouse, camera);
+
+        if(scene===null) return false;
+        
+        const objs=scene.children;
+        const selected = ray.checker.intersectObjects(objs);
+
+        if (selected.length > 0) {
+            console.log(selected);
+        }
+    },
     screen:(dom_id)=>{
         const el = document.getElementById(dom_id);
         if (!el) return;
         el.addEventListener('click', (ev)=>{
+            //1. check selection
             const mouse=self.getClickPosition(ev);
             const mode=VBW.cache.get(["active","mode"]);
             if(mode===2){
@@ -307,6 +332,9 @@ const self = {
                     //{label:"Version",icon:"",type:"info",action:()=>{}}
                 ],{offset:mouse});
             }
+
+            //2. raycast check
+            self.selection(ev);
         });
     },
 }

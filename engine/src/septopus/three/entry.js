@@ -16,6 +16,7 @@ import Render from "./basic/renderer";
 import Mesh from "./basic/mesh";
 import Group from "./basic/group";
 import Sky from "./basic/sky";
+import Raycast from "./basic/raycast";
 
 import light_direct from "./light/light_direct";
 import light_point from "./light/light_point";
@@ -42,7 +43,8 @@ const router={
         scene:Scene,
         mesh:Mesh,
         group:Group,
-        sky:Sky,             
+        sky:Sky, 
+        raycast:Raycast,            
     },
     light:{
         spot:light_spot,
@@ -135,11 +137,7 @@ const ThreeObject = {
         return {mesh:mesh,material:mm};
     },
 
-    line:(points,mt,position,rotation)=>{
-
-    },
-
-    group:(objs,position,rotation)=>{
+    raycast:()=>{
 
     },
 }
