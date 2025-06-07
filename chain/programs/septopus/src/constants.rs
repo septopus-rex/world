@@ -293,4 +293,16 @@ pub enum ErrorCode {
 
     #[msg("Not the owner of this block.")]
     NotOwnerOfBlock,
+
+    #[msg("Can not buy the block own by yourself.")]
+    InvalidBuyYourself,
+
+    #[msg("Coordination or World index is valid.")]
+    InvalidBlockIndex,
+
+    #[msg("Invalid public string.")]
+    InvalidPubkey,
+
+    #[msg("Invalid recipient of selling block.")]
+    InvalidRecipient,
 }

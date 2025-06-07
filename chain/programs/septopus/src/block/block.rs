@@ -1,6 +1,7 @@
 use {
     std::str::FromStr,
     anchor_lang::prelude::*,
+    anchor_lang::system_program,
     serde_json::{Value},
 };
 
@@ -19,7 +20,6 @@ use crate::constants::{
     ErrorCode,
 };
 
-
 /********************************************************************/
 /************************ Public Functions **************************/
 /********************************************************************/
@@ -30,21 +30,17 @@ pub fn mint(
     y:u32,
     world:u32,
 ) -> Result<()> {
-    msg!("world {} localtion: [{},{}]", world,x,y);
-    msg!("seed: {:?}", SPW_SEEDS_BLOCK_DATA);
-    msg!("x: {:?}", x.to_le_bytes());
-    msg!("y: {:?}", y.to_le_bytes());
-    msg!("world: {:?}", world.to_le_bytes());
-    //1. input check
-    //1.1 wether world is on sell
-    let world_list=&mut ctx.accounts.world_list;
-    if world_list.list.len()-1 != world as usize {
-        return Err(error!(ErrorCode::InvalidWorldIndex));
-    }
+    // debug output
+    // msg!("world {} localtion: [{},{}]", world,x,y);
+    // msg!("seed: {:?}", SPW_SEEDS_BLOCK_DATA);
+    // msg!("x: {:?}", x.to_le_bytes());
+    // msg!("y: {:?}", y.to_le_bytes());
+    // msg!("world: {:?}", world.to_le_bytes());
 
-    //1.2 wether X or Y overflow
-    if !is_valid_location(x,y,&world_list.list[world as usize]) {
-        return Err(error!(ErrorCode::InvalidLocation));
+    //1. input check
+    let world_list=&mut ctx.accounts.world_list;
+    if !is_valid_block(x,y,world,&world_list){
+        return Err(error!(ErrorCode::InvalidBlockIndex));
     }
 
     //2. logical check
@@ -89,67 +85,95 @@ pub fn update(
 )-> Result<()> {
 
     //1. input check
-    //1.1 wether world is on sell
-    // let world_list=&mut ctx.accounts.world_list;
-    // if world_list.list.len()-1 != world as usize {
-    //     return Err(error!(ErrorCode::InvalidWorldIndex));
-    // }
-
-    //1.2 wether X or Y overflow
-    // if !is_valid_location(x,y,&world_list.list[world as usize]) {
-    //     return Err(error!(ErrorCode::InvalidLocation));
-    // }
+    let world_list=&mut ctx.accounts.world_list;
+    if !is_valid_block(x,y,world,&world_list){
+        return Err(error!(ErrorCode::InvalidBlockIndex));
+    }
 
     //1.3 wether owner of block
-    // let check_key = ctx.accounts.payer.key();
-    // if is_owner(check_key,&ctx.accounts.block_data.owner) {
-    //     return Err(error!(ErrorCode::NotOwnerOfBlock));
-    // }
+    let check_key = ctx.accounts.payer.key();
+    if is_owner(check_key,&ctx.accounts.block_data.owner) {
+        return Err(error!(ErrorCode::NotOwnerOfBlock));
+    }
 
     //2. update the account address on block
     let clock = &ctx.accounts.clock;
     let bk= &mut ctx.accounts.block_data;
-    //bk.data=data;
+    bk.data=data;
     bk.update=clock.slot;
     Ok(())
 }
 
 
 pub fn sell(
-    ctx: Context<SellBlock>,      //default from system
-    _x:u32,                      
-    _y:u32,
-    _world:u32,
-    price:u64,                      //Selling price in SOL
+    ctx: Context<SellBlock>,
+    x:u32,                      
+    y:u32,
+    world:u32,
+    price:u64,                  //Selling price in SOL
 ) -> Result<()> {
 
     //1. input check
+    let world_list=&mut ctx.accounts.world_list;
+    if !is_valid_block(x,y,world,&world_list){
+        return Err(error!(ErrorCode::InvalidBlockIndex));
+    }
+
+    //2.check wether the owner to withdraw
+    let bk= &mut ctx.accounts.block_data;
+    let check_key = ctx.accounts.payer.key();
+    if is_owner(check_key,&bk.owner) {
+        return Err(error!(ErrorCode::NotOwnerOfBlock));
+    }
 
     let clock = &ctx.accounts.clock;
-    let bk= &mut ctx.accounts.block_data;
     bk.price=price;
     bk.update=clock.slot;
-    bk.status=BlockStatus::Selling as u32;            //FIXME, here to set an enum to select
+    bk.status=BlockStatus::Selling as u32;
 
     Ok(())
 }
 
 pub fn buy(
     ctx: Context<BuyBlock>,      //default from system
-    _x:u32,                      
-    _y:u32,
-    _world:u32,
+    x:u32,                      
+    y:u32,
+    world:u32,
 ) -> Result<()> {
 
     //1. input check
+    let world_list=&mut ctx.accounts.world_list;
+    if !is_valid_block(x,y,world,&world_list){
+        return Err(error!(ErrorCode::InvalidBlockIndex));
+    }
 
-    let payer_pubkey = ctx.accounts.payer.key();
-    let owner=payer_pubkey.to_string();
+    //2.check wether the owner to buy the block
+    let bk= &mut ctx.accounts.block_data;
+    let check_key = ctx.accounts.payer.key();
+    if is_owner(check_key,&bk.owner) {
+        return Err(error!(ErrorCode::NotOwnerOfBlock));
+    }
+
+    //3.pay the fee to owner
+    let fee_recipient=&bk.owner;
+    let check_pubkey = str_to_pubkey(fee_recipient)?;
+    if check_pubkey != *ctx.accounts.recipient.key{
+        return Err(error!(ErrorCode::InvalidRecipient));
+    }
+
+    system_program::transfer(
+        CpiContext::new(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.payer.to_account_info(),
+                to: ctx.accounts.recipient.to_account_info(),
+            },
+        ),
+        bk.price,
+    )?;
 
     let clock = &ctx.accounts.clock;
-
-    let bk= &mut ctx.accounts.block_data;
-    bk.owner=owner;
+    bk.owner=check_key.to_string();
     bk.update=clock.slot;
     bk.price=0;
 
@@ -159,19 +183,25 @@ pub fn buy(
 
 pub fn withdraw(
     ctx: Context<WithdrawBlock>,      //default from system
-    _x:u32,                      
-    _y:u32,
-    _world:u32,
+    x:u32,                      
+    y:u32,
+    world:u32,
 ) -> Result<()> {
 
     //1. input check
+    let world_list=&mut ctx.accounts.world_list;
+    if !is_valid_block(x,y,world,&world_list){
+        return Err(error!(ErrorCode::InvalidBlockIndex));
+    }
 
-    // let payer_pubkey = ctx.accounts.payer.key();
-    // let owner=payer_pubkey.to_string();
+    //2.check wether the owner to withdraw
+    let bk= &mut ctx.accounts.block_data;
+    let check_key = ctx.accounts.payer.key();
+    if is_owner(check_key,&bk.owner) {
+        return Err(error!(ErrorCode::NotOwnerOfBlock));
+    }
 
     let clock = &ctx.accounts.clock;
-
-    let bk= &mut ctx.accounts.block_data;
     bk.update=clock.slot;
     bk.price=0;
 
@@ -182,7 +212,16 @@ pub fn withdraw(
 /********************************************************************/
 /*********************** Private Functions **************************/
 /********************************************************************/
+fn is_valid_block(x:u32,y:u32,world:u32,world_list:&WorldList) -> bool {
+    if world_list.list.len()-1 != world as usize {
+        return false;
+    }
 
+    if !is_valid_location(x,y,&world_list.list[world as usize]) {
+        return false;
+    }
+    return true;
+}
 
 fn is_owner(check_pubkey:Pubkey,record:&str) -> bool{
     let pubkey = solana_program::pubkey::Pubkey::from_str(record).expect("Invalid pubkey");
@@ -213,6 +252,11 @@ fn is_valid_location(x:u32, y:u32, single:&WorldData) -> bool{
         return false;
     }
     return true;
+}
+
+fn str_to_pubkey(key_str: &str) -> Result<Pubkey> {
+    let pubkey = Pubkey::from_str(key_str).map_err(|_| error!(ErrorCode::InvalidPubkey))?;
+    Ok(pubkey)
 }
 
 ///!important, do not add payer.publickey as one of seeds. Need to sell/buy.
@@ -295,6 +339,9 @@ pub struct SellBlock<'info> {
     ],bump)]
     pub block_data: Account<'info, BlockData>,
 
+    #[account(mut,seeds = [SPW_SEEDS_WORLD_LIST],bump)]
+    pub world_list: Account<'info, WorldList>,
+
     pub clock: Sysvar<'info, Clock>,
 }
 
@@ -304,6 +351,9 @@ pub struct BuyBlock<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    #[account(mut)]
+    pub recipient: SystemAccount<'info>,
+
     #[account(mut,seeds = [
         SPW_SEEDS_BLOCK_DATA,
         &x.to_le_bytes(),
@@ -312,7 +362,11 @@ pub struct BuyBlock<'info> {
     ],bump)]
     pub block_data: Account<'info, BlockData>,
 
+    #[account(mut,seeds = [SPW_SEEDS_WORLD_LIST],bump)]
+    pub world_list: Account<'info, WorldList>,
+
     pub clock: Sysvar<'info, Clock>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
@@ -328,6 +382,9 @@ pub struct WithdrawBlock<'info> {
         &world.to_le_bytes(),
     ],bump)]
     pub block_data: Account<'info, BlockData>,
+
+    #[account(mut,seeds = [SPW_SEEDS_WORLD_LIST],bump)]
+    pub world_list: Account<'info, WorldList>,
 
     pub clock: Sysvar<'info, Clock>,
 }
