@@ -1,13 +1,13 @@
-/* 
-*  Three.js rednerder function 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-26
-*  @there.js R175
-*  @functions
-*  1. create different kind of renderer.
-*/
-
+/**
+ * Three.js rednerder function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create different kind of renderer.
+ *
+ * @author Fuu
+ * @date 2025-04-26
+ */
 
 import * as THREE from "three";
 const Renderer={

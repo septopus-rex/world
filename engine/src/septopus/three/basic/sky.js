@@ -1,11 +1,12 @@
 /**
  * Three.js sky function 
- *
+ * @there.js R175
+ * 
  * @fileoverview:
  *  1. create different kind of sky.
  * 
  * @author Fuu
- * @date 2025-04-23
+ * @date 2025-06-03
  */
 
 import * as THREE from "three";

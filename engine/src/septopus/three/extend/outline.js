@@ -1,5 +1,15 @@
-import * as THREE from "three";
+/**
+ * Three.js extend function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create outline of 3D object
+ *
+ * @author Fuu
+ * @date 2025-05-21
+ */
 
+import * as THREE from "three";
 const self={
     /*按照给定的值生成box外轮廓线的方法
      * @param	size	array		//[x,y,z]的数据

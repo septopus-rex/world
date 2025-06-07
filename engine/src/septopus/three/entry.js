@@ -89,19 +89,32 @@ const self = {
     valid:()=>{
 
     },
+
+    //!important, transform rule between three.js and Septopus.
     transform:(arr)=>{
         return [arr[0],arr[2],-arr[1]];
     },
-
 };
 
 const ThreeObject = {
-    //Entry to get geometry, material
+    /** 
+     * Entry to get geometry, material and objects on Three.js
+     * @functions
+     * 1.create 3D objects
+     * 2.change the coordination system from three.js to Septopus world
+     * @param   {string}    cat      - category of 3D object
+     * @param   {string}    mod      - name of 3D object
+     * @param   {object}    params   - parameters for creating 3D object
+     * @returns
+     * @return objects
+     */
     get: (cat, mod, params) => {
-        //console.log(JSON.stringify(params));
 
+        //1. check validation
         if(!router[cat] || !router[cat][mod]) return {error:`Invalid three object: ${cat} ${mod}`}
 
+
+        //2. coordination adaptation
         //!important,change size of 3D object
         if(params.size) params.size=[
             params.size[0],
@@ -109,12 +122,23 @@ const ThreeObject = {
             params.size[1]
         ];
 
-        //console.log(JSON.stringify(params));
+        //3.create 3D object
         return router[cat][mod].create(params);
     },
 
+    /** 
+     * Create Mesh for renderer.
+     * @functions
+     * 1.create 3D mesh
+     * 2.change the coordination system from three.js to Septopus world
+     * @param   {object}    geo      - three.js geometry for creating mesh
+     * @param   {object}    mt       - {type:"TYPE_OF_MATERIAL",params:{}}, material parameters
+     * @param   {array}     position - [x,y,z], position of mesh
+     * @param   {array}     rotation - [rx,ry,rz], rotation of mesh
+     * @returns
+     * @return {object}  - {mesh:Object,material:Object}
+     */
     mesh:(geo,mt,position,rotation)=>{
-        //console.log(JSON.stringify(geo));
         if(geo===undefined ||
             mt===undefined ||
             position===undefined ||
@@ -128,17 +152,13 @@ const ThreeObject = {
 
         const mesh=ThreeObject.get("basic","mesh",{geometry:gg,material:mm});
 
+        //!important, transform the coordination
         //mesh.position.set(...position);
         //mesh.rotation.set(...rotation); 
-
         mesh.position.set(...self.transform(position));
         mesh.rotation.set(...self.transform(rotation));
 
         return {mesh:mesh,material:mm};
-    },
-
-    raycast:()=>{
-
     },
 }
 

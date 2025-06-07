@@ -1,14 +1,16 @@
-/* 
-*  Three.js camera function 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-26
-*  @there.js R175
-*  @functions
-*  1. create different kind of camera.
-*/
+/**
+ * Three.js camera function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create different kind of camera.
+ *
+ * @author Fuu
+ * @date 2025-04-26
+ */
 
 import * as THREE from "three";
+
 const Camera={
     create:(cfg)=>{
         const type=!cfg.type?"perspective":cfg.type;

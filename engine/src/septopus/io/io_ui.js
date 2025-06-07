@@ -62,6 +62,11 @@ const doms={
             close:null,
         },
     },
+    sidebar:{
+        events:{
+
+        },
+    }
 }
 
 const inputs={

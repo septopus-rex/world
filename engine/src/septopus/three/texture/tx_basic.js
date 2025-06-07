@@ -1,12 +1,14 @@
-/* 
-*  Three.js basic texture 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @there.js R175
-*  @functions
-*  1. create texture from image.
-*/
+/**
+ * Three.js texture function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create texture from image.
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
+
 
 
 import * as THREE from "three";
@@ -17,8 +19,6 @@ const self={
 
         return true;
     },
-
-    //提供standard的数据输出，可以进行比较处理，也供valid来使用
     sample:()=>{
         return {
             size:[],
@@ -28,9 +28,9 @@ const self={
 
 const texture_basic={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create BASIC TEXTURE."};
+
         const {image,repeat}=params;
-        //const texture = new THREE.TextureLoader().load( "textures/water.jpg" );
         const texture = new THREE.TextureLoader().load(image);
         texture.wrapS = THREE.RepeatWrapping;
         texture.wrapT = THREE.RepeatWrapping;

@@ -5,6 +5,8 @@
  *  1. keyboard support
  *  2. block cross checking
  *  3. base on three.js coordinate system
+ *  4. object selection
+ *  5. sidebar and popup menu orginazation
  * 
  * @author Fuu
  * @date 2025-04-25
@@ -16,8 +18,8 @@ import UI from "../io/io_ui";
 import ThreeObject from "../three/entry";
 
 const reg = {
-    name: "con_first",       //组件名称
-    category: 'controller',      //组件分类
+    name: "con_first",
+    category: 'controller',
 }
 
 let player = null;            //player information
@@ -30,18 +32,18 @@ let world = null;             //active world
 const config = {
     id: "fpv_control",
     code: {          //Definition of keyboard
-        FORWARD: 87,     //W
-        BACKWARD: 83,     //S
-        LEFT: 65,     //A
-        RIGHT: 68,     //D
-        BODY_RISE: 82,     //R
-        BODY_FALL: 70,     //F
-        HEAD_LEFT: 37,     //Arrow left
+        FORWARD: 87,        //W
+        BACKWARD: 83,       //S
+        LEFT: 65,           //A
+        RIGHT: 68,          //D
+        BODY_RISE: 82,      //R
+        BODY_FALL: 70,      //F
+        HEAD_LEFT: 37,      //Arrow left
         HEAD_RIGHT: 39,     //Arrow right
-        HEAD_RISE: 38,     //Arrow up
-        HEAD_DOWN: 40,     //Arrow down
-        JUMP: 32,     //Space
-        SQUAT: 17,     //Ctrl
+        HEAD_RISE: 38,      //Arrow up
+        HEAD_DOWN: 40,      //Arrow down
+        JUMP: 32,           //Space
+        SQUAT: 17,          //Ctrl
     },
     queue: "keyboard",
     move: {
@@ -89,7 +91,7 @@ const self = {
     keyboard: (dom_id) => {
         VBW.queue.init(config.queue);
         self.bind('keydown', (ev) => {
-            UI.hide("pop");         //hide popup menu when moving 
+            UI.hide("pop"); //hide popup menu when moving 
             const code = ev.which;
             if (config.keyboard[code]) VBW.queue.insert(config.queue, config.keyboard[code]);
         });
@@ -295,19 +297,19 @@ const self = {
         return [ev.clientY,ev.clientX];
     },
 
-    selection:(ev)=>{
+    select:(ev)=>{
         const ray=ThreeObject.get("basic","raycast",{});
         ray.mouse.x = (ev.clientX / window.innerWidth) * 2 - 1;
         ray.mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
         ray.checker.setFromCamera(ray.mouse, camera);
 
         if(scene===null) return false;
-        
+
         const objs=scene.children;
         const selected = ray.checker.intersectObjects(objs);
 
         if (selected.length > 0) {
-            console.log(selected);
+            //console.log(selected);
         }
     },
     screen:(dom_id)=>{
@@ -334,7 +336,7 @@ const self = {
             }
 
             //2. raycast check
-            self.selection(ev);
+            self.select(ev);
         });
     },
 }

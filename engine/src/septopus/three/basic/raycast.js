@@ -1,12 +1,13 @@
-/* 
-*  Three.js group function 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-06-07
-*  @there.js R175
-*  @functions
-*  1. create group.
-*/
+/**
+ * Three.js raycast function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create raycast.
+ *
+ * @author Fuu
+ * @date 2025-06-07
+ */
 
 import * as THREE from "three";
 

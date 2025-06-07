@@ -1,3 +1,14 @@
+/**
+ * Three.js material function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create meshphong material
+ *
+ * @author Fuu
+ * @date 2025-05-21
+ */
+
 import * as THREE from "three";
 
 const self={
@@ -8,8 +19,6 @@ const self={
 
         return true;
     },
-
-    //提供standard的数据输出，可以进行比较处理，也供valid来使用
     sample:()=>{
         return {
             color:"#ffffff",

@@ -33,6 +33,9 @@ const self={
         reg:()=>{
             return reg;
         },
+        // init:()=>{
+
+        // },
     },
     attribute:{
 

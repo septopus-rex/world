@@ -1,13 +1,13 @@
-/* 
-*  Three.js sun light 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @there.js R175
-*  @functions
-*  1. create sun light
-*/
-
+/**
+ * Three.js light function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create sun light.
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
 import * as THREE from "three";
 

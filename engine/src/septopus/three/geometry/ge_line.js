@@ -1,28 +1,26 @@
-/* 
-*  Three.js geometry 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @there.js R175
-*  @functions
-*  1. create line.
-*/
+/**
+ * Three.js geometry function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create line.
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
 import * as THREE from "three";
-
 const self={
-    get:(pa,pb,texture)=>{
-        // const geo = new THREE.Geometry();
-        // const va=new THREE.Vector3(pa[0], pa[1], pa[2]);
-        // const vb=new THREE.Vector3(pb[0], pb[1], pb[2])
-        // geo.vertices.push(va,vb);
-
-        // const line=new THREE.Line(geo,mm);
-        // line.userData={type:'gridLine',data:[pa,pb]};
-        // return line;
+    get:(pa,pb,color)=>{
+        const points = [];
+        points.push( new THREE.Vector3( pa[0], pa[1], pa[2]) );
+        points.push( new THREE.Vector3( pb[0], pb[1], pb[2]) );
+        const geometry = new THREE.BufferGeometry().setFromPoints( points );
+        const material = new THREE.LineBasicMaterial({ color: color});
+        const line=new THREE.Line(geometry,material);
+        return line;
     },
     valid:(params)=>{
-
         return true;
     },
 
@@ -36,7 +34,7 @@ const self={
 
 const geometry_line={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create LINE."};
         return self.get(params);
     },
     standard:()=>{

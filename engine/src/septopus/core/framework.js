@@ -306,7 +306,9 @@ const self = {
         return preload;
     },
     structEntire: (x, y, ext, world, dom_id, ck, cfg) => {
-        //2.construct all blocks data
+
+        //1.construct all blocks data
+        //FIXME, get the limit by world not setting.
         const limit = self.cache.get(["setting", "limit"]);
         const fun_single = self.structSingle;
         for (let i = -ext; i < ext + 1; i++) {
@@ -318,7 +320,7 @@ const self = {
             }
         }
 
-        //4.construct render data
+        //2.construct render data
         const fun_render = self.structRenderData;
         const prefetch = { module: [], texture: [] };
         for (let i = -ext; i < ext + 1; i++) {
@@ -332,7 +334,7 @@ const self = {
             }
         }
 
-        //5.unique module and texture IDs
+        //3.unique module and texture IDs
         prefetch.module = Toolbox.unique(prefetch.module);
         prefetch.texture = Toolbox.unique(prefetch.texture);
         return ck && ck(prefetch);
@@ -600,7 +602,14 @@ const Framework = {
         }
     },
 
-
+    /**
+     * force to fresh block data from RAW
+     * @param {object}   target     - {x:100,y:200,world:0,container:DOM_ID}, spectial block to prepair
+     * @param {function} ck         - callback function
+     * @param {object}   [cfg]      - setting for fresh
+     * @returns
+     * @return void
+     */
     prepair:(target,ck,cfg)=>{
         //1.struct data from RAW to STD
         const {x, y,world, container} = target;

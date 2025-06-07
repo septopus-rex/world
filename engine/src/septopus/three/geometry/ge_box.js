@@ -1,13 +1,13 @@
-/* 
-*  Three.js geometry 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-23
-*  @there.js R175
-*  @functions
-*  1. create box.
-*/
-
+/**
+ * Three.js geometry function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create box.
+ *
+ * @author Fuu
+ * @date 2025-04-23
+ */
 
 import * as THREE from "three";
 

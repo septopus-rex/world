@@ -1,5 +1,15 @@
-import * as THREE from "three";
+/**
+ * Three.js extend function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create grid
+ *
+ * @author Fuu
+ * @date 2025-05-21
+ */
 
+import * as THREE from "three";
 const config={
     color:{
         x:0xef4444,     //red

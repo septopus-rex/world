@@ -1,12 +1,13 @@
-/* 
-*  Three.js geometry 
-*  @auth [ Fuu ]
-*  @creator Fuu
-*  @date 2025-04-29
-*  @there.js R175
-*  @functions
-*  1. create plane.
-*/
+/**
+ * Three.js geometry function 
+ * @there.js R175
+ * 
+ * @fileoverview
+ * 1. create plane.
+ *
+ * @author Fuu
+ * @date 2025-04-29
+ */
 
 import * as THREE from "three";
 
@@ -29,12 +30,8 @@ const self={
 
 const geometry_plane={
     create:(params)=>{
-        //console.log(params);
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create PLANE."};
         const {size} = params;
-
-        //console.log(size);
-        
         return new THREE.PlaneGeometry(size[0],size[1]);
     },
     standard:()=>{
