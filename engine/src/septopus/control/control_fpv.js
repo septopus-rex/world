@@ -16,6 +16,7 @@ import Movment from "../core/movement";
 import VBW from "../core/framework";
 import UI from "../io/io_ui";
 import ThreeObject from "../three/entry";
+import Toolbox from "../lib/toolbox";
 
 const reg = {
     name: "con_first",
@@ -231,6 +232,49 @@ const self = {
         UI.show("compass",-180*player.location.rotation[1]/Math.PI,{});
     },
 
+    //fliter out stops related by block coordination.
+    getStops:(bks)=>{
+        //console.log(bks);
+        const stops=[];
+        const fun=VBW.cache.get;
+        for(let i=0;i<bks.length;i++){
+            const [x,y]=bks[i];
+            if(!x || !y) continue;
+
+            const key=`${x}_${y}`;
+            const arr=fun(["block",container,world,key,"stop"]);
+            if(arr.error || arr.length===0) continue;
+
+            for(let j=0;j<arr.length;j++){
+                const stop=arr[j];
+                if(!stop.block)stop.block=[x,y];
+                if(!stop.elevation) stop.elevation=fun(["block",container,world,key,"elevation"]);
+                stops.push(stop);
+            }
+        }
+        return stops;
+    },
+
+    checkStop:(delta)=>{
+        const cvt = self.getConvert();
+        const [x,y]=player.location.block;
+        const pos=[
+            player.location.position[0]*cvt,
+            player.location.position[1]*cvt,
+            player.location.position[2]*cvt
+        ];
+        const arr=VBW.stop.calculate.blocks(pos,delta,x,y,side);
+        const stops=self.getStops(arr);
+
+        const cfg={
+            cap:0.2 * cvt,
+            height:1.8  * cvt,
+            elevation:0.6  * cvt,
+            pre:0.3 * cvt
+        };
+        return VBW.stop.check(pos,stops,cfg);
+    },
+
     //Frame Synchronization, movement here to imply
     action: () => {
         const dis = [config.move.distance, config.move.angle];
@@ -246,16 +290,22 @@ const self = {
 
             if (diff.position) {
                 //1.1.check wether stop by stops
+                const check=self.checkStop(diff.position);
+                if(!check.move){
+                    console.log(`Stopped.`);
+                }
 
                 //1.2.movement here
                 moved = true;
+
+                //!important, adopation of coordination here.
                 total.position[0] += diff.position[0];
-                total.position[1] += diff.position[2];
-                total.position[2] += -diff.position[1];
+                total.position[1] += diff.position[2];       //!important, transform from Septopus to three.js
+                total.position[2] += -diff.position[1];      //!important, transform from Septopus to three.js
 
                 camera.position.set(
                     camera.position.x + total.position[0],
-                    camera.position.y + total.position[1],
+                    camera.position.y + total.position[1], 
                     camera.position.z + total.position[2],
                 );
             }

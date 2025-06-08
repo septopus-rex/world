@@ -56,13 +56,13 @@ export default {
                 // },3000);
 
                 /*********** Adjunct Modification Demo ***********/
-                World.edit(container,wd_index,2025,502);
-                setTimeout(()=>{
-                    const tasks=[
-                        {adjunct:"wall",action:"set",param:{z:8,index:0}}
-                    ]
-                    World.modify(tasks,container,wd_index,(done)=>{});
-                },1000);
+                // World.edit(container,wd_index,2025,502);
+                // setTimeout(()=>{
+                //     const tasks=[
+                //         {adjunct:"wall",action:"set",param:{z:8,index:0}}
+                //     ]
+                //     World.modify(tasks,container,wd_index,(done)=>{});
+                // },1000);
             },5000);
             
             // const tasks=[

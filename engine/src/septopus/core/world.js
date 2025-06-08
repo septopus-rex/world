@@ -141,10 +141,11 @@ const self={
                 //console.log(cat);
                 if(component.hooks[initKey]!==undefined){
                     const res=component.hooks[initKey]();
-                    if(!res.chain || !res.value){
-                        UI.show("toast",`Invalid init data from "${cat}" component.`,{type:"error"});
-                    } 
-                    VBW.cache.set(res.chain,res.value);
+                    if(!res || !res.chain || !res.value){
+                        UI.show("toast",`Invalid init data from "${cat}" category component.`,{type:"error"});
+                    }else{
+                        VBW.cache.set(res.chain,res.value);
+                    }
                 }
             }
         }
