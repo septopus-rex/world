@@ -149,7 +149,7 @@ const self={
             //console.log(obj);
             const ds={stop:[],helper:[]};
             const cfg=config.active;
-            const h=cfg.height*cvt*10;
+            const h=cfg.height*cvt;
             const zj=Math.PI*0.5;
             const row=obj[0];
             const cc=0.5*row.x;
@@ -160,7 +160,7 @@ const self={
             arr.push({          //south
                 type:"box",
                 params:{
-                    size:[row.x,h,w],
+                    size:[row.x,w,h],
                     position:[cc,0,oz],
                     rotation:[0,0,0],
                 },
@@ -172,7 +172,7 @@ const self={
             arr.push({      //east
                 type:"box",
                 params:{
-                    size:[h,row.y,w],
+                    size:[w,row.y,h],
                     position:[cc+cc,cc,oz],
                     rotation:[0,0,0],
                 },
@@ -184,7 +184,7 @@ const self={
             arr.push({          //north
                 type:"box",
                 params:{
-                    size:[row.x,h,w],
+                    size:[row.x,w,h],
                     position:[cc,cc+cc,oz],
                     rotation:[0,0,0],
                 },
@@ -196,7 +196,7 @@ const self={
             arr.push({          //west
                 type:"box",
                 params:{
-                    size:[h,row.y,w],
+                    size:[w,row.y,h],
                     position:[0,cc,oz],
                     rotation:[0,0,0],
                 },

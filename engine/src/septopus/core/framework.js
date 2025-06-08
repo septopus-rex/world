@@ -375,12 +375,13 @@ const self = {
 
             //2.isolate basic component stop
             if(data.stop && data.stop.length!==0){
-
-            }
+                console.log(data.stop);
+                edit.stop.push(...data.stop);
+            }   
 
             //3.isolate object helper
             if(data.helper && data.helper.length!==0){
-                
+                edit.stop.push(...data.helper);
             }
         }
 

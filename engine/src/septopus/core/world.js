@@ -646,7 +646,8 @@ const World={
         VBW.cache.set(chain,{
             x:x,y:y,world:world,
             border:[],          //threeObject of block border
-            raycast:[],         //threeObjects need to check selection status
+            //raycast:[],       //threeObjects need to check selection status
+            stop:[],            //stop to show
             helper:[],          //helper of all object
             grid:{
                 raw:null,       //grid raw parameters,
@@ -657,13 +658,18 @@ const World={
                 adjunct:"",     //selected adjunct
                 index:0,        //selected adjunct index
                 face:"",        //selected adjunct face ["x","y","z","-x","-y","-z"]
-            },      
+            },
+            objects:{           //objects in scene, easy for cleaning from scene
+                stop:null,
+                helper:null,
+                grid:null,
+            }    
         });
 
         //2.create three objects
         const target={x:x,y:y,world:world,container:dom_id}
         const mode="edit";
-        console.log(`Switch to edit mode.`);
+        //console.log(`Switch to edit mode.`);
         VBW.mode(mode,target,(pre)=>{
             if(pre.error){
                 UI.show("toast",pre.error,{type:"error"});

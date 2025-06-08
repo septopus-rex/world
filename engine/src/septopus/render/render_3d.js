@@ -269,8 +269,7 @@ const self={
         }
     },
 
-    //FIXME, player can go out of editing block, this can effect the active block
-    
+    //FIXME, player can go out of editing block, this can effect the active block 
     //!important, in edit mode, player can go out the editing block, so the info of editing is isolated.
     loadEdit:(scene,dom_id)=>{
         //const player=VBW.cache.get(["env","player"]);
@@ -280,7 +279,7 @@ const self={
 
         UI.show("toast",`Ready to show edit data.`);
         const edit=VBW.cache.get(chain);
-        
+
         //1.get related helper
         let objs=[];
         if(edit.selected.adjunct){
@@ -295,7 +294,7 @@ const self={
             edit.x,
             edit.y,
             world,
-            { editor:objs }
+            {editor:objs}
         );
         const side=self.getSide();
         for(let i=0;i<data.object.length;i++){
@@ -311,8 +310,7 @@ const self={
         }
 
         //3.load grid
-        //console.log(JSON.stringify(edit.grid.raw));
-        if(edit.grid.raw!==null){
+        if(edit.grid && edit.grid.raw!==null){
             const params=Toolbox.clone(edit.grid.raw);
             //TODO, the parameters for grid can be modified and load dynamic
             params.density={
@@ -325,15 +323,23 @@ const self={
             edit.grid.line=gs;
             gs.position[0]+=(edit.x-1)*side[0];
             gs.position[1]+=(edit.y-1)*side[1];
-
             gs.userData={
                 x:edit.x,
                 y:edit.y,
                 name:"grid",
             }
-
-
             scene.add(gs);
+        }
+
+        //4.load helper;
+        if(edit.helper && edit.helper.length!==0){
+            console.log(`Here to show helper on edit mode.`);
+        }
+
+        //5.load stops;
+        if(edit.stop && edit.stop.length!==0){
+            console.log(`Here to show stop on edit mode.`);
+            console.log(edit.stop);
         }
     },
     loadBlocks:(scene,dom_id)=>{
@@ -359,12 +365,14 @@ const self={
         let mds=[],txs=[],objs=[],ans=[];
         const data_chain=["block",dom_id,world,`${x}_${y}`,"three"];
         const tdata=VBW.cache.get(data_chain);
+
         //1.get data of target block[x,y]
         const data=self.singleBlock(x,y,world,tdata);
         if(data.texture.length!==0) txs=txs.concat(data.texture);
         if(data.module.length!==0) mds=mds.concat(data.module);
         objs=objs.concat(data.object);
         ans=ans.concat(data.animate);
+
         //2.parse texture and module for 3D renders
         self.parse(txs,mds,world,dom_id,(failed)=>{
 

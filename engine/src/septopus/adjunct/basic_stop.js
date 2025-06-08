@@ -28,6 +28,11 @@ const config = {
         ],
     },
     color: 0xffffff,
+    stop:{
+        'BODY_STOP':1,		//stop the body
+        'FOOT_STOP':2,		//stop on foot
+        'HEAD_STOP':3,		//stop beyond header
+	},
 }
 
 const self = {
@@ -35,12 +40,9 @@ const self = {
         reg: () => {
             return reg;
         },
-        // init:()=>{
-
-        // },
     },
     attribute: {
-
+        
     },
     transform: {
         raw_std: (arr, cvt) => {
@@ -95,6 +97,7 @@ const self = {
 
             return blocks;
         },
+
         // wether in stop projection surface
         projection:  (px, py, stops)=>{
             const list = {};
@@ -120,23 +123,43 @@ const self = {
 		 * */
 		relationZ:function(z,h,cap,va,list){
 			const arr=[];
-			const types=config.stop;
+			const option=config.stop;
+
 			for(let id in list){
 				const st=list[id];
 				const zmin=st.oz-st.z*0.5+va,zmax=st.oz+st.z*0.5+va;
+
+                //TODO, here to check BALL type stop
+
 				if(zmin>=z+h){
                     //a.stop upon header
-					arr.push({stop:false,way:types.HEAD_STOP,id:parseInt(id)})
+					arr.push({
+                        stop:false,
+                        way:option.HEAD_STOP,
+                        index:parseInt(id)
+                    });
 				}else if(zmin<z+h && zmin>=z+cap){
                     //b.normal stop 
-					arr.push({stop:true,way:types.BODY_STOP,id:parseInt(id)})
+					arr.push({
+                        stop:true,
+                        way:option.BODY_STOP,
+                        index:parseInt(id)
+                    });
 				}else{
                     //c.stop on foot
 					const zd=zmax-z; //height to cross
 					if(zd>cap){
-						arr.push({stop:true,way:types.FOOT_STOP,id:parseInt(id)})
+						arr.push({
+                            stop:true,
+                            way:option.FOOT_STOP,
+                            index:parseInt(id)
+                        });
 					}else{
-						arr.push({stop:false,delta:zd,id:parseInt(id)})
+						arr.push({
+                            stop:false,
+                            delta:zd,
+                            index:parseInt(id)
+                        });
 					}
 				}
 			}
@@ -176,13 +199,6 @@ const basic_stop = {
     attribute: self.attribute,
     calculate: self.calculate,
 
-    /** check wether stopped or on a stop
-	 *  @param	{object}    cfg	    - {pos:[x,y,z],cap:0.2,height:1.8,elevation:0.6,pre:0.3}
-	 *  @param	{object[]}  stops	- [stop,stop...] stop list
-	 * 	@return {object}
-	 * 	{stop:false,elevation:0,index:-1}
-	 * */
-
     /** 
      * check wether stopped or on a stop
      * @param {number[]}   pos    - [x,y,z], check position
@@ -192,9 +208,12 @@ const basic_stop = {
      * @return {object}  - {on:[],stop:[]}
      */
     check: (pos, stops, cfg) => {
-        console.log(stops);
-        //console.log(pos, stops, cfg);
-        const rst={interact:false,move:true,index:-1}		//stop关系的信号系统
+        //console.log(stops);
+        const rst={ //stop result
+            interact:false,     //wether on a stop
+            move:true,          //wether allow to move
+            index:-1            //index of stops
+        }		
 		if(stops.length<1) return rst;
 			
 		const [dx,dy,dz]=pos;
@@ -206,8 +225,9 @@ const basic_stop = {
 		const arr=self.calculate.relationZ(dz,h,cap,cfg.elevation,list);
 		const fs=self.calculate.filter(arr);
 		rst.move=!fs.stop;
-		rst.index=fs.id;
+		rst.index=fs.index;
 		if(fs.delta!=undefined)rst.delta=fs.delta;
+
 		return rst;
     },
 }

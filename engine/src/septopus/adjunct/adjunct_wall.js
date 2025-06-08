@@ -184,6 +184,20 @@ const self = {
 
         std_active: (std, va) => {
             const ds = { stop: [], helper: [] };
+            for(let i=0;i<std.length;i++){
+                const row=std[i];
+                if(row.stop){
+                    ds.stop.push({
+                        type: "box",
+                        index: i,
+                        params: {
+                            size: [row.x, row.y, row.z],
+                            position: [row.ox, row.oy, row.oz + va],
+                            rotation: [row.rx, row.ry, row.rz],
+                        },
+                    });
+                }
+            }
             return ds;
         },
 
