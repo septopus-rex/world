@@ -12,8 +12,11 @@
 import * as THREE from "three";
 
 const self={
-    get:(size,position,rotation,material)=>{
-
+    get:(radius)=>{
+        const seg_v=32;
+        const seg_h=32;
+        const geo= new THREE.SphereGeometry(radius, seg_v, seg_h);
+        return geo;
     },
     valid:(params)=>{
 
@@ -30,7 +33,10 @@ const geometry_ball={
     create:(params)=>{
         if(!self.valid(params)) return {error:"Invalid parameters to create BALL."};
         const {size} = params;
-        return new THREE.BoxGeometry(size[0], size[1], size[2]);
+
+        const radius=0.5*size[0];
+
+        return self.get(radius);
     },
     standard:()=>{
         return self.sample();

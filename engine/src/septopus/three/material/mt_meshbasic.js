@@ -32,8 +32,9 @@ const material_meshbasic={
         if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
         if(!params.side) params.side=THREE.DoubleSide;
         //console.log(params);
+        if(params.opacity) params.transparent=true;
         const mm=new THREE.MeshBasicMaterial(params)
-        if(params.opacity) mm.opacity=params.opacity;
+        //if(params.opacity) mm.opacity=params.opacity;
         return mm;
     },
     standard:()=>{
