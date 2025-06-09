@@ -265,7 +265,6 @@ const self = {
         ];
         const arr=VBW.stop.calculate.blocks(pos,delta,x,y,side);
         const stops=self.getStops(arr);
-
         const cfg={
             cap:0.2 * cvt,
             height:1.8  * cvt,

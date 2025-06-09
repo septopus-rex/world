@@ -167,10 +167,15 @@ const self={
         }
 
         if(cfg.color){
-            return {type:"meshbasic",params:{color:cfg.color}};
+            return {
+                type:"meshbasic",
+                params:{
+                    color:cfg.color,
+                    opacity:!cfg.opacity?1:cfg.opacity,
+                }
+            };
         }
-
-        return {type:"",params:{color:config.color}};
+        return {type:"linebasic",params:{color:config.color,opacity:1}};
     },
 
     getThree:(single,world,id,side)=>{
@@ -299,6 +304,7 @@ const self={
         const side=self.getSide();
         for(let i=0;i<data.object.length;i++){
             const single=data.object[i];
+            //console.log(single);
             const ms=self.getThree(single,world,dom_id,side);
             for(let j=0;j<ms.length;j++){
                 if(ms[j].error){
@@ -331,16 +337,49 @@ const self={
             scene.add(gs);
         }
 
+        self.showHelper(scene,edit.x,edit.y,world,dom_id);
+        self.showStop(scene,edit.x,edit.y,world,dom_id);
+
         //4.load helper;
         if(edit.helper && edit.helper.length!==0){
             console.log(`Here to show helper on edit mode.`);
         }
 
         //5.load stops;
-        if(edit.stop && edit.stop.length!==0){
-            console.log(`Here to show stop on edit mode.`);
-            console.log(edit.stop);
-        }
+        
+        // if(edit.stop && edit.stop.length!==0){
+        //     for(let i=0;i<edit.stop.length;i++){
+        //         const row=edit.stop[i];
+        //         const obj={
+        //             geometry:row,
+        //             material:{
+        //                 color:row.orgin.color,
+        //                 opacity:row.orgin.opacity,
+        //             },
+        //             x:edit.x,
+        //             y:edit.y,
+        //             adjunct:`${row.orgin.adjunct}_stop`,
+        //         }
+        //         const ms=self.getThree(obj,world,dom_id,side);
+        //         for(let j=0;j<ms.length;j++){
+        //             if(ms[j].error){
+        //                 UI.show("toast",ms[j].error,{type:"error"});
+        //                 continue;
+        //             } 
+        //             scene.add(ms[j]);
+        //         }
+
+        //     }
+        // }
+
+    },
+    showHelper:(scene,x,y,world,dom_id)=>{
+        console.log(`Here to show helper on edit mode.`);
+    },
+    showStop:(scene,x,y,world,dom_id)=>{
+        const stops=VBW.cache.get(["block",dom_id,world,`${x}_${y}`,"stop"]);
+        console.log(stops);
+        console.log(`Here to show stops on edit mode.`);
     },
     loadBlocks:(scene,dom_id)=>{
         const player_chain=["env","player"];

@@ -27,7 +27,10 @@ const config = {
             'type',             //3. stop type, [1.box, 2.ball, ], box default
         ],
     },
-    color: 0xffffff,
+    style:{
+        color: 0xffffff,
+        opacity:0.8,
+    },
     stop:{
         'BODY_STOP':1,		//stop the body
         'FOOT_STOP':2,		//stop on foot
@@ -72,7 +75,12 @@ const self = {
                         position: [row.ox, row.oy, row.oz + va],
                         rotation: [row.rx, row.ry, row.rz],
                     },
-                    stop: !row.stop ? false : true,
+                }
+                if(row.stop){
+                    obj.stop={
+                        opacity:config.style.opacity,
+                        color:!config.style.color?0xfffffff:config.style.color
+                    }
                 }
                 if (row.animate !== null) obj.animate = row.animate;
                 arr.push(obj);

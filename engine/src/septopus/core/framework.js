@@ -284,6 +284,7 @@ const self = {
                 if (row.module) preload.module.push(row.module);
                 if (row.stop){
                     const obj=self.clone(row.params);
+                    obj.material=row.stop;
                     obj.orgin={
                         adjunct:name,
                         index:i,
@@ -354,7 +355,7 @@ const self = {
 
         //1. block data
         //1.1. filter out module or texture for preload
-        const bk=Framework.block.transform.std_active(map.block, va, cvt);
+        const bk=Framework.block.transform.std_border(map.block, va, cvt);
         const edit_chain = ["block", dom_id, world, "edit"];
         const edit=self.cache.get(edit_chain);
         if(bk.helper && bk.helper.length!==0){
@@ -371,17 +372,16 @@ const self = {
 
         //2.restruct block adjunct, including the active highlight
         for (let name in map) {
-            const data = Framework[name].transform.std_active(map[name], va);
+            const data = Framework[name].transform.std_active(map[name], va, cvt);
 
-            //2.isolate basic component stop
-            if(data.stop && data.stop.length!==0){
-                console.log(data.stop);
-                edit.stop.push(...data.stop);
-            }   
+            //2.isolate basic component stop, orginal stop.
+            // if(data.stop && data.stop.length!==0){
+            //     edit.stop.push(...data.stop);
+            // }   
 
             //3.isolate object helper
             if(data.helper && data.helper.length!==0){
-                edit.stop.push(...data.helper);
+                //edit.stop.push(...data.helper);
             }
         }
 
@@ -399,7 +399,9 @@ const self = {
         if(obj.error) return console.error(`Invalid object to select, ${JSON.stringify(raw_chain)}`);
 
         const va = self.getElevation(x, y, world, dom_id);
-        const act=Framework[selected.adjunct].transform.std_active(obj, va);
+        const cvt = self.getConvert();
+        const act=Framework[selected.adjunct].transform.std_active(obj, va, cvt);
+
         const edit=self.cache.get(["block", dom_id, world, "edit"]);
         if(act.helper && act.helper.length!==0){
             for (let i = 0; i < bk.helper.length; i++) {

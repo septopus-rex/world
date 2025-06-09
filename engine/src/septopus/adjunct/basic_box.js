@@ -30,6 +30,11 @@ const config={
         ],
     },
     color:0xf3f5f6,
+    stop:{
+        offset: 0.05,
+        color: 0xffffff,
+        opacity:0.5,    
+    },
     animate:[
         {way:"rotate",param:{speed:0.2,ax:"x"}},
     ],
@@ -93,7 +98,13 @@ const self={
                     },
                     material:row.material,
                     animate:row.animate,
-                    stop:row.stop,
+                }
+                
+                if(row.stop){
+                    single.stop={
+                        opacity:config.stop.opacity,
+                        color:!config.stop.color?0xfffffff:config.stop.color
+                    }
                 }
                 arr.push(single);
             }

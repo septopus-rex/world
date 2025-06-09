@@ -144,13 +144,17 @@ const self={
             return arr;
         },
 
+        std_active:(std,va)=>{
+             const ds = { stop: [], helper: [] };
+             return ds;
+        },
+
         //!important, active is struct from "std" to "3d"
-        std_active:(obj,va,cvt)=>{
+        std_border:(obj,va,cvt)=>{
             //console.log(obj);
             const ds={stop:[],helper:[]};
             const cfg=config.active;
             const h=cfg.height*cvt;
-            const zj=Math.PI*0.5;
             const row=obj[0];
             const cc=0.5*row.x;
             const oz=va+h*0.5;
@@ -204,56 +208,6 @@ const self={
                     color:cfg.color.west,
                 },
             });
-
-            /********************************************/
-            // arr.push({
-            //     type:"plane",
-            //     params:{
-            //         size:[row.x,h,0],
-            //         position:[cc,0,oz],
-            //         rotation:[-zj,0,0],
-            //     },
-            //     material:{
-            //         color:cfg.color[0],
-            //     },
-            // });
-
-            // arr.push({
-            //     type:"plane",
-            //     params:{
-            //         size:[h,row.y,0],
-            //         position:[cc+cc,cc,oz],
-            //         rotation:[0,-zj,0],
-            //     },
-            //     material:{
-            //         color:cfg.color[1],
-            //     },
-            // });
-
-            // arr.push({
-            //     type:"plane",
-            //     params:{
-            //         size:[row.x,h,0],
-            //         position:[cc,cc+cc,oz],
-            //         rotation:[zj,0,0],
-            //     },
-            //     material:{
-            //         color:cfg.color[2],
-            //     },
-            // });
-
-            // arr.push({
-            //     type:"plane",
-            //     params:{
-            //         size:[h,row.y,0],
-            //         position:[0,cc,oz],
-            //         rotation:[0,zj,0],
-            //     },
-            //     material:{
-            //         color:cfg.color[3],
-            //     },
-            // });
-
             ds.helper=arr;
             return ds;
         },

@@ -29,7 +29,12 @@ const config={
             "stop",             //5.
         ],
     },
-    color:0x3456f3,     
+    color:0x3456f3,
+    stop:{
+        offset: 0.05,
+        color: 0xffffff,
+        opacity:0.5,    
+    },    
     animate:[
         {way:"rotate",param:{speed:0.2,ax:"x"}},
     ],
@@ -86,7 +91,13 @@ const self={
                     material:row.material,                      //用于处理没有加载时候的显示color的材质
                     animate:row.animate,
                     module:row.module,
-                    stop:row.stop,
+                }
+                
+                if(row.stop){
+                    single.stop={
+                        opacity:config.stop.opacity,
+                        color:!config.stop.color?0xfffffff:config.stop.color
+                    }
                 }
                 arr.push(single);
             }

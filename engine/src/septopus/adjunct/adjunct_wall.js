@@ -37,6 +37,11 @@ const config = {
         offsetX: 0.5,		//offset of X
         offsetY: 0.5,		//offset of Y
     },
+    stop:{
+        offset: 0.05,
+        color: 0xffffff,
+        opacity:0.5,    
+    },
     animate: [              //support animation list
         { way: "fadeout" },
         { way: "fadein" },
@@ -170,11 +175,13 @@ const self = {
                         rotation: [row.rx, row.ry, row.rz],
                     },
                     material: row.material,
-                    stop:!row.stop?false:true,
-                    // stop:{
-                    //     exsist:!row.stop?false:true,
-                    //     type:1,
-                    // }
+                    //stop:!row.stop?false:true,
+                }
+                if(row.stop){
+                    obj.stop={
+                        opacity:config.stop.opacity,
+                        color:!config.stop.color?0xfffffff:config.stop.color
+                    }
                 }
                 if (row.animate !== null) obj.animate = row.animate;
                 arr.push(obj);
@@ -182,21 +189,27 @@ const self = {
             return arr;
         },
 
-        std_active: (std, va) => {
+        std_active: (std, va, cvt) => {
             const ds = { stop: [], helper: [] };
+            const offset=config.stop.offset*cvt;
             for(let i=0;i<std.length;i++){
                 const row=std[i];
-                if(row.stop){
-                    ds.stop.push({
-                        type: "box",
-                        index: i,
-                        params: {
-                            size: [row.x, row.y, row.z],
-                            position: [row.ox, row.oy, row.oz + va],
-                            rotation: [row.rx, row.ry, row.rz],
-                        },
-                    });
-                }
+                // if(row.stop){
+                //     ds.stop.push({
+                //         type: "box",
+                //         params: {
+                //             size: [row.x + 2*offset, row.y  + 2*offset , row.z  + 2*offset ],
+                //             position: [row.ox, row.oy, row.oz + va],
+                //             rotation: [row.rx, row.ry, row.rz],
+                //         },
+                //         orgin:{
+                //             index:i,
+                //             adjunct: reg.name,
+                //             opacity:config.stop.opacity,
+                //             color:!config.stop.color?0xfffffff:config.stop.color
+                //         }
+                //     });
+                // }
             }
             return ds;
         },
@@ -219,23 +232,13 @@ const self = {
 };
 
 const adj_wall = {
-    hooks: self.hooks,               //注册的hook部分，供主动调用
+    hooks: self.hooks,
     transform: self.transform,
     attribute: self.attribute,
-    animate: {
-
-    },
-
-    //数据属性处理
-
-
-    //显示操作菜单
-    menu: {
-
-    },
-
-    //控制响应
     control: {
+        menu:{
+
+        },
         swipe: () => {
 
         },
