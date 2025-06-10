@@ -1,6 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Septopus } from "../target/types/septopus";
 import self from "./preset";
+import BN from "bn.js";
 
 const program = anchor.workspace.Septopus as anchor.Program<Septopus>;
 const provider = anchor.AnchorProvider.env();
@@ -55,7 +56,7 @@ const reqs={
     const users=await self.init({balance:true});
     self.output.start(`Sell block.`);
     const sign_init= await program.methods
-      .sellBlock(x,y,world,price)
+      .sellBlock(x,y,world,new BN(price))
       .accounts({
         payer:users.creator.pair.publicKey,
       })
@@ -87,24 +88,24 @@ const reqs={
       await self.info.blockdata(x,y,world);
       self.output.end(`Signature of "buyBlock": ${sign_init}`);
   },
-  revoke:async(x,y,world)=>{
-    const users=await self.init({balance:true});
-    self.output.start(`Revoke block.`);
-    const sign_init= await program.methods
-      .revokeBlock(x,y,world)
-      .accounts({
-        payer:users.creator.pair.publicKey,
-      })
-      .signers([users.creator.pair])
-      .rpc()
-      .catch((err)=>{
-        self.output.hr("Got Error");
-        console.log(err);
-      });
+  // revoke:async(x,y,world)=>{
+  //   const users=await self.init({balance:true});
+  //   self.output.start(`Revoke block.`);
+  //   const sign_init= await program.methods
+  //     .revokeBlock(x,y,world)
+  //     .accounts({
+  //       payer:users.creator.pair.publicKey,
+  //     })
+  //     .signers([users.creator.pair])
+  //     .rpc()
+  //     .catch((err)=>{
+  //       self.output.hr("Got Error");
+  //       console.log(err);
+  //     });
 
-      await self.info.blockdata(x,y,world);
-      self.output.end(`Signature of "revokeBlock": ${sign_init}`);
-  },
+  //     await self.info.blockdata(x,y,world);
+  //     self.output.end(`Signature of "revokeBlock": ${sign_init}`);
+  // },
   recover:async(x,y,world)=>{
     const users=await self.init({balance:true});
     self.output.start(`Recover block.`);
@@ -164,12 +165,11 @@ describe("VBW block functions test.",async () => {
   // });
 
 
-  // it("Sell block by target price.", async () => {
-  //   const x=2025,y=502,world=0;
-  //   const price=13000000;
-  //   //await reqs.mint(price,x,y);
-  //   await reqs.sell(price,x,y,world);
-  // });
+  it("Sell block by target price.", async () => {
+    const x=2025,y=503,world=0;
+    const price=1300000000;
+    await reqs.sell(price,x,y,world);
+  });
 
   // it("Buy block.", async () => {
   //   const x=2025,y=502,world=0;

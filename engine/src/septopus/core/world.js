@@ -477,7 +477,7 @@ const self={
         //Sidebar sample
         const groups=[
             {
-                title:"Size",
+                title:"SIZE",
                 col:4,
                 row:12,
                 inputs:[
@@ -517,7 +517,7 @@ const self={
                 ],
             },
             {
-                title:"Position",
+                title:"POSITION",
                 col:4,
                 row:12,
                 inputs:[
@@ -557,7 +557,7 @@ const self={
                 ],
             },
             {
-                title:"Rotation",
+                title:"ROTATION",
                 col:4,
                 row:12,
                 inputs:[
@@ -599,6 +599,12 @@ const self={
         ]
         const cfg_side={
             title:"Adjunct Modification",
+            prefix:"sd",
+            events:{
+                change:(obj)=>{
+                    console.log(obj);
+                },
+            }
         }
         UI.show("sidebar",groups,cfg_side);
     },

@@ -70,23 +70,23 @@ const doms={
 }
 
 const inputs={
-    number:(val,key,placeholder)=>{
-        return `<input type="number" value="${val}" id="${key}" placeholder="${placeholder}">`;
+    number:(val,key,placeholder,prefix)=>{
+        return `<input type="number" value="${val}" id="${!prefix?"":(prefix+"_")}${key}" placeholder="${placeholder}">`;
     },
-    integer:(val,key,placeholder)=>{
-        return `<input type="number" value="${val}" id="${key}" placeholder="${placeholder}">`;
+    integer:(val,key,placeholder,prefix)=>{
+        return `<input type="number" value="${val}" id="${!prefix?"":(prefix+"_")}${key}" placeholder="${placeholder}">`;
     },
     string:(val,key,placeholder)=>{
-        return `<input type="text" value="${val}" id="${key}" placeholder="${placeholder}">`;
+        return `<input type="text" value="${val}" id="${!prefix?"":(prefix+"_")}${key}" placeholder="${placeholder}">`;
     },
-    boolean:(val,key,placeholder)=>{
+    boolean:(val,key,placeholder,prefix)=>{
 
     },
-    select:(val,key,placeholder)=>{
+    select:(val,key,placeholder,prefix)=>{
 
     },
-    text:(val,key,placeholder)=>{
-        return `<input type="text" value="${val}" id="${key}" placeholder="${placeholder}">`;
+    text:(val,key,placeholder,prefix)=>{
+        return `<input type="text" value="${val}" id="${!prefix?"":(prefix+"_")}${key}" placeholder="${placeholder}">`;
     },
 };
 
@@ -115,6 +115,7 @@ const self={
         const id=`${config.prefix}${type}`;
         const container=document.getElementById(id);
         container.hidden = true;
+        container.style.display="none";
     },
     domMenu:(arr,name)=>{
         let ctx=`<ul class="buttons">`;
@@ -181,7 +182,7 @@ const self={
         const parser = new DOMParser();
         return  parser.parseFromString(data, 'text/html');
     },
-    getInputs:(arr)=>{
+    getInputs:(arr,prefix)=>{
         let ctx='<div>';
         for(let i=0;i<arr.length;i++){
             const row=arr[i];
@@ -189,7 +190,7 @@ const self={
                 console.error(`Error input: ${JSON.stringify(row)}`)
                 continue;
             }
-            const input=inputs[row.type](row.value,row.key,row.placeholder);
+            const input=inputs[row.type](row.value,row.key,row.placeholder,prefix);
             ctx+=`<div class="row">
                 <span class="pr-1">${row.desc}</span>${input}
             </div>`;
@@ -197,11 +198,11 @@ const self={
         ctx+='</div>';
         return ctx;
     },
-    getGroups:(arr)=>{
+    getGroups:(arr,prefix)=>{
         let txt="";
         for(let i=0;i<arr.length;i++){
             const group=arr[i];
-            const ctx=self.getInputs(group.inputs);
+            const ctx=self.getInputs(group.inputs,prefix);
             txt+=`<div>
                 <strong>${group.title}</strong>
                 ${ctx}
@@ -220,7 +221,7 @@ const router={
         el.innerHTML="";
 
         const title=`<div class="title">${cfg.title}</div><hr/>`;
-        const body=self.getGroups(arr);
+        const body=self.getGroups(arr,cfg.prefix);
         const dom=self.getDom(title+body);
         
         el.appendChild(dom.body);
@@ -330,6 +331,7 @@ const router={
 
         el.textContent = ctx;
         el.hidden = false;
+        
     },
     menu:(arr,cfg)=>{
         const id=`${config.prefix}menu`;
@@ -354,7 +356,7 @@ const router={
         el.appendChild(dom);
         el.style.top=`${cfg.offset[0]}px`;
         el.style.left=`${cfg.offset[1]}px`;
-        el.hidden=false;
+        el.style.display="block";
         self.bindActions(arr,name);
     },
     compass:(val,cfg)=>{
@@ -419,8 +421,19 @@ const UI={
     },
 
     hide:(type)=>{
-        if(!router[type]) return console.error(`No UI component called "${type}" to hide, please check system.`);
-        self.hide(type);
+        if(Array.isArray(type)){
+            for(let i=0;i<type.length;i++){
+                const row=type[i];
+                if(!router[row]){
+                    console.error(`No UI component called "${row}" to hide, please check system.`);
+                    continue;
+                }
+                self.hide(row);
+            }
+        }else{
+            if(!router[type]) return console.error(`No UI component called "${type}" to hide, please check system.`);
+            self.hide(type);
+        }
     },
     
     //bind UI event

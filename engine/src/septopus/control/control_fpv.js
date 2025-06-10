@@ -92,7 +92,7 @@ const self = {
     keyboard: (dom_id) => {
         VBW.queue.init(config.queue);
         self.bind('keydown', (ev) => {
-            UI.hide("pop"); //hide popup menu when moving 
+            UI.hide(["pop","sidebar"]); //hide popup menu when moving 
             const code = ev.which;
             if (config.keyboard[code]) VBW.queue.insert(config.queue, config.keyboard[code]);
         });

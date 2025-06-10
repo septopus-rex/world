@@ -125,7 +125,10 @@ pub fn sell(
     //2.check wether the owner to withdraw
     let bk= &mut ctx.accounts.block_data;
     let check_key = ctx.accounts.payer.key();
-    if is_owner(check_key,&bk.owner) {
+
+    //msg!("record owner:{:?}", &bk.owner);
+    //msg!("request:{:?}", check_key.to_string());
+    if !is_owner(check_key,&bk.owner) {
         return Err(error!(ErrorCode::NotOwnerOfBlock));
     }
 
@@ -154,7 +157,7 @@ pub fn buy(
     let bk= &mut ctx.accounts.block_data;
     let check_key = ctx.accounts.payer.key();
     if is_owner(check_key,&bk.owner) {
-        return Err(error!(ErrorCode::NotOwnerOfBlock));
+        return Err(error!(ErrorCode::InvalidBuyYourself));
     }
 
     //3.pay the fee to owner
@@ -200,7 +203,7 @@ pub fn withdraw(
     //2.check wether the owner to withdraw
     let bk= &mut ctx.accounts.block_data;
     let check_key = ctx.accounts.payer.key();
-    if is_owner(check_key,&bk.owner) {
+    if !is_owner(check_key,&bk.owner) {
         return Err(error!(ErrorCode::NotOwnerOfBlock));
     }
 
@@ -235,7 +238,6 @@ fn is_owner(check_pubkey:Pubkey,record:&str) -> bool{
     }
     return true;
 }
-
 
 fn is_account_initialized(account_info: &AccountInfo) -> bool {
     account_info.lamports() > 0

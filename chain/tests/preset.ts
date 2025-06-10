@@ -121,6 +121,12 @@ const self={
       const txSignature = await provider.sendAndConfirm(transaction);
       return txSignature;
     },
+    getU64:(num)=>{
+      const bn = BigInt(num);
+      const buffer = Buffer.alloc(8);
+      buffer.writeBigUInt64LE(bn); // 写入为小端 u64
+      return buffer;
+    },
     output:{
       hr:(title)=>{
         console.log(`--------------------------- ${title}---------------------------`);

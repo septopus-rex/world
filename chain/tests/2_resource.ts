@@ -113,11 +113,11 @@ const reqs={
 
 describe("VBW module functions test.",() => {
 
-  it("Add a new resource ( IPFS ).", async () => {
-    const ipfs="bafkreicl7rl7d6bkgyzxc67jdfoythbthikk7bnt4m22zjd6e7jx5hoerb";
-    const index=3;
-    await reqs.add(ipfs,index);
-  });
+  // it("Add a new resource ( IPFS ).", async () => {
+  //   const ipfs="bafkreicl7rl7d6bkgyzxc67jdfoythbthikk7bnt4m22zjd6e7jx5hoerb";
+  //   const index=3;
+  //   await reqs.add(ipfs,index);
+  // });
 
   // it("Approve new module ( IPFS ).", async () => {
   //   const index=1;
