@@ -1,6 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Septopus } from "../target/types/septopus";
-import { PublicKey,SystemProgram,SYSVAR_CLOCK_PUBKEY } from "@solana/web3.js";
+import { PublicKey,SystemProgram } from "@solana/web3.js";
 import self from "./preset";
 import { BN } from "bn.js";
 

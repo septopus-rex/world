@@ -92,7 +92,7 @@ pub fn update(
 
     //2. wether owner of block
     let check_key = ctx.accounts.payer.key();
-    if is_owner(check_key,&ctx.accounts.block_data.owner) {
+    if !is_owner(check_key,&ctx.accounts.block_data.owner) {
         return Err(error!(ErrorCode::NotOwnerOfBlock));
     }
 
@@ -311,7 +311,7 @@ pub struct MintBlock<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(x:u32,y:u32,world:u32,data:String)]
+#[instruction(x:u32,y:u32,world:u32)]
 pub struct UpdateBlock<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -331,7 +331,7 @@ pub struct UpdateBlock<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(x:u32,y:u32,world:u32,price:u32)]
+#[instruction(x:u32,y:u32,world:u32)]
 pub struct SellBlock<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,

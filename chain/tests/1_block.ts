@@ -1,5 +1,6 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Septopus } from "../target/types/septopus";
+import { PublicKey,SystemProgram } from "@solana/web3.js";
 import self from "./preset";
 import BN from "bn.js";
 
@@ -10,6 +11,13 @@ anchor.setProvider(provider);
 self.setENV(provider,program.programId);
 
 //let users=null;
+
+const getU32=(n)=>{
+    const u32=Buffer.alloc(4);
+    u32.writeUInt32LE(n);
+    return u32;
+};
+
 const reqs={
   init:async ()=>{
     
@@ -37,10 +45,16 @@ const reqs={
   update:async(data,x,y,world)=>{
     const users=await self.init({balance:true});
     self.output.start(`Update block data.`);
+
+    await self.info.blockdata(x,y,world);
+
+    //const blockData = new PublicKey("E8cTst9BkcSVmkwupnbSbY6SXdYKW8d44KUycKmJReAJ");
     const sign_init= await program.methods
       .updateBlock(data,x,y,world)
       .accounts({
         payer:users.creator.pair.publicKey,
+        //blockData:blockData,
+        //systemProgram: SystemProgram.programId
       })
       .signers([users.creator.pair])
       .rpc()
@@ -77,6 +91,7 @@ const reqs={
       .buyBlock(x,y,world)
       .accounts({
         payer:users.manager.pair.publicKey,
+        recipient:users.creator.pair.publicKey,
       })
       .signers([users.manager.pair])
       .rpc()
@@ -88,24 +103,24 @@ const reqs={
       await self.info.blockdata(x,y,world);
       self.output.end(`Signature of "buyBlock": ${sign_init}`);
   },
-  // revoke:async(x,y,world)=>{
-  //   const users=await self.init({balance:true});
-  //   self.output.start(`Revoke block.`);
-  //   const sign_init= await program.methods
-  //     .revokeBlock(x,y,world)
-  //     .accounts({
-  //       payer:users.creator.pair.publicKey,
-  //     })
-  //     .signers([users.creator.pair])
-  //     .rpc()
-  //     .catch((err)=>{
-  //       self.output.hr("Got Error");
-  //       console.log(err);
-  //     });
+  withdraw:async(x,y,world)=>{
+    const users=await self.init({balance:true});
+    self.output.start(`Revoke block.`);
+    const sign_init= await program.methods
+      .withdrawBlock(x,y,world)
+      .accounts({
+        payer:users.creator.pair.publicKey,
+      })
+      .signers([users.creator.pair])
+      .rpc()
+      .catch((err)=>{
+        self.output.hr("Got Error");
+        console.log(err);
+      });
 
-  //     await self.info.blockdata(x,y,world);
-  //     self.output.end(`Signature of "revokeBlock": ${sign_init}`);
-  // },
+      await self.info.blockdata(x,y,world);
+      self.output.end(`Signature of "revokeBlock": ${sign_init}`);
+  },
   recover:async(x,y,world)=>{
     const users=await self.init({balance:true});
     self.output.start(`Recover block.`);
@@ -146,10 +161,10 @@ const reqs={
 
 
 describe("VBW block functions test.",async () => {
-  it("Mint block out.", async () => {
-    const x=2025,y=503,world=0;
-    await reqs.mint(x,y,world);
-  });
+  // it("Mint block out.", async () => {
+  //   const x=2025,y=503,world=0;
+  //   await reqs.mint(x,y,world);
+  // });
 
   // it("Complain block for banning.", async () => {
   //   const x=2025,y=502,world=0;
@@ -159,30 +174,32 @@ describe("VBW block functions test.",async () => {
 
   // it("Update block detail.", async () => {
   //   const x=2025,y=386,world=0;
-  //   const data="7cXc1JZECqmPAHqew3sjrzmygXsxCfzWoqfXaLsn6AZF";
+  //   const data=JSON.stringify([0.3,[0x00b1,[]]]);
   //   await reqs.mint(x,y,world);
   //   await reqs.update(data,x,y,world);
   // });
 
 
-  it("Sell block by target price.", async () => {
-    const x=2025,y=503,world=0;
-    const price=1300000000;
-    await reqs.sell(price,x,y,world);
-  });
+  // it("Sell block by target price.", async () => {
+  //   const x=2025,y=503,world=0;
+  //   const price=1300000000;
+  //   await reqs.mint(x,y,world);
+  //   await reqs.sell(price,x,y,world);
+  // });
 
   // it("Buy block.", async () => {
-  //   const x=2025,y=502,world=0;
+  //   const x=2025,y=1509,world=0;
+  //   const price=2400000000;
+  //   await reqs.mint(x,y,world);
+  //   await reqs.sell(price,x,y,world);
   //   await reqs.buy(x,y,world);
   // });
 
-  // it("Revoke block from selling.", async () => {
-  //   const x=2025,y=502,world=0;
-  //   await reqs.revoke(x,y,world);
-  // });
-
-  // it("Recover block from banned.", async () => {
-  //   const x=2025,y=502,world=0;
-  //   await reqs.recover(x,y,world);
-  // });
+  it("Revoke block from selling.", async () => {
+    const x=2025,y=502,world=0;
+    const price=1400000000;
+    await reqs.mint(x,y,world);
+    await reqs.sell(price,x,y,world);
+    await reqs.withdraw(x,y,world);
+  });
 });

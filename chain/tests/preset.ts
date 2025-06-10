@@ -184,21 +184,16 @@ const self={
           y_u32.writeUInt32LE(y);
           const world_u32=Buffer.alloc(4);
           world_u32.writeUInt32LE(world);
-          
-          const pda_account=self.getPDA([
-            Buffer.from("b_dt"),
-            x_u32,
-            y_u32,
-            world_u32
-          ],PID);
+
+          const pda_account=self.getPDA([Buffer.from("b_dt"),x_u32,y_u32,world_u32],PID);
+          console.log(pda_account.toString());
           const raw=await self.getAccount(pda_account);
-          if(raw===null) return console.log(`"texturecounter" is not created.`)
+          if(raw===null) return console.log(`"blockdata" is not created.`)
           console.log(raw.data.toString());
         },
         moduledata:async (index)=>{
           const n_index=Buffer.alloc(4);
           n_index.writeUInt32LE(index);
-          //new BN(index).toArrayLike(Buffer,"le",index)
           
           const pda_counter=self.getPDA([
             Buffer.from("m_yz"),

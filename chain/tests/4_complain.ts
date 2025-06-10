@@ -15,7 +15,7 @@ const reqs={
 
 describe("VBW complain functions test.",() => {
 
-  it("Ban texture.", async () => {
+  // it("Ban texture.", async () => {
     
-  });
+  // });
 });
