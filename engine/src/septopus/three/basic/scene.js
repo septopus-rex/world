@@ -13,7 +13,6 @@ import * as THREE from "three";
 
 const Scene={
     create:(cfg)=>{
-        
         return new THREE.Scene();
     },
 }

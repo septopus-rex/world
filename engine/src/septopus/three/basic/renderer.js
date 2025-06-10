@@ -10,11 +10,11 @@
  */
 
 import * as THREE from "three";
+
 const Renderer={
     create:(cfg)=>{
-        const rd=new THREE.WebGLRenderer({
-                antialias: true // 开启抗锯齿
-            });
+        if(!cfg.antialias) cfg.antialias=true;
+        const rd=new THREE.WebGLRenderer(cfg);
         rd.setSize(cfg.width, cfg.height);
         return rd;
     },
