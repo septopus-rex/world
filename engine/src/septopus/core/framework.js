@@ -249,12 +249,14 @@ const self = {
         std.block = Framework.block.transform.raw_std(bk.data, cvt, side);
 
         //1.1.set block elevation;
-        const va = std.block[0].z;
+         const INDEX_OF_ELEVATION=0;
+        const va = std.block[INDEX_OF_ELEVATION].z;
         const va_chain = ["block", dom_id, world, key, "elevation"];
         self.cache.set(va_chain, va);
 
         //2.construct all adjuncts;
-        const adjs = bk.data[2];
+        const INDEX_OF_ADJUNCT=1;
+        const adjs = bk.data[INDEX_OF_ADJUNCT];
         for (let i = 0; i < adjs.length; i++) {
             const [short, list] = adjs[i];
             const name = self.getNameByShort(short);

@@ -19,6 +19,12 @@ const reg={
     category:"system",      //component category
 }
 
+const def={
+    "BLOCK_ELEVACATION_INDEX":0,
+    "BLOCK_ADJUNCTS_INDEX":1,
+    "BLOCK_STATUS_INDEX":2,
+}
+
 const config={
     opacity:1,
     texture:1,          //ground texture ID
@@ -110,7 +116,7 @@ const self={
     transform:{
         //convert raw data to standard septopus world object format
         raw_std:(obj,cvt,side)=>{
-            const [va,status]=obj;
+            const [va,adjs,status]=obj;
             const s=side[0],hs=0.5*s;
 			const data={
 				x:s,y:s,z:va*cvt,

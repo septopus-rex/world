@@ -30,13 +30,13 @@ const reqs={
     //await self.info.modulecounter();
     //!important, here is a bug, the PDA account calculated at frontend is not the same as contract
     //!important, need to check on Devnet
-    const moduleData = new PublicKey("FJDwuFjqpSTqd2pJAgCDeDQRdK5SPqXZPdwpqUyHFZre");
+    const resourceData = new PublicKey("CCLbGcdTft84d8fGRPY1fqoCXEhUsRHpATNYuNFjNHKX");
     const sign_init= await program.methods
       .addResource(ipfs,index)
       .accounts({
         payer:users.recipient.pair.publicKey,
-        //resourceData:moduleData,
-        //systemProgram: SystemProgram.programId
+        resourceData:resourceData,
+        systemProgram: SystemProgram.programId
       })
       .signers([users.recipient.pair])
       .rpc()
@@ -53,7 +53,7 @@ const reqs={
         }
       });
       //await self.info.moduledata(index);
-      self.output.end(`Signature of "addModule": ${sign_init}`);
+      self.output.end(`Signature of "addResource": ${sign_init}`);
   },
   approve:async(index)=>{
     const users=await self.init({balance:true});
@@ -113,7 +113,7 @@ const reqs={
 
 describe("VBW module functions test.",() => {
 
-  it("Add a new module ( IPFS ).", async () => {
+  it("Add a new resource ( IPFS ).", async () => {
     const ipfs="bafkreicl7rl7d6bkgyzxc67jdfoythbthikk7bnt4m22zjd6e7jx5hoerb";
     const index=3;
     await reqs.add(ipfs,index);

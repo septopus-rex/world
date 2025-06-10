@@ -101,8 +101,6 @@ const self = {
                 pos[1] + delta[1]
             ];
 
-            //console.log(to);
-
             return blocks;
         },
 
@@ -110,13 +108,30 @@ const self = {
         projection:  (px, py, stops)=>{
             const list = {};
             for (let i in stops) {
-                const st = stops[i];
-                const xmin = st.ox - st.x * 0.5, xmax = st.ox + st.x * 0.5;
-                const ymin = st.oy - st.y * 0.5, ymax = st.oy + st.y * 0.5;
-                if ((px > xmin && px < xmax) && 		//进入stop的平面投影
-                    (py > ymin && py < ymax)) {
-                    list[i] = st;
+                const row= stops[i];
+                switch (row.orgin.type) {
+                    case "box":
+                        const {size,position,side,block} = row;
+                        const xmin = position[0] - size[0] * 0.5, xmax = position[0] + size[0] * 0.5;
+                        const ymin = position[1] - size[1] * 0.5, ymax = position[1] + size[1] * 0.5;
+                        
+                        const cx=px+(block[0]-1)*side[0];
+                        const cy=py+(block[1]-1)*side[1];
+                        if ((cx > xmin && cx < xmax) && 		//进入stop的平面投影
+                            (cy > ymin && cy < ymax)) {
+                            list[i] = row;
+                        }
+                        break;
+
+                    case "ball":
+                        console.log(row);
+                        console.log(`Check ball in projection here.`);
+                        break;
+                
+                    default:
+                        break;
                 }
+                
             }
             return list;
         },
@@ -223,14 +238,19 @@ const basic_stop = {
             index:-1            //index of stops
         }		
 		if(stops.length<1) return rst;
-			
+        
+        //1.check wether interact with stop from top view ( in projection ).
 		const [dx,dy,dz]=pos;
 		const list=self.calculate.projection(dx,dy,stops);
+        console.log(list);
 		if(Toolbox.empty(list)) return rst;
 		rst.interact=true;
-			
+        
+        //2.check position of stop;
 		const cap=cfg.cap+(cfg.pre!=undefined?cfg.pre:0),h=cfg.height;
 		const arr=self.calculate.relationZ(dz,h,cap,cfg.elevation,list);
+
+        //3.filter out the target stop for movement;
 		const fs=self.calculate.filter(arr);
 		rst.move=!fs.stop;
 		rst.index=fs.index;

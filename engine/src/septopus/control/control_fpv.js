@@ -233,7 +233,7 @@ const self = {
     },
 
     //fliter out stops related by block coordination.
-    getStops:(bks)=>{
+    getStops:(bks,side)=>{
         //console.log(bks);
         const stops=[];
         const fun=VBW.cache.get;
@@ -249,6 +249,7 @@ const self = {
                 const stop=arr[j];
                 if(!stop.block)stop.block=[x,y];
                 if(!stop.elevation) stop.elevation=fun(["block",container,world,key,"elevation"]);
+                if(!stop.side) stop.side=side;
                 stops.push(stop);
             }
         }
@@ -264,7 +265,7 @@ const self = {
             player.location.position[2]*cvt
         ];
         const arr=VBW.stop.calculate.blocks(pos,delta,x,y,side);
-        const stops=self.getStops(arr);
+        const stops=self.getStops(arr,side);
         const cfg={
             cap:0.2 * cvt,
             height:1.8  * cvt,

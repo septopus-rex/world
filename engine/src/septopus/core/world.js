@@ -395,7 +395,6 @@ const self={
         return true;
     },
     loadingBlockQueue:(map,dom_id)=>{
-        
         const name=config.queue.block;
         const push=VBW.queue.push;
         for(let key in map){
@@ -521,7 +520,7 @@ const World={
         //0.1. set UI layout
         self.layout();
 
-        //02.2. start listener.
+        //0.2. start listener.
         self.autoBind();
 
         //1.get the player status
@@ -583,6 +582,7 @@ const World={
             });
         });
     },
+
     /**
      * Load block[x,y]
     */
