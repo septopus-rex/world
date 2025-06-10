@@ -1,3 +1,26 @@
+.sidebar{
+  background-color: #333333;
+  position: absolute;
+  color: white;
+  width: 15rem;
+  min-height: 30rem;
+  right:1rem;
+  top:3rem;
+  display: none;
+  border-radius: 0.5rem;
+  opacity: 0.9;
+}
+
+.sidebar .title{
+  text-align: center;
+}
+
+.sidebar .sub{
+  background-color: #7f91a9;
+  border: none;
+  height: 1px;
+}
+
 .dialog{
   background-color: #333333;
   position: absolute;
@@ -127,6 +150,7 @@
   background-size: cover;
   background-position: center;
   opacity: 0.4;
+  user-select: none;
 }
 
 .pointer{
@@ -144,6 +168,7 @@
   left:20px;
   text-align: center;
   color: #ffffff;
+  user-select: none;
 }
 
 .menu{
@@ -197,4 +222,8 @@
 
 .buttons li:active {
   background-color: #1d4ed8;      /* 点击效果 */
+}
+
+.pr-1{
+  padding-right: 1rem;
 }

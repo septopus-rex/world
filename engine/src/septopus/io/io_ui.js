@@ -177,9 +177,55 @@ const self={
                 break;
         }
     },
+    getDom:(data)=>{
+        const parser = new DOMParser();
+        return  parser.parseFromString(data, 'text/html');
+    },
+    getInputs:(arr)=>{
+        let ctx='<div>';
+        for(let i=0;i<arr.length;i++){
+            const row=arr[i];
+            if(!row.type || !inputs[row.type]){
+                console.error(`Error input: ${JSON.stringify(row)}`)
+                continue;
+            }
+            const input=inputs[row.type](row.value,row.key,row.placeholder);
+            ctx+=`<div class="row">
+                <span class="pr-1">${row.desc}</span>${input}
+            </div>`;
+        }
+        ctx+='</div>';
+        return ctx;
+    },
+    getGroups:(arr)=>{
+        let txt="";
+        for(let i=0;i<arr.length;i++){
+            const group=arr[i];
+            const ctx=self.getInputs(group.inputs);
+            txt+=`<div>
+                <strong>${group.title}</strong>
+                ${ctx}
+                <hr class="sub"/>
+            </div>`
+        }
+        return txt;
+    },
 }; 
 
 const router={
+    sidebar:(arr,cfg)=>{
+        const id=`${config.prefix}sidebar`;
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "form"`);
+        el.innerHTML="";
+
+        const title=`<div class="title">${cfg.title}</div><hr/>`;
+        const body=self.getGroups(arr);
+        const dom=self.getDom(title+body);
+        
+        el.appendChild(dom.body);
+        el.style.display="block";
+    },
     form:(arr,cfg)=>{
         //1. create DOM
         const ctx=self.getForm(arr);
@@ -201,9 +247,7 @@ const router={
                 <button class="left" id="${config.form.recover}">Recover</button>
                 <button class="right" id="${config.form.save}">Save</button>
             </div>`;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data, 'text/html');
-
+        const doc=self.getDom(data);
         el.appendChild(doc.body); 
         el.style.display="block";
         el.hidden=false;

@@ -473,6 +473,134 @@ const self={
                 UI.show("form",inputs,cfg);
             }}
         ]);
+
+        //Sidebar sample
+        const groups=[
+            {
+                title:"Size",
+                col:4,
+                row:12,
+                inputs:[
+                    {
+                        type:"number",
+                        key:"x",
+                        value:0,
+                        desc:"X",
+                        placeholder:"size X value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                    {
+                        type:"number",
+                        key:"y",
+                        value:0,
+                        desc:"Y",
+                        placeholder:"size Y value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                    {
+                        type:"number",
+                        key:"z",
+                        value:0,
+                        desc:"Z",
+                        placeholder:"size Z value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                ],
+            },
+            {
+                title:"Position",
+                col:4,
+                row:12,
+                inputs:[
+                    {
+                        type:"number",
+                        key:"x",
+                        value:0,
+                        desc:"X",
+                        placeholder:"position X value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                    {
+                        type:"number",
+                        key:"y",
+                        value:0,
+                        desc:"Y",
+                        placeholder:"position Y value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                    {
+                        type:"number",
+                        key:"z",
+                        value:0,
+                        desc:"Z",
+                        placeholder:"position Z value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                ],
+            },
+            {
+                title:"Rotation",
+                col:4,
+                row:12,
+                inputs:[
+                    {
+                        type:"number",
+                        key:"x",
+                        value:0,
+                        desc:"X",
+                        placeholder:"rotation X value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                    {
+                        type:"number",
+                        key:"y",
+                        value:0,
+                        desc:"Y",
+                        placeholder:"rotation Y value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                    {
+                        type:"number",
+                        key:"z",
+                        value:0,
+                        desc:"Z",
+                        placeholder:"rotation Z value",
+                        valid:(val)=>{
+                            
+                            return true;
+                        }
+                    },
+                ],
+            },
+        ]
+        const cfg_side={
+            title:"Adjunct Modification",
+        }
+        UI.show("sidebar",groups,cfg_side);
     },
     autoBind:()=>{
         API.bind("height","getSlot",(data)=>{
