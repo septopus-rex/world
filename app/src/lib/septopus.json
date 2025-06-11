@@ -1,0 +1,1623 @@
+{
+  "address": "4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2",
+  "metadata": {
+    "name": "septopus",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Septopus world, UGC world on chain."
+  },
+  "instructions": [
+    {
+      "name": "add_resource",
+      "docs": [
+        "add new IPFS resource, need to approve"
+      ],
+      "discriminator": [
+        83,
+        86,
+        127,
+        113,
+        72,
+        33,
+        236,
+        121
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "resource_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  95,
+                  114,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "module_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  95,
+                  114,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "ipfs",
+          "type": "string"
+        },
+        {
+          "name": "index",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "adjunct_world",
+      "docs": [
+        "insert or update adjunct details"
+      ],
+      "discriminator": [
+        238,
+        30,
+        173,
+        236,
+        130,
+        160,
+        102,
+        65
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        },
+        {
+          "name": "short",
+          "type": "u32"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "format",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "approve_resource",
+      "docs": [
+        "approve to allow resource (module, texture ...) for Septopus World, manage operation"
+      ],
+      "discriminator": [
+        7,
+        235,
+        29,
+        78,
+        207,
+        19,
+        242,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "resource_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  95,
+                  114,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "ban_block",
+      "docs": [
+        "ban the target block, manage operation"
+      ],
+      "discriminator": [
+        16,
+        226,
+        242,
+        130,
+        36,
+        160,
+        80,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "ban_resource",
+      "docs": [
+        "ban the target resource, manage operation"
+      ],
+      "discriminator": [
+        174,
+        130,
+        175,
+        144,
+        190,
+        201,
+        218,
+        247
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "resource_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  95,
+                  114,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "buy_block",
+      "docs": [
+        "buy the on-sell block"
+      ],
+      "discriminator": [
+        137,
+        144,
+        19,
+        181,
+        253,
+        137,
+        71,
+        245
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "complain_block",
+      "docs": [
+        "complain when block content is illeagale"
+      ],
+      "discriminator": [
+        227,
+        33,
+        51,
+        136,
+        163,
+        16,
+        232,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "complain_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  112,
+                  98,
+                  107
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "json",
+          "type": "string"
+        },
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "complain_resource",
+      "docs": [
+        "complain when resource content is illeagale"
+      ],
+      "discriminator": [
+        45,
+        156,
+        153,
+        43,
+        33,
+        25,
+        63,
+        166
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "complain_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  112,
+                  114,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "string"
+        },
+        {
+          "name": "index",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "init",
+      "docs": [
+        "init whole septopus world system"
+      ],
+      "discriminator": [
+        220,
+        59,
+        207,
+        236,
+        108,
+        250,
+        47,
+        100
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "resource_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  95,
+                  114,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "root",
+          "type": "string"
+        },
+        {
+          "name": "recipient",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "mint_block",
+      "docs": [
+        "Mint out a new block if it is valid."
+      ],
+      "discriminator": [
+        68,
+        105,
+        25,
+        214,
+        251,
+        82,
+        180,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  95,
+                  99,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "recover_block",
+      "docs": [
+        "recover the banned block, manage operation"
+      ],
+      "discriminator": [
+        231,
+        234,
+        167,
+        53,
+        253,
+        65,
+        40,
+        241
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "recover_resource",
+      "docs": [
+        "recover the banned resource, manage operation"
+      ],
+      "discriminator": [
+        37,
+        8,
+        80,
+        134,
+        154,
+        32,
+        210,
+        48
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "resource_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  95,
+                  114,
+                  115
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "sell_block",
+      "docs": [
+        "set price to sell block"
+      ],
+      "discriminator": [
+        39,
+        139,
+        243,
+        182,
+        7,
+        208,
+        251,
+        62
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "start_world",
+      "docs": [
+        "start a new world when it is ready"
+      ],
+      "discriminator": [
+        234,
+        83,
+        229,
+        183,
+        157,
+        34,
+        60,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "world_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  95,
+                  99,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "index"
+              }
+            ]
+          }
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "index",
+          "type": "u32"
+        },
+        {
+          "name": "setting",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "update_block",
+      "docs": [
+        "Update the data account address"
+      ],
+      "discriminator": [
+        98,
+        36,
+        60,
+        51,
+        52,
+        44,
+        109,
+        71
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": "string"
+        },
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_block",
+      "docs": [
+        "buy the on-sell block"
+      ],
+      "discriminator": [
+        131,
+        25,
+        157,
+        40,
+        226,
+        125,
+        240,
+        8
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "block_data",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  95,
+                  100,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              },
+              {
+                "kind": "arg",
+                "path": "world"
+              }
+            ]
+          }
+        },
+        {
+          "name": "world_list",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "clock",
+          "address": "SysvarC1ock11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        },
+        {
+          "name": "world",
+          "type": "u32"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "BlockData",
+      "discriminator": [
+        247,
+        25,
+        161,
+        135,
+        10,
+        118,
+        85,
+        137
+      ]
+    },
+    {
+      "name": "ComplainData",
+      "discriminator": [
+        237,
+        158,
+        161,
+        187,
+        173,
+        249,
+        236,
+        197
+      ]
+    },
+    {
+      "name": "ResourceCounter",
+      "discriminator": [
+        103,
+        81,
+        151,
+        249,
+        49,
+        74,
+        43,
+        64
+      ]
+    },
+    {
+      "name": "ResourceData",
+      "discriminator": [
+        76,
+        89,
+        94,
+        149,
+        33,
+        216,
+        217,
+        71
+      ]
+    },
+    {
+      "name": "WhiteList",
+      "discriminator": [
+        77,
+        38,
+        70,
+        33,
+        93,
+        150,
+        136,
+        174
+      ]
+    },
+    {
+      "name": "WorldCounter",
+      "discriminator": [
+        33,
+        165,
+        23,
+        36,
+        82,
+        7,
+        191,
+        70
+      ]
+    },
+    {
+      "name": "WorldList",
+      "discriminator": [
+        43,
+        35,
+        5,
+        104,
+        194,
+        34,
+        196,
+        22
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AlreadyInited",
+      "msg": "System is inited already."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidWorldIndex",
+      "msg": "Invalid index to start new world."
+    },
+    {
+      "code": 6002,
+      "name": "InvalidJSON",
+      "msg": "Invalid JSON format."
+    },
+    {
+      "code": 6003,
+      "name": "FailedToString",
+      "msg": "Failed to stringify JSON."
+    },
+    {
+      "code": 6004,
+      "name": "BlockIsMinted",
+      "msg": "Block is minted, please try another one."
+    },
+    {
+      "code": 6005,
+      "name": "InvalidLocation",
+      "msg": "Invalid block location."
+    },
+    {
+      "code": 6006,
+      "name": "NotOwnerOfBlock",
+      "msg": "Not the owner of this block."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidBuyYourself",
+      "msg": "Can not buy the block own by yourself."
+    },
+    {
+      "code": 6008,
+      "name": "InvalidBlockIndex",
+      "msg": "Coordination or World index is valid."
+    },
+    {
+      "code": 6009,
+      "name": "InvalidPubkey",
+      "msg": "Invalid public string."
+    },
+    {
+      "code": 6010,
+      "name": "InvalidRecipient",
+      "msg": "Invalid recipient of selling block."
+    }
+  ],
+  "types": [
+    {
+      "name": "BlockData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "type": "string"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "create",
+            "type": "u64"
+          },
+          {
+            "name": "update",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ComplainData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "category",
+            "type": "u32"
+          },
+          {
+            "name": "complain",
+            "type": "string"
+          },
+          {
+            "name": "result",
+            "type": "string"
+          },
+          {
+            "name": "create",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ResourceCounter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ResourceData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ipfs",
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "type": "string"
+          },
+          {
+            "name": "create",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WhiteList",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "vec": "string"
+            }
+          },
+          {
+            "name": "recipient",
+            "type": "string"
+          },
+          {
+            "name": "root",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WorldCounter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WorldData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": "string"
+          },
+          {
+            "name": "adjunct",
+            "type": "string"
+          },
+          {
+            "name": "start",
+            "type": "u64"
+          },
+          {
+            "name": "close",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WorldList",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "list",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "WorldData"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

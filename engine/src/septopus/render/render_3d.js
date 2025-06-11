@@ -15,7 +15,6 @@ import VBW from "../core/framework";
 import ThreeObject from "../three/entry";
 import UI from "../io/io_ui";
 import Toolbox from "../lib/toolbox";
-import { Sigmar } from "next/font/google";
 
 const reg = {
     name: "rd_three",
