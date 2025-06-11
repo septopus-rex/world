@@ -18,8 +18,26 @@ const helps={
     box:(cfg)=>{
         return new THREE.BoxHelper(cfg.object,cfg.color);
     },
+    arrow:(cfg)=>{
+
+    },
+    camera:(cfg)=>{
+
+    },
+    grid:(cfg)=>{
+        return new THREE.GridHelper(cfg.size,cfg.division,cfg.color[0],cfg.color[1]);
+    },
+    point:(cfg)=>{
+        return new THREE.PointLightHelper(cfg.light,cfg.size,cfg.color);
+    },
     direct:(cfg)=>{
         return new THREE.DirectionalLightHelper(cfg.light,cfg.size,cfg.color);
+    },
+    hemisphere:(cfg)=>{
+
+    },
+    spot:(cfg)=>{
+
     },
 }
 

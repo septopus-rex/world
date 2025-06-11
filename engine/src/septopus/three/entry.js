@@ -17,6 +17,7 @@ import Mesh from "./basic/mesh";
 import Group from "./basic/group";
 import Sky from "./basic/sky";
 import Raycast from "./basic/raycast";
+import Helper from "./basic/helper";
 
 import light_direct from "./light/light_direct";
 import light_point from "./light/light_point";
@@ -44,7 +45,8 @@ const router={
         mesh:Mesh,
         group:Group,
         sky:Sky, 
-        raycast:Raycast,            
+        raycast:Raycast, 
+        helper:Helper,           
     },
     light:{
         spot:light_spot,
