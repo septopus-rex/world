@@ -9,6 +9,16 @@
  * @date 2025-04-29
  */
 
+//definit as const value
+const def={
+    "INDEX_OF_SIZE":            0,
+    "INDEX_OF_POSITION":        1,
+    "INDEX_OF_ROTATION":        2,
+    "RESOURCE_ID_ON_CHAIN":     3,
+    "ANIMATION_OPTION":         4,
+    "AUTO_STOP":                5,
+}
+
 const reg={
     name:"module",
     category:'basic',

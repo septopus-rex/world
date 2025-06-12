@@ -11,6 +11,16 @@
 import Toolbox from "../lib/toolbox";
 import Calc from "../lib/calc";
 
+const def={
+    "INDEX_OF_SIZE":            0,
+    "INDEX_OF_POSITION":        1,
+    "INDEX_OF_ROTATION":        2,
+    "TYPE_OF_STOP":             3,
+    "BODY_STOP":                1,		//stop the body
+    "FOOT_STOP":                2,		//stop on foot
+    "HEAD_STOP":                3,		//stop beyond header
+}
+
 const reg = {
     name: "stop",
     category: "basic",
@@ -156,8 +166,6 @@ const self = {
 		 * */
 		relationZ:(z,h,cap,va,list)=>{
 			const arr=[];
-			const option=config.stop;
-
 			for(let id in list){
 				const row=list[id];
                 const {position,size}=row;
@@ -170,14 +178,14 @@ const self = {
                     //a.stop upon header
 					arr.push({
                         stop:false,
-                        way:option.HEAD_STOP,
+                        way:def.HEAD_STOP,
                         index:parseInt(id)
                     });
 				}else if(zmin<z+h && zmin>=z+cap){
                     //b.normal stop 
 					arr.push({
                         stop:true,
-                        way:option.BODY_STOP,
+                        way:def.BODY_STOP,
                         index:parseInt(id)
                     });
 				}else{
@@ -186,7 +194,7 @@ const self = {
 					if(zd>cap){
 						arr.push({
                             stop:true,
-                            way:option.FOOT_STOP,
+                            way:def.FOOT_STOP,
                             index:parseInt(id)
                         });
 					}else{

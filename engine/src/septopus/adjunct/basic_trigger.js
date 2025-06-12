@@ -9,14 +9,33 @@
  * @date 2025-04-23
  */
 
+const def={
+    "INDEX_OF_SIZE":            0,
+    "INDEX_OF_POSITION":        1,
+    "INDEX_OF_ROTATION":        2,
+    "TRIGGER_SHAPE_OPTION":     3,      //["box","ball","more"]
+    "TRIGGER_OPTION":           4,      //[""]
+    "ACTION_GROUP":             5, 
+    "CONTRACT_ID_ON_CHAIN":     6,
+    "RUN_ONE_TIME":             7,
+};
+
 const reg={
     name:"trigger",
     category:"basic",
-    short:0x00b8,         //key的缩写，用于减少链上数据
+    short:0x00b8,
     desc:"Trigger to make the scene interactable, great component.",
     version:"1.0.0",
 }
 
+//trigger control target
+//1. adjuncts;
+//2. player, or player basic parameters;
+
+const config={
+    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [ "ACTION_0", "ACTION_1"] , 4, 0],
+    action:[["CONDITIONS_TO_START"],["ACTIONS_TODO"],["CONDITIONS_TO_ABORD"],["ACTIONS_RECOVER"]],
+}
 
 const self={
     hooks:{

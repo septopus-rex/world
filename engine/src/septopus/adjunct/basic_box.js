@@ -8,12 +8,23 @@
  * @date 2025-04-23
  */
 
+const def={
+    "INDEX_OF_SIZE":            0,
+    "INDEX_OF_POSITION":        1,
+    "INDEX_OF_ROTATION":        2,
+    "RESOURCE_ID_ON_CHAIN":     3,
+    "TEXTURE_REPEAT_SETTING":   4,
+    "ANIMATION_OPTION":         5,
+    "AUTO_STOP":                6,
+}
+
 const reg={
     name:"box",
     category:'basic',
     short:0x00a2,
     desc:"",
     version:"1.0.0",
+    definition:def,
 }
 
 const config={

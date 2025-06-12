@@ -9,12 +9,25 @@
  * @date 2025-04-24
  */
 
+//definit as const value
+const def={
+    "INDEX_OF_SIZE":            0,
+    "INDEX_OF_POSITION":        1,
+    "INDEX_OF_ROTATION":        2,
+    "RESOURCE_ID_ON_CHAIN":     3,
+    "TEXTURE_REPEAT_SETTING":   4,
+    "ANIMATION_OPTION":         5,
+    "AUTO_STOP":                6,
+    "INDEX_OF_HOLE":            7,
+}
+
 const reg = {
     name: "wall", 
     category: "adjunct",
     short: 0x00a1,
-    desc: "Wall with texture. Hole on it support.",
+    desc: "Wall with texture. Hole on it will be support soon.",
     version: "1.0.0",
+    definition:def,
 }
 
 const config = {
@@ -64,6 +77,14 @@ const self = {
     reviseSizeOffset: (o, d, s) => {
         const fs = d > s ? s * 0.5 : d * .5 + o > s ? s - 0.5 * d : o < 0.5 * d ? 0.5 * d : o, sz = d > s ? s : d;
         return { offset: fs, size: sz }
+    },
+    menu:{
+        pop:(raw)=>{
+
+        },
+        sidebar:(raw)=>{
+
+        },
     },
 
     attribute: {
@@ -235,6 +256,7 @@ const adj_wall = {
     hooks: self.hooks,
     transform: self.transform,
     attribute: self.attribute,
+    menu:self.menu,
     control: {
         menu:{
 
