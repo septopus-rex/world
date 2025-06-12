@@ -486,6 +486,23 @@ const self={
         //Sidebar sample
         const groups=[
             {
+                title:"SELECTION",
+                col:12,
+                row:12,
+                inputs:[
+                    {
+                        type:"select",
+                        key:"adjunct",
+                        value:["all","stop","box"],
+                        desc:"",
+                        placeholder:"",
+                        valid:(val)=>{
+                            return true;
+                        }
+                    },
+                ],
+            },
+            {
                 title:"SIZE",
                 col:4,
                 row:12,
@@ -497,8 +514,11 @@ const self={
                         desc:"X",
                         placeholder:"size X value",
                         valid:(val)=>{
-                            
-                            return true;
+                            const n=parseFloat(val);
+                            console.log(n);
+                            if(isNaN(n)) return false;
+                            if(n<0) return false;
+                            return n;
                         }
                     },
                     {
@@ -532,7 +552,7 @@ const self={
                 inputs:[
                     {
                         type:"number",
-                        key:"x",
+                        key:"ox",
                         value:0,
                         desc:"X",
                         placeholder:"position X value",
@@ -543,7 +563,7 @@ const self={
                     },
                     {
                         type:"number",
-                        key:"y",
+                        key:"oy",
                         value:0,
                         desc:"Y",
                         placeholder:"position Y value",
@@ -554,7 +574,7 @@ const self={
                     },
                     {
                         type:"number",
-                        key:"z",
+                        key:"oz",
                         value:0,
                         desc:"Z",
                         placeholder:"position Z value",
@@ -572,7 +592,7 @@ const self={
                 inputs:[
                     {
                         type:"number",
-                        key:"x",
+                        key:"rx",
                         value:0,
                         desc:"X",
                         placeholder:"rotation X value",
@@ -583,7 +603,7 @@ const self={
                     },
                     {
                         type:"number",
-                        key:"y",
+                        key:"ry",
                         value:0,
                         desc:"Y",
                         placeholder:"rotation Y value",
@@ -594,7 +614,7 @@ const self={
                     },
                     {
                         type:"number",
-                        key:"z",
+                        key:"rz",
                         value:0,
                         desc:"Z",
                         placeholder:"rotation Z value",
@@ -615,7 +635,7 @@ const self={
                 },
             }
         }
-        //UI.show("sidebar",groups,cfg_side);
+        UI.show("sidebar",groups,cfg_side);
     },
     autoBind:()=>{
         API.bind("height","getSlot",(data)=>{

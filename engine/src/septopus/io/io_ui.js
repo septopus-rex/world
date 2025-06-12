@@ -83,7 +83,13 @@ const inputs={
 
     },
     select:(val,key,placeholder,prefix)=>{
-
+        let ctx=`<select id="${!prefix?"":(prefix+"_")}${key}">`;
+        //console.log(val,key,placeholder,prefix);
+        for(let i=0;i<val.length;i++){
+            ctx+=`<option value="${val[i]}">${val[i]}</option>`;
+        }
+        ctx+=`</select>`;
+        return ctx
     },
     text:(val,key,placeholder,prefix)=>{
         return `<input type="text" value="${val}" id="${!prefix?"":(prefix+"_")}${key}" placeholder="${placeholder}">`;
@@ -215,6 +221,7 @@ const self={
 
 const router={
     sidebar:(arr,cfg)=>{
+        //1.create dom;
         const id=`${config.prefix}sidebar`;
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "form"`);
@@ -226,6 +233,36 @@ const router={
         
         el.appendChild(dom.body);
         el.style.display="block";
+
+        //2.bind events;
+        for(let i=0;i<arr.length;i++){
+            const group=arr[i];
+            if(!group.inputs) continue;
+            for(let j=0;j<group.inputs.length;j++){
+                const row=group.inputs[j];
+                const single=document.getElementById(`${cfg.prefix}_${row.key}`);
+                ((single,row,cfg)=>{
+                    single.addEventListener("change",(ev)=>{
+                        single.disabled=true;   //disable input until done;
+
+                        const val=row.valid(ev.target.value);
+                        if(!val){
+                            single.style.borderColor="#FF0000";
+                            single.value="";
+                            single.disabled=false;
+                            return false;
+                        }
+
+                        const res={};
+                        res[row.key]=val;
+                        if(cfg.events && cfg.events.change){
+                            cfg.events.change(res);
+                        };
+                        single.disabled=false;
+                    });
+                })(single,row,cfg);
+            }
+        }
     },
     form:(arr,cfg)=>{
         //1. create DOM
