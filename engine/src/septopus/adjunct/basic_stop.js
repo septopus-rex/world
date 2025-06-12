@@ -9,6 +9,7 @@
  */
 
 import Toolbox from "../lib/toolbox";
+import Calc from "../lib/calc";
 
 const reg = {
     name: "stop",
@@ -107,25 +108,34 @@ const self = {
         // wether in stop projection surface
         projection:  (px, py, stops)=>{
             const list = {};
+            
             for (let i in stops) {
                 const row= stops[i];
-                switch (row.orgin.type) {
+                const {size,position,side,block,orgin} = row;
+                
+                switch (orgin.type) {
                     case "box":
-                        const {size,position,side,block} = row;
                         const xmin = position[0] - size[0] * 0.5, xmax = position[0] + size[0] * 0.5;
                         const ymin = position[1] - size[1] * 0.5, ymax = position[1] + size[1] * 0.5;
-                        
-                        const cx=px+(block[0]-1)*side[0];
-                        const cy=py+(block[1]-1)*side[1];
-                        if ((cx > xmin && cx < xmax) && 		//进入stop的平面投影
-                            (cy > ymin && cy < ymax)) {
+                        //const cx=px+(block[0]-1)*side[0];
+                        //const cy=py+(block[1]-1)*side[1];
+
+                        //console.log();
+
+                        if ((px > xmin && px < xmax) &&
+                            (py > ymin && py < ymax)) {
                             list[i] = row;
                         }
                         break;
 
                     case "ball":
-                        console.log(row);
-                        console.log(`Check ball in projection here.`);
+                        const radius=0.5*size[0];
+                        const center=[position[0],position[1]];     //ball center
+                        const dis=Calc.distance([px,py],center);
+                        //console.log(radius,dis);
+                        if(dis<radius){
+                            list[i] = row;
+                        }
                         break;
                 
                     default:
@@ -144,14 +154,19 @@ const self = {
 		 * @param	{object[]}  list    //{id:stop,id:stop,...}, stop list to check
 		 * 
 		 * */
-		relationZ:function(z,h,cap,va,list){
+		relationZ:(z,h,cap,va,list)=>{
 			const arr=[];
 			const option=config.stop;
 
 			for(let id in list){
-				const st=list[id];
-				const zmin=st.oz-st.z*0.5+va,zmax=st.oz+st.z*0.5+va;
-
+				const row=list[id];
+                //console.log(row);
+                const {position,size}=row;
+				//const zmin=row.oz-row.z*0.5+va;
+                //const zmax=row.oz+row.z*0.5+va;
+                const zmin=position[2]-size[2]*0.5+va;
+                const zmax=position[2]+size[2]*0.5+va;
+                //console.log(zmin,zmax);
                 //TODO, here to check BALL type stop
 
 				if(zmin>=z+h){
@@ -242,10 +257,11 @@ const basic_stop = {
         //1.check wether interact with stop from top view ( in projection ).
 		const [dx,dy,dz]=pos;
 		const list=self.calculate.projection(dx,dy,stops);
-        console.log(list);
 		if(Toolbox.empty(list)) return rst;
 		rst.interact=true;
         
+        console.log(list);
+
         //2.check position of stop;
 		const cap=cfg.cap+(cfg.pre!=undefined?cfg.pre:0),h=cfg.height;
 		const arr=self.calculate.relationZ(dz,h,cap,cfg.elevation,list);

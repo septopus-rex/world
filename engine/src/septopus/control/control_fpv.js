@@ -292,7 +292,8 @@ const self = {
                 //1.1.check wether stop by stops
                 const check=self.checkStop(diff.position);
                 if(!check.move){
-                    console.log(`Stopped.`);
+                    console.log(`Stopped.`,check);
+                    continue;
                 }
 
                 //1.2.movement here
