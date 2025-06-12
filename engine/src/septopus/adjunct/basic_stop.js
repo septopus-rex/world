@@ -160,10 +160,7 @@ const self = {
 
 			for(let id in list){
 				const row=list[id];
-                //console.log(row);
                 const {position,size}=row;
-				//const zmin=row.oz-row.z*0.5+va;
-                //const zmax=row.oz+row.z*0.5+va;
                 const zmin=position[2]-size[2]*0.5+va;
                 const zmax=position[2]+size[2]*0.5+va;
                 //console.log(zmin,zmax);
@@ -208,17 +205,17 @@ const self = {
 			const rst={stop:false,index:-1}
 			let max=null;
 			for(let i in arr){
-				const st=arr[i];
-				if(st.stop==true){
+				const row=arr[i];
+				if(row.stop==true){
 					rst.stop=true;
-					rst.index=st.index;
-					rst.way=st.way;
+					rst.index=row.index;
+					rst.way=row.way;
 					return rst;
 				}
 				
 				if(st.delta!=undefined){
-					if(max==null) max=st;
-					if(st.delta>max.delta) max=st;
+					if(max==null) max=row;
+					if(row.delta>max.delta) max=row;
 				}
 			}
 			if(max!=null){
@@ -260,12 +257,13 @@ const basic_stop = {
 		if(Toolbox.empty(list)) return rst;
 		rst.interact=true;
         
-        console.log(list);
+        //console.log(list);
 
         //2.check position of stop;
 		const cap=cfg.cap+(cfg.pre!=undefined?cfg.pre:0),h=cfg.height;
 		const arr=self.calculate.relationZ(dz,h,cap,cfg.elevation,list);
 
+        console.log(arr);
         //3.filter out the target stop for movement;
 		const fs=self.calculate.filter(arr);
 		rst.move=!fs.stop;

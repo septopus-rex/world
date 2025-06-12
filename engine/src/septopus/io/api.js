@@ -204,11 +204,29 @@ const self = {
     },
 }
 
+const contract={
+    set:(reqs)=>{
+        contract.instructions=reqs;       // attatch to contract directly
+        //console.log(contract);
+        return true;
+    },
+
+    call:async (method,params)=>{
+        if(!contract.instructions || !contract.instructions[method]) return {error:`No such method "${method}"`}
+        return await contract.instructions[method](...params);
+    },
+}
+
 const API = {
     /** 
      * Hooks for system register and initialization
      */
     hooks: self.hooks,
+
+    /** 
+     * Contract calls for system
+     */
+    contract:contract,
 
     /** 
      * get single world setting
@@ -347,7 +365,8 @@ const API = {
         if(!events[event]) return {error:`Invalid event.`};
         delete events[event][key];
         return true;
-    }
+    },
+    
 }
 
 export default API;

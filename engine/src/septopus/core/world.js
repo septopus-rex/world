@@ -410,7 +410,7 @@ const self={
     layout:()=>{
         const dom_id="three_demo";
         const world=0;
-        UI.show("menu",[
+        const menus=[
             {label:"Buy",icon:"",action:()=>{}},
             {label:"Edit",icon:"",action:()=>{
                 const bk=VBW.cache.get(["env","player","location","block"]);
@@ -430,6 +430,12 @@ const self={
                 }
                 UI.show("dialog",ctx,{position:"center"});
             }},
+
+            {label:"Mint",icon:"",action:async ()=>{
+               const res=await VBW.datasource.contract.call("mint",[2000,1290,0]);
+               console.log(res);
+            }},
+
             //UI.form Sample
             {label:"World",icon:"",action:()=>{
                 const inputs=[
@@ -472,7 +478,10 @@ const self={
                 }
                 UI.show("form",inputs,cfg);
             }}
-        ]);
+        ];
+        const cfg_menu={}
+
+        UI.show("menu",menus,cfg_menu);
 
         //Sidebar sample
         const groups=[
@@ -606,7 +615,7 @@ const self={
                 },
             }
         }
-        UI.show("sidebar",groups,cfg_side);
+        //UI.show("sidebar",groups,cfg_side);
     },
     autoBind:()=>{
         API.bind("height","getSlot",(data)=>{
@@ -642,7 +651,7 @@ const World={
      * Septopus World entry, start from 0 to start the 3D world
      * @param	{string}    id		- container DOM id
      * @param   {function}  ck      - callback when loaded
-     * @param   {object}    [cfg]   - config setting
+     * @param   {object}    [cfg]   - {contract:methods,fullscreen:false}, config setting
      * @return {boolean} - wether load successful
      * */
     first:(dom_id,ck,cfg)=>{
@@ -656,6 +665,11 @@ const World={
 
         //0.2. start listener.
         self.autoBind();
+        
+        //0.3. set contract requests.
+        if(cfg && cfg.contract && VBW.datasource && VBW.datasource.contract){
+            VBW.datasource.contract.set(cfg.contract);
+        }
 
         //1.get the player status
         if(!self.struct(dom_id)) return  UI.show("toast",`Failed to struct html dom for running.`,{type:"error"});
