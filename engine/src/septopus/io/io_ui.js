@@ -478,6 +478,10 @@ const UI={
     bind:(type,name,event)=>{
 
     },
+
+    format:(type,param)=>{
+        
+    },
 }
 
 export default UI;

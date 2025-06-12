@@ -10,28 +10,28 @@
  */
 
 //definit as const value
-const def={
-    "INDEX_OF_SIZE":            0,
-    "INDEX_OF_POSITION":        1,
-    "INDEX_OF_ROTATION":        2,
-    "RESOURCE_ID_ON_CHAIN":     3,
-    "TEXTURE_REPEAT_SETTING":   4,
-    "ANIMATION_OPTION":         5,
-    "AUTO_STOP":                6,
-    "INDEX_OF_HOLE":            7,
+const def = {
+    "INDEX_OF_SIZE": 0,
+    "INDEX_OF_POSITION": 1,
+    "INDEX_OF_ROTATION": 2,
+    "RESOURCE_ID_ON_CHAIN": 3,
+    "TEXTURE_REPEAT_SETTING": 4,
+    "ANIMATION_OPTION": 5,
+    "AUTO_STOP": 6,
+    "INDEX_OF_HOLE": 7,
 }
 
 const reg = {
-    name: "wall", 
+    name: "wall",
     category: "adjunct",
     short: 0x00a1,
     desc: "Wall with texture. Hole on it will be support soon.",
     version: "1.0.0",
-    definition:def,
+    definition: def,
 }
 
 const config = {
-    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, 1,[], 2025],
+    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, 1, [], 2025],
     hole: [0.5, 0.6, 0.9, 0.6, 2025],        //[ offset,width,height,windowsill,version ]
     definition: {
         2025: [
@@ -50,16 +50,62 @@ const config = {
         offsetX: 0.5,		//offset of X
         offsetY: 0.5,		//offset of Y
     },
-    stop:{
+    stop: {
         offset: 0.05,
         color: 0xffffff,
-        opacity:0.5,    
+        opacity: 0.5,
     },
     animate: [              //support animation list
+        { way: "none" },
         { way: "fadeout" },
         { way: "fadein" },
         { way: "moveup" },
     ],
+}
+
+const valid={
+    x:(val,raw)=>{
+
+    },
+    y:(val,raw)=>{
+
+    },
+    z:(val,raw)=>{
+
+    },
+    ox:(val,raw)=>{
+
+    },
+    oy:(val,raw)=>{
+
+    },
+    oz:(val,raw)=>{
+
+    },
+    rx:(val,raw)=>{
+
+    },
+    ry:(val,raw)=>{
+
+    },
+    rz:(val,raw)=>{
+
+    },
+    texture:(val,raw)=>{
+
+    },
+    tx:(val,raw)=>{
+
+    },
+    ty:(val,raw)=>{
+
+    },
+    animate:(val,raw)=>{
+
+    },
+    stop:(val,raw)=>{
+
+    },
 }
 
 const self = {
@@ -67,62 +113,89 @@ const self = {
         reg: () => {
             return reg;
         },
-        task: () => {
-            console.log(`wall task here.`);
-        },
         animate: (ms) => {
 
         },
     },
-    reviseSizeOffset: (o, d, s) => {
-        const fs = d > s ? s * 0.5 : d * .5 + o > s ? s - 0.5 * d : o < 0.5 * d ? 0.5 * d : o, sz = d > s ? s : d;
-        return { offset: fs, size: sz }
-    },
-    menu:{
-        pop:(raw)=>{
-
+    
+    menu: {
+        pop: (raw) => {
+            return [
+                {},
+                {},
+            ];
         },
-        sidebar:(raw)=>{
-
+        sidebar: (raw) => {
+            const animate_options=[
+                {key:"Null",value:0},
+            ];
+            return {
+                size:[
+                    {type:"number",key:"x",value:row[0][0],label:"X",desc:"X of wall",valid:(val)=>{valid.x(val,raw)}},
+                    {type:"number",key:"y",value:row[0][1],label:"Y",desc:"Y of wall",valid:(val)=>{valid.y(val,raw)}},
+                    {type:"number",key:"z",value:row[0][2],label:"Z",desc:"Z of wall",valid:(val)=>{valid.z(val,raw)}},
+                ],
+                position:[
+                    {type:"number",key:"ox",value:row[1][0],label:"X",desc:"X of postion",valid:(val)=>{valid.ox(val,raw)}},
+                    {type:"number",key:"oy",value:row[1][1],label:"Y",desc:"Y of postion",valid:(val)=>{valid.oy(val,raw)}},
+                    {type:"number",key:"oz",value:row[1][2],label:"Z",desc:"Z of postion",valid:(val)=>{valid.oz(val,raw)}},
+                ],
+                rotation:[
+                    {type:"number",key:"rx",value:row[2][0],label:"X",desc:"X of rotation",valid:(val)=>{valid.ox(val,raw)}},
+                    {type:"number",key:"ry",value:row[2][1],label:"Y",desc:"Y of rotation",valid:(val)=>{valid.oy(val,raw)}},
+                    {type:"number",key:"rz",value:row[2][2],label:"Z",desc:"Z of rotation",valid:(val)=>{valid.oz(val,raw)}},
+                ],
+                texture:[
+                    {type:"number",key:"texture",value:row[3],label:"Texture",desc:"Resource ID",valid:(val)=>{valid.texture(val,raw)}},
+                    {type:"number",key:"tx",value:row[4][0],label:"RepeatX",desc:"Repeat of X",valid:(val)=>{valid.tx(val,raw)}},
+                    {type:"number",key:"ty",value:row[4][1],label:"RepeatY",desc:"Repeat of Y",valid:(val)=>{valid.ty(val,raw)}},
+                ],
+                animation:[
+                    {type:"select",key:"animate",value:row[5],option:animate_options,label:"Animate",desc:"Animation setting",valid:(val)=>{valid.animate(val,raw)}},
+                ],
+                stop:[
+                    {type:"bool",key:"stop",value:row[6],label:"Stop",desc:"Auto STOP",valid:(val)=>{valid.stop(val,raw)}},
+                ],
+            }
         },
     },
 
     attribute: {
-        add: (p,raw) => {
+        add: (p, raw) => {
             raw.push(self.attribute.combine(p));
-			return raw;
+            return raw;
         },
-        set: (p,raw,limit) => {
-            if(p.index===undefined) return false;
-			const index=p.index;
-            if(limit===undefined){
-                raw[index]=self.attribute.combine(p,raw[index]);
-            }else{
-                const pp=self.attribute.revise(p,raw[index],limit);
-                raw[index]=self.attribute.combine(pp,raw[index]);
+        set: (p, raw, limit) => {
+            if (p.index === undefined) return false;
+            const index = p.index;
+            if (limit === undefined) {
+                raw[index] = self.attribute.combine(p, raw[index]);
+            } else {
+                const pp = self.attribute.revise(p, raw[index], limit);
+                raw[index] = self.attribute.combine(pp, raw[index]);
             }
-			return raw;
+            return raw;
         },
-        remove: (p,raw) => {
-            if(p.index===undefined) return false;
-			const rst=[];
-			for(let i in raw)if(i!=p.index)rst.push(raw[i]);
-			return rst;
+        remove: (p, raw) => {
+            if (p.index === undefined) return false;
+            const rst = [];
+            for (let i in raw) if (i != p.index) rst.push(raw[i]);
+            return rst;
         },
-        combine: (p,row) => {
-            const dd=row || JSON.parse(JSON.stringify(config.default));
-			dd[0][0]=p.x===undefined?dd[0][0]:p.x;
-			dd[0][1]=p.y===undefined?dd[0][1]:p.y;
-			dd[0][2]=p.z===undefined?dd[0][2]:p.z;
-			dd[1][0]=p.ox===undefined?dd[1][0]:p.ox;
-			dd[1][1]=p.oy===undefined?dd[1][1]:p.oy;
-			dd[1][2]=p.oz===undefined?dd[1][2]:p.oz;
-			dd[2][0]=p.rx===undefined?dd[2][0]:p.rx;
-			dd[2][1]=p.ry===undefined?dd[2][1]:p.ry;
-			dd[2][2]=p.rz===undefined?dd[2][2]:p.rz;
-			dd[3]=p.texture===undefined?dd[3]:p.texture;
-			dd[5]=p.animate===undefined?dd[5]:p.animate;
-			return dd;
+        combine: (p, row) => {
+            const dd = row || JSON.parse(JSON.stringify(config.default));
+            dd[0][0] = p.x === undefined ? dd[0][0] : p.x;
+            dd[0][1] = p.y === undefined ? dd[0][1] : p.y;
+            dd[0][2] = p.z === undefined ? dd[0][2] : p.z;
+            dd[1][0] = p.ox === undefined ? dd[1][0] : p.ox;
+            dd[1][1] = p.oy === undefined ? dd[1][1] : p.oy;
+            dd[1][2] = p.oz === undefined ? dd[1][2] : p.oz;
+            dd[2][0] = p.rx === undefined ? dd[2][0] : p.rx;
+            dd[2][1] = p.ry === undefined ? dd[2][1] : p.ry;
+            dd[2][2] = p.rz === undefined ? dd[2][2] : p.rz;
+            dd[3] = p.texture === undefined ? dd[3] : p.texture;
+            dd[5] = p.animate === undefined ? dd[5] : p.animate;
+            return dd;
         },
         revise: (p, row, limit) => {
             const reviseSizeOffset = self.reviseSizeOffset
@@ -176,7 +249,7 @@ const self = {
                         color: config.color,
                     },
                     animate: Array.isArray(d[5]) ? d[5] : null,
-                    stop:!d[6]?false:true,
+                    stop: !d[6] ? false : true,
                 }
                 rst.push(dt);
             }
@@ -198,10 +271,10 @@ const self = {
                     material: row.material,
                     //stop:!row.stop?false:true,
                 }
-                if(row.stop){
-                    obj.stop={
-                        opacity:config.stop.opacity,
-                        color:!config.stop.color?0xfffffff:config.stop.color
+                if (row.stop) {
+                    obj.stop = {
+                        opacity: config.stop.opacity,
+                        color: !config.stop.color ? 0xfffffff : config.stop.color
                     }
                 }
                 if (row.animate !== null) obj.animate = row.animate;
@@ -212,9 +285,9 @@ const self = {
 
         std_active: (std, va, cvt) => {
             const ds = { stop: [], helper: [] };
-            const offset=config.stop.offset*cvt;
-            for(let i=0;i<std.length;i++){
-                const row=std[i];
+            const offset = config.stop.offset * cvt;
+            for (let i = 0; i < std.length; i++) {
+                const row = std[i];
                 // if(row.stop){
                 //     ds.stop.push({
                 //         type: "box",
@@ -250,15 +323,19 @@ const self = {
         },
     },
 
+    reviseSizeOffset: (o, d, s) => {
+        const fs = d > s ? s * 0.5 : d * .5 + o > s ? s - 0.5 * d : o < 0.5 * d ? 0.5 * d : o, sz = d > s ? s : d;
+        return { offset: fs, size: sz }
+    },
 };
 
 const adj_wall = {
     hooks: self.hooks,
     transform: self.transform,
     attribute: self.attribute,
-    menu:self.menu,
+    menu: self.menu,
     control: {
-        menu:{
+        menu: {
 
         },
         swipe: () => {

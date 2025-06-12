@@ -24,13 +24,14 @@ const reg={
     name:"trigger",
     category:"basic",
     short:0x00b8,
-    desc:"Trigger to make the scene interactable, great component.",
+    desc:"Trigger of engine, for building games.",
     version:"1.0.0",
 }
 
 //trigger control target
-//1. adjuncts;
+//1. adjuncts;                  //including objects, lights and more
 //2. player, or player basic parameters;
+//3. system env;
 
 const config={
     default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [ "ACTION_0", "ACTION_1"] , 4, 0],
