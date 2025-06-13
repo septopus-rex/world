@@ -64,46 +64,65 @@ const config = {
 }
 
 const valid={
-    x:(val,raw)=>{
+    x:(val,cvt,std)=>{
+        console.log(val,cvt,std);
+        const n=parseInt(val);
+        if(isNaN(n)) return false;
+        if(n<=0) return false;
+        return parseFloat(n/cvt);
+    },
+    y:(val,cvt,std)=>{
+        const n=parseInt(val);
+        if(isNaN(n)) return false;
+        if(n<=0) return false;
+        return parseFloat(n/cvt);
+    },
+    z:(val,cvt,std)=>{
+        const n=parseInt(val);
+        if(isNaN(n)) return false;
+        if(n<=0) return false;
+        return parseFloat(n/cvt);
+    },
+    ox:(val,cvt,std)=>{
+        const n=parseInt(val);
+        if(isNaN(n)) return false;
+        if(n<=0) return false;
+        return n;
+    },
+    oy:(val,cvt,std)=>{
+        const n=parseInt(val);
+        if(isNaN(n)) return false;
+        if(n<=0) return false;
+        return parseFloat(n/cvt);
+    },
+    oz:(val,cvt,std)=>{
+        const n=parseInt(val);
+        if(isNaN(n)) return false;
+        if(n<=0) return false;
+        return parseFloat(n/cvt);
+    },
+    rx:(val,cvt,std)=>{
 
     },
-    y:(val,raw)=>{
+    ry:(val,cvt,std)=>{
 
     },
-    z:(val,raw)=>{
+    rz:(val,cvt,std)=>{
 
     },
-    ox:(val,raw)=>{
+    texture:(val,cvt,std)=>{
 
     },
-    oy:(val,raw)=>{
+    tx:(val,cvt,std)=>{
 
     },
-    oz:(val,raw)=>{
+    ty:(val,cvt,std)=>{
 
     },
-    rx:(val,raw)=>{
+    animate:(val,cvt,std)=>{
 
     },
-    ry:(val,raw)=>{
-
-    },
-    rz:(val,raw)=>{
-
-    },
-    texture:(val,raw)=>{
-
-    },
-    tx:(val,raw)=>{
-
-    },
-    ty:(val,raw)=>{
-
-    },
-    animate:(val,raw)=>{
-
-    },
-    stop:(val,raw)=>{
+    stop:(val,cvt,std)=>{
 
     },
 }
@@ -138,19 +157,19 @@ const self = {
             ];
             return {
                 size:[
-                    {type:"number",key:"x",value:std.x,label:"X",icon:"",desc:"X of wall",valid:(val)=>{valid.x(val,raw)}},
-                    {type:"number",key:"y",value:std.y,label:"Y",icon:"",desc:"Y of wall",valid:(val)=>{valid.y(val,raw)}},
-                    {type:"number",key:"z",value:std.z,label:"Z",icon:"",desc:"Z of wall",valid:(val)=>{valid.z(val,raw)}},
+                    {type:"number",key:"x",value:std.x,label:"X",icon:"",desc:"X of wall",valid:(val,cvt)=>{return valid.x(val,cvt,std)}},
+                    {type:"number",key:"y",value:std.y,label:"Y",icon:"",desc:"Y of wall",valid:(val,cvt)=>{return valid.y(val,cvt,std)}},
+                    {type:"number",key:"z",value:std.z,label:"Z",icon:"",desc:"Z of wall",valid:(val,cvt)=>{return valid.z(val,cvt,std)}},
                 ],
                 position:[
-                    {type:"number",key:"ox",value:std.ox,label:"X",icon:"",desc:"X of postion",valid:(val)=>{valid.ox(val,raw)}},
-                    {type:"number",key:"oy",value:std.oy,label:"Y",icon:"",desc:"Y of postion",valid:(val)=>{valid.oy(val,raw)}},
-                    {type:"number",key:"oz",value:std.oz,label:"Z",icon:"",desc:"Z of postion",valid:(val)=>{valid.oz(val,raw)}},
+                    {type:"number",key:"ox",value:std.ox,label:"X",icon:"",desc:"X of postion",valid:(val,cvt)=>{return valid.ox(val,cvt,std)}},
+                    {type:"number",key:"oy",value:std.oy,label:"Y",icon:"",desc:"Y of postion",valid:(val,cvt)=>{return valid.oy(val,cvt,std)}},
+                    {type:"number",key:"oz",value:std.oz,label:"Z",icon:"",desc:"Z of postion",valid:(val,cvt)=>{return valid.oz(val,cvt,std)}},
                 ],
                 rotation:[
-                    {type:"number",key:"rx",value:std.rx,label:"X",icon:"",desc:"X of rotation",valid:(val)=>{valid.ox(val,raw)}},
-                    {type:"number",key:"ry",value:std.ry,label:"Y",icon:"",desc:"Y of rotation",valid:(val)=>{valid.oy(val,raw)}},
-                    {type:"number",key:"rz",value:std.rz,label:"Z",icon:"",desc:"Z of rotation",valid:(val)=>{valid.oz(val,raw)}},
+                    {type:"number",key:"rx",value:std.rx,label:"X",icon:"",desc:"X of rotation",valid:(val,cvt)=>{return valid.rx(val,cvt,std)}},
+                    {type:"number",key:"ry",value:std.ry,label:"Y",icon:"",desc:"Y of rotation",valid:(val,cvt)=>{return valid.ry(val,cvt,std)}},
+                    {type:"number",key:"rz",value:std.rz,label:"Z",icon:"",desc:"Z of rotation",valid:(val,cvt)=>{return valid.rz(val,cvt,std)}},
                 ],
                 // texture:[
                 //     {type:"number",key:"texture",value:row[3],label:"Texture",icon:"",desc:"Resource ID",valid:(val)=>{valid.texture(val,raw)}},

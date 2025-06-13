@@ -104,15 +104,15 @@ const self={
             ];
         },
         sidebar:(std)=>{
+            console.log(std);
             return {
                 elevation:[
-                    {type:"number",key:"elevation",value:row[0],label:"Elevation",desc:"Elevation of block",valid:(val)=>{
+                    {type:"number",key:"elevation",value:std.z,label:"",desc:"Elevation of block",valid:(val)=>{
                         
                     }},
-                    
                 ],
                 status:[
-                    {type:"number",key:"statu",value:row[0],label:"Status",desc:"Status of block",valid:(val)=>{
+                    {type:"number",key:"status",value:std.status,label:"",desc:"Status of block",valid:(val)=>{
                         
                     }},
                 ]

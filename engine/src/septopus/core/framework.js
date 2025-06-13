@@ -25,6 +25,7 @@ const def={
     "MODE_NORMAL":1,
     "MODE_EDIT":2,
     "MODE_GAME":3,
+    "INDEX_OF_RAW_ON_CHAIN_DATA":1,
 }
 
 const config = {
@@ -496,8 +497,8 @@ const self = {
         //2.3. get new raw data
         //console.log(`Ready to get raw`)
         const block_raw=self.cache.get(d_chain);
-        const raw_index=2;
-        const raw=self.getRawByName(task.adjunct,block_raw[raw_index]);
+        //const raw_index=1;
+        const raw=self.getRawByName(task.adjunct,block_raw[def.INDEX_OF_RAW_ON_CHAIN_DATA]);
         //console.log(`Raw data of wall`,raw);
         task.limit!==undefined?fun(task.param,raw,task.limit):fun(task.param,raw);
         

@@ -387,6 +387,20 @@ const self = {
         const target=objs[selected];
         return target.object.userData;
     },
+    formatGroups:(groups)=>{
+        const ss=[];
+        for(let title in groups){
+            const gp=groups[title];
+            const group={
+                title:title.toUpperCase(),
+                col:12,
+                row:12,
+                inputs:gp,
+            }
+            ss.push(group);
+        }
+        return ss;
+    },
     getSelection:(objs,x,y,side)=>{
         const selected={
             adjunct:"",
@@ -466,39 +480,38 @@ const self = {
                 }
 
                 //3. show pop menu
-
                 const std=self.getSTD(x,y,target.adjunct,target.index);
-                console.log(std,target);
+                //console.log(std,target);
                 const pop=VBW[target.adjunct].menu.pop(std);
                 UI.show("pop",pop,{offset:mouse});
 
-                //4. show sidebar menu  
+                //4. show sidebar menu 
                 const groups=VBW[target.adjunct].menu.sidebar(std);
-                //console.log(groups);
                 const cfg_side={
                     title:`${target.adjunct}-${target.index} Modification`,
                     prefix:"sd",
+                    convert:cache.convert,
                     events:{
                         change:(obj)=>{
                             console.log(obj);
+
+                            obj.index=target.index;
+                            const task={x:x,y:y,adjunct:"wall",action:"set",param:obj};
+                            const queue=VBW.cache.get(["task", cache.container, cache.world]);
+                            queue.push(task);
+
+                            VBW.update(cache.container, cache.world);
+                            const range={x:x,y:y,world:cache.world,container:cache.container}
+                            VBW.prepair(range,(pre)=>{
+                                console.log(pre);
+                                VBW[config.render].show(cache.container,[x,y,cache.world]);
+                                //return ck && ck(true);
+                            });
                         },
                     }
                 }
-                UI.show("sidebar",groups,cfg_side);
-
-                // UI.show("pop",[
-                //     {label:"Size",icon:"",type:"button",action:(ev)=>{
-                //         console.log(ev);
-                //     }},
-                //     {label:"Position",icon:"",type:"button",action:(ev)=>{
-
-                //     }},
-                //     //{label:"Detail",icon:"",type:"hr",action:()=>{}},
-                //     {label:"Detail",icon:"",type:"button",action:(ev)=>{
-
-                //     }},
-                //     //{label:"Version",icon:"",type:"info",action:()=>{}}
-                // ],{offset:mouse});
+                const sidebar=self.formatGroups(groups);
+                UI.show("sidebar",sidebar,cfg_side);
             }
             
         });

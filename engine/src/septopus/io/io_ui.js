@@ -196,9 +196,9 @@ const self={
                 console.error(`Error input: ${JSON.stringify(row)}`)
                 continue;
             }
-            const input=inputs[row.type](row.value,row.key,row.placeholder,prefix);
+            const input=inputs[row.type](row.value,row.key,row.desc,prefix);
             ctx+=`<div class="row">
-                <span class="pr-1">${row.desc}</span>${input}
+                <span class="pr-1">${row.label}</span>${input}
             </div>`;
         }
         ctx+='</div>';
@@ -234,7 +234,14 @@ const router={
         el.appendChild(dom.body);
         el.style.display="block";
 
-        //2.bind events;
+        //2.bind events to avoid click go cross;
+        el.addEventListener("click",(ev)=>{
+            self.hide("pop");
+            ev.preventDefault();
+            ev.stopPropagation();
+        });
+
+        //3.bind events;
         for(let i=0;i<arr.length;i++){
             const group=arr[i];
             if(!group.inputs) continue;
@@ -244,8 +251,9 @@ const router={
                 ((single,row,cfg)=>{
                     single.addEventListener("change",(ev)=>{
                         single.disabled=true;   //disable input until done;
+                        const cvt=cfg.convert;
+                        const val=row.valid(ev.target.value,cvt);
 
-                        const val=row.valid(ev.target.value);
                         if(!val){
                             single.style.borderColor="#FF0000";
                             single.value="";
