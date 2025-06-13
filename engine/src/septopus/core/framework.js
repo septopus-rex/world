@@ -21,6 +21,12 @@ const cache = {
     setting:CONFIG
 };
 
+const def={
+    "MODE_NORMAL":1,
+    "MODE_EDIT":2,
+    "MODE_GAME":3,
+}
+
 const config = {
     keys: [             //keys of cache
         "component",    //component keyname

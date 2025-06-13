@@ -92,6 +92,31 @@ const self={
             console.log(mesh);
         },
     },
+    menu:{
+        pop:(std)=>{
+            return [
+                {type:"button",label:"Info",icon:"",action:(ev)=>{
+                    console.log(ev);
+                }},
+                {type:"button",label:"Remove",icon:"",action:(ev)=>{
+                    console.log(ev);
+                }},
+            ];
+        },
+        sidebar:(std)=>{
+            return {
+                elevation:[
+                    {type:"number",key:"elevation",value:row[0],label:"Elevation",desc:"Elevation of block",valid:(val)=>{
+                        
+                    }},
+                    
+                ],
+                status:[
+
+                ]
+            }
+        },
+    },
     attribute:{
         load:(x,y,param,world, dom_id)=>{
             //console.log(`block load:`,x,y,param,world,dom_id);
