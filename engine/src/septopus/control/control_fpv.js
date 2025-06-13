@@ -16,21 +16,13 @@ import Movment from "../core/movement";
 import VBW from "../core/framework";
 import UI from "../io/io_ui";
 import ThreeObject from "../three/entry";
-import Toolbox from "../lib/toolbox";
 
 const reg = {
     name: "con_first",
     category: 'controller',
+    desc:"FPV controller for Septopus World",
+    version: "1.0.0",
 }
-
-// let player = null;            //player information
-// let camera = null;            //FPV camera object
-// let scene=null;               //scene for raycast checking
-// let actions = null;           //Pressed key queue
-// let side = null;              //Block size
-// let container = null;         //init DOM id
-// let world = null;             //active world
-// let raycaster=null;             //raycast checker
 
 const cache={
     player:null,            //player information 
@@ -379,25 +371,66 @@ const self = {
     getClickPosition:(ev)=>{
         return [ev.clientY,ev.clientX];
     },
+    getSingle:(objs)=>{
+        let dis=0;
+        let selected=0;
+        for(let i=0;i<objs.length;i++){
+            const row=objs[i];
+            if(dis===0) dis=row.distance;
+            if(row.distance<dis) selected=i;
+        }
+        const target=objs[selected];
+        return target.object.userData;
+    },
+    getSelection:(objs,x,y,side)=>{
+        const selected={
+            adjunct:"",
+            index:0,
+        }
+        const arr=[];
+        for(let i=0;i<objs.length;i++){
+            const row=objs[i];
+            if(row.distance>side[0]) continue;          //ignore objects on other blocks
+            if( !row.object || 
+                !row.object.userData ||
+                !row.object.userData.x || 
+                !row.object.userData.y ||
+                !row.object.userData.name ||
+                row.object.userData.x!==x ||
+                row.object.userData.y!==y) continue;   //ignore system objects
 
+            const tmp=row.object.userData.name.split("_");
+            if(tmp.length>1) continue;                  //ignore helper objects
+            arr.push(row);
+        }
+
+        if(arr.length===0) return selected;
+        const single=self.getSingle(arr);
+        selected.adjunct=single.name;
+        selected.index=single.index;
+        return selected;
+    },
     select:(ev)=>{
         if(cache.scene===null) return false;
 
         //1.check 
         if(cache.raycaster===null){
             cache.raycaster=ThreeObject.get("basic","raycast",{});
-            cache.raycaster.mouse.x = (ev.clientX / window.innerWidth) * 2 - 1;
-            cache.raycaster.mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
-            cache.raycaster.checker.setFromCamera(cache.raycaster.mouse, camera);
         }
+        const raycaster=cache.raycaster;
+        
+        raycaster.mouse.x = (ev.clientX / window.innerWidth) * 2 - 1;
+        raycaster.mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+        raycaster.checker.setFromCamera(raycaster.mouse, cache.camera);
 
         const objs=cache.scene.children;
         const selected = cache.raycaster.checker.intersectObjects(objs);
 
         //2.filter out 
         if (selected.length > 0) {
-
-            console.log(selected);
+            const [x,y]=cache.player.location.block;
+            const target=self.getSelection(selected,x,y,cache.side);
+            return target;
         }
     },
     screen:(dom_id)=>{
@@ -411,7 +444,8 @@ const self = {
             if(mode===2){
                 //1. raycast check the selected object
                 const target=self.select(ev);
-
+                console.log(target);
+                
                 //2. set active
 
                 //3. show pop menu

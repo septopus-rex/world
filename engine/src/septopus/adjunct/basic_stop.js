@@ -272,6 +272,7 @@ const basic_stop = {
 		const arr=self.calculate.relationZ(dz,h,cap,cfg.elevation,list);
 
         console.log(arr);
+        
         //3.filter out the target stop for movement;
 		const fs=self.calculate.filter(arr);
 		rst.move=!fs.stop;

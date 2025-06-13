@@ -112,7 +112,9 @@ const self={
                     
                 ],
                 status:[
-
+                    {type:"number",key:"statu",value:row[0],label:"Status",desc:"Status of block",valid:(val)=>{
+                        
+                    }},
                 ]
             }
         },

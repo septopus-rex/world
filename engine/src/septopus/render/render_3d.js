@@ -348,7 +348,6 @@ const self = {
         console.log(`Here to show stops on edit mode.`);
         for (let i = 0; i < stops.length; i++) {
             const row = stops[i];
-            //console.log(row);
             const obj = {
                 geometry: {
                     type:row.orgin.type,
