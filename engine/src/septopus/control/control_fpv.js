@@ -58,6 +58,7 @@ const config = {
         distance: 100,
         angle: Math.PI * 0.01,
     },
+    render:"rd_three",
 }
 
 const status = {
@@ -98,6 +99,10 @@ const self = {
     },
     getEditActive:()=>{
         return VBW.cache.get(["block",cache.container,cache.world,"edit"]);
+    },
+    getSTD:(x,y,adjunct,index)=>{
+        const chain=["block",cache.container,cache.world,`${x}_${y}`,'std',adjunct,index===undefined?0:index];
+        return VBW.cache.get(chain);
     },
     keyboard: (dom_id) => {
         VBW.queue.init(config.queue);
@@ -444,15 +449,42 @@ const self = {
             if(mode===2){
                 //1. raycast check the selected object
                 const target=self.select(ev);
-                console.log(target);
                 
                 //2. set active
+                const editing=self.getEditActive();
+                const [x,y]=cache.player.location.block;
+               if(!target.adjunct){
+                    target.adjunct="block"; //set default adjunct
+                }else{
+                    editing.selected.adjunct=target.adjunct;
+                    editing.selected.index=target.index;
+                    editing.selected.face="x";
+
+                    //fresh to show grid
+                    
+                    VBW[config.render].show(cache.container,[x,y,cache.world]);
+                }
 
                 //3. show pop menu
-                //const pop=VBW.component[target.adjunct].menu.pop();
-                //UI.show("pop",pop,{offset:mouse});
 
-                //4. show sidebar menu
+                const std=self.getSTD(x,y,target.adjunct,target.index);
+                console.log(std,target);
+                const pop=VBW[target.adjunct].menu.pop(std);
+                UI.show("pop",pop,{offset:mouse});
+
+                //4. show sidebar menu  
+                const groups=VBW[target.adjunct].menu.sidebar(std);
+                //console.log(groups);
+                const cfg_side={
+                    title:`${target.adjunct}-${target.index} Modification`,
+                    prefix:"sd",
+                    events:{
+                        change:(obj)=>{
+                            console.log(obj);
+                        },
+                    }
+                }
+                UI.show("sidebar",groups,cfg_side);
 
                 // UI.show("pop",[
                 //     {label:"Size",icon:"",type:"button",action:(ev)=>{

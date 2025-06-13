@@ -119,7 +119,7 @@ const self = {
     },
     
     menu: {
-        pop: (raw) => {
+        pop: (std) => {
             return [
                 {type:"button",label:"Info",icon:"",action:(ev)=>{
                     console.log(ev);
@@ -132,37 +132,37 @@ const self = {
                 }},
             ];
         },
-        sidebar: (raw) => {
+        sidebar: (std) => {
             const animate_options=[
                 {key:"Null",value:0},
             ];
             return {
                 size:[
-                    {type:"number",key:"x",value:row[0][0],label:"X",icon:"",desc:"X of wall",valid:(val)=>{valid.x(val,raw)}},
-                    {type:"number",key:"y",value:row[0][1],label:"Y",icon:"",desc:"Y of wall",valid:(val)=>{valid.y(val,raw)}},
-                    {type:"number",key:"z",value:row[0][2],label:"Z",icon:"",desc:"Z of wall",valid:(val)=>{valid.z(val,raw)}},
+                    {type:"number",key:"x",value:std.x,label:"X",icon:"",desc:"X of wall",valid:(val)=>{valid.x(val,raw)}},
+                    {type:"number",key:"y",value:std.y,label:"Y",icon:"",desc:"Y of wall",valid:(val)=>{valid.y(val,raw)}},
+                    {type:"number",key:"z",value:std.z,label:"Z",icon:"",desc:"Z of wall",valid:(val)=>{valid.z(val,raw)}},
                 ],
                 position:[
-                    {type:"number",key:"ox",value:row[1][0],label:"X",icon:"",desc:"X of postion",valid:(val)=>{valid.ox(val,raw)}},
-                    {type:"number",key:"oy",value:row[1][1],label:"Y",icon:"",desc:"Y of postion",valid:(val)=>{valid.oy(val,raw)}},
-                    {type:"number",key:"oz",value:row[1][2],label:"Z",icon:"",desc:"Z of postion",valid:(val)=>{valid.oz(val,raw)}},
+                    {type:"number",key:"ox",value:std.ox,label:"X",icon:"",desc:"X of postion",valid:(val)=>{valid.ox(val,raw)}},
+                    {type:"number",key:"oy",value:std.oy,label:"Y",icon:"",desc:"Y of postion",valid:(val)=>{valid.oy(val,raw)}},
+                    {type:"number",key:"oz",value:std.oz,label:"Z",icon:"",desc:"Z of postion",valid:(val)=>{valid.oz(val,raw)}},
                 ],
                 rotation:[
-                    {type:"number",key:"rx",value:row[2][0],label:"X",icon:"",desc:"X of rotation",valid:(val)=>{valid.ox(val,raw)}},
-                    {type:"number",key:"ry",value:row[2][1],label:"Y",icon:"",desc:"Y of rotation",valid:(val)=>{valid.oy(val,raw)}},
-                    {type:"number",key:"rz",value:row[2][2],label:"Z",icon:"",desc:"Z of rotation",valid:(val)=>{valid.oz(val,raw)}},
+                    {type:"number",key:"rx",value:std.rx,label:"X",icon:"",desc:"X of rotation",valid:(val)=>{valid.ox(val,raw)}},
+                    {type:"number",key:"ry",value:std.ry,label:"Y",icon:"",desc:"Y of rotation",valid:(val)=>{valid.oy(val,raw)}},
+                    {type:"number",key:"rz",value:std.rz,label:"Z",icon:"",desc:"Z of rotation",valid:(val)=>{valid.oz(val,raw)}},
                 ],
-                texture:[
-                    {type:"number",key:"texture",value:row[3],label:"Texture",icon:"",desc:"Resource ID",valid:(val)=>{valid.texture(val,raw)}},
-                    {type:"number",key:"tx",value:row[4][0],label:"RepeatX",icon:"",desc:"Repeat of X",valid:(val)=>{valid.tx(val,raw)}},
-                    {type:"number",key:"ty",value:row[4][1],label:"RepeatY",icon:"",desc:"Repeat of Y",valid:(val)=>{valid.ty(val,raw)}},
-                ],
-                animation:[
-                    {type:"select",key:"animate",value:row[5],option:animate_options,label:"Animate",icon:"",desc:"Animation setting",valid:(val)=>{valid.animate(val,raw)}},
-                ],
-                stop:[
-                    {type:"bool",key:"stop",value:row[6],label:"Stop",icon:"",desc:"Auto STOP",valid:(val)=>{valid.stop(val,raw)}},
-                ],
+                // texture:[
+                //     {type:"number",key:"texture",value:row[3],label:"Texture",icon:"",desc:"Resource ID",valid:(val)=>{valid.texture(val,raw)}},
+                //     {type:"number",key:"tx",value:row[4][0],label:"RepeatX",icon:"",desc:"Repeat of X",valid:(val)=>{valid.tx(val,raw)}},
+                //     {type:"number",key:"ty",value:row[4][1],label:"RepeatY",icon:"",desc:"Repeat of Y",valid:(val)=>{valid.ty(val,raw)}},
+                // ],
+                // animation:[
+                //     {type:"select",key:"animate",value:row[5],option:animate_options,label:"Animate",icon:"",desc:"Animation setting",valid:(val)=>{valid.animate(val,raw)}},
+                // ],
+                // stop:[
+                //     {type:"bool",key:"stop",value:row[6],label:"Stop",icon:"",desc:"Auto STOP",valid:(val)=>{valid.stop(val,raw)}},
+                // ],
             }
         },
     },

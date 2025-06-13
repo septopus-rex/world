@@ -274,6 +274,7 @@ const vbw_block={
     hooks:self.hooks,
     transform:self.transform,  
     attribute:self.attribute,
+    menu: self.menu,
 }
 
 export default vbw_block;
