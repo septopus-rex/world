@@ -23,7 +23,10 @@ const self={
 }
 
 const control_2d={
-    hooks:self.hooks, 
+    hooks:self.hooks,
+    start: (dom_id) => {
+        console.log(`Binding actions to 2D map of ${dom_id}`);
+    },
 }
 
 export default control_2d;

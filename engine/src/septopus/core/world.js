@@ -413,7 +413,11 @@ const self={
         const dom_id="three_demo";
         const world=0;
         const menus=[
-            {label:"Buy",icon:"",action:()=>{}},
+            {label:"Buy",icon:"", action:async ()=>{
+                console.log(`Buy button clicked.`);
+                const res=await VBW.datasource.contract.call("buy",[2000,1290,0]);
+                console.log(res);
+            }},
             {label:"Edit",icon:"",action:()=>{
                 const bk=VBW.cache.get(["env","player","location","block"]);
                 if(bk.error) return UI.show("toast",bk.error,{type:"error"});
@@ -421,7 +425,9 @@ const self={
             }},
 
             {label:"Normal",icon:"",action:()=>{
-                World.normal(dom_id,world)
+                World.normal(dom_id,world,(done)=>{
+                    console.log(done);
+                });
             }},
 
             //UI.dialog Sample
@@ -707,9 +713,12 @@ const World={
      * @param {boolean} result
      * */
     normal:(dom_id,world,ck)=>{
-        //0.remove edit data
-        const chain=["block",dom_id,world];
+        //0.check edit mode
+        const chain=["block",dom_id,world,"edit"];
         const cur=VBW.cache.get(chain);
+        if(cur.error) return ck && ck(cur);
+
+        //1.remove edit data
         const x=cur.edit.x,y=cur.edit.y;
         const target={x:x,y:y,world:world,container:dom_id}
 

@@ -21,6 +21,12 @@
   height: 1px;
 }
 
+.map{
+  background: #444444;
+  min-height: 400px;
+  cursor: pointer;
+}
+
 .dialog{
   background-color: #333333;
   position: absolute;
@@ -151,6 +157,7 @@
   background-position: center;
   opacity: 0.4;
   user-select: none;
+  cursor: pointer;
 }
 
 .pointer{
@@ -169,6 +176,7 @@
   text-align: center;
   color: #ffffff;
   user-select: none;
+  cursor: pointer;
 }
 
 .menu{

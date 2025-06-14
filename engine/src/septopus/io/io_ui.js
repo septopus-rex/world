@@ -129,9 +129,7 @@ const self={
             const row=arr[i];
             ctx+=`<li id="${name}_${i}">${row.label}</li>`;
         }
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(ctx, 'text/html');
-        
+        const doc=self.getDom(ctx);
         return doc.body.firstChild;
     },
     bindActions:(arr,name)=>{
@@ -341,7 +339,6 @@ const router={
     },
     dialog:(ctx,cfg)=>{
         const id=`${config.prefix}dialog`;
-
         const el=document.getElementById(id);
         el.innerHTML="";
         const data=`<div class="title">${ctx.title}</div>
@@ -351,9 +348,7 @@ const router={
             </svg>
             <hr />
             <div class="body">${ctx.content}</div>`;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data, 'text/html');
-
+        const doc=self.getDom(data);
         el.appendChild(doc.body); 
         el.style.display="block";
         el.hidden=false;
@@ -426,21 +421,32 @@ const router={
 
         //TODO, need to manage events to avoid multi bind.
         //2. bind events
-        // el.addEventListener("click",(ev)=>{
-        //     if(cfg && cfg.events && cfg.events.click){
-        //         ev.preventDefault();
-        //         ev.stopPropagation();
-        //         cfg.events.click(ev);
-        //     }
-        // });
+        if(doms.compass.events.click!==null){
+            el.removeEventListener("click",doms.compass.events.click);
+        }
+
+        if(cfg && cfg.events && cfg.events.click){
+            doms.compass.events.click=cfg.events.click;
+            el.addEventListener("click",doms.compass.events.click)
+        }
     },
     status:(val,cfg)=>{
         const id=`${config.prefix}status`;
-
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "status"`);
 
+        //1. set dom
         el.textContent = val;
+
+        //2. bind events
+        if(doms.status.events.click!==null){
+            el.removeEventListener("click",doms.status.events.click);
+        }
+
+        if(cfg && cfg.events && cfg.events.click){
+            doms.status.events.click=cfg.events.click;
+            el.addEventListener("click",doms.status.events.click)
+        }
     },
     
 };

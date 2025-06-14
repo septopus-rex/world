@@ -258,7 +258,9 @@ const self = {
         if(rotated){
             const cfg_compass={
                 events:{
-                    click:()=>{
+                    click:(ev)=>{
+                        ev.preventDefault();
+                        ev.stopPropagation();
                         console.log(`Compass clicked`);
                     },
                 },
