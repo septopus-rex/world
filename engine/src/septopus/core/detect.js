@@ -28,7 +28,7 @@ const self={
                         height:window.innerHeight,
                         ratio:window.devicePixelRatio,
                     },
-                    mobile:true,
+                    mobile:false,
                     network:"",
                 }
             };

@@ -165,6 +165,8 @@ const self={
 
         //0.device detect
         const dt=VBW.detect.check(container);
+        const dev_chain=["block",container,"basic"];
+        VBW.cache.set(dev_chain,dt);
 
         //1.1.struct dom for render
         const dom_render=VBW[config.render].construct(dt.width,dt.height,container);

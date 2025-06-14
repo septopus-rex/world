@@ -360,14 +360,6 @@ const adj_wall = {
     transform: self.transform,
     attribute: self.attribute,
     menu: self.menu,
-    control: {
-        menu: {
-
-        },
-        swipe: () => {
-
-        },
-    },
 }
 
 export default adj_wall;

@@ -255,7 +255,16 @@ const self = {
         player.location.rotation[2] = player.location.rotation[2] + total.rotation[2]; 
         
         //4.update compass value
-        UI.show("compass",-180*player.location.rotation[1]/Math.PI,{});
+        if(rotated){
+            const cfg_compass={
+                events:{
+                    click:()=>{
+                        console.log(`Compass clicked`);
+                    },
+                },
+            }
+            UI.show("compass",-180*player.location.rotation[1]/Math.PI,cfg_compass);
+        }
     },
 
     //fliter out stops related by block coordination.
@@ -437,9 +446,11 @@ const self = {
             cache.raycaster=ThreeObject.get("basic","raycast",{});
         }
         const raycaster=cache.raycaster;
-        
-        raycaster.mouse.x = (ev.clientX / window.innerWidth) * 2 - 1;
-        raycaster.mouse.y = -(ev.clientY / window.innerHeight) * 2 + 1;
+
+        const dv=VBW.cache.get(["block",cache.container,"basic"]);
+        const {width,height}=dv;
+        raycaster.mouse.x = (ev.clientX /width) * 2 - 1;
+        raycaster.mouse.y = -(ev.clientY /height) * 2 + 1;
         raycaster.checker.setFromCamera(raycaster.mouse, cache.camera);
 
         const objs=cache.scene.children;
@@ -473,10 +484,7 @@ const self = {
                     editing.selected.adjunct=target.adjunct;
                     editing.selected.index=target.index;
                     editing.selected.face="x";
-
-                    //fresh to show grid
-                    
-                    VBW[config.render].show(cache.container,[x,y,cache.world]);
+                    //VBW[config.render].show(cache.container,[x,y,cache.world]);
                 }
 
                 //3. show pop menu
@@ -505,7 +513,6 @@ const self = {
                             VBW.prepair(range,(pre)=>{
                                 console.log(pre);
                                 VBW[config.render].show(cache.container,[x,y,cache.world]);
-                                //return ck && ck(true);
                             });
                         },
                     }

@@ -406,10 +406,10 @@ const router={
     },
     compass:(val,cfg)=>{
         const id=`${config.prefix}compass`;
-
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "compass"`);
 
+        //1. set DOM
         el.innerHTML="";
         //SVG pointer
         const pointer=`<svg viewBox="0 0 100 100" width="100%" height="100%"  class="pointer">
@@ -422,7 +422,17 @@ const router={
             </svg>`;
         const parser = new DOMParser();
         const doc = parser.parseFromString(pointer, 'text/html');
-        el.appendChild(doc.body.firstChild);    
+        el.appendChild(doc.body.firstChild);
+
+        //TODO, need to manage events to avoid multi bind.
+        //2. bind events
+        // el.addEventListener("click",(ev)=>{
+        //     if(cfg && cfg.events && cfg.events.click){
+        //         ev.preventDefault();
+        //         ev.stopPropagation();
+        //         cfg.events.click(ev);
+        //     }
+        // });
     },
     status:(val,cfg)=>{
         const id=`${config.prefix}status`;
