@@ -12,20 +12,60 @@
 const self ={
     drawing:{
         line:(env,ps,cfg)=>{
-            if(env.pen===nul) return {error:"Canvas is not init yet."}
+            if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
-            const b2c=self.calculate.point.b2c;
+            const pBtoC=self.calculate.point.b2c;
+			const antiHeight=cfg.anticlock?height*ratio:0;
+
+			pen.lineWidth = !cfg.width?1:cfg.width;
+			pen.strokeStyle = !cfg.color?"#000000":cfg.color;
+			pen.beginPath();
+			for (let i=0,len=ps.length;i<len;i++){
+				const p=pBtoC(ps[i],scale,offset,density,antiHeight);
+				if(i==0)pen.moveTo(p[0]+0.5,p[1]+0.5);
+				if(i>0 && i<len)pen.lineTo(p[0]+0.5,p[1]+0.5);
+			}
+			pen.closePath();
+			pen.stroke();
         },
         dash:()=>{
-            if(env.pen===nul) return {error:"Canvas is not init yet."}
+            if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
         },
-        arc:()=>{
-            if(env.pen===nul) return {error:"Canvas is not init yet."}
+        arc:(center,radius,angle)=>{
+            if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
+			const antiHeight=cfg.anticlock?height*ratio:0;
+
+            const [start,end]=angle;
+            const rotation=0;
+
+			const pBtoC=self.calculate.point.b2c;
+            const disBtoC=self.calculate.distance.b2c;
+            const anClear=self.calculate.angle.clean;
+			const c=pBtoC(center,scale,offset,density,antiHeight);
+            const r=disBtoC(radius,rotation,scale,ratio,density);
+			const startAngle=anClear(start),endAngle=anClear(end);
+
+			let grd;
+			if(cfg.grad){
+				grd=pen.createRadialGradient(c[0],c[1],1,c[0],c[1],r);
+				for(let i in cfg.grad){
+					const stop=cfg.grad[i];
+					grd.addColorStop(stop[0],stop[1]);
+				}
+			}
+			
+			pen.beginPath();
+			pen.fillStyle=cfg.grad?grd:cfg.color;
+			pen.strokeStyle=cfg.color;
+			pen.moveTo(c[0], c[1]);
+			pen.arc(c[0], c[1],r,startAngle,endAngle);
+			pen.closePath();
+			pen.fill();
         },
         fill:(env,ps,cfg)=>{
-            if(env.pen===nul) return {error:"Canvas is not init yet."}
+            if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio} = env;        // density=== px per meter
             const b2c=self.calculate.point.b2c;
 
@@ -40,15 +80,15 @@ const self ={
             pen.fill();
         },
         sector:()=>{
-            if(env.pen===nul) return {error:"Canvas is not init yet."}
+            if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
         },
         image:()=>{
-            if(env.pen===nul) return {error:"Canvas is not init yet."}
+            if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
         },
         text:()=>{
-            if(env.pen===nul) return {error:"Canvas is not init yet."}
+            if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
         },
         grid:()=>{
@@ -96,6 +136,16 @@ const self ={
                 ];	
             },
         },
+        distance:{
+            b2c:(dis, rotation, scale, ratio, density)=>{
+                if (rotation == undefined) rotation = 0 
+                return dis * density * scale / ratio 
+            },
+            c2b:(dis, rotation, scale, ratio, density)=>{
+                if (rotation == undefined) rotation = 0 
+                return dis * ratio / (density * scale)
+            },
+        },
         angle:{
             r2n:()=>{
 
@@ -105,6 +155,13 @@ const self ={
             },
             merge:(angle)=>{
 
+            },
+            clean:(angle)=>{
+                const x = Math.PI + Math.PI;
+                const clean=self.calculate.angle.clean;
+                if (angle < 0) return clean(angle + x);
+                if (angle >= x) return clean(angle - x);
+                return angle;
             },
         },
         line: {
