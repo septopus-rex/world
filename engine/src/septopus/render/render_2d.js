@@ -28,21 +28,23 @@ const config = {
         max: 30,     //max scale
         min: 1,      //min scale
     },
+    fov: 50,        //3D fov setting
 }
 
 const env = {
     pen: null,
-    scale: 10,
+    scale: 30,            //scale, more big more details
     offset: [0, 0],       //
     size: [0, 0],         //canvas size as meter
     side: [0, 0],         //block side
-    limit:[4096,4096],   //block number limit
+    limit: [4096, 4096],   //block number limit
     height: 100,         //canvas height
     width: 100,          //canvas width
     density: 0.21,       // px/meter,
     ratio: 1,            // for apple device, screen ratio
     convert: 1,          //system convert 
     player: null,        //link to player
+    selected:[0,0],      //selected block
 };
 
 const test = {
@@ -117,47 +119,72 @@ const self = {
 
     },
     grid: () => {
-        //const env = run[target], tpl = env.theme, size = env.size, m = env.multi
-        //console.log(env)
-        //const wd = me.core.world, s = wd.sideLength, mx = wd.xMax * s, my = wd.yMax * s
-        const s=env.side[0], mx=env.limit[0]*s,my=env.limit[1]*s;
+        const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
         const x = env.offset[0], y = env.offset[1], xw = env.size[0], yw = env.size[1];
 
         const xs = x < 0 ? 0 : (x - x % s);
-        const ys = y < 0 ? 0 : (y - y % s);					//开始坐标位置
+        const ys = y < 0 ? 0 : (y - y % s);
         const xe = x + xw > mx ? mx : x + xw;
-        const ye = y + yw > my ? my : y + yw;			//结束坐标位置
-        const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);		//竖线条数
-        const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);		//横线条数
-        //console.log('绘制竖线条数:'+xn+',绘制横线条数:'+yn)
-        //console.log(JSON.stringify(size))
-        //console.log('x轴开始绘制的位置:'+xs+',y轴开始绘制的位置:'+ys)
+        const ye = y + yw > my ? my : y + yw;
+        const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);
+        const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);
         const cfg = { width: 1, color: "#888888", anticlock: true }
         const line = TwoObject.drawing.line;
 
         let ystep = ys
-        for (let i = 0; i < yn; i++) {		//绘制横线
+        for (let i = 0; i < yn; i++) {
             const pa = [xs, ystep], pb = [xe, ystep];
-            line(env,[pa, pb], cfg);
+            line(env, [pa, pb], cfg);
             ystep += s;
         }
 
         let xstep = xs
         for (let i = 0; i < xn; i++) {		//绘制竖线
             const pa = [xstep, ys], pb = [xstep, ye];
-            line(env,[pa, pb], cfg);
+            line(env, [pa, pb], cfg);
             xstep += s;
         }
     },
-
+    block:(x,y,cfg)=>{
+		//const wd=me.core.world,s=wd.sideLength,env=run[target];
+        const s=env.side[0];
+		const ps=[[(x-1)*s,(y-1)*s],[(x-1)*s,y*s],[x*s,y*s],[x*s,(y-1)*s]];
+        TwoObject.drawing.fill(env,ps,cfg);
+		//root.two.fillPolygon(ps,cfg)
+	},
     active: () => {
-
+        const [x,y]=env.selected;
+		if(x > 0 && y > 0){
+			self.block(x,y,{width:1,color:'#00CCBB',anticlock:true});
+            
+		}
+		const [px,py]=env.player.location.block;
+		self.block(px,py,{width:1,color:'#99CCBB',anticlock:true});
+        self.block(px+2,py+2,{width:1,color:'#00CCDD',anticlock:true})
     },
     detail: () => {
 
     },
     avatar: () => {
+        const player=env.player.location;
+        const [x,y]=player.block;
+        const pos=player.position;
+        const ro=player.rotation;
+        const s=env.side[0];
+        const hf=Math.PI*config.fov/360,rz=ro[1],r=s,zj=Math.PI/2
 
+        const cen=[(x-1)*s+pos[0],(y-1)*s+pos[1]];
+        const p={center:cen,start:-rz-hf-zj,end:-rz+hf-zj,radius:r}
+        const grad=[
+        	[0.2,'#666666'],
+        	[1,'#FFFFFF'],
+        ];
+        const cfg={width:1,color:"#FF99CC",anticlock:true,grad:grad,alpha:0.3};
+        TwoObject.drawing.sector(env,p,cfg);
+
+        // const pp={center:cen,start:0,end:Math.PI+Math.PI,radius:1};
+        // const pcfg={width:1,color:"#FF9999",anticlock:true};
+        // TwoObject.drawing.arc(env,pp,pcfg);
     },
     render: (force) => {
         if (force) self.start();
@@ -166,6 +193,11 @@ const self = {
         self.active();              //fill active block;
         self.avatar();              //drawing player;
     },
+
+    // cvsMove:(dx,dy,tg)=>{
+    //     run[tg].offset[0]-=dx;
+    //     run[tg].offset[1]+=dy;
+    // },
 };
 
 export default {

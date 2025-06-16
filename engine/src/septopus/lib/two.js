@@ -32,7 +32,8 @@ const self ={
             if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
         },
-        arc:(center,radius,angle)=>{
+        
+        arc:(env,center,radius,angle)=>{
             if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
 			const antiHeight=cfg.anticlock?height*ratio:0;
@@ -79,9 +80,43 @@ const self ={
             pen.closePath();
             pen.fill();
         },
-        sector:()=>{
+        sector:(env,param,cfg)=>{
             if(env.pen===null) return {error:"Canvas is not init yet."}
             const {pen,scale,offset,height,density,ratio}=env;
+            if(cfg.alpha) pen.globalAlpha=cfg.alpha;
+
+            const rotation=0;
+            const zj=Math.PI/2;
+            const antiHeight=cfg.anticlock?height*ratio:0;
+            const pBtoC=self.calculate.point.b2c;
+            const disBtoC=self.calculate.distance.b2c;
+            const anClear=self.calculate.angle.clean;
+
+            //const s=run.scale,o=run.offset,px=run.pxperm,ro=0,m=run.multi,zj=Math.PI/2
+			//const h=cfg.anticlock?run.height*run.multi:0;
+			//const calc=root.calc,pBtoC=calc.pBtoC,disBtoC=calc.disBtoC,anClear=calc.anClean
+			const c=pBtoC(param.center,scale,offset,density,antiHeight);
+            const r=disBtoC(param.radius,rotation,scale,ratio,density);
+			const ss=anClear(param.start),e=anClear(param.end);
+			//console.log(r)
+			let grd;
+			if(cfg.grad){
+				//console.log(cfg.grad)
+				grd=pen.createRadialGradient(c[0],c[1],1,c[0],c[1],r);
+				for(let i in cfg.grad){
+					const stop=cfg.grad[i];
+					grd.addColorStop(stop[0],stop[1]);
+				}
+			}
+			
+			pen.beginPath();
+			pen.fillStyle=cfg.grad?grd:cfg.color;
+			pen.strokeStyle=cfg.color;
+			pen.moveTo(c[0], c[1]);
+			pen.arc(c[0], c[1],r,ss,e);
+			pen.closePath();
+			pen.fill();
+            if(cfg.alpha) pen.globalAlpha=1;
         },
         image:()=>{
             if(env.pen===null) return {error:"Canvas is not init yet."}
