@@ -17,6 +17,7 @@ const reg = {
 }
 
 const config = {
+    background:"#eeeeee",
     scale: {
         range: 18,       //scale to show range
         detail: 8,       //scale to show details
@@ -116,7 +117,7 @@ const self = {
         return true;
     },
     clean: () => {
-
+        TwoObject.drawing.clean(env,config.background);
     },
     grid: () => {
         const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
@@ -150,7 +151,6 @@ const self = {
         const s=env.side[0];
 		const ps=[[(x-1)*s,(y-1)*s],[(x-1)*s,y*s],[x*s,y*s],[x*s,(y-1)*s]];
         TwoObject.drawing.fill(env,ps,cfg);
-		//root.two.fillPolygon(ps,cfg)
 	},
     active: () => {
         const [x,y]=env.selected;
@@ -198,8 +198,10 @@ const self = {
         env.offset[0]-=dx;
         env.offset[1]+=dy;
     },
-    cvsScale:()=>{
-
+    cvsScale:(dx,dy,ds)=>{
+        env.offset[0]-=dx;
+        env.offset[1]+=dy;
+        env.scale+=ds;
     },
 };
 
@@ -220,12 +222,17 @@ export default {
         self.render();
     },
     control:{
-        scale:(s,dx,dy)=>{
-
-        },
-        move:(dx,dy)=>{
-            self.cvsMove(dx,dy);
+        scale:(point,delta)=>{
+            //console.log(point,delta);
+            console.log(`Scale on ${JSON.stringify(point)} by delta ${delta}`);
+            const dx=2,dy=1,ds=1
+            self.cvsScale(dx,dy,ds);
             self.render();
+        },
+        move:(cx,cy)=>{
+            console.log(`Canvas change: [${cx},${cy}]`);
+            //self.cvsMove(dx,dy);
+            //self.render();
         },
     }
 }

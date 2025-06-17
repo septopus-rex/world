@@ -129,6 +129,12 @@ const self ={
         grid:()=>{
 
         },
+        clean:(env,color)=>{
+            const {pen,width,height,ratio}=env;
+            //console.log(pen,width,height,ratio);
+            pen.fillStyle=color;
+            pen.fillRect(0,0,width*ratio,height*ratio);
+        },
     },
     calculate:{
         point:{
