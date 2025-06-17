@@ -76,7 +76,7 @@ const inputs={
     integer:(val,key,placeholder,prefix)=>{
         return `<input type="number" value="${val}" id="${!prefix?"":(prefix+"_")}${key}" placeholder="${placeholder}">`;
     },
-    string:(val,key,placeholder)=>{
+    string:(val,key,placeholder,prefix)=>{
         return `<input type="text" value="${val}" id="${!prefix?"":(prefix+"_")}${key}" placeholder="${placeholder}">`;
     },
     boolean:(val,key,placeholder,prefix)=>{

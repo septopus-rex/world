@@ -25,6 +25,62 @@
   background: #444444;
   min-height: 400px;
   cursor: pointer;
+  padding: auto;
+  padding: 0px 0px 0px 0px;
+  /* border-bottom-left-radius: 3rem;
+  border-bottom-right-radius: 3rem; */
+}
+
+.map canvas{
+  padding: 0px 0px 0px 0px;
+  /* border-bottom-left-radius: 3rem;
+  border-bottom-right-radius: 3rem; */
+}
+
+.zoom{
+  position: absolute;
+  top:5rem;
+  right: 1.5rem;
+  height:22rem;
+  width: 1.7rem;
+  background-color: #1f2937;
+  text-align: center;
+  border-radius: 0.5rem;
+  opacity: 0.6;
+}
+
+.zoom:hover{
+  background-color: #4c5c72;
+}
+
+.zoom_top{
+  position: absolute;
+  top:0.5rem;
+  left: 0.5rem;
+  font-size: 1rem;
+  margin: 0 auto;
+  text-align: center;
+  user-select: none;
+}
+
+.zoom_bottom{
+  position: absolute;
+  bottom:0.5rem;
+  left: 0.5rem;
+  font-size: 1rem;
+  margin: 0 auto;
+  text-align: center;
+  user-select: none;
+}
+
+.zoom_button{
+  position: absolute;
+  top:5rem;
+  left: 0.35rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.5rem;
+  background-color: #4b75af;
 }
 
 .dialog{

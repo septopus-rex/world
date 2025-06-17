@@ -90,7 +90,7 @@ const self = {
                 style="width:${width}px;height:${height}px"
             ></canvas>`;
             const doc = self.getDom(ctx);
-            el.appendChild(doc.body);
+            el.appendChild(doc.body.firstChild);
 
             cvs = document.getElementById(config.canvas.id);
         }
@@ -194,10 +194,13 @@ const self = {
         self.avatar();              //drawing player;
     },
 
-    // cvsMove:(dx,dy,tg)=>{
-    //     run[tg].offset[0]-=dx;
-    //     run[tg].offset[1]+=dy;
-    // },
+    cvsMove:(dx,dy)=>{
+        env.offset[0]-=dx;
+        env.offset[1]+=dy;
+    },
+    cvsScale:()=>{
+
+    },
 };
 
 export default {
@@ -216,4 +219,13 @@ export default {
         console.log(`Showing 2D map of ${dom_id}`, env.pen);
         self.render();
     },
+    control:{
+        scale:(s,dx,dy)=>{
+
+        },
+        move:(dx,dy)=>{
+            self.cvsMove(dx,dy);
+            self.render();
+        },
+    }
 }
