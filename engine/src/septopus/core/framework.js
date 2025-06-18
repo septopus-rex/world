@@ -16,6 +16,7 @@
 
 import CONFIG from "./config";
 import Toolbox from "../lib/toolbox";
+import TriggerBuilder from "../lib/builder";
 
 const cache = {
     setting:CONFIG,
@@ -302,9 +303,18 @@ const self = {
             rdata[name] = data;
 
             //2.2. event trigger construct
-            //TODO, here to struct events
-            if(!map[name].event) continue;
-            console.log(`Build event function,`,map[name].event);
+            if(Framework.event){
+                for(let i=0;i<map[name].length;i++){
+                    const single=map[name][i];
+                    if(!single.event) continue;
+                    const key=`${name}_${i}_event`;
+                    if(!Framework.event.exsist(key,x,y,world,dom_id)){
+                        console.log(`Binding ${key}`);
+                        const fun=TriggerBuilder.get(single.event,{},Framework);
+                        Framework.event.on(key,fun,{x:x,y:y,world:world,container:dom_id});
+                    }
+                }
+            }
         }
 
         //3.save stop data;

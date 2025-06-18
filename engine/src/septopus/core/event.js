@@ -34,6 +34,7 @@ const runtime={
     active:null,        //active instance
 }
 
+const cache={};
 const self={
     hooks:{
         reg: () => {
@@ -59,11 +60,21 @@ const self={
 
 const vbw_event = {
     hooks: self.hooks,
-
-    //cfg: {type:"",container:""}
     on:(name,fun,cfg)=>{
+        console.log(name,fun,cfg);
         const type=!cfg.type?"object":cfg.type;
         if(!runtime[type]) return {error:"Invalid event type"};
+
+        //2. save to cache, need to attatch to framework cache
+        const key=`${cfg.world}_${cfg.x}_${cfg.y}_${name}`;
+        cache[key]=fun;
+    },
+
+    //check event wether loaded.
+    exsist:(name,x,y,world,dom_id)=>{
+        const key=`${world}_${x}_${y}_${name}`;
+        if(cache[key]===undefined) return false;
+        return true;
     },
 
     start:(world,dom_id)=>{

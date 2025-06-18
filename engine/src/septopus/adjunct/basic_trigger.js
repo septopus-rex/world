@@ -115,7 +115,7 @@ const self={
                     ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt + s[2] * cvt * 0.5,
                     rx: r[0], ry: r[1], rz: r[2],
                     type: "box",
-                    event:d[5],           //construct event function here
+                    event:self.decode(d[5]),           //construct event function here
                 }
                 rst.push(dt);
             }
@@ -145,6 +145,10 @@ const self={
             const ds = { stop: [], helper: [] };
             return ds;
         },
+    },
+    decode:(actions)=>{
+        console.log(actions);
+        return actions;
     },
     getObject:()=>{
 

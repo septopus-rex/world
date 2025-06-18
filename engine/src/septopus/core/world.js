@@ -514,11 +514,21 @@ const World={
         return true;
     },
 
+    /**
+     * Stop render, needed in UI mode
+     * @param	{string}    dom_id		- container DOM id
+     * @void
+     * */
     stop:(dom_id)=>{
         const {render }=VBW.cache.get(["active","containers",dom_id]);
         render.setAnimationLoop(null)
     },
 
+    /**
+     * start render, needed in UI mode
+     * @param	{string}    dom_id		- container DOM id
+     * @void
+     * */
     start:(dom_id)=>{
         const {render }=VBW.cache.get(["active","containers",dom_id]);
         render.setAnimationLoop(VBW.loop)
