@@ -18,7 +18,7 @@ import CONFIG from "./config";
 import Toolbox from "../lib/toolbox";
 
 const cache = {
-    setting:CONFIG
+    setting:CONFIG,
 };
 
 const def={
@@ -206,10 +206,6 @@ const self = {
         },
 
     },
-    fresh: () => {
-        console.log(`ticktok, fresh system.`);
-    },
-    
     structCache: () => {
         const keys = config.keys;
         for (let k in keys) {
@@ -532,7 +528,6 @@ const Framework = {
     init: () => {
         self.structCache();
         self.initActive();
-        window.requestAnimationFrame(self.fresh);
         return true;
     },
 
@@ -674,7 +669,8 @@ const Framework = {
      * @returns
      * @return void
      */
-    loop: () => {
+    loop: (ev) => {
+        //console.log(ev);
         //1.get the active scene
         const current_chain = ["active", "current"];
         if (!self.cache.exsist(current_chain)) return false;

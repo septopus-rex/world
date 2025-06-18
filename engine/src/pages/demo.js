@@ -8,6 +8,8 @@ export default function Demo() {
     },
   }
 
+  const dom_id="three_demo";
+
   useEffect(() => {
     const cfg={
       contract:{
@@ -34,12 +36,13 @@ export default function Demo() {
       },
       fullscreen:false,
     };
-    World.launch("three_demo",cfg,(done)=>{
+    
+    World.launch(dom_id,cfg,(done)=>{
       console.log(`App loaded:`, done);
     });
   }, []);
 
   return (
-    <div id="three_demo" className={self.getRenderClass()} style={{height:"600px"}}></div>
+    <div id={dom_id} className={self.getRenderClass()} style={{height:"600px"}}></div>
   );
 }

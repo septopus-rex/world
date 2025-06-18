@@ -515,11 +515,13 @@ const World={
     },
 
     stop:(dom_id)=>{
-        //window.cancelAnimationFrame(run.request);
+        const {render }=VBW.cache.get(["active","containers",dom_id]);
+        render.setAnimationLoop(null)
     },
 
     start:(dom_id)=>{
-        //window.cancelAnimationFrame(run.request);
+        const {render }=VBW.cache.get(["active","containers",dom_id]);
+        render.setAnimationLoop(VBW.loop)
     },
 
 
@@ -572,7 +574,6 @@ const World={
                     //console.log(map);
                     if(map.loaded!==undefined){
                         if(!map.loaded){
-
                             //2.1. add loading queue
                             delete map.loaded;
                             self.loadingBlockQueue(map,dom_id);

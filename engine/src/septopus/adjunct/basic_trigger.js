@@ -80,6 +80,16 @@ const config={
         ["CONDITIONS_TO_ABORD"],        //condition to abord
         ["ACTIONS_RECOVER"],            //action todo after abord
     ],
+    sample:{
+        condition:[
+            [],         //[ TYPE_OF_OBJECT, CACULATION, VALUE_NEEDED ]
+            [],
+        ],
+        todo:[
+            [],         //[TYPE_OF_OBJECT,UNIQUE_INDEX,]
+            [],
+        ],
+    },
     style:{
         color: 0xff3298,
         opacity:0.8,
@@ -135,6 +145,9 @@ const self={
             const ds = { stop: [], helper: [] };
             return ds;
         },
+    },
+    getObject:()=>{
+
     },
 }
 

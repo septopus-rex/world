@@ -9,11 +9,15 @@
  */
 
 const self={
-
+    
 };
 
 const TriggerBuilder = {
-    get: (type, cfg) => {
+    /**  get frame sync function
+     * @param	{object[]}    actions   //formatted action array
+     * @param   {object}       cfg      //{}
+     * */
+    get: (actions, cfg) => {
         
     }
 }
