@@ -286,6 +286,7 @@ const self = {
         //2.filter out special components
         const va = self.getElevation(x, y, world, dom_id);
         for (let name in map) {
+            //2.1 construct standard 3D object;
             const data = Framework[name].transform.std_3d(map[name], va);
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
@@ -303,7 +304,13 @@ const self = {
                 }
             }
             rdata[name] = data;
+
+            //2.2. event trigger construct
+            //TODO, here to struct events
+            if(!map[name].event) continue;
+            console.log(`Build event function,`,map[name].event);
         }
+
         //3.save stop data;
         //3.1.set THREE data;
         const render_chain = ["block", dom_id, world, key, "three"];
@@ -330,7 +337,7 @@ const self = {
             }
         }
 
-        //2.construct render data
+        //2.construct render data, && 
         const fun_render = self.structRenderData;
         const prefetch = { module: [], texture: [] };
         for (let i = -ext; i < ext + 1; i++) {

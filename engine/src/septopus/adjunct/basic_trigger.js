@@ -20,6 +20,15 @@ const def={
     "RUN_ONE_TIME":             7,
 };
 
+const reg={
+    name:"trigger",
+    category:"basic",
+    short:0x00b8,
+    desc:"Trigger of engine, for building games.",
+    version:"1.0.0",
+    definition:def,
+}
+
 const events={
     in:{
         origin:["player","adjunct"],
@@ -58,14 +67,6 @@ const events={
     },
 };
 
-const reg={
-    name:"trigger",
-    category:"basic",
-    short:0x00b8,
-    desc:"Trigger of engine, for building games.",
-    version:"1.0.0",
-}
-
 //trigger control target
 //1. adjuncts;                  //including objects, lights and more
 //2. player, or player basic parameters;
@@ -74,6 +75,10 @@ const reg={
 const config={
     default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [ "ACTION_0", "ACTION_1"] , 4, 0],
     action:[["CONDITIONS_TO_START"],["ACTIONS_TODO"],["CONDITIONS_TO_ABORD"],["ACTIONS_RECOVER"]],
+    style:{
+        color: 0xff3298,
+        opacity:0.8,
+    },
 }
 
 const self={
@@ -86,7 +91,45 @@ const self={
 
     },
     transform:{
-
+        raw_std: (arr, cvt) => {
+            const rst = []
+            for (let i in arr) {
+                const d = arr[i], s = d[0], p = d[1], r = d[2], tid = d[3], rpt = d[4];
+                const dt = {
+                    x: s[0] * cvt, y: s[1] * cvt, z: s[2] * cvt,
+                    ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt + s[2] * cvt * 0.5,
+                    rx: r[0], ry: r[1], rz: r[2],
+                    type: "box",
+                    event:[],           //construct event function here
+                }
+                rst.push(dt);
+            }
+            return rst;
+        },
+        std_3d:(stds, va)=>{
+            const arr = [];
+            for (let i = 0; i < stds.length; i++) {
+                const row = stds[i];
+                const obj = {
+                    type: row.type,
+                    index: i,
+                    params: {
+                        size: [row.x, row.y, row.z],
+                        position: [row.ox, row.oy, row.oz + va],
+                        rotation: [row.rx, row.ry, row.rz],
+                    },
+                    material:{
+                        color:config.style.color,
+                    },
+                }
+                arr.push(obj);
+            }
+            return arr;
+        },
+        std_active: (stds, va, index) => {
+            const ds = { stop: [], helper: [] };
+            return ds;
+        },
     },
 }
 

@@ -10,11 +10,17 @@
 
 import VBW  from "./framework";
 
+const def={
+
+};
+
 const reg={
     name:"event",          //register key name
     category:"system",      //component category
+    desc:"Septopus event system",
+    version:"1.0.0",
+    definition:def,
 }
-
 
 const runtime={
     system:{            //system events
@@ -23,7 +29,9 @@ const runtime={
     },
     object:{            //object events
         
-    }
+    },
+    player:null,        //player detail
+    active:null,        //active instance
 }
 
 const self={
@@ -42,7 +50,10 @@ const self={
 
     //function put on queue of frame sync
     checker:()=>{
-        console.log(`Event check.`);
+        //console.log(`Event check.`);
+
+        //1. check player position
+
     },
 }
 
@@ -56,9 +67,14 @@ const vbw_event = {
     },
 
     start:(world,dom_id)=>{
+        //1. set frame sync function
         const frame_chain = ["block", dom_id, world, "loop"];
         const queue = VBW.cache.get(frame_chain);
         queue.push({ name: "event_checker", fun: self.checker});
+
+        //2. get the env for checking
+        if(runtime.player===null) runtime.player=VBW.cache.get(["env", "player"]);
+        if(runtime.active===null) runtime.active=VBW.cache.get(["active"]);
     },
 }
 export default vbw_event;

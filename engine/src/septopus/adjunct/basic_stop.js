@@ -27,7 +27,9 @@ const reg = {
     short: 0x00b4,
     desc: "Special component to avoid move forward.",
     version: "1.0.0",
+    definition:def,
 }
+
 const config = {
     default: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 2025],
     definition: {
@@ -378,7 +380,7 @@ const self = {
 					return rst;
 				}
 				
-				if(st.delta!=undefined){
+				if(rst.delta!=undefined){
 					if(max==null) max=row;
 					if(row.delta>max.delta) max=row;
 				}
@@ -429,7 +431,7 @@ const basic_stop = {
 		const cap=cfg.cap+(cfg.pre!=undefined?cfg.pre:0),h=cfg.height;
 		const arr=self.calculate.relationZ(dz,h,cap,cfg.elevation,list);
 
-        console.log(arr);
+        //console.log(arr);
         
         //3.filter out the target stop for movement;
 		const fs=self.calculate.filter(arr);
