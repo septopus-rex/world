@@ -20,6 +20,44 @@ const def={
     "RUN_ONE_TIME":             7,
 };
 
+const events={
+    in:{
+        origin:["player","adjunct"],
+        condition:[],
+        action:()=>{
+
+        },
+    },
+    out:{
+        origin:["player","adjunct"],
+        condition:[],
+        action:()=>{
+
+        },
+    },
+    hold:{
+        origin:["player","adjunct"],
+        condition:[],
+        action:()=>{
+
+        },
+    },
+    on:{
+        origin:["player","adjunct"],
+        condition:[],
+        action:()=>{
+
+        },
+    },
+    beside:{
+        origin:["player","adjunct"],
+        condition:[],
+        action:()=>{
+
+        },
+    },
+};
+
 const reg={
     name:"trigger",
     category:"basic",

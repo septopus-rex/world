@@ -26,6 +26,7 @@ import vbw_block from "./block";
 import vbw_detect from "./detect";
 import vbw_player from "./player";
 import vbw_movement from "./movement";
+import vbw_event from "./event";
 import API from "../io/api";
 
 import render_3d from "../render/render_3d";
@@ -58,6 +59,7 @@ const regs={
         vbw_block,
         vbw_player,
         vbw_movement,
+        vbw_event,
         API,
     ],
     render:[
@@ -552,6 +554,7 @@ const World={
         VBW.player.start(dom_id,(start)=>{
             UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
             const world=start.world;
+            VBW.event.start(world,dom_id);
             VBW.datasource.world(start.world,(wd)=>{
                 UI.show("toast",`World data load from network successful.`);
                 //1.2. set `block checker` and `resource check`.

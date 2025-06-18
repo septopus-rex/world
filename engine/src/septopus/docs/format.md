@@ -31,3 +31,6 @@
 
 * Need a Trigger Language to storage on chain, can be decode by engine.
 
+* How to. Event trigger point to a function which will be push in the frame synchronous queue. Then the engine just need to listen the condition how to trigger.
+
+* Confliction: more than one event try to modify the same parameters, the actions will be deal with carefully. 
