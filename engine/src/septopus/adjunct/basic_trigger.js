@@ -74,7 +74,12 @@ const events={
 
 const config={
     default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [ "ACTION_0", "ACTION_1"] , 4, 0],
-    action:[["CONDITIONS_TO_START"],["ACTIONS_TODO"],["CONDITIONS_TO_ABORD"],["ACTIONS_RECOVER"]],
+    action:[     //action data struct
+        ["CONDITIONS_TO_START"],        //check condition
+        ["ACTIONS_TODO"],               //action todo format
+        ["CONDITIONS_TO_ABORD"],        //condition to abord
+        ["ACTIONS_RECOVER"],            //action todo after abord
+    ],
     style:{
         color: 0xff3298,
         opacity:0.8,
@@ -100,7 +105,7 @@ const self={
                     ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt + s[2] * cvt * 0.5,
                     rx: r[0], ry: r[1], rz: r[2],
                     type: "box",
-                    event:[],           //construct event function here
+                    event:d[5],           //construct event function here
                 }
                 rst.push(dt);
             }

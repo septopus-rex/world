@@ -102,6 +102,7 @@ const self = {
         UI.show("status", JSON.stringify(player.block), cfg_status);
     },
     showMap: (ev) => {
+        const dom_id=config.map.id;
         const ctx = {
             title: "2D Map",
             content: `<div class="map" id="${config.map.id}"></div>`,
@@ -110,11 +111,10 @@ const self = {
             events: {
                 close: () => {
                     console.log(`Map closed, clean the objects to access.`);
+                    VBW.rd_two.clean(dom_id);
                 },
             },
             auto: () => {
-                //console.log(`here to create 2D map`);
-                const dom_id=config.map.id;
                 VBW.rd_two.show(dom_id);
                 VBW.con_two.start(dom_id);
             },

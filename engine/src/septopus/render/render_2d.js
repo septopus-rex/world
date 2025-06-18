@@ -221,6 +221,12 @@ export default {
         console.log(`Showing 2D map of ${dom_id}`, env.pen);
         self.render();
     },
+    clean:(dom_id)=>{
+        const el = document.getElementById(dom_id);
+        el.innerHTML="";
+        
+        env.pen=null;
+    },
     control:{
         scale:(point,delta)=>{
             //console.log(point,delta);

@@ -336,8 +336,17 @@ const router={
                 })(row.key);
             });
         }
+
+        //3.attatch events;
+        if(cfg.events){
+            for(let evt in cfg.events){
+                if(!doms.dialog.events[evt]) continue;
+                doms.dialog.events[evt]=cfg.events;
+            }
+        } 
     },
     dialog:(ctx,cfg)=>{
+        //1. create dom
         const id=`${config.prefix}dialog`;
         const el=document.getElementById(id);
         el.innerHTML="";
@@ -353,13 +362,26 @@ const router={
         el.style.display="block";
         el.hidden=false;
 
+        //2. auto run to support more function
+        if(cfg.auto) cfg.auto();
+
+        //3.attatch events;
+        if(cfg.events){
+            for(let evt in cfg.events){
+                console.log(evt,doms.dialog.events);
+                if(doms.dialog.events[evt]===undefined) continue;
+                doms.dialog.events[evt]=cfg.events[evt];
+            }
+        } 
+
+        //4.dialog events
         const close=document.getElementById(config.dialog.close);
         close.addEventListener("click",(ev)=>{
             el.style.display="none";
             el.hidden=true;
+            if(doms.dialog.events.close) doms.dialog.events.close(ev);
+            for(let k in doms.dialog.events)doms.dialog.events[k]=null;  //binding recover
         });
-
-        if(cfg.auto) cfg.auto();
     },
     toast:(ctx,cfg)=>{
         const msg=`[UI.toast]:`+ctx;
