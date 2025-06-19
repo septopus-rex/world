@@ -81,13 +81,13 @@ const config={
         ["ACTIONS_RECOVER"],            //action todo after abord
     ],
     sample:{
-        condition:[
-            [],         //[ TYPE_OF_OBJECT, CACULATION, VALUE_NEEDED ]
+        condition:[         //[ TYPE_OF_OBJECT, CACULATION, VALUE_NEEDED ]
+            [[1,0x00a1,0,1,2],1,100], 
             [],
         ],
-        todo:[
-            [],         //[TYPE_OF_OBJECT,UNIQUE_INDEX,]
-            [],
+        todo:[              //[ TYPE_OF_OBJECT,ACTION,VALUE,]
+            [[1,0x00a1,0,1,2],1,0.1],       //["SELECT_WALL_POSIOTION_Z", "ADD_DELTA", 100 ]       
+            [[3,1,2],0,0.3],                //["PLAYER_ROTAIION_Z", "SET", 0.3 ]     
         ],
     },
     style:{

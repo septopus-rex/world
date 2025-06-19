@@ -92,10 +92,10 @@ const mock = {
 
                     [0x00b8,    //trigger
                         [[[3, 3, 6], [4, 4, 0], [0, 0, 0],  1, 2, [
-                            [],
-                            [],
-                            [],
-                            []
+                            [],     //check condition
+                            [],     //action todo format
+                            [],     //condition to abord
+                            []      //action todo after abord
                         ], 3, 0]]],
                 ],
                 1,  //block status
