@@ -506,7 +506,7 @@ const World={
      * Septopus World system initalization
      * @return {boolean} - wether init successful
      * */
-    init:async ()=>{
+    init:async (cfg)=>{
         //1.register all components;
         self.register();
         UI.show("toast",`Septopus World running env done.`,{});

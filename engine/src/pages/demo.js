@@ -34,7 +34,7 @@ export default function Demo() {
           return {signature:hash,action:"withdraw"};
         },
       },
-      fullscreen:false,
+      fullscreen:true,
     };
     
     World.launch(dom_id,cfg,(done)=>{
@@ -43,6 +43,6 @@ export default function Demo() {
   }, []);
 
   return (
-    <div id={dom_id} className={self.getRenderClass()} style={{height:"600px"}}></div>
+    <div id={dom_id} className={self.getRenderClass()}></div>
   );
 }

@@ -8,21 +8,48 @@
 *  2.single entry for running VBW;
 */
 
-import Framework from "./core/framework";
+import VBW from "./core/framework";
 import UI from "./io/io_ui";
 import World from "./core/world";
 import "./css/common.css";
 
-import Toolbox from "./lib/toolbox";
-
 const self={
-    init:async (container,ck)=>{
-        Framework.init();           //构建基础的cache
-        const done = await UI.init(container);   //UI构建基础的dom
+    init:async (container,cfg,ck)=>{
+        VBW.init();       
+        const done = await UI.init(container);
         if(done.error) return ck && ck(done);
 
-        const great=await World.init();         //VBW的初始化，注册组件
+        const great = await World.init();
+
+        self.autoSize(container,cfg);
+
         return ck && ck(great);
+    },
+
+    autoSize:(container,cfg)=>{
+        //1.set size by parameters.
+        if(cfg && cfg.size){
+            return self.setDomSize(container,cfg.size[0],cfg.size[1]);
+        }
+
+        //2.check wether mobile
+        const device=VBW.cache.get(["env","device"]);
+        //console.log(device);
+        if(device.mobile){
+            return self.setDomSize(container,device.screen.width,device.screen.height);
+        }
+
+        const body = document.body;
+        const style = getComputedStyle(body);
+        const fix = style.marginLeft+style.marginRight;
+        const min=700;
+        return self.setDomSize(container,device.screen.width-fix,min);
+    },
+    setDomSize:(container,width,height)=>{
+        console.log(container,width,height);
+        const el=document.getElementById(container);
+        el.style.width=`${width}px`;
+        el.style.height=`${height}px`;
     },
 }
 
@@ -33,8 +60,7 @@ export default {
     },
 
     launch:(container,cfg,ck)=>{
-        self.init(container,(done)=>{
-            
+        self.init(container,cfg,(done)=>{
             if(done!==true) return ck && ck(done);
             World.first(container,ck,cfg);
 

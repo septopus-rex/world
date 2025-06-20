@@ -28,7 +28,7 @@ const self={
                         height:window.innerHeight,
                         ratio:window.devicePixelRatio,
                     },
-                    mobile:false,
+                    mobile:window.innerWidth<768?true:false,
                     network:"",
                 }
             };
@@ -39,10 +39,12 @@ const self={
 const vbw_detect={
     hooks:self.hooks,
     check:(id)=>{
+        const info={};
         const dom=document.getElementById(id);
-        const width=dom.clientWidth,height=dom.clientHeight;
-        
-        return {width:width,height:height}
+        //const width=dom.clientWidth,height=om.clientHeight;
+        info.width=dom.clientWidth;
+        info.height=dom.clientHeight;
+        return info;
     },
 }
 
