@@ -733,7 +733,7 @@ const World={
         if(cur.error) return ck && ck(cur);
 
         //1.remove edit data
-        const x=cur.edit.x,y=cur.edit.y;
+        const x=cur.x,y=cur.y;
         const target={x:x,y:y,world:world,container:dom_id}
 
         const mode="normal";

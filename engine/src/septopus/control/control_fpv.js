@@ -332,6 +332,7 @@ const self = {
             if (diff.position) {
                 //1.1.check wether stop by stops
                 const check=self.checkStop(diff.position);
+                //console.log(check);
                 if(!check.move){
                     console.log(`Stopped.`,check);
                     continue;

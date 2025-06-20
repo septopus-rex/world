@@ -316,14 +316,14 @@ const self = {
         },
         
         /** player Z position calculation
-		 * @param   {number}    z	    //player stand height
-		 * @param	{number}    h       //player body height
+		 * @param   {number}    stand	 //player stand height
+		 * @param	{number}    body     //player body height
 		 * @param	{number}    cap     //max height player can go cross
 		 * @param	{number}    va      //player elevacation
 		 * @param	{object[]}  list    //{id:stop,id:stop,...}, stop list to check
 		 * 
 		 * */
-		relationZ:(z,h,cap,va,list)=>{
+		relationZ:(stand,body,cap,va,list)=>{
 			const arr=[];
 			for(let id in list){
 				const row=list[id];
@@ -333,14 +333,14 @@ const self = {
                 //console.log(zmin,zmax);
                 //TODO, here to check BALL type stop
 
-				if(zmin>=z+h){
+				if(zmin>=stand+body){
                     //a.stop upon header
 					arr.push({
                         stop:false,
                         way:def.HEAD_STOP,
                         index:parseInt(id)
                     });
-				}else if(zmin<z+h && zmin>=z+cap){
+				}else if(zmin<stand+body && zmin>=stand+cap){
                     //b.normal stop 
 					arr.push({
                         stop:true,
@@ -349,7 +349,7 @@ const self = {
                     });
 				}else{
                     //c.stop on foot
-					const zd=zmax-z; //height to cross
+					const zd=zmax-stand; //height to cross
 					if(zd>cap){
 						arr.push({
                             stop:true,
@@ -437,7 +437,7 @@ const basic_stop = {
 		const fs=self.calculate.filter(arr);
 		rst.move=!fs.stop;
 		rst.index=fs.index;
-		if(fs.delta!=undefined)rst.delta=fs.delta;
+		if(fs.delta!=undefined) rst.delta=fs.delta;
 
 		return rst;
     },
