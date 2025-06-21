@@ -194,6 +194,7 @@ const self = {
         self.avatar();              //drawing player;
     },
 
+    //[dx,dy] is the 2D map real distance
     cvsMove:(dx,dy)=>{
         env.offset[0]-=dx;
         env.offset[1]+=dy;
@@ -236,9 +237,9 @@ export default {
             self.render();
         },
         move:(cx,cy)=>{
-            console.log(`Canvas change: [${cx},${cy}]`);
-            //self.cvsMove(dx,dy);
-            //self.render();
+            //console.log(`Canvas change: [${cx},${cy}]`);
+            self.cvsMove(cx,cy);
+            self.render();
         },
     }
 }
