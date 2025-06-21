@@ -324,8 +324,8 @@ const self = {
 		 * 
 		 * */
 		relationZ:(stand,body,cap,elevation,list)=>{
-            // console.log(`Basic, player stand height: ${stand}, 
-            //     body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
+            console.log(`Basic, player stand height: ${stand}, 
+                body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
 			const arr=[];
 			for(let id in list){
 				const row=list[id];
@@ -424,7 +424,7 @@ const basic_stop = {
 		if(stops.length<1) return rst;
         
         //1.check wether interact with stop from top view ( in projection ).
-		const [dx,dy,dz]=pos;       //player position
+		const [dx,dy,stand]=pos;       //player position
 		const list=self.calculate.projection(dx,dy,stops);
 		if(Toolbox.empty(list)) return rst;
 		rst.interact=true;
@@ -434,7 +434,6 @@ const basic_stop = {
         //2.check position of stop;
 		const cap=cfg.cap+(cfg.pre!==undefined?cfg.pre:0)
         const body=cfg.height;
-        const stand=dz-body;
 		const arr=self.calculate.relationZ(stand,body,cap,cfg.elevation,list);
 
         //console.log(arr);

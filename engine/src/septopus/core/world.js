@@ -258,6 +258,8 @@ const self={
     syncPlayer:(user,id)=>{
         //1.set location of player;
         VBW.cache.set(["env","player","location"],user);
+        console.log(user);
+        
         //2.set camera as player view.
         const cam_chain=["active","containers",id,"camera"];
         const cam =  VBW.cache.get(cam_chain);
@@ -566,7 +568,8 @@ const World={
         VBW.player.start(dom_id,(start)=>{
             UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
             const world=start.world;
-            VBW.event.start(world,dom_id);
+            VBW.event.start(world,dom_id);      //listen to events
+
             VBW.datasource.world(start.world,(wd)=>{
                 UI.show("toast",`World data load from network successful.`);
                 //1.2. set `block checker` and `resource check`.

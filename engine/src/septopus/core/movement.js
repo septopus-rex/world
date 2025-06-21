@@ -74,20 +74,24 @@ const vbw_movement={
     },
     head:{
         up:(diff,ak)=>{
+            // console.log(diff,ak);
+            // const rx=diff[1]*Math.tan(ak);
+            // const ry=0;
+            // console.log(rx,ry);
+            // return {rotation:[rx,ry,0]};
             return {rotation:[diff[1],0,0]};
-            //{cos:[++d,+-d,-+d,--d],sin:[++d,+-d,-+d,--]}
-            //return {rotation:[ -diff[1]*Math.sin(ak), 0, -diff[1]*Math.sin(ak)]};
-
         },
         down:(diff,ak)=>{
-            //return {rotation:[-diff[1],0,0]};
+
             return {rotation:[-diff[1],0,0]};
         },
         left:(diff,ak)=>{
-            return {rotation:[0,diff[1],0]};
+            return {rotation:[0,0,diff[1]]};
+            //return {rotation:[0,diff[1],0]};
         },
         right:(diff,ak)=>{
-            return {rotation:[0,-diff[1],0]};
+            return {rotation:[0,0,-diff[1]]};
+            //return {rotation:[0,-diff[1],0]};
         },
     },
     test:()=>{

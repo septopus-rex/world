@@ -30,12 +30,6 @@ const self = {
     hooks: {
         reg: () => { return reg },
     },
-    getCameraStatus: () => {
-        const chain = ["env", "player"];
-        const player = VBW.cache.get(chain);
-
-        return { position: player.position, rotation: player.rotation };
-    },
     getConvert: () => {
         return VBW.cache.get(["env", "world", "accuracy"]);
     },

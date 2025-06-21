@@ -22,13 +22,13 @@ const config = {
     location: {
         block: [2025, 501],
         world: 0,
-        position: [8, 14, 1.7],
+        position: [8, 14, 0],
         rotation: [0, 0, 0],
         headAx: "y",
         extend: 2,
     },
     body: {
-        height: 1.5,
+        height: 1.7,
         shoulder: 0.5,
         chest: 0.22,
     },
@@ -126,8 +126,10 @@ const self = {
 const vbw_player = {
     hooks: self.hooks,
     autosave: () => {
+        //return false;
         if (player === null) {
             player = VBW.cache.get(["env", "player", "location"]);
+            player.position[2]-=config.body.height;     //dec the body height
         }
 
         if (count > config.autosave.interval) {
@@ -143,6 +145,11 @@ const vbw_player = {
     //get the player status.
     start: (dom_id, ck) => {
         const data = self.getPlayerLocation();
+
+        //1.set body height
+        data.position[2]+=config.body.height;
+
+        //2. set auto update
         const chain = ["block", dom_id, data.world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
