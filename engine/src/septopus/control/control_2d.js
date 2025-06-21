@@ -10,6 +10,7 @@
  */
 
 import VBW from "../core/framework";
+
 const reg = {
     name: "con_two",
     category: 'controller',
@@ -30,12 +31,13 @@ const config = {
 }
 
 const env = {
-    pan: false,          //wether pan canvas
-    render: null,        //render actions
-    pre:null,            //previous mouse position
+    pan: false,                 //wether pan canvas
+    render: null,               //render actions
+    pre:null,                   //previous mouse position
     position:{left:0,top:0},    //canvas position
-    gestures:false,
-}
+    gestures:false,             //whether gestures
+    distance:0,                 //last gestures to calc scale
+}   
 
 const self = {
     hooks: {
@@ -78,8 +80,7 @@ const self = {
             console.log(`scale down`);
         });
     },
-    cvsMove:(from,to)=>{
-        //console.log(`Mouse move from ${JSON.stringify(from)} to ${JSON.stringify(to)}`);
+    cvsPan:(from,to)=>{
         const cx=to[0]-from[0];
         const cy=to[1]-from[1];
         return env.render.move(cx,cy);
@@ -89,6 +90,7 @@ const self = {
     },
     screen: (dom_id) => {
         const cvs = document.querySelector(`#${dom_id} canvas`);
+
         cvs.addEventListener("touchstart", (ev) => {
             if(self.isGestures(ev)){
                 env.gestures=true;
@@ -98,14 +100,28 @@ const self = {
         });
 
         cvs.addEventListener("touchmove", (ev) => {
-            if(env.gestures){
+            console.log(`Touch moving...`);
+            if(self.isGestures(ev)){
                 console.log(`Gestures scale.`);
+                const f1=ev.touches[0],f2=ev.touches[1];
+                const dx = f1.clientX - f2.clientX;
+                const dy = f1.clientY - f2.clientY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
+                if(env.distance===0){
+                    env.distance=distance;
+                }else{
+                    const scale=distance/env.distance;
 
+                    const mid=[(f1.clientX+f2.clientX)*0.5,(f1.clientY + f2.clientY)*0.5]
+                    //here to scale the map
+                    self.cvsScale(mid,scale);
+                    env.distance=distance;
+                }
             }else{
                 if(env.pre===null) return env.pre=self.getTouchPoint(ev);
                 const now=self.getTouchPoint(ev);
-                self.cvsMove(env.pre,now);
+                self.cvsPan(env.pre,now);
                 env.pre=now;
             }
         });
@@ -117,10 +133,6 @@ const self = {
                 env.pan = false;
                 env.pre = null;
             }
-        });
-
-        cvs.addEventListener('pointerdown', (e) => {
-            console.log(e.pointerId, e.pointerType);
         });
     },
     pan:(dom_id)=>{
@@ -154,12 +166,15 @@ const self = {
         //1.create dom for scale
         const cvs = document.querySelector(`#${dom_id} canvas`);
         if (cvs === null) return false;
-        const ctx = `<div class="zoom" id="${config.zoom.bar}">
-            <div class="zoom_top" id="${config.scale.up}">+</div>
-            <div id="${config.scale.now}">
-                <span class="zoom_button"></span>
+        const ctx = `<div>
+            <div class="zoom" id="${config.zoom.bar}">
+                <div class="zoom_top" id="${config.scale.up}">+</div>
+                <div id="${config.scale.now}">
+                    <span class="zoom_button"></span>
+                </div>
+                <div class="zoom_bottom" id="${config.scale.down}">-</div>
             </div>
-            <div class="zoom_bottom" id="${config.scale.down}">-</div>
+            <div id="zoom_debug">Debug info</div>
         </div>`;
         const doc = self.getDom(ctx);
         const el = document.getElementById(dom_id);

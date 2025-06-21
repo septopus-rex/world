@@ -63,8 +63,9 @@ const config = {
 }
 
 const status = {
-    locked: false,               //wether lock the movement input
+    locked: false,               //whether lock the movement input
     limit: null,                 //limit of movement
+    moving: false,               //whether moving, for mobile
 };
 
 const todo = {
@@ -105,8 +106,7 @@ const self = {
         const chain = ["block", cache.container, cache.world, `${x}_${y}`, 'std', adjunct, index === undefined ? 0 : index];
         return VBW.cache.get(chain);
     },
-    keyboard: (dom_id) => {
-        VBW.queue.init(config.queue);
+    keyboard: () => {
         self.bind('keydown', (ev) => {
             const code = ev.which;
             if (config.keyboard[code]) {
@@ -362,6 +362,8 @@ const self = {
                 );
             }
 
+
+            //FIXME, here to solve the header rise up/down issue
             if (diff.rotation) {
                 rotated = true;
                 //z ax rotation
@@ -506,9 +508,9 @@ const self = {
             return target;
         }
     },
-    screen: (dom_id) => {
+    editControl: (dom_id) => {
         const el = document.getElementById(dom_id);
-        if (!el) return;
+        if (!el) return false;
         el.addEventListener('click', (ev) => {
             //1. check selection
             const mouse = self.getClickPosition(ev);
@@ -566,6 +568,29 @@ const self = {
 
         });
     },
+    screen:(dom_id)=>{
+        const el = document.getElementById(dom_id);
+        if (!el) return false;
+        el.addEventListener('touchstart', (ev) => {
+            if(!status.moving){
+                VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
+                status.moving=true;
+                UI.hide(["pop", "sidebar"]);
+            }else{
+                status.moving=false;
+                VBW.queue.remove(config.queue,config.keyboard[config.code.FORWARD]);
+            }
+        });
+
+        el.addEventListener('touchmove', (ev) => {
+            
+        })
+
+        el.addEventListener('dblclick', (ev) => {
+            console.log(`Double clicked.`);
+            VBW.queue.remove(config.queue,config.keyboard[config.code.FORWARD]);
+        });
+    },
 }
 
 const control_fpv = {
@@ -583,9 +608,17 @@ const control_fpv = {
     start: (dom_id) => {
         if (cache.container !== null) return false;
         console.log(`Start to get the input from outside, bind html events.`);
+
+        const device=VBW.cache.get(["env","device"]);
+
         //0.add keyboard listener and screen control
-        self.keyboard(dom_id);
-        self.screen(dom_id);
+        VBW.queue.init(config.queue);
+        if(device.mobile){
+            self.screen(dom_id);
+        }else{
+            self.keyboard();
+            self.editControl(dom_id);
+        }
 
         //1.set the related link
         self.autocache(dom_id);

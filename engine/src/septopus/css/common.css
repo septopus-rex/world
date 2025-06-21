@@ -22,7 +22,7 @@
 }
 
 .map{
-  background: #444444;
+  /* background: #444444; */
   min-height: 400px;
   cursor: pointer;
   padding: auto;
