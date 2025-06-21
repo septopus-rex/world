@@ -59,6 +59,7 @@ const config = {
         angle: Math.PI * 0.01,
     },
     render:"rd_three",
+    //body:1.7,               //body height for temp use
 }
 
 const status = {
@@ -224,11 +225,6 @@ const self = {
                         tasks.push({block:bk,action:"unload"});
                     }
                 }
-
-                //tasks.push({adjunct:"block",act:"remove",param:{x:bx,y:by}});
-                //tasks.push({adjunct:"block",act:"remove",param:{x:x+1,y:y}});
-                //tasks.push({adjunct:"block",act:"remove",param:{x:x,y:y+1}});
-                //tasks.push({adjunct:"wall",act:"set",x:bx,y:by,world:0,param:{index:0,x:1.9}});
             }
 
             VBW.update(cache.container, cache.world);
@@ -241,10 +237,6 @@ const self = {
 
         //3.player sync
         const cvt = cache.convert;
-        // player.location.position[0] = px % side[0] / cvt;
-        // player.location.position[1] = py % side[1] / cvt;
-        // player.location.position[2] = player.location.position[2] + total.position[2] / cvt;
-
         player.location.position[0] = px % side[0] / cvt;
         player.location.position[1] = py % side[1] / cvt;
         //!important, total is base on three.js coordinaration
@@ -306,11 +298,13 @@ const self = {
         const side=cache.side;
         const arr=VBW.stop.calculate.blocks(pos,delta,x,y,side);
         const stops=self.getStops(arr,side);
+
+        //FIXME, here to set the real player parameters.
         const cfg={
-            cap:0.2 * cvt,
-            height:1.8  * cvt,
-            elevation:0.6  * cvt,
-            pre:0.3 * cvt
+            cap:0.3 * cvt,            //cross limit
+            height:1.7  * cvt,        //player body height
+            elevation:0.2  * cvt,     //block elevation
+            pre:0 * cvt,              //pre stand height
         };
         return VBW.stop.check(pos,stops,cfg);
     },
@@ -332,10 +326,15 @@ const self = {
             if (diff.position) {
                 //1.1.check wether stop by stops
                 const check=self.checkStop(diff.position);
-                //console.log(check);
                 if(!check.move){
-                    console.log(`Stopped.`,check);
+                    //console.log(`Stopped.`,check);
                     continue;
+                }
+
+                //1.3.if delta, set the player
+                if(check.delta){
+                    //console.log(`Here to set the player height. diff: ${check.delta}`);
+                    diff.position[2]+=check.delta;      //add rise to diff
                 }
 
                 //1.2.movement here

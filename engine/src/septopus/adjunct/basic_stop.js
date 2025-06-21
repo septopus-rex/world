@@ -31,7 +31,7 @@ const reg = {
 }
 
 const config = {
-    default: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 2025],
+    default: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 1,2025],
     definition: {
         2025: [
             ['x', 'y', 'z'],      //0.
@@ -224,7 +224,7 @@ const self = {
                 const d = arr[i], s = d[0], p = d[1], r = d[2], type = d[3];
                 const dt = {
                     x: s[0] * cvt, y: s[1] * cvt, z: s[2] * cvt,
-                    ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt + s[2] * cvt * 0.5,
+                    ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt,
                     rx: r[0], ry: r[1], rz: r[2],
                     type: type === 1 ? "box" : "ball",
                     stop: true,
@@ -316,21 +316,25 @@ const self = {
         },
         
         /** player Z position calculation
-		 * @param   {number}    stand	 //player stand height
-		 * @param	{number}    body     //player body height
-		 * @param	{number}    cap     //max height player can go cross
-		 * @param	{number}    va      //player elevacation
-		 * @param	{object[]}  list    //{id:stop,id:stop,...}, stop list to check
+		 * @param   {number}    stand       //player stand height
+		 * @param	{number}    body        //player body height
+		 * @param	{number}    cap         //max height player can go cross
+		 * @param	{number}    elevation    //player elevacation
+		 * @param	{object[]}  list        //{id:stop,id:stop,...}, stop list to check
 		 * 
 		 * */
-		relationZ:(stand,body,cap,va,list)=>{
+		relationZ:(stand,body,cap,elevation,list)=>{
+            // console.log(`Basic, player stand height: ${stand}, 
+            //     body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
 			const arr=[];
 			for(let id in list){
 				const row=list[id];
                 const {position,size}=row;
-                const zmin=position[2]-size[2]*0.5+va;
-                const zmax=position[2]+size[2]*0.5+va;
-                //console.log(zmin,zmax);
+                const zmin=position[2]-size[2]*0.5-row.elevation;
+                const zmax=position[2]+size[2]*0.5-row.elevation;
+                
+                //console.log(`Object[${id}], stop from ${zmin} to ${zmax}`,row);
+
                 //TODO, here to check BALL type stop
 
 				if(zmin>=stand+body){
@@ -380,7 +384,7 @@ const self = {
 					return rst;
 				}
 				
-				if(rst.delta!=undefined){
+				if(row.delta!=undefined){
 					if(max==null) max=row;
 					if(row.delta>max.delta) max=row;
 				}
@@ -420,7 +424,7 @@ const basic_stop = {
 		if(stops.length<1) return rst;
         
         //1.check wether interact with stop from top view ( in projection ).
-		const [dx,dy,dz]=pos;
+		const [dx,dy,dz]=pos;       //player position
 		const list=self.calculate.projection(dx,dy,stops);
 		if(Toolbox.empty(list)) return rst;
 		rst.interact=true;
@@ -428,13 +432,16 @@ const basic_stop = {
         //console.log(list);
 
         //2.check position of stop;
-		const cap=cfg.cap+(cfg.pre!=undefined?cfg.pre:0),h=cfg.height;
-		const arr=self.calculate.relationZ(dz,h,cap,cfg.elevation,list);
+		const cap=cfg.cap+(cfg.pre!==undefined?cfg.pre:0)
+        const body=cfg.height;
+        const stand=dz-body;
+		const arr=self.calculate.relationZ(stand,body,cap,cfg.elevation,list);
 
         //console.log(arr);
         
         //3.filter out the target stop for movement;
 		const fs=self.calculate.filter(arr);
+        console.log(fs);
 		rst.move=!fs.stop;
 		rst.index=fs.index;
 		if(fs.delta!=undefined) rst.delta=fs.delta;

@@ -23,9 +23,10 @@ const cache = {
 };
 
 const def={
-    "MODE_NORMAL":1,
-    "MODE_EDIT":2,
-    "MODE_GAME":3,
+    "MODE_NORMAL":1,                //login player
+    "MODE_EDIT":2,                  //edit mode on your own block
+    "MODE_GAME":3,                  //preload all block data
+    "MODE_GHOST":4,                 //anonymous player, no trigger
     "INDEX_OF_RAW_ON_CHAIN_DATA":1,
 }
 
@@ -254,7 +255,7 @@ const self = {
 
         //1.1.set block elevation;
          const INDEX_OF_ELEVATION=0;
-        const va = std.block[INDEX_OF_ELEVATION].z;
+        const va = std.block[INDEX_OF_ELEVATION].elevation;
         const va_chain = ["block", dom_id, world, key, "elevation"];
         self.cache.set(va_chain, va);
 
