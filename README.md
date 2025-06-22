@@ -7,6 +7,11 @@
 * Verify Identity in Septopus World. User can mint a block of Septopus World to be the participant.
 * On-chain virtual world can keep everything on the table. Easy to explorer Septopus.
 
+## Demo
+
+* Engine test: [https://world.septopus.xyz/demo](https://world.septopus.xyz/demo)
+* Contract: [https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet](https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet)
+
 ## Roadmap
 
 ### Step1 ( 6 month ): Devnet version Septopus World

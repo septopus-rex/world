@@ -103,6 +103,9 @@ const self = {
         const cvs = document.querySelector(`#${dom_id} canvas`);
 
         cvs.addEventListener("touchstart", (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+
             //1.check gestures
             if(self.isGestures(ev)){
                 env.gestures=true;
@@ -117,6 +120,9 @@ const self = {
         });
 
         cvs.addEventListener("touchmove", (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+
             self.info("Touch moving...");
             //console.log(`Touch moving...`);
             if(self.isGestures(ev)){
@@ -144,6 +150,9 @@ const self = {
         });
 
         cvs.addEventListener("touchend", (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            
             if(env.gestures){
                 env.gestures=false;
             }else{

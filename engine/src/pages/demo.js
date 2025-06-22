@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import World from "@/septopus/app";
+import World from "../septopus/app";
 
 export default function Demo() {
   const self = {
