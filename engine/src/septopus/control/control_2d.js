@@ -10,6 +10,7 @@
  */
 
 import VBW from "../core/framework";
+//import TwoObject from "../lib/two";
 
 const reg = {
     name: "con_two",
@@ -27,16 +28,26 @@ const config = {
     render: "rd_two",
     zoom:{
         bar:"zoom_bar",
+        info:"zoom_debug",
+    },
+    debug:true,
+    select:{
+        width:1,
+        color:'#00CCDD',
+        anticlock:true
     }
 }
 
 const env = {
-    pan: false,                 // pan canvas
+    player:null,                //player status
     render: null,               //render actions
     pre:null,                   //previous mouse position
+    pan: false,                 // pan canvas
+    height:0,                   //canvas height
     position:{left:0,top:0},    //canvas position
     gestures:false,             //whether gestures
     distance:0,                 //last gestures to calc scale
+    
 }   
 
 const self = {
@@ -48,7 +59,6 @@ const self = {
         return parser.parseFromString(data, 'text/html');
     },
     isGestures:(ev)=>{
-        console.log(ev);
         if(!ev || !ev.touches) return false;
         if(ev.touches.length === 2) return true;
         return false;
@@ -57,7 +67,7 @@ const self = {
         if(!ev || !ev.touches) return [0,0];
         const evt=ev.touches[0];
         const pos = env.position;
-        return [evt.clientX - pos.left, evt.clientY - pos.top];
+        return [evt.clientX - pos.left,env.height-(evt.clientY - pos.top)];
     },
     getMousePoint:(ev)=>{
         return [ev.clientX,ev.clientY]
@@ -92,15 +102,21 @@ const self = {
         const cvs = document.querySelector(`#${dom_id} canvas`);
 
         cvs.addEventListener("touchstart", (ev) => {
+            //1.check gestures
             if(self.isGestures(ev)){
                 env.gestures=true;
             }else{
                 env.pan = true;
             }
+
+            //2.check selected block
+            const point=self.getTouchPoint(ev);
+            env.render.select(point,config.select);
         });
 
         cvs.addEventListener("touchmove", (ev) => {
-            console.log(`Touch moving...`);
+            self.info("Touch moving...");
+            //console.log(`Touch moving...`);
             if(self.isGestures(ev)){
                 console.log(`Gestures scale.`);
                 const f1=ev.touches[0],f2=ev.touches[1];
@@ -112,9 +128,8 @@ const self = {
                     env.distance=distance;
                 }else{
                     const scale=distance/env.distance;
-
-                    const mid=[(f1.clientX+f2.clientX)*0.5,(f1.clientY + f2.clientY)*0.5]
-                    //here to scale the map
+                    const mid=[(f1.clientX+f2.clientX)*0.5,(f1.clientY + f2.clientY)*0.5];
+                    self.info(`Scale:${scale}`);
                     self.cvsScale(mid,scale);
                     env.distance=distance;
                 }
@@ -159,9 +174,25 @@ const self = {
             env.pre=now;
         });
     },
+    info:(ctx,at)=>{
+        if(!config.debug) return false;
+        const el=document.getElementById(config.zoom.info);
+        el.innerHTML=ctx;
+        if(!!at){
+            setTimeout(()=>{
+                el.innerHTML="";
+            },at);
+        }
+    },
+    status:()=>{
+        //console.log(env.player);
+        const player=env.player;
+        const ctx=`Block ${JSON.stringify(player.location.block)}`;
+
+        self.info(ctx);
+    },
     construct: (dom_id) => {
         const device=VBW.cache.get(["env","device"]);
-        console.log(device);
 
         //1.create dom for scale
         const cvs = document.querySelector(`#${dom_id} canvas`);
@@ -174,13 +205,13 @@ const self = {
                 </div>
                 <div class="zoom_bottom" id="${config.scale.down}">-</div>
             </div>
-            <div id="zoom_debug">Debug info</div>
+            <div id="${config.zoom.info}"></div>
         </div>`;
         const doc = self.getDom(ctx);
         const el = document.getElementById(dom_id);
         el.appendChild(doc.body.firstChild);
 
-        //3.screen binding
+        //2.screen binding
         if(!device.mobile){
             const zoom = document.getElementById(config.zoom.bar);
             zoom.style.display="block";
@@ -191,6 +222,13 @@ const self = {
         }else{
             self.screen(dom_id);    
         }
+
+        //3. set postion of canvas
+        const rect = cvs.getBoundingClientRect();
+        //console.log(rect);
+        env.position.left=rect.left;
+        env.position.top=rect.top;
+        env.height=rect.height;
     },
 }
 
@@ -201,6 +239,9 @@ const control_2d = {
         if (env.render === null) env.render = VBW[config.render].control;
 
         //console.log(`Binding actions to 2D map of ${dom_id}`,env);
+        if(env.player===null) env.player=VBW.cache.get(["env","player"]);
+
+        self.status();
     },
 }
 

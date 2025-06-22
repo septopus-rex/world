@@ -160,7 +160,7 @@ const self = {
 		}
 		const [px,py]=env.player.location.block;
 		self.block(px,py,{width:1,color:'#99CCBB',anticlock:true});
-        self.block(px+2,py+2,{width:1,color:'#00CCDD',anticlock:true})
+        //self.block(px+2,py+2,{width:1,color:'#00CCDD',anticlock:true})
     },
     detail: () => {
 
@@ -219,7 +219,7 @@ export default {
             self.construct(dom_id);
             self.start();
         }
-        console.log(`Showing 2D map of ${dom_id}`, env.pen);
+        //console.log(`Showing 2D map of ${dom_id}`, env.pen);
         self.render();
     },
     clean:(dom_id)=>{
@@ -240,6 +240,18 @@ export default {
             //console.log(`Canvas change: [${cx},${cy}]`);
             self.cvsMove(cx,cy);
             self.render();
+        },
+        select:(pos,cfg)=>{
+            //console.log(pos,cfg);
+            //const cp=root.calc.pCtoB(pos, env.scale, env.offset, env.multi, env.pxperm);
+            const pCtoB=TwoObject.calculate.point.c2b;
+            const point=pCtoB(pos, env.scale, env.offset, env.density, env.ratio);
+            const x=Math.ceil(point[0]/env.side[0]);
+            const y=Math.ceil(point[1]/env.side[1]);
+
+            console.log(x,y);
+            
+            self.block(x,y,cfg);
         },
     }
 }
