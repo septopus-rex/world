@@ -70,7 +70,7 @@ impl WorldList {
             Err(_) => return (),
         };
 
-        //2.check wether name or short exsist
+        //2.check whether name or short exsist
         // for s in adjunct_data {
         //     if let Some(s_arr) = s.as_array() {
         //         if s_arr.len() != 2 
@@ -164,7 +164,7 @@ pub struct BlockData {
 #[account]
 #[derive(InitSpace)]
 pub struct ResourceFootprint {
-    exsist:bool,        //wether init
+    exsist:bool,        //whether init
     stamp:u64,          //slot height
 }
 

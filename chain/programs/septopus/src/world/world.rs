@@ -65,13 +65,13 @@ pub fn start(
 ) -> Result<()> {
 
     //0. input check
-    //0.1. wether valid index.
+    //0.1. whether valid index.
     let world_list=&mut ctx.accounts.world_list;
     if world_list.list.len() != index as usize {
         return Err(error!(ErrorCode::InvalidWorldIndex));
     }
     
-    //0.2. wether valid setting.
+    //0.2. whether valid setting.
 
     //1. logical check
     //1.1. ready to start new world.

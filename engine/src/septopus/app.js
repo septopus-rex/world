@@ -32,7 +32,7 @@ const self={
             return self.setDomSize(container,cfg.size[0],cfg.size[1]);
         }
 
-        //2.check wether mobile
+        //2.check whether mobile
         const device=VBW.cache.get(["env","device"]);
         //console.log(device);
         if(device.mobile){

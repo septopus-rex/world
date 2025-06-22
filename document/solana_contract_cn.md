@@ -41,7 +41,7 @@
     {
         type:"module",                          //["texture","module", ... ]
         format:"3ds",                           //file format
-        compress:{                              //wether compressed
+        compress:{                              //whether compressed
             format:"zip",                   
             version:"0.0.1",
         },

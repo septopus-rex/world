@@ -528,7 +528,7 @@ export default {
         const { render, scene, camera } = data;
 
         const info = render.info.render;
-        const first = info.frame === 0 ? true : false;  //check frames to confirm wether first running.
+        const first = info.frame === 0 ? true : false;  //check frames to confirm whether first running.
 
         //first running functions
         if (first) {

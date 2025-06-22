@@ -274,7 +274,7 @@ const self = {
             return blocks;
         },
 
-        // wether in stop projection surface
+        // whether in stop projection surface
         projection:  (px, py, stops)=>{
             const list = {};
             
@@ -407,7 +407,7 @@ const basic_stop = {
     menu:self.menu,
 
     /** 
-     * check wether stopped or on a stop
+     * check whether stopped or on a stop
      * @param {number[]}   pos    - [x,y,z], check position
      * @param {object[]}   stops  - STOP[], stops nearby for checking
      * @param {object}     cfg    - {cap:0.2,height:1.8,elevation:0.6,pre:0.3}
@@ -417,13 +417,13 @@ const basic_stop = {
     check: (pos, stops, cfg) => {
         //console.log(stops);
         const rst={ //stop result
-            interact:false,     //wether on a stop
-            move:true,          //wether allow to move
+            interact:false,     //whether on a stop
+            move:true,          //whether allow to move
             index:-1            //index of stops
         }		
 		if(stops.length<1) return rst;
         
-        //1.check wether interact with stop from top view ( in projection ).
+        //1.check whether interact with stop from top view ( in projection ).
 		const [dx,dy,stand]=pos;       //player position
 		const list=self.calculate.projection(dx,dy,stops);
 		if(Toolbox.empty(list)) return rst;

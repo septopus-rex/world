@@ -41,7 +41,7 @@ const config = {
             'texture_id',           //3.
             ['rpx', 'rpy'],         //4.
             'animate',              //5.
-            'stop',                 //6.wether stop
+            'stop',                 //6.whether stop
             ["hole"],               //7.hole arr
         ],
     },

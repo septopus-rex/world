@@ -70,7 +70,7 @@ const vbw_event = {
         cache[key]=fun;
     },
 
-    //check event wether loaded.
+    //check event whether loaded.
     exsist:(name,x,y,world,dom_id)=>{
         const key=`${world}_${x}_${y}_${name}`;
         if(cache[key]===undefined) return false;

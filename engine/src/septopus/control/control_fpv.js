@@ -248,7 +248,7 @@ const self = {
             player.location.block = [x, y];
         }
 
-        //2.check wether stop
+        //2.check whether stop
         //TODO, need to check stop station, include nearby blocks
 
         //3.player sync
@@ -351,7 +351,7 @@ const self = {
             const diff = todo[act](dis, ak);
 
             if (diff.position) {
-                //1.1.check wether stop by stops
+                //1.1.check whether stop by stops
                 const check = self.checkStop(diff.position);
                 if (!check.move) {
                     //console.log(`Stopped.`,check);
@@ -433,7 +433,7 @@ const self = {
                 for (let i = 0; i < diff.group.length; i++) {
                     const single = diff.group[i];
 
-                    //2.1.check wether stopped.
+                    //2.1.check whether stopped.
 
                     //2.2.rotation
                 }

@@ -272,6 +272,13 @@ const API = {
     contract:contract,
 
     /** 
+     * Subcribe network block height change
+     */
+    subcribe:(networks,agent)=>{
+        
+    },
+
+    /** 
      * get single world setting
      * !important no need to fresh dynamic, wait the data back then rebuild the world
      * @param {number}      index   - world index

@@ -31,7 +31,7 @@ const config = {
 }
 
 const env = {
-    pan: false,                 //wether pan canvas
+    pan: false,                 // pan canvas
     render: null,               //render actions
     pre:null,                   //previous mouse position
     position:{left:0,top:0},    //canvas position

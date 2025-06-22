@@ -35,7 +35,6 @@ import render_observe from "../render/render_observe";
 
 import control_fpv from "../control/control_fpv";
 import control_2d from "../control/control_2d";
-import control_mobile from "../control/control_mobile";
 import control_observe from "../control/control_observe";
 
 import adj_wall from "../adjunct/adjunct_wall";
@@ -69,7 +68,6 @@ const regs={
     ],
     controller:[
         control_fpv,
-        control_mobile,
         control_2d,
         control_observe,
     ],
@@ -198,7 +196,7 @@ const self={
      * @param {number}  world   - world index
      * @param {object}  map     - blocks map, `${x}_${y}` --> BLOCK_RAW_DATA
      * @param {object}  world_info  - world information object
-     * @return {boolean}    - wether saved successful
+     * @return {boolean}    - whether saved successful
      */
     save:(dom_id,world,map,world_info)=>{
         const fun=VBW.cache.set;
@@ -321,7 +319,7 @@ const self={
         if(queue.error) return false;
         if(queue.length===0) return false;
 
-        //2. check the first wether loaded
+        //2. check the first whether loaded
         const todo=queue[0];
         //console.log(JSON.stringify(todo));
         const world=todo.world;
@@ -506,7 +504,7 @@ const self={
 const World={
     /**
      * Septopus World system initalization
-     * @return {boolean} - wether init successful
+     * @return {boolean} - whether init successful
      * */
     init:async (cfg)=>{
         //1.register all components;
@@ -542,7 +540,7 @@ const World={
      * @param	{string}    id		- container DOM id
      * @param   {function}  ck      - callback when loaded
      * @param   {object}    [cfg]   - {contract:methods,fullscreen:false}, config setting
-     * @return {boolean} - wether load successful
+     * @return {boolean} - whether load successful
      * */
     first:(dom_id,ck,cfg)=>{
         UI.show("toast",`Start to struct world.`);
@@ -565,6 +563,13 @@ const World={
         if(!self.struct(dom_id)) return  UI.show("toast",`Failed to struct html dom for running.`,{type:"error"});
         console.log("Framework:",VBW)
         if(!VBW.datasource) return UI.show("toast",`No datasource for the next step.`,{type:"error"});
+
+        //1.1. set subcribe
+        if(cfg.networks){
+            //console.log(cfg.networks);
+            //VBW.datasource.subcribe(cfg.networks);
+        }
+
         VBW.player.start(dom_id,(start)=>{
             UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
             const world=start.world;
@@ -636,7 +641,7 @@ const World={
         const limit=[4096,4096];
         //const limit = VBW.cache.get(["setting", "limit"]);
 
-        //check wether exsist first.
+        //check whether exsist first.
         VBW.datasource.view(x,y,ext,world,(map)=>{
             //console.log(map);
             if(map.loaded!==undefined){
@@ -676,7 +681,7 @@ const World={
      * @param   {number}    x       - coordination X
      * @param   {number}    y       - coordination y
      * @param   {function}  ck      - callback function
-     * @callback - wether done callback
+     * @callback - whether done callback
      * @param {boolean} result
      * */
     edit:(dom_id,world,x,y,ck)=>{
@@ -726,7 +731,7 @@ const World={
      * @param	{string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {function}  ck      - callback function
-     * @callback - wether done callback
+     * @callback - whether done callback
      * @param {boolean} result
      * */
     normal:(dom_id,world,ck)=>{
@@ -757,7 +762,7 @@ const World={
      * @param   {number}    index   - selected adjunct index
      * @param   {number}    face    - selected adjunct face in ["x","y","z","-x","-y","-z"]
      * @param   {function}  ck      - callback function
-     * @callback - wether done callback
+     * @callback - whether done callback
      * @param {boolean} result
      * */
     select:(dom_id,world,x,y,name,index,face,ck)=>{
@@ -787,7 +792,7 @@ const World={
      * @param	{string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {function}  ck      - callback function
-     * @callback - wether done callback
+     * @callback - whether done callback
      * @param {boolean} result
      * */
     modify:(tasks,dom_id,world,ck)=>{

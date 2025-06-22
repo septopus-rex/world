@@ -90,7 +90,7 @@ pub fn update(
         return Err(error!(ErrorCode::InvalidBlockIndex));
     }
 
-    //2. wether owner of block
+    //2. whether owner of block
     let check_key = ctx.accounts.payer.key();
     if !is_owner(check_key,&ctx.accounts.block_data.owner) {
         return Err(error!(ErrorCode::NotOwnerOfBlock));
@@ -122,7 +122,7 @@ pub fn sell(
         return Err(error!(ErrorCode::InvalidBlockIndex));
     }
 
-    //2.check wether the owner to withdraw
+    //2.check whether the owner to withdraw
     let bk= &mut ctx.accounts.block_data;
     let check_key = ctx.accounts.payer.key();
 
@@ -153,7 +153,7 @@ pub fn buy(
         return Err(error!(ErrorCode::InvalidBlockIndex));
     }
 
-    //2.check wether the owner to buy the block
+    //2.check whether the owner to buy the block
     let bk= &mut ctx.accounts.block_data;
     let check_key = ctx.accounts.payer.key();
     if is_owner(check_key,&bk.owner) {
@@ -200,7 +200,7 @@ pub fn withdraw(
         return Err(error!(ErrorCode::InvalidBlockIndex));
     }
 
-    //2.check wether the owner to withdraw
+    //2.check whether the owner to withdraw
     let bk= &mut ctx.accounts.block_data;
     let check_key = ctx.accounts.payer.key();
     if !is_owner(check_key,&bk.owner) {

@@ -248,7 +248,7 @@ const self = {
      * 2.set block parameters, such as elevation
      */
     structSingle: (x, y, world, dom_id) => {
-        //1.check wether constructed block;
+        //1.check whether constructed block;
         const key = `${x}_${y}`;
         const cvt = self.getConvert();
         const std_chain = ["block", dom_id, world, key, "std"];
@@ -667,7 +667,7 @@ const Framework = {
      * @param {string}  dom_id  - container DOM id
      * @param {number}  world   - world index
      * @returns
-     * @callback - wether update successful
+     * @callback - whether update successful
      * @param {boolean} - update result
      */
     update: (dom_id, world) => {

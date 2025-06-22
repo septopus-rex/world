@@ -29,7 +29,7 @@ const mocker={
             };
             agent(obj);
             height++;
-        },3000);
+        },60000*4);
     },
     transaction:(addr)=>{
 

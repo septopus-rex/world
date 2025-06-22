@@ -35,6 +35,7 @@ export default function Demo() {
         },
       },
       fullscreen:true,
+      networks:["solana","bitcoin"],
     };
     
     World.launch(dom_id,cfg,(done)=>{
