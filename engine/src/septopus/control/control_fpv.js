@@ -16,6 +16,8 @@ import Movment from "../core/movement";
 import VBW from "../core/framework";
 import UI from "../io/io_ui";
 import ThreeObject from "../three/entry";
+import Toolbox from "../lib/toolbox";
+
 import * as THREE from "three";
 
 const reg = {
@@ -60,12 +62,26 @@ const config = {
         angle: Math.PI * 0.01,
     },
     render: "rd_three",
+    double: {
+        delay: 300,
+        distance: 5,
+    },
+    swipe:{
+        distance: 15,
+    }   
 }
 
-const status = {
-    locked: false,               //whether lock the movement input
-    limit: null,                 //limit of movement
-    moving: false,               //whether moving, for mobile
+const env = {
+    locked: false,          //whether lock the movement input
+    limit: null,            //limit of movement
+    moving: false,          //whether moving, for mobile
+    position: [0, 0],         //[left,top],DOM offset      
+    touch: {
+        start: null,         //touchstart position
+        last: null,          //touchmove position
+        scale: 0,            //last scale value
+        stamp: 0,            //last touch stamp
+    },
 };
 
 const todo = {
@@ -94,10 +110,10 @@ const self = {
         if (!dom_id) document.addEventListener(evt, fun);
     },
     lock: () => {
-        status.locked = true;
+        env.locked = true;
     },
     recover: () => {
-        status.locked = false;
+        env.locked = false;
     },
     getEditActive: () => {
         return VBW.cache.get(["block", cache.container, cache.world, "edit"]);
@@ -328,6 +344,7 @@ const self = {
         //1.deal with keyboard inputs.
         let moved = false, rotated = false;
         const total = { position: [0, 0, 0], rotation: [0, 0, 0] }
+        //console.log(JSON.stringify(cache.actions));
         for (let i = 0; i < cache.actions.length; i++) {
             const act = cache.actions[i];
             if (!todo[act]) continue;
@@ -364,10 +381,11 @@ const self = {
 
 
             //FIXME, here to solve the header rise up/down issue
+            //console.log(diff.rotation)
             if (diff.rotation) {
                 rotated = true;
                 //z ax rotation
-                if(diff.rotation[2]){
+                if (diff.rotation[2]) {
                     total.rotation[1] += diff.rotation[2];
                     camera.rotation.set(
                         camera.rotation.x + total.rotation[0],
@@ -423,7 +441,7 @@ const self = {
         }
 
         //2.update player location
-        if (!status.lock) {
+        if (!env.lock) {
             self.updateLocation(cache.camera, total, moved, rotated);
         }
     },
@@ -568,27 +586,72 @@ const self = {
 
         });
     },
-    screen:(dom_id)=>{
+    getTouchPoint: (ev) => {
+        if (!ev || !ev.touches) return [0, 0];
+        const evt = ev.touches[0];
+        const pos = env.position;
+        return [evt.clientX - pos[0], evt.clientY - pos[1]];
+    },
+    swipe: (dx,dy) => {
+        //console.log(dx,dy);
+        if(Math.abs(dx)>config.swipe.distance){
+            
+        }
+    },
+    double: (pos) => {
+        console.log(`double`,pos);
+        if (!env.moving) {
+            VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
+            env.moving = true;
+            UI.hide(["pop", "sidebar"]);
+        } else {
+            env.moving = false;
+            VBW.queue.remove(config.queue, config.keyboard[config.code.FORWARD]);
+        }
+    },
+    screen: (dom_id) => {
         const el = document.getElementById(dom_id);
         if (!el) return false;
         el.addEventListener('touchstart', (ev) => {
-            if(!status.moving){
-                VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
-                status.moving=true;
-                UI.hide(["pop", "sidebar"]);
-            }else{
-                status.moving=false;
-                VBW.queue.remove(config.queue,config.keyboard[config.code.FORWARD]);
+            //1. set env and check double click
+            const point = self.getTouchPoint(ev);
+            const now = Toolbox.stamp();
+            if (env.touch.stamp !== 0 && env.touch.start !== null) {
+                const delta = now - env.touch.stamp;
+                const dx = Math.abs(point[0] - env.touch.start[0]);
+                const dy = Math.abs(point[1] - env.touch.start[1]);
+                if (delta < config.double.delay && dx < config.double.distance && dy < config.double.distance) {
+                    self.double(env.touch.start);
+                }
             }
+            env.touch.start = point;
+            env.touch.stamp = now;
         });
 
         el.addEventListener('touchmove', (ev) => {
-            
-        })
+            const point = self.getTouchPoint(ev);
+            if(env.touch.last!==null){
+                const dx = point[0] - env.touch.last[0];
+                const dy = point[1] - env.touch.last[1];
+                if(Math.abs(dx)>config.swipe.distance || Math.abs(dy)>config.swipe.distance){
+                    self.swipe(dx,dy);
+                }else{
+                    if(dx > 0){   //swipe right
+                        VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_LEFT]);
+                    }else{      //swipe left
+                        VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
+                    }
+                }
+            }
+            env.touch.last = point;
+        });
 
-        el.addEventListener('dblclick', (ev) => {
-            console.log(`Double clicked.`);
-            VBW.queue.remove(config.queue,config.keyboard[config.code.FORWARD]);
+        el.addEventListener('touchend', (ev) => {
+            //console.log(JSON.stringify(VBW.queue.get(config.queue)));
+            env.touch.last=null;
+            VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_LEFT]);
+            VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
+            //console.log(JSON.stringify(VBW.queue.get(config.queue)));
         });
     },
 }
@@ -609,13 +672,13 @@ const control_fpv = {
         if (cache.container !== null) return false;
         console.log(`Start to get the input from outside, bind html events.`);
 
-        const device=VBW.cache.get(["env","device"]);
+        const device = VBW.cache.get(["env", "device"]);
 
         //0.add keyboard listener and screen control
         VBW.queue.init(config.queue);
-        if(device.mobile){
+        if (device.mobile) {
             self.screen(dom_id);
-        }else{
+        } else {
             self.keyboard();
             self.editControl(dom_id);
         }

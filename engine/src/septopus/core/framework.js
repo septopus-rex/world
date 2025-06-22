@@ -184,27 +184,37 @@ const self = {
         init: (qu) => {
             const chain = ["queue", qu];
             self.cache.set(chain, []);
+            return true;
         },
         clean: (qu) => {
             const chain = ["queue", qu];
             self.cache.set(chain, []);
+            return true;
         },
         push: (qu, val) => {
             const chain = ["queue", qu];
             if (!self.cache.exsist(chain)) self.queue.init(qu);
             const arr = self.cache.get(chain);
+            if(arr.error) return arr;
             arr.push(val);
+            return true;
         },
         insert: (qu, val) => {
             const chain = ["queue", qu];
             if (!self.cache.exsist(chain)) self.queue.init(qu);
             const arr = self.cache.get(chain);
+            if(arr.error) return arr;
             if (!arr.includes(val)) arr.push(val);
+            return true;
         },
         remove: (qu, val) => {
             const chain = ["queue", qu];
             const arr = self.cache.get(chain);
-            arr.splice(arr.indexOf(val), 1);
+            if(arr.error) return arr;
+            const index=arr.indexOf(val);
+            if(index<0) return false;
+            arr.splice(index, 1);
+            return true;
         },
 
     },
