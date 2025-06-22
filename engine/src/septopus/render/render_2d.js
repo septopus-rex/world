@@ -249,9 +249,10 @@ export default {
             const x=Math.ceil(point[0]/env.side[0]);
             const y=Math.ceil(point[1]/env.side[1]);
 
-            console.log(x,y);
-            
+            //console.log(x,y);
+            self.render();
             self.block(x,y,cfg);
+            return [x,y];
         },
     }
 }

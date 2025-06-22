@@ -63,11 +63,12 @@ const self = {
         if(ev.touches.length === 2) return true;
         return false;
     },
-    getTouchPoint: (ev) => {
+    getTouchPoint: (ev,anti) => {
         if(!ev || !ev.touches) return [0,0];
         const evt=ev.touches[0];
         const pos = env.position;
-        return [evt.clientX - pos.left,env.height-(evt.clientY - pos.top)];
+        if(anti) return [evt.clientX - pos.left,env.height-(evt.clientY - pos.top)];
+        return [evt.clientX - pos.left,evt.clientY - pos.top];
     },
     getMousePoint:(ev)=>{
         return [ev.clientX,ev.clientY]
@@ -110,8 +111,9 @@ const self = {
             }
 
             //2.check selected block
-            const point=self.getTouchPoint(ev);
-            env.render.select(point,config.select);
+            const point=self.getTouchPoint(ev,true);
+            const bk = env.render.select(point,config.select);
+            self.info(`${JSON.stringify(bk)} is selected`);
         });
 
         cvs.addEventListener("touchmove", (ev) => {
@@ -225,7 +227,6 @@ const self = {
 
         //3. set postion of canvas
         const rect = cvs.getBoundingClientRect();
-        //console.log(rect);
         env.position.left=rect.left;
         env.position.top=rect.top;
         env.height=rect.height;
