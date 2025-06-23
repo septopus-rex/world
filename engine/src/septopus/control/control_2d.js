@@ -12,6 +12,8 @@
 import VBW from "../core/framework";
 //import TwoObject from "../lib/two";
 
+import Touch from "../lib/touch";
+
 const reg = {
     name: "con_two",
     category: 'controller',
@@ -99,6 +101,20 @@ const self = {
     cvsScale:(point,delta)=>{
         return env.render.scale(point,delta);
     },
+    touch:(dom_id)=>{
+        const id=`#${dom_id} canvas`;
+        Touch.on(id,"doubleTap",(ev)=>{
+            console.log(`Double`);
+        });
+        // Touch.on(id,"singleTap",(ev)=>{
+        //     console.log(ev);
+        // });
+
+        // Touch.on(dom_id,"singleTap",(ev)=>{
+
+        // });
+    },
+
     screen: (dom_id) => {
         const cvs = document.querySelector(`#${dom_id} canvas`);
 
@@ -231,7 +247,8 @@ const self = {
             self.pan(dom_id);
             self.mouse(dom_id);
         }else{
-            self.screen(dom_id);    
+            self.touch(dom_id);
+            //self.screen(dom_id);    
         }
 
         //3. set postion of canvas
