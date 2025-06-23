@@ -46,7 +46,6 @@ const self={
         return self.setDomSize(container,device.screen.width-fix,min);
     },
     setDomSize:(container,width,height)=>{
-        console.log(container,width,height);
         const el=document.getElementById(container);
         el.style.width=`${width}px`;
         el.style.height=`${height}px`;

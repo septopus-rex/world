@@ -234,7 +234,6 @@ const self = {
             y * side[1],
             0
         );
-
         const chain = ["block", dom_id, world, "sky"];
         VBW.cache.set(chain, sky);
 
@@ -244,33 +243,12 @@ const self = {
         //4.add frame loop to update sky
         const frame_chain = ["block", dom_id, world, "loop"];
         const queue = VBW.cache.get(frame_chain);
-        queue.push({ name: "sky_checker", fun: self.updateSky });
-    },
-
-    updateSky: () => {
-        const dom_id = VBW.cache.get(["active", "current"]);
-        const player = VBW.cache.get(["env", "player"]);
-        const world = player.location.world;
-        const sky = VBW.cache.get(["block", dom_id, world, "sky"]);
-
-        if (sky.counter === undefined) sky.counter = 0;
-        if (sky.angle === undefined) sky.angle = 0;
-        if (sky.angle > 180) sky.angle = 0;
-
-        if (sky.counter > 200) {
-            const deg = Math.PI / 180;
-            sky.material.uniforms['sunPosition'].value.setFromSphericalCoords(1, (90 - sky.angle) * deg, 90 * 0.5);
-            sky.counter = 0;
-            sky.angle++;
-        } else {
-            sky.counter++;
-        }
+        queue.push({ name: "sky_checker", fun: VBW.sky.check });
     },
 
     //FIXME, player can go out of editing block, this can effect the active block 
     //!important, in edit mode, player can go out the editing block, so the info of editing is isolated.
     loadEdit: (scene, dom_id) => {
-        //const player=VBW.cache.get(["env","player"]);
         const world = VBW.cache.get(["active", "world"]);
         const chain = ["block", dom_id, world, "edit"];
         if (!VBW.cache.exsist(chain)) return false;

@@ -41,8 +41,6 @@ const self={
 
 const vbw_time={
     hooks:self.hooks,
-
-    //calc septopus world 
     calc:(data)=>{
         //console.log(`weather`,data);
     },
