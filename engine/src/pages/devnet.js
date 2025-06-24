@@ -9,7 +9,7 @@ import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 import { useState, useEffect, useMemo } from "react";
-import World from "@/septopus/app";
+import World from "../septopus/app";
 import SeptopusContract from "@/lib/contract";
 
 export const WalletConnectionProvider = ({ children }) => {

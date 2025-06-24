@@ -23,10 +23,9 @@ const format={
     size:[0,0],
     position:[0,0],     //dom offset
     stamp:0,
+    double:false,       //
     start:null,
-    move:{
-        last:null,
-    },
+    move:null,
     gesture:{
         on:false,
         last:null,          //last mid point
@@ -37,7 +36,7 @@ const format={
 
 //dock binding events
 const events={
-    singleTap:{},
+    //singleTap:{},
     doubleTap:{},
     touchStart:{},
     touchMove:{},
@@ -89,9 +88,6 @@ const self={
     getStamp:()=>{
         return new Date().getTime();
     },
-    resetGesture:(id)=>{
-
-    },
     getListener:()=>{
         return {
             touchstart:(ev)=>{
@@ -103,32 +99,26 @@ const self={
                 const point=self.getTouchPoint(ev,id);
                 const now= self.getStamp();
 
+                //console.log("Start",JSON.stringify(env));
+
                 //doubletap event
-                if(events.doubleTap[id] && env.stamp !==0 && env.start!==null ){
-                    
-                    const delta = now - env.stamp;
+                if(env.stamp !==0 && env.start!==null ){
                     const dx = Math.abs(point[0] - env.start[0]);
                     const dy = Math.abs(point[1] - env.start[1]);
-                    if (delta < config.delay && Math.sqrt(dx*dx+dy*dy) < config.distance) {
-                        self.double(env.touch.start);
+                    const dis=Math.sqrt(dx*dx+dy*dy);
+                    if (now - env.stamp < config.delay && dis < config.distance) {
+                        env.double=true;
                     }
-                    env.stamp=0;
-                    env.start=null;
-                    events.doubleTap[id](point);
-                    return true;
-                }else{
-                    env.stamp=now;      //set tap timestamp to check double click
                 }
-
+                env.stamp=now;
 
                 //singletap and touchstat
                 if(ev.touches && ev.touches.length===1){
                     
-                    if(events.singleTap[id]) events.singleTap[id](point);
+                    //if(events.singleTap[id]) events.singleTap[id](point);
                     if(events.touchStart[id]) events.touchStart[id](point);
-
                     env.start=point;    //set start point to check swipe
-                    env.move.last=point;     //set touchmove point to calc distance
+                    env.move=point;     //set touchmove point to calc distance
                 }
                 
                 //Gesturestart event
@@ -149,18 +139,18 @@ const self={
                 const env=map[id].data;
 
                 //touchmove event: 
-                if(events.touchMove[id] && env.start!==null){
+                if(env.start!==null){
                     const point=self.getTouchPoint(ev,id);
-                    const distance=self.distancePoints(point,env.move.last);
-                    events.touchMove[id](point,distance);
-                    env.move.last=point;
+                    const distance=self.distancePoints(point,env.move);
+                    if(events.touchMove[id]) events.touchMove[id](point,distance);
+                    env.move=point;
                 } 
                 
                 //gesturemove event
-                if(env.gesture.on && ev.touches.length===2 && env.start!==null){
+                if(env.gesture.on && ev.touches.length===2){
                     const mid=self.getGesturePoint(ev,id);
                     const dis=self.getDistance(ev);
-                    const delta=dis-env.gesture.distance;
+                    const delta= dis - env.gesture.distance;
                     if(delta===0){
                         const scale=1;
                         if(events.gestureMove[id]) events.gestureMove[id](mid,scale);
@@ -173,19 +163,22 @@ const self={
                 }
             },
             touchend:(ev)=>{
+                //console.log(`Touch end.`);
                 ev.preventDefault();
                 ev.stopPropagation();
 
                 const id=ev.currentTarget.getAttribute(config.key);
                 const env=map[id].data;
-                //console.log(ev,id)
-                //const point=self.getTouchPoint(ev,id);
                 const now= self.getStamp();
 
+                //console.log("End",JSON.stringify(env));
+
+                //Touchend event
+                if(events.touchEnd[id]) events.touchEnd[id](now);
+
                 //Gestureend event
-                if(env.gesture.on && env.start!==null){
+                if(env.gesture.on){
                     if(events.gestureEnd[id]) events.gestureEnd[id]();
-                    //reset gesture
                     env.gesture.last=null;
                     env.gesture.distance=0;
                     env.gesture.on=false;
@@ -193,7 +186,7 @@ const self={
 
                 //Swipe event
                 if( env.start!==null && 
-                    env.move.last!==null && 
+                    env.move!==null && 
                     now - env.stamp < config.swipe.delay &&
                     (events.swipe[id] || 
                     events.swipeLeft[id] || 
@@ -201,37 +194,33 @@ const self={
                     events.swipeUp[id] || 
                     events.swipeDown[id])
                 ){
-                    const dx = env.move.last[0] - env.last[0];
-                    const dy = env.move.last[1] - env.last[1];
-
+                    const dx = env.move[0] - env.start[0];
+                    const dy = env.move[1] - env.start[1];
                     if(Math.abs(dx) > config.swipe.distance ){
+                        if(events.swipe[id]) events.swipe[id]([dx,dy]);
                         if(dx>0){
-                            if(events.swipeRight[id]) events.swipeRight[id](dx);
+                            if(events.swipeRight[id]) events.swipeRight[id]([dx,dy]);
                         }else{
-                            if(events.swipeLeft[id]) events.swipeLeft[id](dx);
+                            if(events.swipeLeft[id]) events.swipeLeft[id]([dx,dy]);
                         }
                     }
 
-                    if(Math.abs(dx) > config.swipe.distance ){
+                    if(Math.abs(dy) > config.swipe.distance ){
+                        if(events.swipe[id]) events.swipe[id]([dx,dy]);
                         if(dy>0){
-                            if(events.swipeDown[id]) events.swipeDown[id](dy);
+                            if(events.swipeDown[id]) events.swipeDown[id]([dx,dy]);
                         }else{
-                            if(events.swipeUp[id]) events.swipeUp[id](dy);
+                            if(events.swipeUp[id]) events.swipeUp[id]([dx,dy]);
                         }
                     }
+                }
 
-                    //if swipe, reset
+                 //Double event
+                if(env.double){
+                    if(events.doubleTap[id]) events.doubleTap[id](env.start);
+                    env.double=false;
                     env.start=null;
-                    env.stamp=0;
                 }
-
-                //Touchend event
-                if(events.touchEnd[id]){
-                    const distance=self.distancePoints(point,env.move.last);
-                    events.touchEnd[id](point,distance);
-                    env.move.last=null;     //reset last 
-                }
-
             },
         }
     },
