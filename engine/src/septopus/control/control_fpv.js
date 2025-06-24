@@ -16,7 +16,9 @@ import Movment from "../core/movement";
 import VBW from "../core/framework";
 import UI from "../io/io_ui";
 import ThreeObject from "../three/entry";
+import Touch from "../lib/touch";
 import Toolbox from "../lib/toolbox";
+
 
 import * as THREE from "three";
 
@@ -76,12 +78,7 @@ const env = {
     limit: null,            //limit of movement
     moving: false,          //whether moving, for mobile
     position: [0, 0],         //[left,top],DOM offset      
-    touch: {
-        start: null,         //touchstart position
-        last: null,          //touchmove position
-        scale: 0,            //last scale value
-        stamp: 0,            //last touch stamp
-    },
+    touch: null,
 };
 
 const todo = {
@@ -586,72 +583,40 @@ const self = {
 
         });
     },
-    getTouchPoint: (ev) => {
-        if (!ev || !ev.touches) return [0, 0];
-        const evt = ev.touches[0];
-        const pos = env.position;
-        return [evt.clientX - pos[0], evt.clientY - pos[1]];
-    },
-    swipe: (dx,dy) => {
-        //console.log(dx,dy);
-        if(Math.abs(dx)>config.swipe.distance){
-            
-        }
-    },
-    double: (pos) => {
-        console.log(`double`,pos);
-        if (!env.moving) {
-            VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
-            env.moving = true;
-            UI.hide(["pop", "sidebar"]);
-        } else {
-            env.moving = false;
-            VBW.queue.remove(config.queue, config.keyboard[config.code.FORWARD]);
-        }
-    },
-    screen: (dom_id) => {
-        const el = document.getElementById(dom_id);
-        if (!el) return false;
-        el.addEventListener('touchstart', (ev) => {
-            //1. set env and check double click
-            const point = self.getTouchPoint(ev);
-            const now = Toolbox.stamp();
-            if (env.touch.stamp !== 0 && env.touch.start !== null) {
-                const delta = now - env.touch.stamp;
-                const dx = Math.abs(point[0] - env.touch.start[0]);
-                const dy = Math.abs(point[1] - env.touch.start[1]);
-                if (delta < config.double.delay && dx < config.double.distance && dy < config.double.distance) {
-                    self.double(env.touch.start);
-                }
+    touch:(dom_id) =>{ 
+        const id=`#${dom_id} canvas`;
+        //1. double tap to go forward
+        Touch.on(id,"doubleTap",(point)=>{
+            if (!env.moving) {
+                VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
+                env.moving = true;
+                UI.hide(["pop", "sidebar"]);
+            } else {
+                env.moving = false;
+                VBW.queue.remove(config.queue, config.keyboard[config.code.FORWARD]);
             }
-            env.touch.start = point;
-            env.touch.stamp = now;
         });
 
-        el.addEventListener('touchmove', (ev) => {
-            const point = self.getTouchPoint(ev);
-            if(env.touch.last!==null){
-                const dx = point[0] - env.touch.last[0];
-                const dy = point[1] - env.touch.last[1];
-                if(Math.abs(dx)>config.swipe.distance || Math.abs(dy)>config.swipe.distance){
-                    self.swipe(dx,dy);
-                }else{
-                    if(dx > 0){   //swipe right
-                        VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_LEFT]);
-                    }else{      //swipe left
-                        VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
-                    }
-                }
-            }
-            env.touch.last = point;
+        Touch.on(id,"touchStart",(point)=>{
+            env.touch = point;
         });
 
-        el.addEventListener('touchend', (ev) => {
-            //console.log(JSON.stringify(VBW.queue.get(config.queue)));
-            env.touch.last=null;
+        //2.touchmove for head rotation
+        Touch.on(id,"touchMove",(point,distance)=>{
+            const dx = point[0] - env.touch[0];
+            //const dy = point[1] - env.touch[1];
+            if(dx > 0){   //swipe right
+                VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_LEFT]);
+            }else{      //swipe left
+                VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
+            }
+            env.touch = point;
+        });
+
+        Touch.on(id,"touchEnd",()=>{
+            env.touch=null;
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_LEFT]);
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
-            //console.log(JSON.stringify(VBW.queue.get(config.queue)));
         });
     },
 }
@@ -677,7 +642,8 @@ const control_fpv = {
         //0.add keyboard listener and screen control
         VBW.queue.init(config.queue);
         if (device.mobile) {
-            self.screen(dom_id);
+            //self.screen(dom_id);
+            self.touch(dom_id);
         } else {
             self.keyboard();
             self.editControl(dom_id);

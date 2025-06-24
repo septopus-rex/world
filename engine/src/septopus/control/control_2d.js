@@ -47,9 +47,6 @@ const env = {
     pan: false,                 // pan canvas
     height:0,                   //canvas height
     position:{left:0,top:0},    //canvas position
-    gestures:false,             //whether gestures
-    distance:0,                 //last gestures to calc scale
-    
 }   
 
 const self = {
@@ -101,83 +98,35 @@ const self = {
     cvsScale:(point,delta)=>{
         return env.render.scale(point,delta);
     },
-    touch:(dom_id)=>{
+    screen:(dom_id)=>{
         const id=`#${dom_id} canvas`;
         Touch.on(id,"doubleTap",(ev)=>{
             console.log(`Double`);
         });
-        // Touch.on(id,"singleTap",(ev)=>{
-        //     console.log(ev);
-        // });
-
-        // Touch.on(dom_id,"singleTap",(ev)=>{
-
-        // });
-    },
-
-    screen: (dom_id) => {
-        const cvs = document.querySelector(`#${dom_id} canvas`);
-
-        cvs.addEventListener("touchstart", (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-
-            //1.check gestures
-            if(self.isGestures(ev)){
-                env.gestures=true;
-            }else{
-                env.pan = true;
-            }
-
-            //2.check selected block
-            const point=self.getTouchPoint(ev,true);
-            const bk = env.render.select(point,config.select);
-            self.info(`${JSON.stringify(bk)} is selected`);
+        Touch.on(id,"touchStart",(point)=>{
+            env.pre=point;
+        });
+        Touch.on(id,"touchMove",(point,distance)=>{
+            self.cvsPan(env.pre,point);
+            env.pre=point;
+        });
+        Touch.on(id,"touchEnd",()=>{
+            env.pre=null;
         });
 
-        cvs.addEventListener("touchmove", (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-
-            self.info("Touch moving...");
-            //console.log(`Touch moving...`);
-            if(self.isGestures(ev)){
-                console.log(`Gestures scale.`);
-                const f1=ev.touches[0],f2=ev.touches[1];
-                const dx = f1.clientX - f2.clientX;
-                const dy = f1.clientY - f2.clientY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                if(env.distance===0){
-                    env.distance=distance;
-                }else{
-                    const scale=distance/env.distance;
-                    const mid=[(f1.clientX+f2.clientX)*0.5,(f1.clientY + f2.clientY)*0.5];
-                    self.info(`Scale:${scale}`);
-                    self.cvsScale(mid,scale);
-                    env.distance=distance;
-                }
-            }else{
-                if(env.pre===null) return env.pre=self.getTouchPoint(ev);
-                const now=self.getTouchPoint(ev);
-                self.cvsPan(env.pre,now);
-                env.pre=now;
-            }
-        });
-
-        cvs.addEventListener("touchend", (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
+        Touch.on(id,"gestureStart",(mid)=>{
             
-            if(env.gestures){
-                env.gestures=false;
-            }else{
-                env.pan = false;
-                env.pre = null;
-            }
+        });
+
+        Touch.on(id,"gestureMove",(mid,scale)=>{
+            self.cvsScale(mid,scale);
+        });
+
+        Touch.on(id,"gestureEnd",()=>{
+            
         });
     },
-    pan:(dom_id)=>{
+     pan:(dom_id)=>{
         const cvs = document.querySelector(`#${dom_id} canvas`);
         cvs.addEventListener("click", (ev) => {
             //console.log(`clicked.`);
@@ -247,8 +196,7 @@ const self = {
             self.pan(dom_id);
             self.mouse(dom_id);
         }else{
-            self.touch(dom_id);
-            //self.screen(dom_id);    
+            self.screen(dom_id);    
         }
 
         //3. set postion of canvas

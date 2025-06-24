@@ -21,5 +21,6 @@
 
 ```Bash
     # find the sid of next for stopping
+    # two tasks need to kill.
     ps aux | grep next
 ```
