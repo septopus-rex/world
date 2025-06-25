@@ -36,11 +36,13 @@ const self={
         },
     },
     decode:(hash)=>{
+        //#20025_504_0|8_3_0|0_0_36
         const result={
             block:[0,0],
             position:[8,8,0],
             rotation:[0,0,0],
         }
+        
         return result;
     },
     isMobile:()=>{

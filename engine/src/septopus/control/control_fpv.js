@@ -262,11 +262,12 @@ const self = {
 
         //4.update compass value
         if (rotated) {
-            self.setCompass(-180 * player.location.rotation[1] / Math.PI);
+            self.setCompass( player.location.rotation[1]);
         }
     },
 
     setCompass: (ak) => {
+        const angle=-180 * ak / Math.PI;
         const cfg_compass = {
             events: {
                 click: (ev) => {
@@ -276,7 +277,7 @@ const self = {
                 },
             },
         }
-        UI.show("compass", ak, cfg_compass);
+        UI.show("compass", angle, cfg_compass);
     },
 
     //fliter out stops related by block coordination.
@@ -680,6 +681,10 @@ const control_fpv = {
 
         //4.flip the code --> key to key --> code, run once.
         if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
+
+        //5. init compass;
+        const ak=cache.player.location.rotation[1];
+        self.setCompass(ak);
     },
 }
 

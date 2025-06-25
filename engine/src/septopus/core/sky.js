@@ -9,12 +9,13 @@
  */
 
 import VBW from "../core/framework";
+
 const reg={
     name:"sky",
     category:'system',
 }
 const config={
-    frequency:200,      //frames to update
+    frequency:300,      //frames to update
 };
 
 const env={
