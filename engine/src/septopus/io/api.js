@@ -141,7 +141,7 @@ const mock = {
             "texture/grass.jpg",
             "texture/avatar.jpg",
             "texture/qr.png",
-        ]
+        ];
 
         return {
             index: id,

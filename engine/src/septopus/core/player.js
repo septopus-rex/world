@@ -24,7 +24,8 @@ const config = {
         world: 0,
         position: [8, 14, 0],
         rotation: [0, 0, 0],
-        headAx: "y",
+        stop:-1,
+        //headAx: "y",
         extend: 2,
     },
     body: {

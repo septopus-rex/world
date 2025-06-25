@@ -1,3 +1,5 @@
+import { BufferAttribute } from "three";
+
 const Toolbox = {
   stamp: () => {
     return new Date().getTime();
@@ -29,6 +31,15 @@ const Toolbox = {
           ? String.fromCharCode(Toolbox.rand(65, 90))
           : String.fromCharCode(Toolbox.rand(97, 122));
     return pre;
+  },
+  hash: (n)=>{
+    const len=!n?64:n;
+    let hash = '0x';
+    const hexChars = '0123456789abcdef';
+    for (let i = 0; i < n; i++) {
+      hash += hexChars[Math.floor(Math.random() * 16)];
+    }
+    return hash;
   },
   shorten: (addr, n) => {
     if (n === undefined) n = 10;

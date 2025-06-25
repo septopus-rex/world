@@ -21,16 +21,18 @@ const self={
 
 const mocker={
     height:(agent)=>{
-        let slot=Toolbox.rand(80000,31000);
+        let slot=Toolbox.rand(80000,310000);
         const salt=Toolbox.char(5);
+        //0xefc58bbf7e0b002e23982caebbb3e072fa8482a515dc454fab52d945909b80b0
         setInterval(()=>{
             const obj={
                 network:"solana",
                 type:"devnet",
                 height:slot,
                 salt:salt,
-                hash:"",
+                hash:Toolbox.hash(64),
                 event:"height",
+                interval:3,                 // (seconds) slot speed 
                 stamp:Toolbox.stamp(),
             };
             agent(obj);
