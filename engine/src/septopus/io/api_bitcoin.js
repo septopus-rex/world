@@ -9,6 +9,8 @@
  * @date 2025-04-29
  */
 
+import Toolbox from "../lib/toolbox";
+
 const map={};
 const self={
 
@@ -24,7 +26,6 @@ const mocker={
                 network:"bitcoin",
                 height:height,
                 salt:salt,
-                //hash:,
                 stamp:Toolbox.stamp(),
             };
             agent(obj);
@@ -40,15 +41,18 @@ const mocker={
 }
 
 const api_bitcoin={
+    hooks:{
+        auto:(disposer)=>{
+            mocker.height(disposer);
+        },
+    },
     world:()=>{
 
     },
     block:(bs)=>{
 
     },
-    auto:(disposer)=>{
-        
-    },
+    
 }
 
 export default api_bitcoin;

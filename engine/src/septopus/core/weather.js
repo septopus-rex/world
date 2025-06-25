@@ -32,12 +32,19 @@ const self={
             };
         },
     },
+    convert:(hash)=>{
+        console.log(hash);
+    },
 }
 
 const vbw_weather={
     hooks:self.hooks,
     calc:(data)=>{
-        //console.log(`weather`,data);
+        //console.log(`Weather`,data);
+        if(data.network!==config.network) return false;
+        if(!data.hash) return false;
+
+        self.convert(hash);
     },
 }
 

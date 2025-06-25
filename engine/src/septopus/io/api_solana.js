@@ -14,6 +14,9 @@ import Toolbox from "../lib/toolbox";
 const map={}; 
 const self={
 
+    hash:(n)=>{
+
+    },
 }
 
 const mocker={
@@ -26,6 +29,7 @@ const mocker={
                 type:"devnet",
                 height:slot,
                 salt:salt,
+                hash:"",
                 event:"height",
                 stamp:Toolbox.stamp(),
             };
@@ -45,14 +49,16 @@ const mocker={
 }
 
 const api_solana={
+    hooks:{
+        auto:(disposer)=>{
+            mocker.height(disposer);
+        },
+    },
     world:()=>{
 
     },
     block:(bs)=>{
 
-    },
-    auto:(disposer)=>{
-        mocker.height(disposer);
     },
 }
 

@@ -37,12 +37,19 @@ const self={
             };
         },
     },
+
+    convert:(height)=>{
+        console.log(height);
+    },
 }
 
 const vbw_time={
     hooks:self.hooks,
     calc:(data)=>{
-        //console.log(`weather`,data);
+        if(data.network!==config.network) return false;
+        if(!data.height) return false;
+
+       self.convert(data.height);
     },
 }
 

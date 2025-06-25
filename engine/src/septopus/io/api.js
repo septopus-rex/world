@@ -39,6 +39,7 @@ const events={
     height:{},      //block height change event
     price:{},       //price change event
     block:{},       //block data update event
+    world:{},       //world update event
 }
 
 const mock = {
@@ -227,16 +228,18 @@ const self = {
         map[key] ={};
         return self.getBlocks(arr, world, ck, map);
     },
+
     listenerStart:()=>{
         console.log(`Listener start...`);
         for(let network in router){
-            if(!router[network].auto){
+            if(!router[network] ||!router[network].hooks || !router[network].hooks.auto){
                 console.error(`${network} API not support auto bind.`);
                 continue;
             }
-            router[network].auto(self.dispose);
+            router[network].hooks.auto(self.dispose);
         }
     },
+    //dispose function to send the subscribe data to component
     dispose:(data)=>{
         if(!data.event || !events[data.event]) return console.error(`Invalid event data.`,data);
 
@@ -250,7 +253,6 @@ const self = {
 const contract={
     set:(reqs)=>{
         contract.instructions=reqs;       // attatch to contract directly
-        //console.log(contract);
         return true;
     },
 
@@ -270,13 +272,6 @@ const API = {
      * Contract calls for system
      */
     contract:contract,
-
-    /** 
-     * Subcribe network block height change
-     */
-    subcribe:(networks,agent)=>{
-        
-    },
 
     /** 
      * get single world setting
