@@ -28,12 +28,24 @@ const self={
                         height:window.innerHeight,
                         ratio:window.devicePixelRatio,
                     },
-                    mobile:window.innerWidth<768?true:false,
+                    mobile:self.isMobile(),
                     network:"",
+                    input:self.decode(window.location.hash),
                 }
             };
         },
     },
+    decode:(hash)=>{
+        const result={
+            block:[0,0],
+            position:[8,8,0],
+            rotation:[0,0,0],
+        }
+        return result;
+    },
+    isMobile:()=>{
+        return window.innerWidth<768?true:false;
+    }
 }
 
 const vbw_detect={
@@ -41,7 +53,6 @@ const vbw_detect={
     check:(id)=>{
         const info={};
         const dom=document.getElementById(id);
-        //const width=dom.clientWidth,height=om.clientHeight;
         info.width=dom.clientWidth;
         info.height=dom.clientHeight;
         return info;

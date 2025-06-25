@@ -184,3 +184,11 @@
         action:(ev)=>{},            //点击后的动作，需要{type:"button"}
     },                 
 ```
+
+### URL的Hash格式
+
+```Text
+    https://world.septopus.xyz/deme#20025_504_0|8_3_0|0_0_36
+```
+
+### 触发器格式

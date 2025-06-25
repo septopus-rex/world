@@ -44,6 +44,7 @@ const env = {
     player:null,                //player status
     render: null,               //render actions
     pre:null,                   //previous mouse position
+    middle:null,                //
     pan: false,                 // pan canvas
     height:0,                   //canvas height
     position:{left:0,top:0},    //canvas position
@@ -95,8 +96,10 @@ const self = {
         const cy=to[1]-from[1];
         return env.render.move(cx,cy);
     },
-    cvsScale:(point,delta)=>{
-        return env.render.scale(point,delta);
+    cvsScale:(point,scale)=>{
+        const cx=point[0]-env.middle[0];
+        const cy=point[1]-env.middle[1];
+        return env.render.scale(cx,cy,scale);
     },
     screen:(dom_id)=>{
         const id=`#${dom_id} canvas`;
@@ -105,6 +108,9 @@ const self = {
         });
         Touch.on(id,"touchStart",(point)=>{
             env.pre=point;
+            const cp=[point[0],env.height-point[1]];
+            const bk = env.render.select(cp,config.select);
+            self.info(`${JSON.stringify(bk)} is selected`);
         });
         Touch.on(id,"touchMove",(point,distance)=>{
             self.cvsPan(env.pre,point);
@@ -115,18 +121,21 @@ const self = {
         });
 
         Touch.on(id,"gestureStart",(mid)=>{
-            
+            env.middle=point;
         });
 
         Touch.on(id,"gestureMove",(mid,scale)=>{
+            self.info(scale);
+
             self.cvsScale(mid,scale);
+            env.middle=point;
         });
 
         Touch.on(id,"gestureEnd",()=>{
-            
+            env.middle=null;
         });
     },
-     pan:(dom_id)=>{
+    pan:(dom_id)=>{
         const cvs = document.querySelector(`#${dom_id} canvas`);
         cvs.addEventListener("click", (ev) => {
             //console.log(`clicked.`);
@@ -136,11 +145,11 @@ const self = {
     },
     mouse: (dom_id) => {
         const cvs = document.querySelector(`#${dom_id} canvas`);
-        cvs.addEventListener("mousewheel", (ev) => {
-            const point=self.getMousePoint(ev);
-            const delta=1;
-            self.cvsScale(point,delta);
-        });
+        // cvs.addEventListener("mousewheel", (ev) => {
+        //     const point=self.getMousePoint(ev);
+        //     const delta=1;
+        //     self.cvsScale(point,delta);
+        // });
 
         cvs.addEventListener("mousemove", (ev) => {
             if (!env.pan) return false;

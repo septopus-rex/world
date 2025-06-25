@@ -150,16 +150,10 @@ const self={
                 if(env.gesture.on && ev.touches.length===2){
                     const mid=self.getGesturePoint(ev,id);
                     const dis=self.getDistance(ev);
-                    const delta= dis - env.gesture.distance;
-                    if(delta===0){
-                        const scale=1;
-                        if(events.gestureMove[id]) events.gestureMove[id](mid,scale);
-                    }else{
-                        const scale=delta/env.gesture.distance;
-                        if(events.gestureMove[id]) events.gestureMove[id](mid,scale);
-                    }
+                    const scale= dis/env.gesture.distance;
+                    if(events.gestureMove[id]) events.gestureMove[id](mid,scale);
+
                     env.gesture.last=mid;
-                    env.gesture.distance=dis;
                 }
             },
             touchend:(ev)=>{

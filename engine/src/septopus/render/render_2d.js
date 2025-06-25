@@ -34,7 +34,7 @@ const config = {
 
 const env = {
     pen: null,
-    scale: 30,            //scale, more big more details
+    scale: 20,            //scale, more big more details
     offset: [0, 0],       //
     size: [0, 0],         //canvas size as meter
     side: [0, 0],         //block side
@@ -194,7 +194,6 @@ const self = {
         self.avatar();              //drawing player;
     },
 
-    //[dx,dy] is the 2D map real distance
     cvsMove:(dx,dy)=>{
         env.offset[0]-=dx;
         env.offset[1]+=dy;
@@ -229,16 +228,22 @@ export default {
         env.pen=null;
     },
     control:{
-        scale:(point,delta)=>{
-            //console.log(point,delta);
-            console.log(`Scale on ${JSON.stringify(point)} by delta ${delta}`);
-            const dx=2,dy=1,ds=1
-            self.cvsScale(dx,dy,ds);
+        scale:(cx,cy,rate)=>{
+            //console.log(`Scale on ${JSON.stringify(point)} by delta ${delta}`);
+            const pCtoB=TwoObject.calculate.distance.c2b;
+            const rotation=0;
+            const dx=pCtoB(cx, rotation ,env.scale,env.ratio,env.density);
+            const dy=pCtoB(cy, rotation ,env.scale,env.ratio,env.density);
+            const cs=(rate-1) * env.scale;
+            self.cvsScale(dx,dy,cs);
             self.render();
         },
         move:(cx,cy)=>{
-            //console.log(`Canvas change: [${cx},${cy}]`);
-            self.cvsMove(cx,cy);
+            const pCtoB=TwoObject.calculate.distance.c2b;
+            const rotation=0;
+            const dx=pCtoB(cx, rotation ,env.scale,env.ratio,env.density);
+            const dy=pCtoB(cy, rotation ,env.scale,env.ratio,env.density);
+            self.cvsMove(dx,dy);
             self.render();
         },
         select:(pos,cfg)=>{
