@@ -19,7 +19,6 @@ import ThreeObject from "../three/entry";
 import Touch from "../lib/touch";
 import Toolbox from "../lib/toolbox";
 
-
 import * as THREE from "three";
 
 const reg = {
@@ -74,11 +73,16 @@ const config = {
 }
 
 const env = {
+    //position: [0, 0],       //[left,top],DOM offset      
+    mobile:false,
     locked: false,          //whether lock the movement input
     limit: null,            //limit of movement
-    moving: false,          //whether moving, for mobile
-    position: [0, 0],         //[left,top],DOM offset      
-    touch: null,
+    moving: false,          //whether moving, for mobile  
+    screen:{
+        touch:null,
+        distance:0,
+        width:0,
+    }         
 };
 
 const todo = {
@@ -221,12 +225,10 @@ const self = {
                 //console.log(`Cross block from ${JSON.stringify(player.location)} to ${JSON.stringify([x, y])}`);
                 const change = self.cross(player.location.block, [x, y], player.location.extend);
                 const tasks = VBW.cache.get(["task", cache.container, cache.world]);
-                //console.log(JSON.stringify(change));
 
                 if (change.load.length !== 0) {
                     for (let i = 0; i < change.load.length; i++) {
                         const bk = change.load[i];
-                        //tasks.push({adjunct:"block",action:"load",param:{x:bk[0],y:bk[1]}});
                         tasks.push({ block: bk, action: "load" });
                     }
                 }
@@ -234,7 +236,6 @@ const self = {
                 if (change.destroy.length !== 0) {
                     for (let i = 0; i < change.destroy.length; i++) {
                         const bk = change.destroy[i];
-                        //tasks.push({adjunct:"block",action:"unload",param:{x:bk[0],y:bk[1]}});
                         tasks.push({ block: bk, action: "unload" });
                     }
                 }
@@ -332,11 +333,22 @@ const self = {
         return VBW.stop.check(pos, stops, cfg);
     },
 
+    getAngle:(ak)=>{
+        if(env.mobile){
+            const rate=env.screen.distance/env.screen.width
+            return Math.PI * 0.5 * rate;
+        }else{
+            return ak;
+        }
+    },
+
     //Frame Synchronization, movement here to imply
     action: () => {
         const camera = cache.camera;
-        const dis = [config.move.distance, config.move.angle];
+        const dis = [config.move.distance, self.getAngle(config.move.angle)];
         const ak = camera.rotation.y;
+
+        //console.log(JSON.stringify(env.screen));
 
         //1.deal with keyboard inputs.
         let moved = false, rotated = false;
@@ -598,26 +610,32 @@ const self = {
         });
 
         Touch.on(id,"touchStart",(point)=>{
-            env.touch = point;
+            env.screen.touch = point;
         });
 
         //2.touchmove for head rotation
         Touch.on(id,"touchMove",(point,distance)=>{
-            const dx = point[0] - env.touch[0];
-            //const dy = point[1] - env.touch[1];
+            const dx = point[0] - env.screen.touch[0];
+            env.screen.distance=distance;
             if(dx > 0){   //swipe right
                 VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_LEFT]);
             }else{      //swipe left
                 VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
             }
-            env.touch = point;
+            env.screen.touch = point;
         });
 
         Touch.on(id,"touchEnd",()=>{
-            env.touch=null;
+            env.screen.touch=null;
+            env.screen.distance=0;
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_LEFT]);
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
         });
+    },
+    setWidth:(dom_id)=>{
+        const el=document.querySelector(`#${dom_id} canvas`);
+        if (!el) return false;
+        env.screen.width=el.width;
     },
 }
 
@@ -637,28 +655,30 @@ const control_fpv = {
         if (cache.container !== null) return false;
         console.log(`Start to get the input from outside, bind html events.`);
 
-        const device = VBW.cache.get(["env", "device"]);
+        //0.get canvas width
+        self.setWidth(dom_id);
 
-        //0.add keyboard listener and screen control
+        //1.add keyboard listener and screen control
+        const device = VBW.cache.get(["env", "device"]);
+        env.mobile=device.mobile;       
         VBW.queue.init(config.queue);
         if (device.mobile) {
-            //self.screen(dom_id);
             self.touch(dom_id);
         } else {
             self.keyboard();
             self.editControl(dom_id);
         }
 
-        //1.set the related link
+        //2.set the related link
         self.autocache(dom_id);
 
-        //2.set frame sync function
+        //3.set frame sync function
         const chain = ["block", dom_id, cache.world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
         queue.push({ name: "movement", fun: self.action });
 
-        //3.flip the code --> key to key --> code, run once.
+        //4.flip the code --> key to key --> code, run once.
         if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
     },
 }
