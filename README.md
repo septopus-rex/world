@@ -1,6 +1,6 @@
 # Septopus World
 
-[Septopus](https://septopus.xyz) virtual world project at [Launch Period](https://septopus.xyz/declaration#launch-period). 
+* [Septopus](https://septopus.xyz) virtual world project at [Launch Period](https://septopus.xyz/declaration#launch-period) 2025.6.19 00:00 ~ 2027.6.18 23:59.
 
 ## Goal
 
@@ -9,7 +9,7 @@
 
 ## Demo
 
-* Engine test: [https://world.septopus.xyz/demo](https://world.septopus.xyz/demo)
+* 3D Engine Demo: [https://world.septopus.xyz/demo](https://world.septopus.xyz/demo)
 * Contract: [https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet](https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet)
 
 ## Roadmap
