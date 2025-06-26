@@ -71,6 +71,7 @@ const events={
 //1. adjuncts;                  //including objects, lights and more
 //2. player, or player basic parameters;
 //3. system env;
+//4. bag system
 
 const config={
     default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [ "ACTION_0", "ACTION_1"] , 4, 0],
@@ -90,7 +91,7 @@ const config={
             [[3,1,2],0,0.3],                //["PLAYER_ROTAIION_Z", "SET", 0.3 ]     
         ],
     },
-    style:{
+    style:{     //trigger object in 3D scene style
         color: 0xff3298,
         opacity:0.8,
     },
