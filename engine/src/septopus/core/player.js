@@ -24,9 +24,13 @@ const config = {
         world: 0,
         position: [8, 14, 0],
         rotation: [0, 0, 0],
-        stop:-1,
-        //headAx: "y",
+        stop:{
+            on:false,               //whether on stop ( including adjunct type )
+            adjunct:"",             //adjunct support stop attribution, need to figure out
+            index:0,                //adjunct index
+        },
         extend: 2,
+        posture: 0,                 //movement posture. ["stand","walking","running","climbing","squatting","lying"]
     },
     body: {
         height: 1.7,

@@ -2,7 +2,8 @@
  * Basic component - Stop
  *
  * @fileoverview
- *  1. Stop use from move in.
+ *  1. Stop player from going cross.
+ *  2. Support player to stand on.
  *
  * @author Fuu
  * @date 2025-04-23
@@ -275,7 +276,7 @@ const self = {
         },
 
         // whether in stop projection surface
-        projection:  (px, py, stops)=>{
+        projection:(px, py, stops)=>{
             const list = {};
             
             for (let i in stops) {
@@ -342,14 +343,16 @@ const self = {
 					arr.push({
                         stop:false,
                         way:def.HEAD_STOP,
-                        index:parseInt(id)
+                        index:parseInt(id),
+                        orgin:row.orgin,
                     });
 				}else if(zmin<stand+body && zmin>=stand+cap){
                     //b.normal stop 
 					arr.push({
                         stop:true,
                         way:def.BODY_STOP,
-                        index:parseInt(id)
+                        index:parseInt(id),
+                        orgin:row.orgin,
                     });
 				}else{
                     //c.stop on foot
@@ -358,13 +361,15 @@ const self = {
 						arr.push({
                             stop:true,
                             way:def.FOOT_STOP,
-                            index:parseInt(id)
+                            index:parseInt(id),
+                            orgin:row.orgin,
                         });
 					}else{
 						arr.push({
                             stop:false,
                             delta:zd,
-                            index:parseInt(id)
+                            index:parseInt(id),
+                            orgin:row.orgin,
                         });
 					}
 				}
@@ -381,6 +386,7 @@ const self = {
 					rst.stop=true;
 					rst.index=row.index;
 					rst.way=row.way;
+                    rst.orgin=row.orgin;
 					return rst;
 				}
 				
@@ -391,6 +397,7 @@ const self = {
 			}
 			if(max!=null){
 				rst.index=max.index;
+                rst.orgin=arr[max.index].orgin;
 				rst.delta=max.delta;
 			}
 			return rst;
@@ -428,15 +435,13 @@ const basic_stop = {
 		const list=self.calculate.projection(dx,dy,stops);
 		if(Toolbox.empty(list)) return rst;
 		rst.interact=true;
-        
-        //console.log(list);
 
         //2.check position of stop;
 		const cap=cfg.cap+(cfg.pre!==undefined?cfg.pre:0)
         const body=cfg.height;
 		const arr=self.calculate.relationZ(stand,body,cap,cfg.elevation,list);
 
-        //console.log(arr);
+        console.log(arr);
         
         //3.filter out the target stop for movement;
 		const fs=self.calculate.filter(arr);

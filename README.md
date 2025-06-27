@@ -25,7 +25,7 @@
 * Infrastructure of Septopus will be launched in virtual world. Different from the old Web2.0/Web2.5 way. Rule Center, King Center, AI center and dApps are put into virtual world. 
 * Improve and fix bugs of program.
 * Rule functions can be tested.
-* King functions can be tested. 
+* King functions can be tested.
 * AI for Septopus can be tested.
 
 ### Step3 ( 3 month ): Septopus World On Line
