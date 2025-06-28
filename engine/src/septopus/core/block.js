@@ -92,6 +92,12 @@ const self={
         animate:(mesh)=>{
             console.log(mesh);
         },
+        setting:()=>{
+            return {
+                default:config,
+                definition:def,
+            }
+        },
     },
     menu:{
         pop:(std)=>{

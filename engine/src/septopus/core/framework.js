@@ -19,7 +19,9 @@ import Toolbox from "../lib/toolbox";
 import TriggerBuilder from "../lib/builder";
 
 const cache = {
-    setting:CONFIG,
+    setting:{
+        system:CONFIG,
+    },
 };
 
 const def={
@@ -42,6 +44,9 @@ const config = {
         "task",         //task list keyname
         "modified",     //modified block data keyname
     ],
+    hookKey:{
+        config:"setting",
+    }
 }
 
 const self = {
@@ -66,7 +71,6 @@ const self = {
         return self.cache.get(queue_chain);
     },
     getNameByShort: (short) => {
-        //console.log(cache.map)
         if (cache.map[short] === undefined) return false;
         return cache.map[short];
     },
@@ -80,7 +84,6 @@ const self = {
         return self.cache.get(["block", dom_id, world, `${x}_${y}`, "elevation"]);
     },
     getRawByName:(name,list)=>{
-        //console.log(name,list);
         if(!cache.map[name]) return {error:"Invalid adjunct name"};
         const short=cache.map[name];
         for(let i=0;i<list.length;i++){
@@ -95,11 +98,11 @@ const self = {
     component: {
         //component registion
         reg: (cfg, component) => {
+            //console.log(cfg, component);
             if (!cache.component) return { error: "Framework is not init yet." };
             if (!cfg.name) return { error: "Invalid component register information." };
 
             cache.component[cfg.name] = cfg;
-            //cache.component[cfg.name].func=component;
 
             //1.attatch to cache,and create map
             if (cfg.short !== undefined) {
@@ -320,7 +323,6 @@ const self = {
                     if(!single.event) continue;
                     const key=`${name}_${i}_event`;
                     if(!Framework.event.exsist(key,x,y,world,dom_id)){
-                        console.log(`Binding ${key}`);
                         const fun=TriggerBuilder.get(single.event,{},Framework);
                         Framework.event.on(key,fun,{x:x,y:y,world:world,container:dom_id});
                     }
@@ -379,7 +381,6 @@ const self = {
         const raw_chain = ["block", dom_id, world, `${x}_${y}`, "std"];
         const map = self.cache.get(raw_chain);
         if(map.error) return map;
-        //console.log(map);
 
         //0.prepare basic parameters
         const stds = {};
@@ -490,7 +491,6 @@ const self = {
             Framework.block.attribute[task.action](x,y,!task.param?{}:task.param,world,dom_id);
             return self.excute(arr, dom_id, world, ck, failed);
         }
-        //console.log(`Not block, ready to adjunct modification.`)
 
         //2.adjunct task;
         if(!Framework[task.adjunct] ||
@@ -503,27 +503,21 @@ const self = {
         const fun=Framework[task.adjunct].attribute[task.action];
 
         //2.1. get raw data of adjunct
-        //console.log(`Ready to get adjunct data.`)
         const key=`${task.x}_${task.y}`;
         const d_chain=["block",dom_id,world,key,"raw","data"];
-        //console.log(d_chain);
         if(!self.cache.exsist(d_chain)){
             return self.excute(arr, dom_id, world, ck, failed);
         }
 
         //2.2. backup the old raw data.
-        // console.log(`Ready to backup`);
         // const backuped=self.block.attribute.backup(task.x,task.y,{},world,dom_id);
         // if(backuped!==true){
         //     return self.excute(arr, dom_id, world, ck, failed);
         // }
 
         //2.3. get new raw data
-        //console.log(`Ready to get raw`)
         const block_raw=self.cache.get(d_chain);
-        //const raw_index=1;
         const raw=self.getRawByName(task.adjunct,block_raw[def.INDEX_OF_RAW_ON_CHAIN_DATA]);
-        //console.log(`Raw data of wall`,raw);
         task.limit!==undefined?fun(task.param,raw,task.limit):fun(task.param,raw);
         
 
@@ -604,7 +598,6 @@ const Framework = {
      * @return void
      */
     mode:(mode,target,ck,cfg)=>{
-        //console.log(mode,target);
         const {x,y,world,container}=target;
         switch (mode) {
             case "normal":
@@ -691,7 +684,7 @@ const Framework = {
      * @return void
      */
     loop: (ev) => {
-        //console.log(ev);
+
         //1.get the active scene
         const current_chain = ["active", "current"];
         if (!self.cache.exsist(current_chain)) return false;

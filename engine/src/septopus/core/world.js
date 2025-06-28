@@ -494,7 +494,9 @@ const self={
         UI.show("menu",menus,cfg_menu);
     },
     autoBind:()=>{
-        API.bind("height","getSlot",(data)=>{
+        const target="height";
+        const key="getSlot"
+        API.bind(target,key,(data)=>{
             VBW.time.calc(data);
             VBW.weather.calc(data);
         });
