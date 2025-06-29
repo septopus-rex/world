@@ -12,10 +12,10 @@
 import * as THREE from "three";
 const self={
     /*按照给定的值生成box外轮廓线的方法
-     * @param	size	array		//[x,y,z]的数据
-     * @param	pos		array		//[ox,oy,oz]的数据 
-     * @param	ro		array		//[rx,ry,rz]的数据
-     * @param	pd		number	    //轮廓偏移的位置
+     * @param size array    //[x,y,z]的数据
+     * @param pos array //[ox,oy,oz]的数据 
+     * @param ro array  //[rx,ry,rz]的数据
+     * @param pd number    //轮廓偏移的位置
      * */
     get:  (size, pos, ro, pd, color)=>{
         const d = pd + pd

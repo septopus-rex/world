@@ -153,9 +153,9 @@ const self={
             const [va,adjs,status]=obj;
             const s=side[0],hs=0.5*s;
             const bh=config.basic*cvt;
-			const data={
-				x:s,y:s,z:va*cvt+bh,        //if va===0, there still be a box
-				ox:hs,oy:hs,oz:va*cvt*0.5-bh*0.5,
+            const data={
+                x:s,y:s,z:va*cvt+bh,        //if va===0, there still be a box
+                ox:hs,oy:hs,oz:va*cvt*0.5-bh*0.5,
                 rx:0,ry:0,rz:0,
                 status:status,
                 elevation:va*cvt,
@@ -164,7 +164,7 @@ const self={
                     color:config.color,
                     repeat:config.repeat,
                 },
-			}
+}
             return [data];
         },
 

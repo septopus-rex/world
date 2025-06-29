@@ -17,9 +17,9 @@ const def={
     "INDEX_OF_POSITION":        1,
     "INDEX_OF_ROTATION":        2,
     "TYPE_OF_STOP":             3,
-    "BODY_STOP":                1,		//stop the body
-    "FOOT_STOP":                2,		//stop on foot
-    "HEAD_STOP":                3,		//stop beyond header
+    "BODY_STOP":                1,  //stop the body
+    "FOOT_STOP":                2,  //stop on foot
+    "HEAD_STOP":                3,  //stop beyond header
 }
 
 const reg = {
@@ -46,10 +46,10 @@ const config = {
         opacity:0.8,
     },
     stop:{
-        'BODY_STOP':1,		//stop the body
-        'FOOT_STOP':2,		//stop on foot
-        'HEAD_STOP':3,		//stop beyond header
-	},
+        'BODY_STOP':1,//stop the body
+        'FOOT_STOP':2,//stop on foot
+        'HEAD_STOP':3,//stop beyond header
+},
 }
 
 const valid={
@@ -317,19 +317,19 @@ const self = {
         },
         
         /** player Z position calculation
-		 * @param   {number}    stand       //player stand height
-		 * @param	{number}    body        //player body height
-		 * @param	{number}    cap         //max height player can go cross
-		 * @param	{number}    elevation    //player elevacation
-		 * @param	{object[]}  list        //{id:stop,id:stop,...}, stop list to check
-		 * 
-		 * */
-		relationZ:(stand,body,cap,elevation,list)=>{
+ * @param   {number}    stand       //player stand height
+ * @param{number}    body        //player body height
+ * @param{number}    cap         //max height player can go cross
+ * @param{number}    elevation    //player elevacation
+ * @param{object[]}  list        //{id:stop,id:stop,...}, stop list to check
+ * 
+ * */
+relationZ:(stand,body,cap,elevation,list)=>{
             console.log(`Basic, player stand height: ${stand}, 
                 body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
-			const arr=[];
-			for(let id in list){
-				const row=list[id];
+const arr=[];
+for(let id in list){
+const row=list[id];
                 const {position,size}=row;
                 const zmin=position[2]-size[2]*0.5-row.elevation;
                 const zmax=position[2]+size[2]*0.5-row.elevation;
@@ -338,70 +338,70 @@ const self = {
 
                 //TODO, here to check BALL type stop
 
-				if(zmin>=stand+body){
+if(zmin>=stand+body){
                     //a.stop upon header
-					arr.push({
+arr.push({
                         stop:false,
                         way:def.HEAD_STOP,
                         index:parseInt(id),
                         orgin:row.orgin,
                     });
-				}else if(zmin<stand+body && zmin>=stand+cap){
+}else if(zmin<stand+body && zmin>=stand+cap){
                     //b.normal stop 
-					arr.push({
+arr.push({
                         stop:true,
                         way:def.BODY_STOP,
                         index:parseInt(id),
                         orgin:row.orgin,
                     });
-				}else{
+}else{
                     //c.stop on foot
-					const zd=zmax-stand; //height to cross
-					if(zd>cap){
-						arr.push({
+const zd=zmax-stand; //height to cross
+if(zd>cap){
+arr.push({
                             stop:true,
                             way:def.FOOT_STOP,
                             index:parseInt(id),
                             orgin:row.orgin,
                         });
-					}else{
-						arr.push({
+}else{
+arr.push({
                             stop:false,
                             delta:zd,
                             index:parseInt(id),
                             orgin:row.orgin,
                         });
-					}
-				}
-			}
-			return arr;
-		},
+}
+}
+}
+return arr;
+},
 
         filter: (arr) => {
-			const rst={stop:false,index:-1}
-			let max=null;
-			for(let i in arr){
-				const row=arr[i];
-				if(row.stop==true){
-					rst.stop=true;
-					rst.index=row.index;
-					rst.way=row.way;
+const rst={stop:false,index:-1}
+let max=null;
+for(let i in arr){
+const row=arr[i];
+if(row.stop==true){
+rst.stop=true;
+rst.index=row.index;
+rst.way=row.way;
                     rst.orgin=row.orgin;
-					return rst;
-				}
-				
-				if(row.delta!=undefined){
-					if(max==null) max=row;
-					if(row.delta>max.delta) max=row;
-				}
-			}
-			if(max!=null){
-				rst.index=max.index;
+return rst;
+}
+
+if(row.delta!=undefined){
+if(max==null) max=row;
+if(row.delta>max.delta) max=row;
+}
+}
+if(max!=null){
+rst.index=max.index;
                 rst.orgin=arr[max.index].orgin;
-				rst.delta=max.delta;
-			}
-			return rst;
-		},
+rst.delta=max.delta;
+}
+return rst;
+},
 
     }
 }
@@ -427,30 +427,30 @@ const basic_stop = {
             interact:false,     //whether on a stop
             move:true,          //whether allow to move
             index:-1            //index of stops
-        }		
-		if(stops.length<1) return rst;
+        }
+if(stops.length<1) return rst;
         
         //1.check whether interact with stop from top view ( in projection ).
-		const [dx,dy,stand]=pos;       //player position
-		const list=self.calculate.projection(dx,dy,stops);
-		if(Toolbox.empty(list)) return rst;
-		rst.interact=true;
+const [dx,dy,stand]=pos;       //player position
+const list=self.calculate.projection(dx,dy,stops);
+if(Toolbox.empty(list)) return rst;
+rst.interact=true;
 
         //2.check position of stop;
-		const cap=cfg.cap+(cfg.pre!==undefined?cfg.pre:0)
+const cap=cfg.cap+(cfg.pre!==undefined?cfg.pre:0)
         const body=cfg.height;
-		const arr=self.calculate.relationZ(stand,body,cap,cfg.elevation,list);
+const arr=self.calculate.relationZ(stand,body,cap,cfg.elevation,list);
 
         console.log(arr);
         
         //3.filter out the target stop for movement;
-		const fs=self.calculate.filter(arr);
+const fs=self.calculate.filter(arr);
         console.log(fs);
-		rst.move=!fs.stop;
-		rst.index=fs.index;
-		if(fs.delta!=undefined) rst.delta=fs.delta;
+rst.move=!fs.stop;
+rst.index=fs.index;
+if(fs.delta!=undefined) rst.delta=fs.delta;
 
-		return rst;
+return rst;
     },
 }
 

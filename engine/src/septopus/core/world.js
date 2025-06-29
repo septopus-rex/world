@@ -102,6 +102,33 @@ const def={
     }
 }
 
+const config_onchain={
+    name: "Septopus World",
+    desc: "Septopus world, a virtual block world on chain.",
+    size: [4096, 4096],           //limit of world 
+    side: [16, 16],             //size of block
+    accuracy: 1000,             //accuracy, 1000 as 1mm. Default data as "m"
+    block: {
+        size: [16, 16, 20],
+        diff: 3,                //周边4块的平均高度的升高值
+        status: ["raw", "public", "private", "locked"],
+    },
+    time: {                          //设计速度为正常的20倍，相当于现实世界1年，VBW里20年
+        slot: 1000,                  //1 hour 对应的slot数量，需要计算清晰
+        year: 360,                   //每年的天数
+        month: 12,                   //月数
+        hour: 24,                    //每天小时数
+    },
+    sky: {                           //天空的设置
+        sun: 1,                      //太阳的数量
+        moon: 3,                     //月亮的数量
+    },
+    weather: {
+        category: ["cloud", "rain", "snow"],
+        grading: 8,                  //每种气候里面的分级
+    },             
+};
+
 const config={
     render:"rd_three",
     controller:"con_first",
@@ -518,7 +545,7 @@ const World={
 
     /**
      * Stop render, needed in UI mode
-     * @param	{string}    dom_id		- container DOM id
+     * @param   {string}    dom_id- container DOM id
      * @void
      * */
     stop:(dom_id)=>{
@@ -528,7 +555,7 @@ const World={
 
     /**
      * start render, needed in UI mode
-     * @param	{string}    dom_id		- container DOM id
+     * @param   {string}    dom_id- container DOM id
      * @void
      * */
     start:(dom_id)=>{
@@ -539,7 +566,7 @@ const World={
 
     /**
      * Septopus World entry, start from 0 to start the 3D world
-     * @param	{string}    id		- container DOM id
+     * @param{string}    id- container DOM id
      * @param   {function}  ck      - callback when loaded
      * @param   {object}    [cfg]   - {contract:methods,fullscreen:false}, config setting
      * @return {boolean} - whether load successful
@@ -678,7 +705,7 @@ const World={
 
     /**
      * set block to edit mode
-     * @param	{string}    dom_id  - container DOM id
+     * @param{string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {number}    x       - coordination X
      * @param   {number}    y       - coordination y
@@ -730,7 +757,7 @@ const World={
 
     /**
      * set block back to normal mode
-     * @param	{string}    dom_id  - container DOM id
+     * @param{string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {function}  ck      - callback function
      * @callback - whether done callback
@@ -756,11 +783,11 @@ const World={
 
     /**
      * select single adjunct in a editing block
-     * @param	{string}    dom_id  - container DOM id
+     * @param{string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {number}    x       - coordination X
      * @param   {number}    y       - coordination y
-     * @param	{string}    name    - selected adjunct name
+     * @param{string}    name    - selected adjunct name
      * @param   {number}    index   - selected adjunct index
      * @param   {number}    face    - selected adjunct face in ["x","y","z","-x","-y","-z"]
      * @param   {function}  ck      - callback function
@@ -790,8 +817,8 @@ const World={
 
     /**
      * excute modify tasks entry
-     * @param	{object[]}  tasks   - modify tasks need to do
-     * @param	{string}    dom_id  - container DOM id
+     * @param{object[]}  tasks   - modify tasks need to do
+     * @param{string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {function}  ck      - callback function
      * @callback - whether done callback

@@ -321,11 +321,11 @@ const self = {
             const row = stops[i];
             const obj = {
                 geometry: {
-                    type:row.orgin.type,
-                    params:{
-                        size:row.size,
-                        position:row.position,
-                        rotation:row.rotation,
+                    type: row.orgin.type,
+                    params: {
+                        size: row.size,
+                        position: row.position,
+                        rotation: row.rotation,
                     },
                 },
                 material: row.material,
@@ -495,7 +495,7 @@ export default {
     },
 
     /**  renderer entry
-     * @param	{string}    dom_id		//container dom id
+     * @param{string}    dom_id//container dom id
      * @param   {number[]}  block       //block coordinaration,[ x,y,world ]
      * */
     show: (dom_id, block) => {

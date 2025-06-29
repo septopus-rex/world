@@ -46,9 +46,9 @@ const config = {
         ],
     },
     color: 0xf8f8f8,        //color for pending
-    grid: {					//grid setting
-        offsetX: 0.5,		//offset of X
-        offsetY: 0.5,		//offset of Y
+    grid: {                 //grid setting
+        offsetX: 0.5,           //offset of X
+        offsetY: 0.5,           //offset of Y
     },
     stop: {
         offset: 0.05,

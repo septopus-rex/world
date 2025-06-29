@@ -14,7 +14,7 @@ const self={
 
 const TriggerBuilder = {
     /**  get frame sync function
-     * @param	{object[]}    actions   //formatted action array
+     * @param   {object[]}    actions   //formatted action array
      * @param   {object}      cfg       //{}
      * @param   {object}      VBW      //VBW root to get all data needed
      * */

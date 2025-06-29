@@ -42,7 +42,7 @@ const config = {
         rotate: 0.05,        //rotate speed of head
         span: 0.31,          //max height of walking
         squat: 0.1,          //height of squat
-        jump: 1,	            //max height of jump
+        jump: 1,            //max height of jump
         death: 3,            //min height of fall death
         speed: 1.5,          //move speed, meter/second
         strength: 1,         //strength time for jump. Not used yet.

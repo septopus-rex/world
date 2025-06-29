@@ -43,6 +43,37 @@ const events={
 }
 
 const mock = {
+    basic:()=>{
+        // return {
+        //     name: "Septopus World",      //World name
+        //     desc: "Septopus world, a virtual block world on chain.",     //Description of world
+        //     size: [4096, 4096],           //limit of world 
+        //     side: [16, 16],             //size of block
+        //     accuracy: 1000,             //accuracy, 1000 as 1mm. Default data as "m"
+        //     block: {
+        //         size: [16, 16, 20],
+        //         diff: 3,                //周边4块的平均高度的升高值
+        //         status: ["raw", "public", "private", "locked"],
+        //     },
+        //     time: {                          //设计速度为正常的20倍，相当于现实世界1年，VBW里20年
+        //         year:12,        // months/year
+        //         month:30,       // days/month
+        //         day:24,         // hours/day
+        //         hour:60,        // minutes/hour
+        //         minute:60,      // seconds/minute
+        //         second:1000,    // microseconds/second
+        //         speed:20,       // rate =  septopus year / reality year
+        //     },
+        //     sky: {                           //天空的设置
+        //         sun: 1,                      //太阳的数量
+        //         moon: 3,                     //月亮的数量
+        //     },
+        //     weather: {
+        //         category: ["cloud", "rain", "snow"],
+        //         grading: 8, 
+        //     },
+        // }
+    },
     world: () => {
         return {
             name: "Septopus World",      //World name
@@ -56,10 +87,13 @@ const mock = {
                 status: ["raw", "public", "private", "locked"],
             },
             time: {                          //设计速度为正常的20倍，相当于现实世界1年，VBW里20年
-                slot: 1000,                  //1 hour 对应的slot数量，需要计算清晰
-                year: 360,                   //每年的天数
-                month: 12,                   //月数
-                hour: 24,                    //每天小时数
+                year:12,        // months/year
+                month:30,       // days/month
+                day:24,         // hours/day
+                hour:60,        // minutes/hour
+                minute:60,      // seconds/minute
+                second:1000,    // microseconds/second
+                speed:20,       // rate =  septopus year / reality year
             },
             sky: {                           //天空的设置
                 sun: 1,                      //太阳的数量
@@ -67,10 +101,11 @@ const mock = {
             },
             weather: {
                 category: ["cloud", "rain", "snow"],
-                grading: 8,                  //每种气候里面的分级
+                grading: 8, 
             },
-            address: "SOLANA_ACCOUNT_ADDRESS",      //数据合约地址
-            blockheight: 1123456,                   //世界启动的slot                 
+            address: "SOLANA_ACCOUNT_ADDRESS",      //signature of this world init
+            blockheight: 1123456,                   //slot height when this world starts
+            index:0,            //index of world               
         };
     },
     block: (x, y, world) => {
@@ -323,7 +358,7 @@ const API = {
      * get modules data by IDs
      * !important, here to implement the frontend cache for module, can get data from indexedDB
      * @param   {number[]}    IDs   //module ids.
-     * @param   {function}    ck	//callback function
+     * @param   {function}    ck    //callback function
      * @returns 
      * @return {object} key(`${id}`) --> MODULE_DATA
      */

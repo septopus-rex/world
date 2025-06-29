@@ -17,7 +17,7 @@ const reg = {
 }
 
 const config = {
-    background:"#eeeeee",
+    background: "#eeeeee",
     scale: {
         range: 18,       //scale to show range
         detail: 8,       //scale to show details
@@ -45,7 +45,7 @@ const env = {
     ratio: 1,            // for apple device, screen ratio
     convert: 1,          //system convert 
     player: null,        //link to player
-    selected:[0,0],      //selected block
+    selected: [0, 0],      //selected block
 };
 
 const test = {
@@ -117,7 +117,7 @@ const self = {
         return true;
     },
     clean: () => {
-        TwoObject.drawing.clean(env,config.background);
+        TwoObject.drawing.clean(env, config.background);
     },
     grid: () => {
         const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
@@ -140,47 +140,47 @@ const self = {
         }
 
         let xstep = xs
-        for (let i = 0; i < xn; i++) {		//绘制竖线
+        for (let i = 0; i < xn; i++) {//绘制竖线
             const pa = [xstep, ys], pb = [xstep, ye];
             line(env, [pa, pb], cfg);
             xstep += s;
         }
     },
-    block:(x,y,cfg)=>{
-		//const wd=me.core.world,s=wd.sideLength,env=run[target];
-        const s=env.side[0];
-		const ps=[[(x-1)*s,(y-1)*s],[(x-1)*s,y*s],[x*s,y*s],[x*s,(y-1)*s]];
-        TwoObject.drawing.fill(env,ps,cfg);
-	},
+    block: (x, y, cfg) => {
+        //const wd=me.core.world,s=wd.sideLength,env=run[target];
+        const s = env.side[0];
+        const ps = [[(x - 1) * s, (y - 1) * s], [(x - 1) * s, y * s], [x * s, y * s], [x * s, (y - 1) * s]];
+        TwoObject.drawing.fill(env, ps, cfg);
+    },
     active: () => {
-        const [x,y]=env.selected;
-		if(x > 0 && y > 0){
-			self.block(x,y,{width:1,color:'#00CCBB',anticlock:true});
-            
-		}
-		const [px,py]=env.player.location.block;
-		self.block(px,py,{width:1,color:'#99CCBB',anticlock:true});
+        const [x, y] = env.selected;
+        if (x > 0 && y > 0) {
+            self.block(x, y, { width: 1, color: '#00CCBB', anticlock: true });
+
+        }
+        const [px, py] = env.player.location.block;
+        self.block(px, py, { width: 1, color: '#99CCBB', anticlock: true });
         //self.block(px+2,py+2,{width:1,color:'#00CCDD',anticlock:true})
     },
     detail: () => {
 
     },
     avatar: () => {
-        const player=env.player.location;
-        const [x,y]=player.block;
-        const pos=player.position;
-        const ro=player.rotation;
-        const s=env.side[0];
-        const hf=Math.PI*config.fov/360,rz=ro[1],r=s,zj=Math.PI/2
+        const player = env.player.location;
+        const [x, y] = player.block;
+        const pos = player.position;
+        const ro = player.rotation;
+        const s = env.side[0];
+        const hf = Math.PI * config.fov / 360, rz = ro[1], r = s, zj = Math.PI / 2
 
-        const cen=[(x-1)*s+pos[0],(y-1)*s+pos[1]];
-        const p={center:cen,start:-rz-hf-zj,end:-rz+hf-zj,radius:r}
-        const grad=[
-        	[0.2,'#666666'],
-        	[1,'#FFFFFF'],
+        const cen = [(x - 1) * s + pos[0], (y - 1) * s + pos[1]];
+        const p = { center: cen, start: -rz - hf - zj, end: -rz + hf - zj, radius: r }
+        const grad = [
+            [0.2, '#666666'],
+            [1, '#FFFFFF'],
         ];
-        const cfg={width:1,color:"#FF99CC",anticlock:true,grad:grad,alpha:0.3};
-        TwoObject.drawing.sector(env,p,cfg);
+        const cfg = { width: 1, color: "#FF99CC", anticlock: true, grad: grad, alpha: 0.3 };
+        TwoObject.drawing.sector(env, p, cfg);
 
         // const pp={center:cen,start:0,end:Math.PI+Math.PI,radius:1};
         // const pcfg={width:1,color:"#FF9999",anticlock:true};
@@ -194,14 +194,14 @@ const self = {
         self.avatar();              //drawing player;
     },
 
-    cvsMove:(dx,dy)=>{
-        env.offset[0]-=dx;
-        env.offset[1]+=dy;
+    cvsMove: (dx, dy) => {
+        env.offset[0] -= dx;
+        env.offset[1] += dy;
     },
-    cvsScale:(dx,dy,ds)=>{
-        env.offset[0]-=dx;
-        env.offset[1]+=dy;
-        env.scale+=ds;
+    cvsScale: (dx, dy, ds) => {
+        env.offset[0] -= dx;
+        env.offset[1] += dy;
+        env.scale += ds;
     },
 };
 
@@ -221,43 +221,43 @@ export default {
         //console.log(`Showing 2D map of ${dom_id}`, env.pen);
         self.render();
     },
-    clean:(dom_id)=>{
+    clean: (dom_id) => {
         const el = document.getElementById(dom_id);
-        el.innerHTML="";
-        
-        env.pen=null;
+        el.innerHTML = "";
+
+        env.pen = null;
     },
-    control:{
-        scale:(cx,cy,rate)=>{
+    control: {
+        scale: (cx, cy, rate) => {
             //console.log(`Scale on ${JSON.stringify(point)} by delta ${delta}`);
-            const pCtoB=TwoObject.calculate.distance.c2b;
-            const rotation=0;
-            const dx=pCtoB(cx, rotation ,env.scale,env.ratio,env.density);
-            const dy=pCtoB(cy, rotation ,env.scale,env.ratio,env.density);
-            const cs=(rate-1) * env.scale;
-            self.cvsScale(dx,dy,cs);
+            const pCtoB = TwoObject.calculate.distance.c2b;
+            const rotation = 0;
+            const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
+            const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
+            const cs = (rate - 1) * env.scale;
+            self.cvsScale(dx, dy, cs);
             self.render();
         },
-        move:(cx,cy)=>{
-            const pCtoB=TwoObject.calculate.distance.c2b;
-            const rotation=0;
-            const dx=pCtoB(cx, rotation ,env.scale,env.ratio,env.density);
-            const dy=pCtoB(cy, rotation ,env.scale,env.ratio,env.density);
-            self.cvsMove(dx,dy);
+        move: (cx, cy) => {
+            const pCtoB = TwoObject.calculate.distance.c2b;
+            const rotation = 0;
+            const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
+            const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
+            self.cvsMove(dx, dy);
             self.render();
         },
-        select:(pos,cfg)=>{
+        select: (pos, cfg) => {
             //console.log(pos,cfg);
             //const cp=root.calc.pCtoB(pos, env.scale, env.offset, env.multi, env.pxperm);
-            const pCtoB=TwoObject.calculate.point.c2b;
-            const point=pCtoB(pos, env.scale, env.offset, env.density, env.ratio);
-            const x=Math.ceil(point[0]/env.side[0]);
-            const y=Math.ceil(point[1]/env.side[1]);
+            const pCtoB = TwoObject.calculate.point.c2b;
+            const point = pCtoB(pos, env.scale, env.offset, env.density, env.ratio);
+            const x = Math.ceil(point[0] / env.side[0]);
+            const y = Math.ceil(point[1] / env.side[1]);
 
             //console.log(x,y);
             self.render();
-            self.block(x,y,cfg);
-            return [x,y];
+            self.block(x, y, cfg);
+            return [x, y];
         },
     }
 }

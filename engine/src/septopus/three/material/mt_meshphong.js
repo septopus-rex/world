@@ -33,7 +33,7 @@ const material_meshphong={
             color: 0xFFFFFF,
             map:params.texture
         };
-		return new THREE.MeshPhongMaterial(cfg);
+        return new THREE.MeshPhongMaterial(cfg);
     },
     standard:()=>{
         return self.sample();
