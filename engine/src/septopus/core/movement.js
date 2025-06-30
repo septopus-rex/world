@@ -88,6 +88,9 @@ const vbw_movement={
             return {rotation:[0,0,-diff[1]]};
         },
     },
+    scale:{
+
+    },
     test:()=>{
         console.log(player);
     },

@@ -52,7 +52,7 @@ const self={
     },
 }
 
-export default {
+const Septo={
     //replace the default console UI, to improve the UX
     UI:(ui)=>{
 
@@ -110,3 +110,5 @@ export default {
         });
     },
 }
+
+export default Septo;

@@ -234,7 +234,7 @@ const self = {
             world: 0,           // default world
             containers: {},     // dom_id -->  raw data and structed data here
             current: "",        // current active render
-            mode:1,             // [1.normal; 2.edit; 3.game; ]
+            mode:def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
         }
         return true;
     },
@@ -600,8 +600,8 @@ const Framework = {
     mode:(mode,target,ck,cfg)=>{
         const {x,y,world,container}=target;
         switch (mode) {
-            case "normal":
-                cache.active.mode=1;
+            case def.MODE_NORMAL:
+                cache.active.mode=def.MODE_NORMAL;
                 if(cache.block[container] &&
                     cache.block[container][world] && 
                     cache.block[container][world].edit
@@ -611,8 +611,8 @@ const Framework = {
                 ck && ck();
                 break;
 
-            case "edit":
-                cache.active.mode=2;
+            case def.MODE_NORMAL:
+                cache.active.mode=def.MODE_NORMAL;
                 const pre=self.toEdit(x,y,world,container);
                 if(cfg && cfg.selected){
                     const more=self.toSelect(x,y,world,container);
@@ -621,8 +621,13 @@ const Framework = {
                 
                 break;
 
-            case "game":
-                cache.active.mode=3;
+            case def.MODE_GAME:
+                cache.active.mode=def.MODE_GAME;
+
+                break;
+
+            case def.MODE_GHOST:
+                cache.active.mode=def.MODE_GHOST;
 
                 break;
             default:
@@ -707,7 +712,7 @@ const Framework = {
             const key = `${row.x}_${row.y}_${name}_${row.index}`;
             if (map[key] === undefined) continue;
 
-            Framework[name].hooks.animate(map[key]);      //给定threeObject的列表，处理动画效果
+            Framework[name].hooks.animate(map[key]);
         }
 
         //4.frame synchronization queue
