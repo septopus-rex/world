@@ -216,7 +216,7 @@ const self = {
     },
 }
 
-const control_2d = {
+const controller = {
     hooks: self.hooks,
     start: (dom_id) => {
         self.construct(dom_id);
@@ -229,4 +229,4 @@ const control_2d = {
     },
 }
 
-export default control_2d;
+export default controller;

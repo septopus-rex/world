@@ -702,8 +702,8 @@ const Framework = {
 
         const ans = self.getAnimateQueue(world, dom_id);
         const map = self.getAnimateMap(world, dom_id);         
-        console.log(ans);
-        console.log(map);
+        //console.log(ans);
+        //console.log(map);
         //3.animate here. scene as parameters to functions
         // `x_y_adj_index` --> ThreeObject[]
         for (let i = 0; i < ans.length; i++) {

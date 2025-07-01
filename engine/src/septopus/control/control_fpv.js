@@ -640,7 +640,7 @@ const self = {
     },
 }
 
-const control_fpv = {
+const controller = {
     hooks: self.hooks,
     construct: () => {
         const check = document.getElementById(config.id);
@@ -688,4 +688,4 @@ const control_fpv = {
     },
 }
 
-export default control_fpv;
+export default controller;

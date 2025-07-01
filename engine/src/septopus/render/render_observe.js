@@ -26,7 +26,7 @@ const self={
     }
 };
 
-export default {
+const renderer={
     hooks:self.hooks,
     construct:(id)=>{
 
@@ -35,3 +35,5 @@ export default {
 
     },
 }
+
+export default renderer;

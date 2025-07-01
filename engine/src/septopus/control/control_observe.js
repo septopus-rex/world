@@ -27,7 +27,7 @@ const self={
     }
 }
 
-const control_observe={
+const controller={
     hooks:self.hooks, 
     construct:()=>{
         const check=document.getElementById(config.id);
@@ -48,4 +48,4 @@ const control_observe={
     },
 }
 
-export default control_observe;
+export default controller;

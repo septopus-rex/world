@@ -478,7 +478,7 @@ const self = {
     }
 };
 
-export default {
+const renderer={
     hooks: self.hooks,
 
     construct: (width, height, dom_id) => {
@@ -541,3 +541,5 @@ export default {
         self.clean(scene, x, y, world, dom_id);
     },
 }
+
+export default renderer;

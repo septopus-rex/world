@@ -205,7 +205,7 @@ const self = {
     },
 };
 
-export default {
+const renderer = {
     hooks: self.hooks,
     show: (dom_id) => {
         if (env.pen === null) {
@@ -261,3 +261,5 @@ export default {
         },
     }
 }
+
+export default renderer;
