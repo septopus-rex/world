@@ -12,14 +12,14 @@
 import Toolbox from "../lib/toolbox";
 import Calc from "../lib/calc";
 
-const def={
-    "INDEX_OF_SIZE":            0,
-    "INDEX_OF_POSITION":        1,
-    "INDEX_OF_ROTATION":        2,
-    "TYPE_OF_STOP":             3,
-    "BODY_STOP":                1,  //stop the body
-    "FOOT_STOP":                2,  //stop on foot
-    "HEAD_STOP":                3,  //stop beyond header
+const def = {
+    "INDEX_OF_SIZE": 0,
+    "INDEX_OF_POSITION": 1,
+    "INDEX_OF_ROTATION": 2,
+    "TYPE_OF_STOP": 3,
+    "BODY_STOP": 1,  //stop the body
+    "FOOT_STOP": 2,  //stop on foot
+    "HEAD_STOP": 3,  //stop beyond header
 }
 
 const reg = {
@@ -28,11 +28,11 @@ const reg = {
     short: 0x00b4,
     desc: "Special component to avoid move forward.",
     version: "1.0.0",
-    definition:def,
+    definition: def,
 }
 
 const config = {
-    default: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 1,2025],
+    default: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 1, 2025],
     definition: {
         2025: [
             ['x', 'y', 'z'],      //0.
@@ -41,62 +41,62 @@ const config = {
             'type',             //3. stop type, [1.box, 2.ball, ], box default
         ],
     },
-    style:{
+    style: {
         color: 0xffffff,
-        opacity:0.8,
+        opacity: 0.8,
     },
-    stop:{
-        'BODY_STOP':1,//stop the body
-        'FOOT_STOP':2,//stop on foot
-        'HEAD_STOP':3,//stop beyond header
-},
+    stop: {
+        'BODY_STOP': 1,//stop the body
+        'FOOT_STOP': 2,//stop on foot
+        'HEAD_STOP': 3,//stop beyond header
+    },
 }
 
-const valid={
-    x:(val,cvt,std)=>{
-        console.log(val,cvt,std);
-        const n=parseInt(val);
-        if(isNaN(n)) return false;
-        if(n<=0) return false;
-        return parseFloat(n/cvt);
+const valid = {
+    x: (val, cvt, std) => {
+        console.log(val, cvt, std);
+        const n = parseInt(val);
+        if (isNaN(n)) return false;
+        if (n <= 0) return false;
+        return parseFloat(n / cvt);
     },
-    y:(val,cvt,std)=>{
-        const n=parseInt(val);
-        if(isNaN(n)) return false;
-        if(n<=0) return false;
-        return parseFloat(n/cvt);
+    y: (val, cvt, std) => {
+        const n = parseInt(val);
+        if (isNaN(n)) return false;
+        if (n <= 0) return false;
+        return parseFloat(n / cvt);
     },
-    z:(val,cvt,std)=>{
-        const n=parseInt(val);
-        if(isNaN(n)) return false;
-        if(n<=0) return false;
-        return parseFloat(n/cvt);
+    z: (val, cvt, std) => {
+        const n = parseInt(val);
+        if (isNaN(n)) return false;
+        if (n <= 0) return false;
+        return parseFloat(n / cvt);
     },
-    ox:(val,cvt,std)=>{
-        const n=parseInt(val);
-        if(isNaN(n)) return false;
-        if(n<=0) return false;
+    ox: (val, cvt, std) => {
+        const n = parseInt(val);
+        if (isNaN(n)) return false;
+        if (n <= 0) return false;
         return n;
     },
-    oy:(val,cvt,std)=>{
-        const n=parseInt(val);
-        if(isNaN(n)) return false;
-        if(n<=0) return false;
-        return parseFloat(n/cvt);
+    oy: (val, cvt, std) => {
+        const n = parseInt(val);
+        if (isNaN(n)) return false;
+        if (n <= 0) return false;
+        return parseFloat(n / cvt);
     },
-    oz:(val,cvt,std)=>{
-        const n=parseInt(val);
-        if(isNaN(n)) return false;
-        if(n<=0) return false;
-        return parseFloat(n/cvt);
+    oz: (val, cvt, std) => {
+        const n = parseInt(val);
+        if (isNaN(n)) return false;
+        if (n <= 0) return false;
+        return parseFloat(n / cvt);
     },
-    rx:(val,cvt,std)=>{
+    rx: (val, cvt, std) => {
 
     },
-    ry:(val,cvt,std)=>{
+    ry: (val, cvt, std) => {
 
     },
-    rz:(val,cvt,std)=>{
+    rz: (val, cvt, std) => {
 
     },
 }
@@ -107,39 +107,45 @@ const self = {
             return reg;
         },
     },
-    menu:{
+    menu: {
         pop: (std) => {
             return [
-                {type:"button",label:"Info",icon:"",action:(ev)=>{
-                    console.log(ev);
-                }},
-                {type:"button",label:"Remove",icon:"",action:(ev)=>{
-                    console.log(ev);
-                }},
-                {type:"button",label:"Copy",icon:"",action:(ev)=>{
-                    console.log(ev);
-                }},
+                {
+                    type: "button", label: "Info", icon: "", action: (ev) => {
+                        console.log(ev);
+                    }
+                },
+                {
+                    type: "button", label: "Remove", icon: "", action: (ev) => {
+                        console.log(ev);
+                    }
+                },
+                {
+                    type: "button", label: "Copy", icon: "", action: (ev) => {
+                        console.log(ev);
+                    }
+                },
             ];
         },
         sidebar: (std) => {
-            const animate_options=[
-                {key:"Null",value:0},
+            const animate_options = [
+                { key: "Null", value: 0 },
             ];
             return {
-                size:[
-                    {type:"number",key:"x",value:std.x,label:"X",icon:"",desc:"X of wall",valid:(val,cvt)=>{return valid.x(val,cvt,std)}},
-                    {type:"number",key:"y",value:std.y,label:"Y",icon:"",desc:"Y of wall",valid:(val,cvt)=>{return valid.y(val,cvt,std)}},
-                    {type:"number",key:"z",value:std.z,label:"Z",icon:"",desc:"Z of wall",valid:(val,cvt)=>{return valid.z(val,cvt,std)}},
+                size: [
+                    { type: "number", key: "x", value: std.x, label: "X", icon: "", desc: "X of wall", valid: (val, cvt) => { return valid.x(val, cvt, std) } },
+                    { type: "number", key: "y", value: std.y, label: "Y", icon: "", desc: "Y of wall", valid: (val, cvt) => { return valid.y(val, cvt, std) } },
+                    { type: "number", key: "z", value: std.z, label: "Z", icon: "", desc: "Z of wall", valid: (val, cvt) => { return valid.z(val, cvt, std) } },
                 ],
-                position:[
-                    {type:"number",key:"ox",value:std.ox,label:"X",icon:"",desc:"X of postion",valid:(val,cvt)=>{return valid.ox(val,cvt,std)}},
-                    {type:"number",key:"oy",value:std.oy,label:"Y",icon:"",desc:"Y of postion",valid:(val,cvt)=>{return valid.oy(val,cvt,std)}},
-                    {type:"number",key:"oz",value:std.oz,label:"Z",icon:"",desc:"Z of postion",valid:(val,cvt)=>{return valid.oz(val,cvt,std)}},
+                position: [
+                    { type: "number", key: "ox", value: std.ox, label: "X", icon: "", desc: "X of postion", valid: (val, cvt) => { return valid.ox(val, cvt, std) } },
+                    { type: "number", key: "oy", value: std.oy, label: "Y", icon: "", desc: "Y of postion", valid: (val, cvt) => { return valid.oy(val, cvt, std) } },
+                    { type: "number", key: "oz", value: std.oz, label: "Z", icon: "", desc: "Z of postion", valid: (val, cvt) => { return valid.oz(val, cvt, std) } },
                 ],
-                rotation:[
-                    {type:"number",key:"rx",value:std.rx,label:"X",icon:"",desc:"X of rotation",valid:(val,cvt)=>{return valid.rx(val,cvt,std)}},
-                    {type:"number",key:"ry",value:std.ry,label:"Y",icon:"",desc:"Y of rotation",valid:(val,cvt)=>{return valid.ry(val,cvt,std)}},
-                    {type:"number",key:"rz",value:std.rz,label:"Z",icon:"",desc:"Z of rotation",valid:(val,cvt)=>{return valid.rz(val,cvt,std)}},
+                rotation: [
+                    { type: "number", key: "rx", value: std.rx, label: "X", icon: "", desc: "X of rotation", valid: (val, cvt) => { return valid.rx(val, cvt, std) } },
+                    { type: "number", key: "ry", value: std.ry, label: "Y", icon: "", desc: "Y of rotation", valid: (val, cvt) => { return valid.ry(val, cvt, std) } },
+                    { type: "number", key: "rz", value: std.rz, label: "Z", icon: "", desc: "Z of rotation", valid: (val, cvt) => { return valid.rz(val, cvt, std) } },
                 ],
             }
         },
@@ -247,10 +253,10 @@ const self = {
                         rotation: [row.rx, row.ry, row.rz],
                     },
                 }
-                if(row.stop){
-                    obj.stop={
-                        opacity:config.style.opacity,
-                        color:!config.style.color?0xfffffff:config.style.color
+                if (row.stop) {
+                    obj.stop = {
+                        opacity: config.style.opacity,
+                        color: !config.style.color ? 0xfffffff : config.style.color
                     }
                 }
                 if (row.animate !== null) obj.animate = row.animate;
@@ -263,7 +269,7 @@ const self = {
             return ds;
         },
     },
-    calculate:{
+    calculate: {
         //TODO, calculate the related blocks;
         blocks: (pos, delta, x, y, side) => {
             const blocks = [[x, y]];
@@ -276,13 +282,13 @@ const self = {
         },
 
         // whether in stop projection surface
-        projection:(px, py, stops)=>{
+        projection: (px, py, stops) => {
             const list = {};
-            
+
             for (let i in stops) {
-                const row= stops[i];
-                const {size,position,side,block,orgin} = row;
-                
+                const row = stops[i];
+                const { size, position, side, block, orgin } = row;
+
                 switch (orgin.type) {
                     case "box":
                         const xmin = position[0] - size[0] * 0.5, xmax = position[0] + size[0] * 0.5;
@@ -299,109 +305,109 @@ const self = {
                         break;
 
                     case "ball":
-                        const radius=0.5*size[0];
-                        const center=[position[0],position[1]];     //ball center
-                        const dis=Calc.distance([px,py],center);
+                        const radius = 0.5 * size[0];
+                        const center = [position[0], position[1]];     //ball center
+                        const dis = Calc.distance([px, py], center);
                         //console.log(radius,dis);
-                        if(dis<radius){
+                        if (dis < radius) {
                             list[i] = row;
                         }
                         break;
-                
+
                     default:
                         break;
                 }
-                
+
             }
             return list;
         },
-        
+
         /** player Z position calculation
- * @param   {number}    stand       //player stand height
- * @param{number}    body        //player body height
- * @param{number}    cap         //max height player can go cross
- * @param{number}    elevation    //player elevacation
- * @param{object[]}  list        //{id:stop,id:stop,...}, stop list to check
- * 
- * */
-relationZ:(stand,body,cap,elevation,list)=>{
+         * @param   {number}    stand       //player stand height
+         * @param{number}    body        //player body height
+         * @param{number}    cap         //max height player can go cross
+         * @param{number}    elevation    //player elevacation
+         * @param{object[]}  list        //{id:stop,id:stop,...}, stop list to check
+         * 
+         * */
+        relationZ: (stand, body, cap, elevation, list) => {
             console.log(`Basic, player stand height: ${stand}, 
                 body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
-const arr=[];
-for(let id in list){
-const row=list[id];
-                const {position,size}=row;
-                const zmin=position[2]-size[2]*0.5-row.elevation;
-                const zmax=position[2]+size[2]*0.5-row.elevation;
-                
+            const arr = [];
+            for (let id in list) {
+                const row = list[id];
+                const { position, size } = row;
+                const zmin = position[2] - size[2] * 0.5 - row.elevation;
+                const zmax = position[2] + size[2] * 0.5 - row.elevation;
+
                 //console.log(`Object[${id}], stop from ${zmin} to ${zmax}`,row);
 
                 //TODO, here to check BALL type stop
 
-if(zmin>=stand+body){
+                if (zmin >= stand + body) {
                     //a.stop upon header
-arr.push({
-                        stop:false,
-                        way:def.HEAD_STOP,
-                        index:parseInt(id),
-                        orgin:row.orgin,
+                    arr.push({
+                        stop: false,
+                        way: def.HEAD_STOP,
+                        index: parseInt(id),
+                        orgin: row.orgin,
                     });
-}else if(zmin<stand+body && zmin>=stand+cap){
+                } else if (zmin < stand + body && zmin >= stand + cap) {
                     //b.normal stop 
-arr.push({
-                        stop:true,
-                        way:def.BODY_STOP,
-                        index:parseInt(id),
-                        orgin:row.orgin,
+                    arr.push({
+                        stop: true,
+                        way: def.BODY_STOP,
+                        index: parseInt(id),
+                        orgin: row.orgin,
                     });
-}else{
+                } else {
                     //c.stop on foot
-const zd=zmax-stand; //height to cross
-if(zd>cap){
-arr.push({
-                            stop:true,
-                            way:def.FOOT_STOP,
-                            index:parseInt(id),
-                            orgin:row.orgin,
+                    const zd = zmax - stand; //height to cross
+                    if (zd > cap) {
+                        arr.push({
+                            stop: true,
+                            way: def.FOOT_STOP,
+                            index: parseInt(id),
+                            orgin: row.orgin,
                         });
-}else{
-arr.push({
-                            stop:false,
-                            delta:zd,
-                            index:parseInt(id),
-                            orgin:row.orgin,
+                    } else {
+                        arr.push({
+                            stop: false,
+                            delta: zd,
+                            index: parseInt(id),
+                            orgin: row.orgin,
                         });
-}
-}
-}
-return arr;
-},
+                    }
+                }
+            }
+            return arr;
+        },
 
         filter: (arr) => {
-const rst={stop:false,index:-1}
-let max=null;
-for(let i in arr){
-const row=arr[i];
-if(row.stop==true){
-rst.stop=true;
-rst.index=row.index;
-rst.way=row.way;
-                    rst.orgin=row.orgin;
-return rst;
-}
+            const rst = { stop: false, index: -1 }
+            let max = null;
+            for (let i in arr) {
+                const row = arr[i];
+                if (row.stop == true) {
+                    rst.stop = true;
+                    rst.index = row.index;
+                    rst.way = row.way;
+                    rst.orgin = row.orgin;
+                    return rst;
+                }
 
-if(row.delta!=undefined){
-if(max==null) max=row;
-if(row.delta>max.delta) max=row;
-}
-}
-if(max!=null){
-rst.index=max.index;
-                rst.orgin=arr[max.index].orgin;
-rst.delta=max.delta;
-}
-return rst;
-},
+                if (row.delta != undefined) {
+                    if (max == null) max = row;
+                    if (row.delta > max.delta) max = row;
+                }
+            }
+            if (max != null) {
+                rst.index = max.index;
+                rst.orgin = arr[max.index].orgin;
+                rst.delta = max.delta;
+            }
+            return rst;
+        },
 
     }
 }
@@ -411,7 +417,7 @@ const basic_stop = {
     transform: self.transform,
     attribute: self.attribute,
     calculate: self.calculate,
-    menu:self.menu,
+    menu: self.menu,
 
     /** 
      * check whether stopped or on a stop
@@ -423,34 +429,34 @@ const basic_stop = {
      */
     check: (pos, stops, cfg) => {
         //console.log(stops);
-        const rst={ //stop result
-            interact:false,     //whether on a stop
-            move:true,          //whether allow to move
-            index:-1            //index of stops
+        const rst = { //stop result
+            interact: false,     //whether on a stop
+            move: true,          //whether allow to move
+            index: -1            //index of stops
         }
-if(stops.length<1) return rst;
-        
+        if (stops.length < 1) return rst;
+
         //1.check whether interact with stop from top view ( in projection ).
-const [dx,dy,stand]=pos;       //player position
-const list=self.calculate.projection(dx,dy,stops);
-if(Toolbox.empty(list)) return rst;
-rst.interact=true;
+        const [dx, dy, stand] = pos;       //player position
+        const list = self.calculate.projection(dx, dy, stops);
+        if (Toolbox.empty(list)) return rst;
+        rst.interact = true;
 
         //2.check position of stop;
-const cap=cfg.cap+(cfg.pre!==undefined?cfg.pre:0)
-        const body=cfg.height;
-const arr=self.calculate.relationZ(stand,body,cap,cfg.elevation,list);
+        const cap = cfg.cap + (cfg.pre !== undefined ? cfg.pre : 0)
+        const body = cfg.height;
+        const arr = self.calculate.relationZ(stand, body, cap, cfg.elevation, list);
 
         console.log(arr);
-        
-        //3.filter out the target stop for movement;
-const fs=self.calculate.filter(arr);
-        console.log(fs);
-rst.move=!fs.stop;
-rst.index=fs.index;
-if(fs.delta!=undefined) rst.delta=fs.delta;
 
-return rst;
+        //3.filter out the target stop for movement;
+        const fs = self.calculate.filter(arr);
+        console.log(fs);
+        rst.move = !fs.stop;
+        rst.index = fs.index;
+        if (fs.delta != undefined) rst.delta = fs.delta;
+
+        return rst;
     },
 }
 
