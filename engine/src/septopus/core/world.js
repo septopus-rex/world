@@ -593,12 +593,6 @@ const World={
         console.log("Framework:",VBW)
         if(!VBW.datasource) return UI.show("toast",`No datasource for the next step.`,{type:"error"});
 
-        //1.1. set subcribe
-        if(cfg.networks){
-            //console.log(cfg.networks);
-            //VBW.datasource.subcribe(cfg.networks);
-        }
-
         VBW.player.start(dom_id,(start)=>{
             UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
             const world=start.world;
