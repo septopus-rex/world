@@ -23,10 +23,8 @@
 const reg={
     name:"trigger",
     category:"basic",
-    short:0x00b8,
     desc:"Trigger of engine, for building games.",
     version:"1.0.0",
-    //definition:def,
 }
 
 const events={

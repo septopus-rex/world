@@ -11,22 +11,12 @@
 const reg={
     name:"NAME",        //Name of adjunct
     category:'adjunct', //category of adjunct
-    short:0x6666,       //Unique index of adjunct, u32
     desc:"Sample adjunct.",     //Desription of adjunct
     version:"1.0.0",            //Version
 }
 
 const config={
-    default:[],
-    definition:{
-        2025:[
-            ['x','y','z'],
-            ['ox','oy','oz'],
-            ['rx','ry','rz'],
-            'TEXTURE_ID',
-            ['rpx','rpy'],
-        ],
-    }
+
 }
 
 const self={

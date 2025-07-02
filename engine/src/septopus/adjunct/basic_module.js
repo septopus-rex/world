@@ -9,36 +9,14 @@
  * @date 2025-04-29
  */
 
-//definit as const value
-const def={
-    "INDEX_OF_SIZE":            0,
-    "INDEX_OF_POSITION":        1,
-    "INDEX_OF_ROTATION":        2,
-    "RESOURCE_ID_ON_CHAIN":     3,
-    "ANIMATION_OPTION":         4,
-    "AUTO_STOP":                5,
-}
-
 const reg={
     name:"module",
     category:'basic',
-    short:0x00a4,
     desc:"Load 3D module to locate on block",
     version:"1.0.0",
 }
 
 const config={
-    default:[[3,4,3],[8,12,0],[0,0,0],27,0,1,2025],
-    definition:{
-        2025:[
-            ['x','y','z'],      //0.
-            ['ox','oy','oz'],   //1.
-            ['rx','ry','rz'],   //2.
-            'module_id',        //3.
-            "animate",          //4.
-            "stop",             //5.
-        ],
-    },
     color:0x3456f3,
     stop:{
         offset: 0.05,

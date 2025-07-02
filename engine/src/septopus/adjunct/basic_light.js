@@ -12,7 +12,6 @@
 const reg={
     name:"light",
     category:"basic",
-    short:0x00b3,
     desc:"",
     version:"1.0.0",
 }

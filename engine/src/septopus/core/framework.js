@@ -43,6 +43,7 @@ const config = {
         "active",       //edit active status keyname
         "task",         //task list keyname
         "modified",     //modified block data keyname
+        "def",          //world and adjunct definition
     ],
     hookKey:{
         config:"setting",
@@ -105,13 +106,13 @@ const self = {
             cache.component[cfg.name] = cfg;
 
             //1.attatch to cache,and create map
-            if (cfg.short !== undefined) {
-                if (cache.map[cfg.short] !== undefined) return { error: `Componet "${cfg.name}" short name conflict with "${cache.map[cfg.short]}", ignore it.` };
-                cache.map[cfg.short] = cfg.name;
+            // if (cfg.short !== undefined) {
+            //     if (cache.map[cfg.short] !== undefined) return { error: `Componet "${cfg.name}" short name conflict with "${cache.map[cfg.short]}", ignore it.` };
+            //     cache.map[cfg.short] = cfg.name;
 
-                if (cache.map[cfg.name] !== undefined) return { error: `Componet "${cfg.name}" short name exsist", ignore it.` };
-                cache.map[cfg.name] = cfg.short;
-            }
+            //     if (cache.map[cfg.name] !== undefined) return { error: `Componet "${cfg.name}" short name exsist", ignore it.` };
+            //     cache.map[cfg.name] = cfg.short;
+            // }
 
             //2.attatch component functions to root
             if (Framework[cfg.name] !== undefined) return { error: `Invalid name "${cfg.name}" to add to framework.` };

@@ -12,10 +12,8 @@
 const reg = {
     name: "wall",
     category: "adjunct",
-    short: 0x00a1,
     desc: "Wall with texture. Hole on it will be support soon.",
     version: "1.0.0",
-    //definition: def,
 }
 
 const config = {

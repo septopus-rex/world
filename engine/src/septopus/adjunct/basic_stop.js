@@ -15,7 +15,6 @@ import Calc from "../lib/calc";
 const reg = {
     name: "stop",
     category: "basic",
-    short: 0x00b4,
     desc: "Special component to avoid move forward.",
     version: "1.0.0",
 }

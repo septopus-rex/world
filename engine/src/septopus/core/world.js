@@ -528,6 +528,23 @@ const self={
             VBW.weather.calc(data);
         });
     },
+    setup:(wd)=>{
+        console.log(`setup system by data on chain`,wd);
+
+        //1.create adjunct map;
+        if(!wd.adjunct) UI.show("toast",`Adjunct definition missing.`,{type:"error"});
+        const map={},def={};
+        for(let adj in wd.adjunct){
+            const row=wd.adjunct[adj];
+            def[adj]=row.definition;
+            if(adj===`common`) continue;
+            map[adj]=row.short;
+            map[row.short]=adj;
+        }
+        VBW.cache.set(["map"],map);
+        VBW.cache.set(["def"],def);
+
+    },
 }   
 
 const World={
@@ -599,7 +616,8 @@ const World={
             VBW.event.start(world,dom_id);      //listen to events
 
             VBW.datasource.world(start.world,(wd)=>{
-                console.log(wd);
+
+                self.setup(wd);
 
                 UI.show("toast",`World data load from network successful.`);
                 //1.2. set `block checker` and `resource check`.

@@ -10,8 +10,7 @@
 
 const reg={
     name:"box",
-    category:'basic',
-    short:0x00a2,               
+    category:'basic',         
     desc:"",
     version:"1.0.0",
 }
