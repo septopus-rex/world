@@ -599,6 +599,8 @@ const World={
             VBW.event.start(world,dom_id);      //listen to events
 
             VBW.datasource.world(start.world,(wd)=>{
+                console.log(wd);
+
                 UI.show("toast",`World data load from network successful.`);
                 //1.2. set `block checker` and `resource check`.
                 const chain = ["block", dom_id, world, "loop"];
@@ -610,7 +612,7 @@ const World={
                 const index=start.world;
                 const [x,y]=start.block;
                 const ext=!start.extend?1:start.extend;
-                const limit=wd.size;
+                const limit=wd.range;
                 VBW.datasource.view(x,y,ext,index,(map)=>{
                     //console.log(map);
                     if(map.loaded!==undefined){
@@ -660,6 +662,7 @@ const World={
             return true;
         }
 
+        //FIXME, here to fix how to get range of world
         const ext=0;
         const limit=[4096,4096];
         //const limit = VBW.cache.get(["setting", "limit"]);

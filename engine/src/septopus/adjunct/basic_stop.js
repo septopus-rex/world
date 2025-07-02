@@ -12,35 +12,15 @@
 import Toolbox from "../lib/toolbox";
 import Calc from "../lib/calc";
 
-const def = {
-    "INDEX_OF_SIZE": 0,
-    "INDEX_OF_POSITION": 1,
-    "INDEX_OF_ROTATION": 2,
-    "TYPE_OF_STOP": 3,
-    "BODY_STOP": 1,  //stop the body
-    "FOOT_STOP": 2,  //stop on foot
-    "HEAD_STOP": 3,  //stop beyond header
-}
-
 const reg = {
     name: "stop",
     category: "basic",
     short: 0x00b4,
     desc: "Special component to avoid move forward.",
     version: "1.0.0",
-    definition: def,
 }
 
 const config = {
-    default: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 1, 2025],
-    definition: {
-        2025: [
-            ['x', 'y', 'z'],      //0.
-            ['ox', 'oy', 'oz'],   //1.
-            ['rx', 'ry', 'rz'],   //2.
-            'type',             //3. stop type, [1.box, 2.ball, ], box default
-        ],
-    },
     style: {
         color: 0xffffff,
         opacity: 0.8,

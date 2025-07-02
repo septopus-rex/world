@@ -9,42 +9,16 @@
  * @date 2025-04-24
  */
 
-//definit as const value
-const def = {
-    "INDEX_OF_SIZE": 0,
-    "INDEX_OF_POSITION": 1,
-    "INDEX_OF_ROTATION": 2,
-    "RESOURCE_ID_ON_CHAIN": 3,
-    "TEXTURE_REPEAT_SETTING": 4,
-    "ANIMATION_OPTION": 5,
-    "AUTO_STOP": 6,
-    "INDEX_OF_HOLE": 7,
-}
-
 const reg = {
     name: "wall",
     category: "adjunct",
     short: 0x00a1,
     desc: "Wall with texture. Hole on it will be support soon.",
     version: "1.0.0",
-    definition: def,
+    //definition: def,
 }
 
 const config = {
-    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, 1, [], 2025],
-    hole: [0.5, 0.6, 0.9, 0.6, 2025],        //[ offset,width,height,windowsill,version ]
-    definition: {
-        2025: [
-            ['x', 'y', 'z'],        //0.
-            ['ox', 'oy', 'oz'],     //1.
-            ['rx', 'ry', 'rz'],     //2.
-            'texture_id',           //3.
-            ['rpx', 'rpy'],         //4.
-            'animate',              //5.
-            'stop',                 //6.whether stop
-            ["hole"],               //7.hole arr
-        ],
-    },
     color: 0xf8f8f8,        //color for pending
     grid: {                 //grid setting
         offsetX: 0.5,           //offset of X

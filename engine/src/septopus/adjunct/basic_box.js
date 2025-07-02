@@ -8,38 +8,15 @@
  * @date 2025-04-23
  */
 
-const def={
-    "INDEX_OF_SIZE":            0,
-    "INDEX_OF_POSITION":        1,
-    "INDEX_OF_ROTATION":        2,
-    "RESOURCE_ID_ON_CHAIN":     3,
-    "TEXTURE_REPEAT_SETTING":   4,
-    "ANIMATION_OPTION":         5,
-    "AUTO_STOP":                6,
-}
-
 const reg={
     name:"box",
     category:'basic',
-    short:0x00a2,
+    short:0x00a2,               
     desc:"",
     version:"1.0.0",
-    definition:def,
 }
 
 const config={
-    default:[[1.2,1.2,1.2],[8,8,2],[0,0,0],2,[1,1],0,0,1,2025],
-    definition:{
-        2025:[
-            ['x','y','z'],      //0.
-            ['ox','oy','oz'],   //1.
-            ['rx','ry','rz'],   //2.
-            'texture_id',       //3.
-            ['rpx','rpy'],      //4.
-            "animate",          //5.
-            "stop",             //6.
-        ],
-    },
     color:0xf3f5f6,
     stop:{
         offset: 0.05,

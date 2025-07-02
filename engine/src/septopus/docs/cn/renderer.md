@@ -11,9 +11,9 @@
 
 |  资源类型   | 主要用途  | 代码位置  |
 |  ----  | ----  | ----  |
-|  3D渲染器  | 主渲染器，显示世界的3D场景  | `./render/render_3d`  |
-|  2D渲染器 | 2D地图渲染器，显示小地图  | `./render/render_2d`  |
-|  观察渲染器  | 显示其他3D软件生成的模型  | `./render/render_observe`  |
+|  3D渲染器  | 主渲染器，显示世界的3D场景  | `./render/render_3d.js`  |
+|  2D渲染器 | 2D地图渲染器，显示小地图  | `./render/render_2d.js`  |
+|  观察渲染器  | 显示其他3D软件生成的模型  | `./render/render_observe.js`  |
 
 ## 程序结构
 

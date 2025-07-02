@@ -9,16 +9,16 @@
  * @date 2025-04-23
  */
 
-const def={
-    "INDEX_OF_SIZE":            0,
-    "INDEX_OF_POSITION":        1,
-    "INDEX_OF_ROTATION":        2,
-    "TRIGGER_SHAPE_OPTION":     3,      //["box","ball","more"]
-    "TRIGGER_OPTION":           4,      //[""]
-    "ACTION_GROUP":             5, 
-    "CONTRACT_ID_ON_CHAIN":     6,
-    "RUN_ONE_TIME":             7,
-};
+// const def={
+//     "INDEX_OF_SIZE":            0,
+//     "INDEX_OF_POSITION":        1,
+//     "INDEX_OF_ROTATION":        2,
+//     "TRIGGER_SHAPE_OPTION":     3,      //["box","ball","more"]
+//     "TRIGGER_OPTION":           4,      //[""]
+//     "ACTION_GROUP":             5, 
+//     "CONTRACT_ID_ON_CHAIN":     6,
+//     "RUN_ONE_TIME":             7,
+// };
 
 const reg={
     name:"trigger",
@@ -26,7 +26,7 @@ const reg={
     short:0x00b8,
     desc:"Trigger of engine, for building games.",
     version:"1.0.0",
-    definition:def,
+    //definition:def,
 }
 
 const events={

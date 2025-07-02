@@ -10,39 +10,10 @@
  * @date 2025-07-20
  */
 
+import Toolbox from "../lib/toolbox";
 
 const mock = {
-    basic: () => {
-        // return {
-        //     name: "Septopus World",      //World name
-        //     desc: "Septopus world, a virtual block world on chain.",     //Description of world
-        //     size: [4096, 4096],           //limit of world 
-        //     side: [16, 16],             //size of block
-        //     accuracy: 1000,             //accuracy, 1000 as 1mm. Default data as "m"
-        //     block: {
-        //         size: [16, 16, 20],
-        //         diff: 3,                //周边4块的平均高度的升高值
-        //         status: ["raw", "public", "private", "locked"],
-        //     },
-        //     time: {                          //设计速度为正常的20倍，相当于现实世界1年，VBW里20年
-        //         year:12,        // months/year
-        //         month:30,       // days/month
-        //         day:24,         // hours/day
-        //         hour:60,        // minutes/hour
-        //         minute:60,      // seconds/minute
-        //         second:1000,    // microseconds/second
-        //         speed:20,       // rate =  septopus year / reality year
-        //     },
-        //     sky: {                           //天空的设置
-        //         sun: 1,                      //太阳的数量
-        //         moon: 3,                     //月亮的数量
-        //     },
-        //     weather: {
-        //         category: ["cloud", "rain", "snow"],
-        //         grading: 8, 
-        //     },
-        // }
-    },
+    
     //common world setting
     common: () => {
         return {
@@ -105,7 +76,7 @@ const mock = {
             },
         }
     },
-    adjunct: () => {
+    adjunct: (index) => {
         return {
             common: {
                 definition: {
@@ -127,17 +98,27 @@ const mock = {
             },
             stop: {
                 definition: {
-
+                    "TYPE_OF_STOP": 3,
                 },
+                sample:[[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 1],
+                version:2025,
+                short:0x00b4,
+                code:"JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "SOLANA_PDA_ACCOUNT_OF_BASIC_ADJUNCT",
             },
             trigger: {
                 definition: {
-                    "RESOURCE_ID_ON_CHAIN": 3,
-                    "ANIMATION_OPTION": 4,
-                    "AUTO_STOP": 5,
+                    "TRIGGER_SHAPE_OPTION":     3,      //["box","ball","more"]
+                    "TRIGGER_OPTION":           4,      //[""]
+                    "ACTION_GROUP":             5, 
+                    "CONTRACT_ID_ON_CHAIN":     6,
+                    "RUN_ONE_TIME":             7,
                 },
+                sample:[],
+                version:2025,
+                short:0x00b8,
+                code:"JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "SOLANA_PDA_ACCOUNT_OF_BASIC_ADJUNCT",
             },
@@ -148,6 +129,10 @@ const mock = {
                     "ANIMATION_OPTION": 5,
                     "AUTO_STOP": 6,
                 },
+                sample:[[1.2,1.2,1.2],[8,8,2],[0,0,0],2,[2,2],0,0,1],
+                version:2025,
+                short:0x00a2,
+                code:"JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
@@ -157,6 +142,10 @@ const mock = {
                     "ANIMATION_OPTION": 4,
                     "AUTO_STOP": 5,
                 },
+                sample:[[3,4,3],[8,12,0],[0,0,0],27,0,1],
+                version:2025,
+                short:0x00a4,
+                code:"JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
@@ -168,23 +157,26 @@ const mock = {
                     "AUTO_STOP": 6,
                     "INDEX_OF_HOLE": 7,
                 },
+                sample:[[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, 1],
+                version:2025,
+                short:0x00a1,
+                code:"JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
-
         }
     },
-    world: () => {
+    world: (index) => {
         return {
             name: "Septopus World",      //World name
             desc: "Septopus world, a virtual block world on chain.",     //Description of world
-            size: [4096, 4096],           //limit of world 
+            range: [4096, 4096],        //limit of world 
             side: [16, 16],             //size of block
             accuracy: 1000,             //accuracy, 1000 as 1mm. Default data as "m"
             block: {
-                size: [16, 16, 32],
+                limit: [16, 16, 32],
                 diff: 4,
-                status: ["raw", "public", "private", "locked"],
+                status: ["RAW", "PUBLIC", "PRIVATE", "LOCKED"],
             },
             time: {         //time setting
                 year: 12,        // months/year
@@ -205,8 +197,9 @@ const mock = {
             },
             address: "SOLANA_ACCOUNT_ADDRESS",      //signature of this world init
             blockheight: 1123456,                   //slot height when this world starts
-            index: 0,            //index of world     
-            adjunct: mock.adjunct(),
+            index: index,                       //index of world     
+            adjunct: mock.adjunct(index),
+            data:mock.single(index),
         };
     },
     single: (index) => {
