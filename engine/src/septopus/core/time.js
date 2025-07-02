@@ -19,16 +19,16 @@ const reg={
 const config={
     network:"solana",
     mount:["env","time"],
-    definition:{
-        year:12,        // months/year
-        month:30,       // days/month
-        day:24,         // hours/day
-        hour:60,        // minutes/hour
-        minute:60,      // seconds/minute
-        second:1000,    // microseconds/second
-        start:78000,    // 0 milestone (2027-6-19 00:00)
-        speed:20,       // rate =  septopus year / reality year
-    },
+    // definition:{
+    //     year:12,        // months/year
+    //     month:30,       // days/month
+    //     day:24,         // hours/day
+    //     hour:60,        // minutes/hour
+    //     minute:60,      // seconds/minute
+    //     second:1000,    // microseconds/second
+    //     start:78000,    // 0 milestone (2027-6-19 00:00)
+    //     speed:20,       // rate =  septopus year / reality year
+    // },
 }
 
 const self={

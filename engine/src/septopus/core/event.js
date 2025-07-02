@@ -10,16 +10,11 @@
 
 import VBW  from "./framework";
 
-const def={
-
-};
-
 const reg={
     name:"event",          //register key name
     category:"system",      //component category
     desc:"Septopus event system",
     version:"1.0.0",
-    definition:def,
 }
 
 const runtime={

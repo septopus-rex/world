@@ -18,11 +18,11 @@ const reg={
 const config={
     network:"solana",
     chain:["env","weather"],
-    definition:{
-        type:[12,6],          // type of weather, ["cloud","rain","snow"]
-        grading:[36,2],       // grading of intensity, 0~8
-        wind:[40,2],          // wind intensity, 0~16
-    },
+    // definition:{
+    //     type:[12,6],          // type of weather, ["cloud","rain","snow"]
+    //     grading:[36,2],       // grading of intensity, 0~8
+    //     wind:[40,2],          // wind intensity, 0~16
+    // },
 };
 
 const self={

@@ -32,9 +32,6 @@ const config = {
         "def",          //world and adjunct definition
         "setting",      //system setting
     ],
-    hookKey:{
-        config:"setting",
-    }
 }
 
 const self = {
