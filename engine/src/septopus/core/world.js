@@ -15,8 +15,6 @@
  */
 
 import UI from "../io/io_ui";
-import CONFIG from "./config";
-
 import VBW  from "./framework";
 
 import vbw_sky from "./sky";
@@ -102,33 +100,6 @@ const def={
     }
 }
 
-const config_onchain={
-    name: "Septopus World",
-    desc: "Septopus world, a virtual block world on chain.",
-    size: [4096, 4096],           //limit of world 
-    side: [16, 16],             //size of block
-    accuracy: 1000,             //accuracy, 1000 as 1mm. Default data as "m"
-    block: {
-        size: [16, 16, 20],
-        diff: 3,                //周边4块的平均高度的升高值
-        status: ["raw", "public", "private", "locked"],
-    },
-    time: {                          //设计速度为正常的20倍，相当于现实世界1年，VBW里20年
-        slot: 1000,                  //1 hour 对应的slot数量，需要计算清晰
-        year: 360,                   //每年的天数
-        month: 12,                   //月数
-        hour: 24,                    //每天小时数
-    },
-    sky: {                           //天空的设置
-        sun: 1,                      //太阳的数量
-        moon: 3,                     //月亮的数量
-    },
-    weather: {
-        category: ["cloud", "rain", "snow"],
-        grading: 8,                  //每种气候里面的分级
-    },             
-};
-
 const config={
     render:"rd_three",
     controller:"con_first",
@@ -136,7 +107,11 @@ const config={
     queue:{
         block:"block_loading",
         resource:"resource_loading",
-    }
+    },
+    hook:{
+        register:"reg",
+        initialize:"init",
+    },
 };
 
 const self={
@@ -148,9 +123,9 @@ const self={
      * @returns void
      */
     register:()=>{
-        const regKey=CONFIG.hooks.register;
-        const initKey=CONFIG.hooks.initialize;
-        //console.log(regs);
+        const regKey=config.hook.register;
+        const initKey=config.hook.initialize;
+        
         for(let cat in regs){
             const coms=regs[cat];
             for(let i=0;i<coms.length;i++){
@@ -612,6 +587,7 @@ const World={
 
         VBW.player.start(dom_id,(start)=>{
             UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
+           
             const world=start.world;
             VBW.event.start(world,dom_id);      //listen to events
 
@@ -859,7 +835,6 @@ const World={
             VBW[config.render].show(dom_id,[x,y,world]);
             return ck && ck(true);
         });
-        
     },
 }
 

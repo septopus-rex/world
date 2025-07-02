@@ -92,6 +92,11 @@ const mock = {
                     "ROTATION_X": 0,
                     "ROTATION_Y": 1,
                     "ROTATION_Z": 2,
+                    "MODE_NORMAL":1,                //login player
+                    "MODE_EDIT":2,                  //edit mode on your own block
+                    "MODE_GAME":3,                  //preload all block data
+                    "MODE_GHOST":4,                 //anonymous player, no trig
+                    "INDEX_OF_RAW_ON_CHAIN_DATA":1, //block raw data index on chain
                 },
                 source: "SOLANA_PDA_ACCOUNT_OF_WORLD_COMMON",
                 owner: "",

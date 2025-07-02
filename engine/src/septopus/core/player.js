@@ -151,6 +151,8 @@ const vbw_player = {
     start: (dom_id, ck) => {
         const data = self.getPlayerLocation();
 
+        const body={};
+
         //1.set body height
         data.position[2]+=config.body.height;
 
@@ -160,7 +162,7 @@ const vbw_player = {
         const queue = VBW.cache.get(chain);
         queue.push({ name: "player", fun: vbw_player.autosave });
 
-        return ck && ck(data);
+        return ck && ck(data,body);
     },
 }
 

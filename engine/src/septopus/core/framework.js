@@ -14,24 +14,10 @@
  * @date 2025-04-23
  */
 
-import CONFIG from "./config";
 import Toolbox from "../lib/toolbox";
 import TriggerBuilder from "../lib/builder";
 
-const cache = {
-    setting:{
-        system:CONFIG,
-    },
-};
-
-const def={
-    "MODE_NORMAL":1,                //login player
-    "MODE_EDIT":2,                  //edit mode on your own block
-    "MODE_GAME":3,                  //preload all block data
-    "MODE_GHOST":4,                 //anonymous player, no trigger
-    "INDEX_OF_RAW_ON_CHAIN_DATA":1,
-}
-
+const cache = {};       //global cache
 const config = {
     keys: [             //keys of cache
         "component",    //component keyname
@@ -44,6 +30,7 @@ const config = {
         "task",         //task list keyname
         "modified",     //modified block data keyname
         "def",          //world and adjunct definition
+        "setting",      //system setting
     ],
     hookKey:{
         config:"setting",
@@ -104,15 +91,6 @@ const self = {
             if (!cfg.name) return { error: "Invalid component register information." };
 
             cache.component[cfg.name] = cfg;
-
-            //1.attatch to cache,and create map
-            // if (cfg.short !== undefined) {
-            //     if (cache.map[cfg.short] !== undefined) return { error: `Componet "${cfg.name}" short name conflict with "${cache.map[cfg.short]}", ignore it.` };
-            //     cache.map[cfg.short] = cfg.name;
-
-            //     if (cache.map[cfg.name] !== undefined) return { error: `Componet "${cfg.name}" short name exsist", ignore it.` };
-            //     cache.map[cfg.name] = cfg.short;
-            // }
 
             //2.attatch component functions to root
             if (Framework[cfg.name] !== undefined) return { error: `Invalid name "${cfg.name}" to add to framework.` };
@@ -235,7 +213,7 @@ const self = {
             world: 0,           // default world
             containers: {},     // dom_id -->  raw data and structed data here
             current: "",        // current active render
-            mode:def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
+            mode:cache.def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
         }
         return true;
     },
@@ -518,7 +496,8 @@ const self = {
 
         //2.3. get new raw data
         const block_raw=self.cache.get(d_chain);
-        const raw=self.getRawByName(task.adjunct,block_raw[def.INDEX_OF_RAW_ON_CHAIN_DATA]);
+        const index=cache.def.INDEX_OF_RAW_ON_CHAIN_DATA;
+        const raw=self.getRawByName(task.adjunct,block_raw[index]);
         task.limit!==undefined?fun(task.param,raw,task.limit):fun(task.param,raw);
         
 
@@ -600,6 +579,7 @@ const Framework = {
      */
     mode:(mode,target,ck,cfg)=>{
         const {x,y,world,container}=target;
+        const def=cache.def;
         switch (mode) {
             case def.MODE_NORMAL:
                 cache.active.mode=def.MODE_NORMAL;
