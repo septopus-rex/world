@@ -18,13 +18,11 @@ const reg={
 const config={
     network:"solana",
     chain:["env","weather"],
-    // definition:{
-    //     type:[12,6],          // type of weather, ["cloud","rain","snow"]
-    //     grading:[36,2],       // grading of intensity, 0~8
-    //     wind:[40,2],          // wind intensity, 0~16
-    // },
 };
 
+
+let def=null;
+let counter=0;
 const self={
     hooks:{
         reg:()=>{
@@ -35,15 +33,35 @@ const self={
                 chain:config.chain,
                 value:{
                     hash:"",
-                    depth:0,
+                    category:0,
+                    grade:0,
                 }
             };
         },
     },
-    convert:(hash)=>{
-        //console.log(hash);
-        const value=VBW.cache.get(config.chain);
+    setDef:()=>{
+        def = VBW.cache.get(["env","world","common","weather"],true);
 
+    },
+
+    getValue:(hash,start,step)=>{
+        const str=hash.substring(start+2,start+2+step);
+        //console.log(hash,str,start,step);
+        return parseInt(`0x${str}`);
+    },
+
+    convert:(hash)=>{
+        const value=VBW.cache.get(config.chain);
+        const cat=self.getValue(hash,def.data.category[0],def.data.category[1]);
+        const grade=self.getValue(hash,def.data.grade[0],def.data.grade[1]);
+        const cat_index=cat%def.category.length;
+        const cat_name=def.category[cat_index];
+
+        value.hash=hash;
+        value.category=cat_index;
+        value.grade=grade%def.detail[cat_name].length;
+
+        //console.log(JSON.stringify(value));
     },
 }
 
@@ -52,8 +70,16 @@ const vbw_weather={
     calc:(data)=>{
         if(data.network!==config.network) return false;
         if(!data.hash) return false;
+        if(def===null) self.setDef();
 
-        self.convert(data.hash);
+        if(counter >= def.data.interval){
+            self.convert(data.hash);
+            counter=0;
+        }else{
+            counter+=60;
+        }
+
+        //console.log(counter);
     },
 }
 

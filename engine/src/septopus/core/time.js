@@ -45,7 +45,8 @@ const self={
         },
     },
     setDef:()=>{
-        const basic = VBW.cache.get(["env","world","time"],true);
+        const basic = VBW.cache.get(["env","world","common","time"],true);
+        //console.log(basic);
         def={
             minute:basic.minute,
             hour:basic.minute*basic.hour,

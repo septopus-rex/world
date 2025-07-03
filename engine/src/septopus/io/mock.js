@@ -13,69 +13,6 @@
 import Toolbox from "../lib/toolbox";
 
 const mock = {
-    
-    //common world setting
-    common: () => {
-        return {
-            world: {     //Septopus setting
-                name: "Septopus Worlds",          //Septopus的名称
-                desc: "Septopus description.",   //Septopus世界的描述
-                range: [4096, 4096],              //每个世界的尺寸 
-                side: [16, 16, 64],             //单个block的尺寸限制
-                max: 99,                          //最大世界发行数量
-            },
-            time: {      //time setting
-                year: 12,        // months/year
-                month: 30,       // days/month
-                day: 24,         // hours/day
-                hour: 60,        // minutes/hour
-                minute: 60,      // seconds/minute
-                second: 1000,    // microseconds/second
-                speed: 20,       // rate =  septopus year / reality year
-            },
-            sky: {      //sky setting
-                sun: 1,         //amount of sun
-                moon: 3,        //amount of moon
-            },
-            weather: {  //Septopus weathe setting
-                category: ["cloud", "rain", "snow"],
-                grading: 8,
-                detail: {
-                    cloud: [
-                        "sunny",              // ☀️ 完全晴朗
-                        "mostly sunny",       // 🌤 几乎晴朗，少量云
-                        "partly cloudy",      // ⛅️ 局部多云
-                        "mostly cloudy",      // 🌥 大部分时间多云
-                        "cloudy",             // ☁️ 完全多云
-                        "overcast",           // 🌫️ 阴沉（厚云层）
-                        "dim daylight",       // 🌁 光线暗淡（接近阴天或雾天）
-                        "dark sky"            // 🌑 漆黑压抑的天空（重云/暴雨前）
-                    ],
-                    rainy: [
-                        "frog",              // 🐸 青蛙出没 / 极轻微湿气（象征刚下雨）
-                        "drizzle",           // 🌦 细雨/毛毛雨
-                        "light rain",        // 🌧 小雨
-                        "moderate rain",     // 🌧 中雨
-                        "heavy rain",        // 🌧🌧 大雨
-                        "downpour",          // 🌧🌧🌧 倾盆大雨
-                        "rainstorm",         // 🌩 雷雨或暴雨
-                        "torrential rain"    // 🌊 特大暴雨，近灾害级
-                    ],
-                    snow: [
-                        "frost",            // ❄️ 霜，极轻微结冰或冻露，非真正降雪
-                        "flurries",         // 🌨️ 零星小雪
-                        "light snow",       // 🌨 小雪
-                        "moderate snow",    // 🌨 中雪
-                        "heavy snow",       // 🌨🌨 大雪
-                        "blowing snow",     // 🌬️❄️ 吹雪，风大雪大
-                        "snowstorm",        // 🌨⚡️ 暴雪
-                        "whiteout"          // 🌫️ 完全白茫茫，能见度极低
-                    ],
-                },
-                degree: 40,
-            },
-        }
-    },
     adjunct: (index) => {
         return {
             common: {
@@ -171,6 +108,75 @@ const mock = {
             },
         }
     },
+
+    //common world setting
+    common: () => {
+        return {
+            world: {     //Septopus setting
+                name: "Septopus Worlds",          //Septopus的名称
+                desc: "Septopus description.",   //Septopus世界的描述
+                range: [4096, 4096],              //每个世界的尺寸 
+                side: [16, 16, 64],             //单个block的尺寸限制
+                max: 99,                          //最大世界发行数量
+            },
+            time: {      //time setting
+                year: 12,        // months/year
+                month: 30,       // days/month
+                day: 24,         // hours/day
+                hour: 60,        // minutes/hour
+                minute: 60,      // seconds/minute
+                second: 1000,    // microseconds/second
+                speed: 20,       // rate =  septopus year / reality year
+                start: 80000,    // septopus world start height
+            },
+            sky: {      //sky setting
+                sun: 1,         //amount of sun
+                moon: 3,        //amount of moon
+            },
+            weather: {  //Septopus weathe setting
+                category: ["cloud", "rain", "snow"],
+                grading: 8,
+                detail: {
+                    cloud: [
+                        "sunny",              // ☀️ 完全晴朗
+                        "mostly sunny",       // 🌤 几乎晴朗，少量云
+                        "partly cloudy",      // ⛅️ 局部多云
+                        "mostly cloudy",      // 🌥 大部分时间多云
+                        "cloudy",             // ☁️ 完全多云
+                        "overcast",           // 🌫️ 阴沉（厚云层）
+                        "dim daylight",       // 🌁 光线暗淡（接近阴天或雾天）
+                        "dark sky"            // 🌑 漆黑压抑的天空（重云/暴雨前）
+                    ],
+                    rainy: [
+                        "frog",              // 🐸 青蛙出没 / 极轻微湿气（象征刚下雨）
+                        "drizzle",           // 🌦 细雨/毛毛雨
+                        "light rain",        // 🌧 小雨
+                        "moderate rain",     // 🌧 中雨
+                        "heavy rain",        // 🌧🌧 大雨
+                        "downpour",          // 🌧🌧🌧 倾盆大雨
+                        "rainstorm",         // 🌩 雷雨或暴雨
+                        "torrential rain"    // 🌊 特大暴雨，近灾害级
+                    ],
+                    snow: [
+                        "frost",            // ❄️ 霜，极轻微结冰或冻露，非真正降雪
+                        "flurries",         // 🌨️ 零星小雪
+                        "light snow",       // 🌨 小雪
+                        "moderate snow",    // 🌨 中雪
+                        "heavy snow",       // 🌨🌨 大雪
+                        "blowing snow",     // 🌬️❄️ 吹雪，风大雪大
+                        "snowstorm",        // 🌨⚡️ 暴雪
+                        "whiteout"          // 🌫️ 完全白茫茫，能见度极低
+                    ],
+                },
+                degree: 40,
+                data:{
+                    category:[2,4],         //
+                    grade:[10,6],
+                    interval:3*60*60,       // 天气更新间隔       
+                }
+            },
+        }
+    },
     world: (index) => {
         return {
             name: `Septopus #${index} World`,      //World name
@@ -183,24 +189,6 @@ const mock = {
                 diff: 4,
                 status: ["RAW", "PUBLIC", "PRIVATE", "LOCKED"],
             },
-            // time: {         //time setting
-            //     year: 12,        // months/year
-            //     month: 30,       // days/month
-            //     day: 24,         // hours/day
-            //     hour: 60,        // minutes/hour
-            //     minute: 60,      // seconds/minute
-            //     second: 1000,    // microseconds/second
-            //     speed: 20,       // rate =  septopus year / reality year
-            //     start: 80000,    // septopus world start height
-            // },
-            // sky: {          //sky setting
-            //     sun: 1,         //amount of sun
-            //     moon: 3,        //amount of moon
-            // },
-            // weather: {
-            //     category: ["cloud", "rain", "snow"],
-            //     grading: 8,
-            // },
             address: "SOLANA_ACCOUNT_ADDRESS",      //signature of this world init
             blockheight: 1123456,                   //slot height when this world starts
             index: index,                       //index of world     
