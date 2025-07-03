@@ -128,7 +128,6 @@ const self={
     },
     attribute:{
         load:(x,y,param,world, dom_id)=>{
-            //console.log(`block load:`,x,y,param,world,dom_id);
             World.load(dom_id,world,x,y);
         },
         unload:(x,y,param,world, dom_id)=>{

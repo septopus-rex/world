@@ -80,15 +80,16 @@ const self = {
         const key = config.autosave.key;
         const pp = localStorage.getItem(key);
         if (pp === null) {
-            localStorage.setItem(key, JSON.stringify(config.location));
-            return Toolbox.clone(config.location);
+            //localStorage.setItem(key, JSON.stringify(config.location));
+            return {world:0};
         } else {
             try {
                 const data = JSON.parse(pp);
                 return data;
             } catch (error) {
-                localStorage.setItem(key, JSON.stringify(config.location));
-                return Toolbox.clone(config.location);
+                //localStorage.setItem(key, JSON.stringify(config.location));
+                localStorage.removeItem(key);
+                return {world:0};
             }
         }
     },
@@ -151,10 +152,10 @@ const vbw_player = {
     start: (dom_id, ck) => {
         const data = self.getPlayerLocation();
 
-        const body={};
+        //const body={};
 
         //1.set body height
-        data.position[2]+=config.body.height;
+        //data.position[2]+=config.body.height;
 
         //2. set auto update
         const chain = ["block", dom_id, data.world, "loop"];
@@ -162,7 +163,7 @@ const vbw_player = {
         const queue = VBW.cache.get(chain);
         queue.push({ name: "player", fun: vbw_player.autosave });
 
-        return ck && ck(data,body);
+        return ck && ck(data);
     },
 }
 

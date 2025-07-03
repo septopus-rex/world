@@ -15,7 +15,7 @@
  */
 
 import UI from "../io/io_ui";
-import VBW  from "./framework";
+import VBW from "./framework";
 
 import vbw_sky from "./sky";
 import vbw_time from "./time";
@@ -47,8 +47,8 @@ import basic_trigger from "../adjunct/basic_trigger";
 import plug_link from "../plugin/plug_link";
 import Toolbox from "../lib/toolbox";
 
-const regs={
-    core:[
+const regs = {
+    core: [
         vbw_detect,
         vbw_sky,
         vbw_time,
@@ -59,17 +59,17 @@ const regs={
         vbw_event,
         API,
     ],
-    render:[
+    render: [
         render_3d,
         render_2d,
         render_observe,
     ],
-    controller:[
+    controller: [
         control_fpv,
         control_2d,
         control_observe,
     ],
-    adjunct:[
+    adjunct: [
         basic_stop,
         basic_trigger,
         basic_light,
@@ -78,43 +78,43 @@ const regs={
         adj_wall,
         adj_water,
     ],
-    plugin:[plug_link],
-    
+    plugin: [plug_link],
+
 };
 
-const def={
-    event:{
-        ticktock:{
-            desc:"Interval to calc time for VBW, blockchain height normally.",
-            params:[],
+const def = {
+    event: {
+        ticktock: {
+            desc: "Interval to calc time for VBW, blockchain height normally.",
+            params: [],
         },
-        update:{
-            desc:"Block data updated, link to contract event normally",
-            params:[],
+        update: {
+            desc: "Block data updated, link to contract event normally",
+            params: [],
         },
     },
-    agent:{
-        onWeatherChange:{
+    agent: {
+        onWeatherChange: {
 
         },
     }
 }
 
-const config={
-    render:"rd_three",
-    controller:"con_first",
-    debug:true,
-    queue:{
-        block:"block_loading",
-        resource:"resource_loading",
+const config = {
+    render: "rd_three",
+    controller: "con_first",
+    debug: true,
+    queue: {
+        block: "block_loading",
+        resource: "resource_loading",
     },
-    hook:{
-        register:"reg",
-        initialize:"init",
+    hook: {
+        register: "reg",
+        initialize: "init",
     },
 };
 
-const self={
+const self = {
     /**
      * world component register management
      * !important, group components here, can load dynamic in the furture.
@@ -122,31 +122,31 @@ const self={
      * 1. reg all components and init
      * @returns void
      */
-    register:()=>{
-        const regKey=config.hook.register;
-        const initKey=config.hook.initialize;
-        
-        for(let cat in regs){
-            const coms=regs[cat];
-            for(let i=0;i<coms.length;i++){
-                const component=coms[i];
-                if(component.hooks===undefined) continue;
+    register: () => {
+        const regKey = config.hook.register;
+        const initKey = config.hook.initialize;
+
+        for (let cat in regs) {
+            const coms = regs[cat];
+            for (let i = 0; i < coms.length; i++) {
+                const component = coms[i];
+                if (component.hooks === undefined) continue;
 
                 //1.load Septopus World components to Framework
-                if(component.hooks[regKey]!==undefined){
-                    const cfg=component.hooks[regKey]();
-                    const result=VBW.component.reg(cfg,component);
-                    if(result.error!==undefined) UI.show("toast",result.error,{type:"error"});
+                if (component.hooks[regKey] !== undefined) {
+                    const cfg = component.hooks[regKey]();
+                    const result = VBW.component.reg(cfg, component);
+                    if (result.error !== undefined) UI.show("toast", result.error, { type: "error" });
                 }
 
                 //2.init the parts component
                 //console.log(cat);
-                if(component.hooks[initKey]!==undefined){
-                    const res=component.hooks[initKey]();
-                    if(!res || !res.chain || !res.value){
-                        UI.show("toast",`Invalid init data from "${cat}" category component.`,{type:"error"});
-                    }else{
-                        VBW.cache.set(res.chain,res.value);
+                if (component.hooks[initKey] !== undefined) {
+                    const res = component.hooks[initKey]();
+                    if (!res || !res.chain || !res.value) {
+                        UI.show("toast", `Invalid init data from "${cat}" category component.`, { type: "error" });
+                    } else {
+                        VBW.cache.set(res.chain, res.value);
                     }
                 }
             }
@@ -162,26 +162,26 @@ const self={
      * @param {string}  container - container DOM id
      * @return {boolean}
      */
-    struct:(container)=>{
-        if(VBW.block===undefined) return UI.show("toast",`No more component.`,{type:"error"});
+    struct: (container) => {
+        if (VBW.block === undefined) return UI.show("toast", `No more component.`, { type: "error" });
 
         //0.device detect
-        const dt=VBW.detect.check(container);
-        const dev_chain=["block",container,"basic"];
-        VBW.cache.set(dev_chain,dt);
+        const dt = VBW.detect.check(container);
+        const dev_chain = ["block", container, "basic"];
+        VBW.cache.set(dev_chain, dt);
 
         //1.1.struct dom for render
-        const dom_render=VBW[config.render].construct(dt.width,dt.height,container);
+        const dom_render = VBW[config.render].construct(dt.width, dt.height, container);
 
         //1.2.struct dom for controller
-        const dom_controller=VBW[config.controller].construct();
+        const dom_controller = VBW[config.controller].construct();
 
         //2.construct the DOM
-        const target=document.getElementById(container);
+        const target = document.getElementById(container);
 
         //FIXME, need to clean all DOM to avoid new screen of system
         //2.1.clean DOM already exsist
-        
+
         //2.2.add new DOM needed
         target.appendChild(dom_render);
         target.appendChild(dom_controller);
@@ -200,338 +200,430 @@ const self={
      * @param {object}  world_info  - world information object
      * @return {boolean}    - whether saved successful
      */
-    save:(dom_id,world,map,world_info)=>{
-        const fun=VBW.cache.set;
-
+    save: (dom_id, world, map, world_info) => {
+        const fun = VBW.cache.set;
+        
         //1.save the world data;
-        if(world_info!==undefined){
-            const w_chain=["env","world"];
-            if(!VBW.cache.exsist(w_chain)){
-                world_info.index=world;
-                const wd=self.formatWorld(world_info);
-                fun(w_chain,wd);        
+        if (world_info !== undefined) {
+            const w_chain = ["env", "world"];
+            if (!VBW.cache.exsist(w_chain)) {
+                world_info.index = world;
+                const wd = self.formatWorld(world_info);
+                fun(w_chain, wd);
             }
         }
-        
+
         //1.1.set `modified` cache key
-        const m_chain=["task",dom_id,world];
-        if(!VBW.cache.exsist(m_chain)){
-            fun(m_chain,[]);
+        const m_chain = ["task", dom_id, world];
+        if (!VBW.cache.exsist(m_chain)) {
+            fun(m_chain, []);
         }
-        
-        //2.deal withe the block raw data
-        let failed=false;
-        for(let k in map){
-            const chain=["block",dom_id,world,k,"raw"];
-            const res=fun(chain,map[k]);
-            if(res!==true && res.error){
-                UI.show("toast",res.error,{type:"error"})
-                failed=true;
-            }else{
+
+        //2.deal with the block raw data
+        let failed = false;
+        for (let k in map) {
+            const chain = ["block", dom_id, world, k, "raw"];
+            const res = fun(chain, map[k]);
+            if (res !== true && res.error) {
+                UI.show("toast", res.error, { type: "error" })
+                failed = true;
+            } else {
 
                 //set recover data
-                const recover_chain=["block",dom_id,world,k,"recover"];
-                const dt=fun(recover_chain,Toolbox.clone(map[k]));
-                if(dt!==true && dt.error){
-                    UI.show("toast",dt.error,{type:"error"});
+                const recover_chain = ["block", dom_id, world, k, "recover"];
+                const dt = fun(recover_chain, Toolbox.clone(map[k]));
+                if (dt !== true && dt.error) {
+                    UI.show("toast", dt.error, { type: "error" });
                 }
             }
         }
         return failed;
     },
 
-    formatWorld:(wd)=>{
-        console.log("format world....",JSON.stringify(wd.side));
-        wd.side=[
-            wd.side[0]*wd.accuracy,
-            wd.side[1]*wd.accuracy,
+    formatWorld: (wd) => {
+        console.log("format world....", JSON.stringify(wd.side));
+        wd.side = [
+            wd.side[0] * wd.accuracy,
+            wd.side[1] * wd.accuracy,
         ];
         return wd;
     },
-    getConvert:()=>{
-        return VBW.cache.get(["env","world","accuracy"]);
+    getConvert: () => {
+        return VBW.cache.get(["env", "world", "accuracy"]);
     },
-    getSide:()=>{
-        return VBW.cache.get(["env","world","side"]);
+    getSide: () => {
+        return VBW.cache.get(["env", "world", "side"]);
     },
 
-    syncPlayer:(user,id)=>{
+    syncPlayer: (user, id) => {
         //1.set location of player;
-        VBW.cache.set(["env","player","location"],user);
+        VBW.cache.set(["env", "player", "location"], user);
         console.log(user);
-        
+
         //2.set camera as player view.
-        const cam_chain=["active","containers",id,"camera"];
-        const cam =  VBW.cache.get(cam_chain);
+        const cam_chain = ["active", "containers", id, "camera"];
+        const cam = VBW.cache.get(cam_chain);
         const side = self.getSide();
         const cvt = self.getConvert();
-        const pos=[
-            cam.position.x+(user.block[0]-1)*side[0]+user.position[0]*cvt,
-            cam.position.y+(user.block[1]-1)*side[1]+user.position[1]*cvt,
-            user.position[2]*cvt
+        const pos = [
+            cam.position.x + (user.block[0] - 1) * side[0] + user.position[0] * cvt,
+            cam.position.y + (user.block[1] - 1) * side[1] + user.position[1] * cvt,
+            user.position[2] * cvt
         ]
-        cam.position.set(pos[0],pos[2],-pos[1]);
+        cam.position.set(pos[0], pos[2], -pos[1]);
         cam.rotation.set(...user.rotation);
     },
 
-    fetchModules:(arr,ck)=>{
-        if(!VBW.datasource || !VBW.datasource.module){
-            return {eror:"No datasource method for module loading."};
-        } 
-        const failed=[];
+    fetchModules: (arr, ck) => {
+        if (!VBW.datasource || !VBW.datasource.module) {
+            return { eror: "No datasource method for module loading." };
+        }
+        const failed = [];
         //1.get data from IPFS
-        VBW.datasource.module(arr,(map)=>{
-            for(let id in map){
-                const chain=["resource","module",id];
-                VBW.cache.set(chain,map[id]);
+        VBW.datasource.module(arr, (map) => {
+            for (let id in map) {
+                const chain = ["resource", "module", id];
+                VBW.cache.set(chain, map[id]);
             }
 
             return ck && ck(failed);
         })
-        
+
     },
-    fetchTextures:(arr,ck)=>{
-        if(!VBW.datasource || !VBW.datasource.texture){
-            return {eror:"No datasource method for texture loading."};
-        } 
-        const failed=[];
-        VBW.datasource.texture(arr,(map)=>{
-            for(let id in map){
-                const chain=["resource","texture",id];
-                VBW.cache.set(chain,map[id]);
+    fetchTextures: (arr, ck) => {
+        if (!VBW.datasource || !VBW.datasource.texture) {
+            return { eror: "No datasource method for texture loading." };
+        }
+        const failed = [];
+        VBW.datasource.texture(arr, (map) => {
+            for (let id in map) {
+                const chain = ["resource", "texture", id];
+                VBW.cache.set(chain, map[id]);
             }
             return ck && ck(failed);
         });
     },
-    prefetch:(txs,mds,ck)=>{
-        const failed={module:[],texture:[]};
-        self.fetchTextures(txs,(tx_failed)=>{
-            failed.texture=tx_failed;
-            self.fetchModules(mds,(md_failed)=>{
-                failed.module=md_failed;
+    prefetch: (txs, mds, ck) => {
+        const failed = { module: [], texture: [] };
+        self.fetchTextures(txs, (tx_failed) => {
+            failed.texture = tx_failed;
+            self.fetchModules(mds, (md_failed) => {
+                failed.module = md_failed;
                 return ck && ck(failed);
             });
         });
     },
 
-    checkBlock:()=>{
+    checkBlock: () => {
         //1. get the block loading queue.
-        const name=config.queue.block;
-        const queue=VBW.queue.get(name);
-        if(queue.error) return false;
-        if(queue.length===0) return false;
+        const name = config.queue.block;
+        const queue = VBW.queue.get(name);
+        if (queue.error) return false;
+        if (queue.length === 0) return false;
 
         //2. check the first whether loaded
-        const todo=queue[0];
+        const todo = queue[0];
         //console.log(JSON.stringify(todo));
-        const world=todo.world;
-        const dom_id=todo.container;
-        const chain=["block",dom_id,world,todo.key,"raw"];
-        const dt=VBW.cache.get(chain);
-        if(dt.error) return false;
+        const world = todo.world;
+        const dom_id = todo.container;
+        const chain = ["block", dom_id, world, todo.key, "raw"];
+        const dt = VBW.cache.get(chain);
+        if (dt.error) return false;
 
         //3. if loaded, deal with the restruct and get the resource list
-        if(!dt.loading){
+        if (!dt.loading) {
             //console.log(`Restruct the whole system here.`);
 
             //3.1. add the resource to loading queue.
-            const arr=todo.key.split("_");
-            const x=parseInt(arr[0]),y=parseInt(arr[1]);
-            const range={x:x,y:y,world:world,container:dom_id};
-            VBW.prepair(range,(pre)=>{
-                self.loadingResourceQueue(pre,x,y,world,dom_id);
-                VBW[config.render].show(dom_id,[x,y,world]);
-            },{});
+            const arr = todo.key.split("_");
+            const x = parseInt(arr[0]), y = parseInt(arr[1]);
+            const range = { x: x, y: y, world: world, container: dom_id };
+            VBW.prepair(range, (pre) => {
+                self.loadingResourceQueue(pre, x, y, world, dom_id);
+                VBW[config.render].show(dom_id, [x, y, world]);
+            }, {});
             queue.shift();
         }
     },
-    
-    checkResource:()=>{
-        const name=config.queue.resource;
-        const queue=VBW.queue.get(name);
-        if(queue.error) return false;
-        if(queue.length===0) return false;
 
-        const todo=queue[0];
-        const {x,y,world,container,preload}=todo;
-        if(self.checkLoaded(preload.texture,preload.module)){
+    checkResource: () => {
+        const name = config.queue.resource;
+        const queue = VBW.queue.get(name);
+        if (queue.error) return false;
+        if (queue.length === 0) return false;
+
+        const todo = queue[0];
+        const { x, y, world, container, preload } = todo;
+        if (self.checkLoaded(preload.texture, preload.module)) {
             //console.log(`---- Rerender [ ${x}, ${y} ]`);
             queue.shift();
 
             //rebuild 3D data then render
-            const range={x:x,y:y,world:world,container:container};
-            VBW.prepair(range,(pre)=>{
-                VBW[config.render].show(container,[x,y,world]);
-            },{});
+            const range = { x: x, y: y, world: world, container: container };
+            VBW.prepair(range, (pre) => {
+                VBW[config.render].show(container, [x, y, world]);
+            }, {});
         }
     },
 
-    checkLoaded:(txs,mds)=>{
-        const exsist=VBW.cache.exsist;
-        for(let i=0;i<txs.length;i++){
-            const id=txs[i];
-            const chain=["resource","texture",id];
-            if(!exsist(chain)) return false;
+    checkLoaded: (txs, mds) => {
+        const exsist = VBW.cache.exsist;
+        for (let i = 0; i < txs.length; i++) {
+            const id = txs[i];
+            const chain = ["resource", "texture", id];
+            if (!exsist(chain)) return false;
         }
 
-        for(let i=0;i<mds.length;i++){
-            const id=mds[i];
-            const chain=["resource","module",id];
-            if(!exsist(chain)) return false;
+        for (let i = 0; i < mds.length; i++) {
+            const id = mds[i];
+            const chain = ["resource", "module", id];
+            if (!exsist(chain)) return false;
         }
 
         return true;
     },
-    loadingResourceQueue:(pre,x,y,world,dom_id)=>{
+    loadingResourceQueue: (pre, x, y, world, dom_id) => {
         //1. set resource queue;
-        const name=config.queue.resource;
-        const push=VBW.queue.push;
-        push(name,{
-            x:x,
-            y:y,
-            world:world,
-            container:dom_id,
-            preload:pre,
+        const name = config.queue.resource;
+        const push = VBW.queue.push;
+        push(name, {
+            x: x,
+            y: y,
+            world: world,
+            container: dom_id,
+            preload: pre,
         });
 
         //2. start to load resource
-        self.prefetch(pre.texture,pre.module,(failed)=>{
+        self.prefetch(pre.texture, pre.module, (failed) => {
 
         });
         return true;
     },
-    loadingBlockQueue:(map,dom_id)=>{
-        const name=config.queue.block;
-        const push=VBW.queue.push;
-        for(let key in map){
-            push(name,{
-                key:key,
-                world:map[key].world,
-                container:dom_id,
+    loadingBlockQueue: (map, dom_id) => {
+        const name = config.queue.block;
+        const push = VBW.queue.push;
+        for (let key in map) {
+            push(name, {
+                key: key,
+                world: map[key].world,
+                container: dom_id,
             });
         }
         return true;
     },
     //menu of layout, basic action
-    layout:()=>{
-        const dom_id="three_demo";
-        const world=0;
-        const menus=[
-            {label:"Buy",icon:"", action:async ()=>{
-                console.log(`Buy button clicked.`);
-                const res=await VBW.datasource.contract.call("buy",[2000,1290,0]);
-                console.log(res);
-            }},
-            {label:"Edit",icon:"",action:()=>{
-                const bk=VBW.cache.get(["env","player","location","block"]);
-                if(bk.error) return UI.show("toast",bk.error,{type:"error"});
-                World.edit(dom_id,world,bk[0],bk[1]);
-            }},
+    layout: () => {
+        const dom_id = "three_demo";
+        const world = 0;
+        const menus = [
+            {
+                label: "Buy", icon: "", action: async () => {
+                    console.log(`Buy button clicked.`);
+                    const res = await VBW.datasource.contract.call("buy", [2000, 1290, 0]);
+                    console.log(res);
+                }
+            },
+            {
+                label: "Edit", icon: "", action: () => {
+                    const bk = VBW.cache.get(["env", "player", "location", "block"]);
+                    if (bk.error) return UI.show("toast", bk.error, { type: "error" });
+                    World.edit(dom_id, world, bk[0], bk[1]);
+                }
+            },
 
-            {label:"Normal",icon:"",action:()=>{
-                World.normal(dom_id,world,(done)=>{
-                    console.log(done);
-                });
-            }},
+            {
+                label: "Normal", icon: "", action: () => {
+                    World.normal(dom_id, world, (done) => {
+                        console.log(done);
+                    });
+                }
+            },
 
             //UI.dialog Sample
-            {label:"Detail",icon:"",action:()=>{
-                const ctx={
-                    title:"Hello",
-                    content:"This a dailog to show more details.",
+            {
+                label: "Detail", icon: "", action: () => {
+                    const ctx = {
+                        title: "Hello",
+                        content: "This a dailog to show more details.",
+                    }
+                    UI.show("dialog", ctx, { position: "center" });
                 }
-                UI.show("dialog",ctx,{position:"center"});
-            }},
+            },
 
-            {label:"Mint",icon:"",action:async ()=>{
-               const res=await VBW.datasource.contract.call("mint",[2000,1290,0]);
-               console.log(res);
-            }},
+            {
+                label: "Mint", icon: "", action: async () => {
+                    const res = await VBW.datasource.contract.call("mint", [2000, 1290, 0]);
+                    console.log(res);
+                }
+            },
 
             //UI.form Sample
-            {label:"World",icon:"",action:()=>{
-                const inputs=[
-                    {
-                        type:"string",
-                        key:"desc",
-                        value:"",
-                        desc:"Description of this Septopus Worlod",
-                        placeholder:"200 max",
-                        valid:(val)=>{
-                            if(!val) return "Invalid description.";
-                            if(val.length>200) return "200 bytes max";
-                            return true;
-                        }
-                    },
-                    {
-                        type:"integer",
-                        key:"index",
-                        value:1,
-                        desc:"World index on chain",
-                        placeholder:"Index of world",
-                        valid:(val)=>{
-                            console.log(val);
-                            if(val!==2) return "Invalid World Index, please check."
-                            return true;
-                        }
-                    },
-                ];
-                const cfg={
-                    title:"World Setting",
-                    buttons:{save:true,recover:false},
-                    events:{
-                        save:(obj)=>{
-                            console.log(obj);
+            {
+                label: "World", icon: "", action: () => {
+                    const inputs = [
+                        {
+                            type: "string",
+                            key: "desc",
+                            value: "",
+                            desc: "Description of this Septopus Worlod",
+                            placeholder: "200 max",
+                            valid: (val) => {
+                                if (!val) return "Invalid description.";
+                                if (val.length > 200) return "200 bytes max";
+                                return true;
+                            }
                         },
-                        close:()=>{
+                        {
+                            type: "integer",
+                            key: "index",
+                            value: 1,
+                            desc: "World index on chain",
+                            placeholder: "Index of world",
+                            valid: (val) => {
+                                console.log(val);
+                                if (val !== 2) return "Invalid World Index, please check."
+                                return true;
+                            }
+                        },
+                    ];
+                    const cfg = {
+                        title: "World Setting",
+                        buttons: { save: true, recover: false },
+                        events: {
+                            save: (obj) => {
+                                console.log(obj);
+                            },
+                            close: () => {
 
-                        },
+                            },
+                        }
                     }
+                    UI.show("form", inputs, cfg);
                 }
-                UI.show("form",inputs,cfg);
-            }}
+            }
         ];
-        const cfg_menu={}
+        const cfg_menu = {}
 
-        UI.show("menu",menus,cfg_menu);
+        UI.show("menu", menus, cfg_menu);
     },
-    autoBind:()=>{
-        const target="height";
-        const key="getSlot"
-        API.bind(target,key,(data)=>{
+    autoBind: () => {
+        const target = "height";
+        const key = "getSlot"
+        API.bind(target, key, (data) => {
             VBW.time.calc(data);
             VBW.weather.calc(data);
         });
     },
-    setup:(wd)=>{
-        console.log(`setup system by data on chain`,wd);
+    setup: (wd) => {
+        console.log(`setup system by data on chain`, wd);
 
         //1.create adjunct map;
-        if(!wd.adjunct) UI.show("toast",`Adjunct definition missing.`,{type:"error"});
-        const map={},def={};
-        for(let adj in wd.adjunct){
-            const row=wd.adjunct[adj];
-            def[adj]=row.definition;
-            if(adj===`common`) continue;
-            map[adj]=row.short;
-            map[row.short]=adj;
+        if (!wd.adjunct) UI.show("toast", `Adjunct definition missing.`, { type: "error" });
+        const map = {}, def = {};
+        for (let adj in wd.adjunct) {
+            const row = wd.adjunct[adj];
+            def[adj] = row.definition;
+            if (adj === `common`) continue;
+            map[adj] = row.short;
+            map[row.short] = adj;
         }
-        VBW.cache.set(["map"],map);
-        VBW.cache.set(["def"],def);
+        VBW.cache.set(["map"], map);
+        VBW.cache.set(["def"], def);
+
+        //2.save world info
+        self.saveWorld(wd);
 
     },
-}   
+    combinePlayer: (start, basic) => {
+        console.log(JSON.stringify(start), basic);
+        const player = Toolbox.clone(start)
 
-const World={
+        return player;
+    },
+    runOnce: (dom_id, cfg) => {
+        //0.set current active dom_id
+        const current_chain = ["active", "current"];
+        VBW.cache.set(current_chain, dom_id);
+
+        //0.1. set UI layout
+        self.layout();
+
+        //0.2. start listener.
+        self.autoBind();
+
+        //0.3. set contract requests.
+        if (cfg && cfg.contract && VBW.datasource && VBW.datasource.contract) {
+            VBW.datasource.contract.set(cfg.contract);
+        }
+    },
+    initEnv: (dom_id, ck) => {
+        //{"block":[2025,502],"world":0,"position":[7.326341784000396,12.310100473087282,0],"rotation":[0,0.3875731999042833,0],"stop":-1,"extend":2}
+        VBW.player.start(dom_id, (start) => {
+            console.log(JSON.stringify(start))
+            const world = start.world;
+            VBW.datasource.world(world, (wd) => {
+                self.setup(wd);         //set world cache
+                const player = self.combinePlayer(start, wd.data.player);
+                return ck && ck(world, player, wd.range);
+            })
+        });
+    },
+    saveWorld:(world_info)=>{
+        //1.save the world data;
+        if (world_info !== undefined) {
+            const w_chain = ["env", "world"];
+            if (!VBW.cache.exsist(w_chain)) {
+                //world_info.index = index;
+                //FIXME, here need to get the right index of world
+                world_info.index = 0;
+                const wd = self.formatWorld(world_info);
+                VBW.cache.set(w_chain, wd);
+            }
+        }
+    },
+    launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
+        VBW.datasource.view(x, y, ext, world, (map) => {
+            //console.log(map);
+            if (map.loaded !== undefined) {
+                if (!map.loaded) {
+                    //2.1. add loading queue
+                    delete map.loaded;
+                    self.loadingBlockQueue(map, dom_id);
+                    UI.show("toast", `Loading data, show block holder.`);
+                    const failed = self.save(dom_id, world, map);
+                    if (failed) return UI.show("toast", `Failed to set cache, internal error, abort.`, { type: "error" });
+                    //2.2. struct holder
+                    const range = { x: x, y: y, ext: ext, world: world, container: dom_id };
+                    VBW.load(range, cfg, (pre) => {
+                        UI.show("toast", `Struct all components, ready to show.`);
+                        //self.syncPlayer(player, dom_id);  //set the camera as player here, need the render is ready
+                        self.prefetch(pre.texture, pre.module, (failed) => {
+                            UI.show("toast", `Fetch texture and module successful.`);
+                            return ck && ck(true);
+                        });
+                    });
+                } else {
+                    delete map.loaded;
+                    UI.show("toast", `Load block data successful.`);
+                    const failed = self.save(dom_id, world, map);
+                    if (failed) return UI.show("toast", `Failed to set cache, internal error, abort.`, { type: "error" });
+                }
+            }
+        }, limit);
+    },
+}
+
+const World = {
     /**
      * Septopus World system initalization
      * @return {boolean} - whether init successful
      * */
-    init:async (cfg)=>{
+    init: async (cfg) => {
         //1.register all components;
         self.register();
-        UI.show("toast",`Septopus World running env done.`,{});
-        if(config.debug) VBW.cache.dump();   //dump when debug
+        UI.show("toast", `Septopus World running env done.`, {});
+        if (config.debug) VBW.cache.dump();   //dump when debug
         return true;
     },
 
@@ -540,8 +632,8 @@ const World={
      * @param   {string}    dom_id- container DOM id
      * @void
      * */
-    stop:(dom_id)=>{
-        const {render }=VBW.cache.get(["active","containers",dom_id]);
+    stop: (dom_id) => {
+        const { render } = VBW.cache.get(["active", "containers", dom_id]);
         render.setAnimationLoop(null)
     },
 
@@ -550,8 +642,8 @@ const World={
      * @param   {string}    dom_id- container DOM id
      * @void
      * */
-    start:(dom_id)=>{
-        const {render }=VBW.cache.get(["active","containers",dom_id]);
+    start: (dom_id) => {
+        const { render } = VBW.cache.get(["active", "containers", dom_id]);
         render.setAnimationLoop(VBW.loop)
     },
 
@@ -563,135 +655,58 @@ const World={
      * @param   {object}    [cfg]   - {contract:methods,fullscreen:false}, config setting
      * @return {boolean} - whether load successful
      * */
-    first:(dom_id,ck,cfg)=>{
-        UI.show("toast",`Start to struct world.`);
-        //0.set current active dom_id
-        const current_chain=["active","current"];
-        VBW.cache.set(current_chain,dom_id);
+    first: (dom_id, ck, cfg) => {
+        if (!self.struct(dom_id)) return UI.show("toast", `Failed to struct html dom for running.`, { type: "error" });
+        if (!VBW.datasource) return UI.show("toast", `No datasource for the next step.`, { type: "error" });
+        UI.show("toast", `Start to struct world. Framework:`, VBW);
 
-        //0.1. set UI layout
-        self.layout();
+        self.runOnce(dom_id, cfg);
 
-        //0.2. start listener.
-        self.autoBind();
-        
-        //0.3. set contract requests.
-        if(cfg && cfg.contract && VBW.datasource && VBW.datasource.contract){
-            VBW.datasource.contract.set(cfg.contract);
-        }
+        self.initEnv(dom_id, (world, player, limit) => {
+            VBW.event.start(world, dom_id);      //listen to events
 
-        //1.get the player status
-        if(!self.struct(dom_id)) return  UI.show("toast",`Failed to struct html dom for running.`,{type:"error"});
-        console.log("Framework:",VBW)
-        if(!VBW.datasource) return UI.show("toast",`No datasource for the next step.`,{type:"error"});
+            UI.show("toast", `World data load from network successful.`);
 
-        VBW.player.start(dom_id,(start)=>{
-            UI.show("toast",`Player start at ${JSON.stringify(start.block)} of world[${start.world}]. raw:${JSON.stringify(start)}`);
-           
-            const world=start.world;
-            VBW.event.start(world,dom_id);      //listen to events
+            //1.1. set `block checker` and `resource check`.
+            const chain = ["block", dom_id, world, "loop"];
+            const queue = VBW.cache.get(chain);
+            queue.push({ name: "block_checker", fun: self.checkBlock });
+            queue.push({ name: "resource_checker", fun: self.checkResource });
 
-            VBW.datasource.world(start.world,(wd)=>{
+            const [x, y] = player.block;
+            const ext = !player.extend ? 1 : player.extend;
 
-                self.setup(wd);
-
-                UI.show("toast",`World data load from network successful.`);
-                //1.2. set `block checker` and `resource check`.
-                const chain = ["block", dom_id, world, "loop"];
-                const queue = VBW.cache.get(chain);
-                queue.push({ name: "block_checker", fun:self.checkBlock});
-                queue.push({ name: "resource_checker", fun:self.checkResource});
-
-                //2.get blocks data;
-                const index=start.world;
-                const [x,y]=start.block;
-                const ext=!start.extend?1:start.extend;
-                const limit=wd.range;
-                VBW.datasource.view(x,y,ext,index,(map)=>{
-                    //console.log(map);
-                    if(map.loaded!==undefined){
-                        if(!map.loaded){
-                            //2.1. add loading queue
-                            delete map.loaded;
-                            self.loadingBlockQueue(map,dom_id);
-                            UI.show("toast",`Loading data, show block holder.`);
-                            const failed = self.save(dom_id,index,map,wd);
-                            if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
-            
-                            const range={x:x,y:y,ext:ext,world:index,container:dom_id};
-
-                            //2.2. struct holder
-                            VBW.load(range,cfg,(pre)=>{
-                                UI.show("toast",`Struct all components, ready to show.`);
-                                self.syncPlayer(start,dom_id);  //set the camera as player here, need the render is ready
-                                self.prefetch(pre.texture,pre.module,(failed)=>{  
-
-                                    UI.show("toast",`Fetch texture and module successful.`);
-
-                                    //2.3.bind controller and show
-                                    VBW[config.controller].start(dom_id);
-                                    VBW[config.render].show(dom_id);
-                                    return ck && ck(true);
-                                });
-                            });
-                        }else{
-                            delete map.loaded;
-                            UI.show("toast",`Load block data successful.`);
-                            const failed = self.save(dom_id,index,map,wd);
-                            if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
-                        }
-                    }
-                },limit);
-            });
+            //1.2.load data
+            self.launch(dom_id, x, y, ext, world, limit, (done)=>{
+                self.syncPlayer(player, dom_id);
+                VBW[config.controller].start(dom_id);
+                VBW[config.render].show(dom_id);
+            },cfg);
         });
     },
 
     /**
      * Load block[x,y]
     */
-    load:(dom_id,world,x,y)=>{
-        const chain=["block",dom_id,world,`${x}_${y}`];
-        if(VBW.cache.exsist(chain)){
-            VBW[config.render].show(dom_id,[x,y,world]);
+    load: (dom_id, world, x, y) => {
+        const chain = ["block", dom_id, world, `${x}_${y}`];
+        if (VBW.cache.exsist(chain)) {
+            VBW[config.render].show(dom_id, [x, y, world]);
             return true;
         }
 
-        //FIXME, here to fix how to get range of world
-        const ext=0;
-        const limit=[4096,4096];
-        //const limit = VBW.cache.get(["setting", "limit"]);
-
-        //check whether exsist first.
-        VBW.datasource.view(x,y,ext,world,(map)=>{
-            //console.log(map);
-            if(map.loaded!==undefined){
-                if(!map.loaded){
-                    delete map.loaded;
-                    self.loadingBlockQueue(map,dom_id);
-                    const failed = self.save(dom_id,world,map);
-                    if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});
-                    const range={x:x,y:y,ext:ext,world:world,container:dom_id};
-
-                    VBW.load(range,{},(pre)=>{
-                        self.prefetch(pre.texture,pre.module,(failed)=>{
-                            VBW[config.render].show(dom_id);
-                        });
-                    })
-
-                }else{
-                    delete map.loaded;
-                    const failed = self.save(dom_id,world,map);
-                    if(failed) return UI.show("toast",`Failed to set cache, internal error, abort.`,{type:"error"});    
-                }
-            }
-        },limit);
+        const ext = 0;
+        const limit = [4096, 4096];
+        self.launch(dom_id, x, y, ext, world, limit, (done)=>{
+            VBW[config.render].show(dom_id);
+        });
     },
 
     /**
      * clean the target block[x,y] in render
     */
-    unload:(dom_id,world,x,y)=>{
-        VBW[config.render].clean(dom_id,world,x,y);
+    unload: (dom_id, world, x, y) => {
+        VBW[config.render].clean(dom_id, world, x, y);
     },
 
     /**
@@ -704,43 +719,43 @@ const World={
      * @callback - whether done callback
      * @param {boolean} result
      * */
-    edit:(dom_id,world,x,y,ck)=>{
+    edit: (dom_id, world, x, y, ck) => {
         //1.create edit temp data
-        const chain=["block",dom_id,world,"edit"];
-        VBW.cache.set(chain,{
-            x:x,y:y,world:world,
-            border:[],          //threeObject of block border
+        const chain = ["block", dom_id, world, "edit"];
+        VBW.cache.set(chain, {
+            x: x, y: y, world: world,
+            border: [],          //threeObject of block border
             //raycast:[],       //threeObjects need to check selection status
-            stop:[],            //stop to show
-            helper:[],          //helper of all object
-            grid:{
-                raw:null,       //grid raw parameters,
-                line:[],        //
-                points:[],      //location points here
+            stop: [],            //stop to show
+            helper: [],          //helper of all object
+            grid: {
+                raw: null,       //grid raw parameters,
+                line: [],        //
+                points: [],      //location points here
             },
-            selected:{          //selection information
-                adjunct:"",     //selected adjunct
-                index:0,        //selected adjunct index
-                face:"",        //selected adjunct face ["x","y","z","-x","-y","-z"]
+            selected: {          //selection information
+                adjunct: "",     //selected adjunct
+                index: 0,        //selected adjunct index
+                face: "",        //selected adjunct face ["x","y","z","-x","-y","-z"]
             },
-            objects:{           //objects in scene, easy for cleaning from scene
-                stop:null,
-                helper:null,
-                grid:null,
-            }    
+            objects: {           //objects in scene, easy for cleaning from scene
+                stop: null,
+                helper: null,
+                grid: null,
+            }
         });
 
         //2.create three objects
-        const target={x:x,y:y,world:world,container:dom_id}
-        const mode="edit";
+        const target = { x: x, y: y, world: world, container: dom_id }
+        const mode = "edit";
         //console.log(`Switch to edit mode.`);
-        VBW.mode(mode,target,(pre)=>{
-            if(pre.error){
-                UI.show("toast",pre.error,{type:"error"});
+        VBW.mode(mode, target, (pre) => {
+            if (pre.error) {
+                UI.show("toast", pre.error, { type: "error" });
                 return ck && ck(false);
             }
-            self.prefetch(pre.texture,pre.module,(failed)=>{
-                VBW[config.render].show(dom_id,[x,y,world]);
+            self.prefetch(pre.texture, pre.module, (failed) => {
+                VBW[config.render].show(dom_id, [x, y, world]);
                 return ck && ck(true);
             });
         });
@@ -754,21 +769,21 @@ const World={
      * @callback - whether done callback
      * @param {boolean} result
      * */
-    normal:(dom_id,world,ck)=>{
+    normal: (dom_id, world, ck) => {
         //0.check edit mode
-        const chain=["block",dom_id,world,"edit"];
-        const cur=VBW.cache.get(chain);
-        if(cur.error) return ck && ck(cur);
+        const chain = ["block", dom_id, world, "edit"];
+        const cur = VBW.cache.get(chain);
+        if (cur.error) return ck && ck(cur);
 
         //1.remove edit data
-        const x=cur.x,y=cur.y;
-        const target={x:x,y:y,world:world,container:dom_id}
+        const x = cur.x, y = cur.y;
+        const target = { x: x, y: y, world: world, container: dom_id }
 
-        const mode="normal";
-        VBW.mode(mode,target,()=>{
-            VBW[config.render].show(dom_id,[x,y,world]);
+        const mode = "normal";
+        VBW.mode(mode, target, () => {
+            VBW[config.render].show(dom_id, [x, y, world]);
         });
-        
+
         return ck && ck(true);
     },
 
@@ -785,26 +800,26 @@ const World={
      * @callback - whether done callback
      * @param {boolean} result
      * */
-    select:(dom_id,world,x,y,name,index,face,ck)=>{
+    select: (dom_id, world, x, y, name, index, face, ck) => {
         //1. set selected adjunct
-        const chain=["block",dom_id,world,"edit","selected"];
-        const selected=VBW.cache.get(chain);
-        selected.adjunct=name;
-        selected.index=index;
-        selected.face=face;
+        const chain = ["block", dom_id, world, "edit", "selected"];
+        const selected = VBW.cache.get(chain);
+        selected.adjunct = name;
+        selected.index = index;
+        selected.face = face;
 
         //2. fresh 
-        const target={x:x,y:y,world:world,container:dom_id}
-        const cfg={selected:true};
-        VBW.mode("edit",target,(pre)=>{
-            if(pre.error){
-                UI.show("toast",pre.error,{type:"error"});
+        const target = { x: x, y: y, world: world, container: dom_id }
+        const cfg = { selected: true };
+        VBW.mode("edit", target, (pre) => {
+            if (pre.error) {
+                UI.show("toast", pre.error, { type: "error" });
                 return ck && ck(false);
             }
-            VBW[config.render].show(dom_id,[x,y,world]);
+            VBW[config.render].show(dom_id, [x, y, world]);
             return ck && ck(true);
-        },cfg);
-    },  
+        }, cfg);
+    },
 
     /**
      * excute modify tasks entry
@@ -815,24 +830,24 @@ const World={
      * @callback - whether done callback
      * @param {boolean} result
      * */
-    modify:(tasks,dom_id,world,ck)=>{
-        const chain = ["block", dom_id,world, "edit"];
+    modify: (tasks, dom_id, world, ck) => {
+        const chain = ["block", dom_id, world, "edit"];
         const active = VBW.cache.get(chain);
-        const x=active.x,y=active.y;
+        const x = active.x, y = active.y;
 
-        const queue=VBW.cache.get(["task", dom_id, world]);
-        for(let i=0;i<tasks.length;i++){
-            const task=tasks[i];
-            task.x=x;
-            task.y=y;
+        const queue = VBW.cache.get(["task", dom_id, world]);
+        for (let i = 0; i < tasks.length; i++) {
+            const task = tasks[i];
+            task.x = x;
+            task.y = y;
             queue.push(task);
         }
         VBW.update(dom_id, world);
-        
-        const target={x:x,y:y,world:world,container:dom_id}
-        VBW.prepair(target,(pre)=>{
+
+        const target = { x: x, y: y, world: world, container: dom_id }
+        VBW.prepair(target, (pre) => {
             console.log(pre);
-            VBW[config.render].show(dom_id,[x,y,world]);
+            VBW[config.render].show(dom_id, [x, y, world]);
             return ck && ck(true);
         });
     },
