@@ -15,6 +15,8 @@
  */
 
 import UI from "../io/io_ui";
+import actions from "../io/actions";
+
 import VBW from "./framework";
 
 import vbw_sky from "./sky";
@@ -48,38 +50,11 @@ import plug_link from "../plugin/plug_link";
 import Toolbox from "../lib/toolbox";
 
 const regs = {
-    core: [
-        vbw_detect,
-        vbw_sky,
-        vbw_time,
-        vbw_weather,
-        vbw_block,
-        vbw_player,
-        vbw_movement,
-        vbw_event,
-        API,
-    ],
-    render: [
-        render_3d,
-        render_2d,
-        render_observe,
-    ],
-    controller: [
-        control_fpv,
-        control_2d,
-        control_observe,
-    ],
-    adjunct: [
-        basic_stop,
-        basic_trigger,
-        basic_light,
-        basic_box,
-        basic_module,
-        adj_wall,
-        adj_water,
-    ],
+    core: [vbw_detect,vbw_sky,vbw_time,vbw_weather,vbw_block,vbw_player,vbw_movement,vbw_event,API],
+    render: [render_3d,render_2d,render_observe],
+    controller: [control_fpv,control_2d,control_observe],
+    adjunct: [ basic_stop,basic_trigger,basic_light,basic_box,basic_module,adj_wall,adj_water],
     plugin: [plug_link],
-
 };
 
 const def = {
@@ -112,7 +87,9 @@ const config = {
         register: "reg",
         initialize: "init",
     },
+    menu: {},
 };
+
 
 const self = {
     /**
@@ -202,7 +179,7 @@ const self = {
      */
     save: (dom_id, world, map, world_info) => {
         const fun = VBW.cache.set;
-        
+
         //1.save the world data;
         if (world_info !== undefined) {
             const w_chain = ["env", "world"];
@@ -414,94 +391,13 @@ const self = {
     },
     //menu of layout, basic action
     layout: () => {
-        const dom_id = "three_demo";
-        const world = 0;
+        const buttons=actions.buttons;
         const menus = [
-            {
-                label: "Buy", icon: "", action: async () => {
-                    console.log(`Buy button clicked.`);
-                    const res = await VBW.datasource.contract.call("buy", [2000, 1290, 0]);
-                    console.log(res);
-                }
-            },
-            {
-                label: "Edit", icon: "", action: () => {
-                    const bk = VBW.cache.get(["env", "player", "location", "block"]);
-                    if (bk.error) return UI.show("toast", bk.error, { type: "error" });
-                    World.edit(dom_id, world, bk[0], bk[1]);
-                }
-            },
-
-            {
-                label: "Normal", icon: "", action: () => {
-                    World.normal(dom_id, world, (done) => {
-                        console.log(done);
-                    });
-                }
-            },
-
-            //UI.dialog Sample
-            {
-                label: "Detail", icon: "", action: () => {
-                    const ctx = {
-                        title: "Hello",
-                        content: "This a dailog to show more details.",
-                    }
-                    UI.show("dialog", ctx, { position: "center" });
-                }
-            },
-
-            {
-                label: "Mint", icon: "", action: async () => {
-                    const res = await VBW.datasource.contract.call("mint", [2000, 1290, 0]);
-                    console.log(res);
-                }
-            },
-
-            //UI.form Sample
-            {
-                label: "World", icon: "", action: () => {
-                    const inputs = [
-                        {
-                            type: "string",
-                            key: "desc",
-                            value: "",
-                            desc: "Description of this Septopus Worlod",
-                            placeholder: "200 max",
-                            valid: (val) => {
-                                if (!val) return "Invalid description.";
-                                if (val.length > 200) return "200 bytes max";
-                                return true;
-                            }
-                        },
-                        {
-                            type: "integer",
-                            key: "index",
-                            value: 1,
-                            desc: "World index on chain",
-                            placeholder: "Index of world",
-                            valid: (val) => {
-                                console.log(val);
-                                if (val !== 2) return "Invalid World Index, please check."
-                                return true;
-                            }
-                        },
-                    ];
-                    const cfg = {
-                        title: "World Setting",
-                        buttons: { save: true, recover: false },
-                        events: {
-                            save: (obj) => {
-                                console.log(obj);
-                            },
-                            close: () => {
-
-                            },
-                        }
-                    }
-                    UI.show("form", inputs, cfg);
-                }
-            }
+            buttons.buy,
+            buttons.edit,
+            buttons.normal,
+            buttons.mint,
+            buttons.world
         ];
         const cfg_menu = {}
 
@@ -569,7 +465,7 @@ const self = {
             })
         });
     },
-    saveWorld:(world_info)=>{
+    saveWorld: (world_info) => {
         //1.save the world data;
         if (world_info !== undefined) {
             const w_chain = ["env", "world"];
@@ -581,6 +477,12 @@ const self = {
                 VBW.cache.set(w_chain, wd);
             }
         }
+    },
+    setChecker: (dom_id, world) => {
+        const chain = ["block", dom_id, world, "loop"];
+        const queue = VBW.cache.get(chain);
+        queue.push({ name: "block_checker", fun: self.checkBlock });
+        queue.push({ name: "resource_checker", fun: self.checkResource });
     },
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
         VBW.datasource.view(x, y, ext, world, (map) => {
@@ -628,6 +530,30 @@ const World = {
     },
 
     /**
+     * Load block[x,y], for block adjunct request
+    */
+    load: (dom_id, world, x, y) => {
+        const chain = ["block", dom_id, world, `${x}_${y}`];
+        if (VBW.cache.exsist(chain)) {
+            VBW[config.render].show(dom_id, [x, y, world]);
+            return true;
+        }
+
+        const ext = 0;
+        const limit = [4096, 4096];
+        self.launch(dom_id, x, y, ext, world, limit, (done) => {
+            VBW[config.render].show(dom_id);
+        });
+    },
+
+    /**
+     * clean the target block[x,y] in render
+    */
+    unload: (dom_id, world, x, y) => {
+        VBW[config.render].clean(dom_id, world, x, y);
+    },
+
+    /**
      * Stop render, needed in UI mode
      * @param   {string}    dom_id- container DOM id
      * @void
@@ -668,45 +594,17 @@ const World = {
             UI.show("toast", `World data load from network successful.`);
 
             //1.1. set `block checker` and `resource check`.
-            const chain = ["block", dom_id, world, "loop"];
-            const queue = VBW.cache.get(chain);
-            queue.push({ name: "block_checker", fun: self.checkBlock });
-            queue.push({ name: "resource_checker", fun: self.checkResource });
-
-            const [x, y] = player.block;
-            const ext = !player.extend ? 1 : player.extend;
+            self.setChecker(dom_id, world);
 
             //1.2.load data
-            self.launch(dom_id, x, y, ext, world, limit, (done)=>{
+            const [x, y] = player.block;
+            const ext = !player.extend ? 1 : player.extend;
+            self.launch(dom_id, x, y, ext, world, limit, (done) => {
                 self.syncPlayer(player, dom_id);
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
-            },cfg);
+            }, cfg);
         });
-    },
-
-    /**
-     * Load block[x,y]
-    */
-    load: (dom_id, world, x, y) => {
-        const chain = ["block", dom_id, world, `${x}_${y}`];
-        if (VBW.cache.exsist(chain)) {
-            VBW[config.render].show(dom_id, [x, y, world]);
-            return true;
-        }
-
-        const ext = 0;
-        const limit = [4096, 4096];
-        self.launch(dom_id, x, y, ext, world, limit, (done)=>{
-            VBW[config.render].show(dom_id);
-        });
-    },
-
-    /**
-     * clean the target block[x,y] in render
-    */
-    unload: (dom_id, world, x, y) => {
-        VBW[config.render].clean(dom_id, world, x, y);
     },
 
     /**

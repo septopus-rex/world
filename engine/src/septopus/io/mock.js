@@ -191,6 +191,7 @@ const mock = {
                 minute: 60,      // seconds/minute
                 second: 1000,    // microseconds/second
                 speed: 20,       // rate =  septopus year / reality year
+                start: 80000,    // septopus world start height
             },
             sky: {          //sky setting
                 sun: 1,         //amount of sun

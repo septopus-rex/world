@@ -10,27 +10,20 @@
  */
 
 import VBW from "./framework";
+import Toolbox from "../lib/toolbox";
 
 const reg={
-    name:"time",        //组件名称
-    category:'system',      //组件分类
+    name:"time",
+    category:'system',
+    version:"1.0.0",
 }
 
 const config={
     network:"solana",
     mount:["env","time"],
-    // definition:{
-    //     year:12,        // months/year
-    //     month:30,       // days/month
-    //     day:24,         // hours/day
-    //     hour:60,        // minutes/hour
-    //     minute:60,      // seconds/minute
-    //     second:1000,    // microseconds/second
-    //     start:78000,    // 0 milestone (2027-6-19 00:00)
-    //     speed:20,       // rate =  septopus year / reality year
-    // },
 }
 
+let def=null;
 const self={
     hooks:{
         reg:()=>{
@@ -45,23 +38,68 @@ const self={
                     month:0,
                     day:0,
                     hour:0,
+                    minute:0,
+                    second:0,
                 }
             };
         },
     },
-
+    setDef:()=>{
+        const basic = VBW.cache.get(["env","world","time"],true);
+        def={
+            minute:basic.minute,
+            hour:basic.minute*basic.hour,
+            day:basic.minute*basic.hour*basic.day,
+            month:basic.minute*basic.hour*basic.day*basic.month,
+            year:basic.minute*basic.hour*basic.day*basic.month*basic.year,
+            speed:basic.speed,
+            start:basic.start,
+        };
+    },
     convert:(height,interval)=>{
-        const value=VBW.cache.get(config.chain);
+        const value=VBW.cache.get(config.mount);
         if(value.error) return false;
-        
+
+        let diff=(height-def.start)*interval*def.speed;
+        if(diff>def.year){
+            value.year=Math.floor(diff/def.year);
+            diff=diff%def.year;
+        }
+
+        if(diff>def.month){
+            value.month=Math.floor(diff/def.month);
+            diff=diff%def.month;
+        }
+
+        if(diff>def.day){
+            value.day=Math.floor(diff/def.day);
+            diff=diff%def.day;
+        }
+
+        if(diff>def.hour){
+            value.hour=Math.floor(diff/def.hour);
+            diff=diff%def.hour;
+        }
+
+        if(diff>def.minute){
+            value.minute=Math.floor(diff/def.minute);
+            diff=diff%def.minute;
+        }
+
+        value.second=diff;
+        value.height=height;
+        console.log(JSON.stringify(value));
     },
 }
 
 const vbw_time={
     hooks:self.hooks,
     calc:(data)=>{
+        if(def===null) self.setDef(); 
+        //console.log(data,def);
         if(data.network!==config.network) return false;
         if(!data.height) return false;
+
         self.convert(data.height,data.interval);
     },
 }
