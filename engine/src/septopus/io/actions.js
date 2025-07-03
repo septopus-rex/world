@@ -11,6 +11,7 @@
 
 import VBW from "../core/framework";
 import World from "../core/world";
+import UI from "./io_ui";
 
 const buttons = {
     buy: {
@@ -23,6 +24,7 @@ const buttons = {
     edit: {
         label: "Edit", icon: "", action: () => {
             const player=VBW.cache.get(["env", "player"]);
+            //console.log(player);
             if (player.error) return UI.show("toast", player.error, { type: "error" });
             const {world,block}=player.location;
             const active=VBW.cache.get(["active"]);

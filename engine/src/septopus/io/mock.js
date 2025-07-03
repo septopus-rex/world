@@ -220,12 +220,19 @@ const mock = {
                     block: [2025, 619],   //玩家的默认启动位置
                     position: [8, 8, 0],   //默认开始的位置[x,y,z],z为站立高度
                     rotation: [0, 0, 0],   //默认的旋转位置
+                    world:0,              //
+                    ext:2,              
+                    stop:{
+                        on:false,               //whether on stop ( including adjunct type )
+                        adjunct:"",             //adjunct support stop attribution, need to figure out
+                        index:0,                //adjunct index
+                    }
                 },
                 body: {     //基础的玩家配置，如需特殊调整，用scale的方式来实现.Avatar里需要有这些参数，不存在的话，就用这个配置
                     //height: 1.7,        //默认玩家身高
                     shoulder: 0.5,      //肩膀宽度
                     chest: 0.22,        //胸部厚度
-                    body: [0.3, 0.4, 0.2, 0.8],  //身体高度分段,[头部，身体，臀部，腿部]
+                    section: [0.3, 0.4, 0.2, 0.8],  //身体高度分段,[头部，身体，臀部，腿部]
                     head: [0.25, 0.05],           //头部的长度，[头高度，脖子]
                     hand: [0.2, 0.2, 0.1],         //手臂长度,[上臂，下臂，手]
                     leg: [0.5, 0.5, 0.1],          //腿的长度,[大腿，小腿，脚]

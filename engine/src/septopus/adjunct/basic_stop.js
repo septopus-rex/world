@@ -313,6 +313,12 @@ const self = {
             console.log(`Basic, player stand height: ${stand}, 
                 body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
             const arr = [];
+            const def = {
+                "BODY_STOP": 1,  //stop the body
+                "FOOT_STOP": 2,  //stop on foot
+                "HEAD_STOP": 3,  //stop beyond header
+            }
+
             for (let id in list) {
                 const row = list[id];
                 const { position, size } = row;

@@ -224,31 +224,6 @@ const self = {
         ];
         return wd;
     },
-    getConvert: () => {
-        return VBW.cache.get(["env", "world", "accuracy"]);
-    },
-    getSide: () => {
-        return VBW.cache.get(["env", "world", "side"]);
-    },
-
-    syncPlayer: (user, id) => {
-        //1.set location of player;
-        VBW.cache.set(["env", "player", "location"], user);
-        console.log(user);
-
-        //2.set camera as player view.
-        const cam_chain = ["active", "containers", id, "camera"];
-        const cam = VBW.cache.get(cam_chain);
-        const side = self.getSide();
-        const cvt = self.getConvert();
-        const pos = [
-            cam.position.x + (user.block[0] - 1) * side[0] + user.position[0] * cvt,
-            cam.position.y + (user.block[1] - 1) * side[1] + user.position[1] * cvt,
-            user.position[2] * cvt
-        ]
-        cam.position.set(pos[0], pos[2], -pos[1]);
-        cam.rotation.set(...user.rotation);
-    },
 
     fetchModules: (arr, ck) => {
         if (!VBW.datasource || !VBW.datasource.module) {
@@ -430,12 +405,6 @@ const self = {
         self.saveWorld(wd);
 
     },
-    combinePlayer: (start, basic) => {
-        console.log(JSON.stringify(start), basic);
-        const player = Toolbox.clone(start)
-
-        return player;
-    },
     runOnce: (dom_id, cfg) => {
         //0.set current active dom_id
         const current_chain = ["active", "current"];
@@ -454,14 +423,24 @@ const self = {
     },
     initEnv: (dom_id, ck) => {
         //{"block":[2025,502],"world":0,"position":[7.326341784000396,12.310100473087282,0],"rotation":[0,0.3875731999042833,0],"stop":-1,"extend":2}
+        //1. get player location
         VBW.player.start(dom_id, (start) => {
-            //console.log(JSON.stringify(start))
             const world = start.world;
+
+            //2. get world setting
             VBW.datasource.world(world, (wd) => {
-                //console.log(wd);
-                self.setup(wd);         //set world cache
-                const player = self.combinePlayer(start, wd.data.player);
-                return ck && ck(world, player, wd.common.world.range);
+                //2.1. setup world parameters
+                self.setup(wd);   
+
+                //2.2. format player data and calc capacity
+                VBW.player.format(start, wd.data.player);
+
+                //2.3. add listener
+                VBW.event.start(world, dom_id);
+
+                //2.4. set checker
+                self.setChecker(dom_id, world);
+                return ck && ck(world, wd.common.world.range);
             })
         });
     },
@@ -497,7 +476,6 @@ const self = {
                     const range = { x: x, y: y, ext: ext, world: world, container: dom_id };
                     VBW.load(range, cfg, (pre) => {
                         UI.show("toast", `Struct all components, ready to show.`);
-                        //self.syncPlayer(player, dom_id);  //set the camera as player here, need the render is ready
                         self.prefetch(pre.texture, pre.module, (failed) => {
                             UI.show("toast", `Fetch texture and module successful.`);
                             return ck && ck(true);
@@ -585,23 +563,15 @@ const World = {
         UI.show("toast", `Start to struct world. Framework:`, VBW);
 
         self.runOnce(dom_id, cfg);
-
-        self.initEnv(dom_id, (world, player, limit) => {
-            //console.log(world, player, limit)
-
-            VBW.event.start(world, dom_id);      //listen to events
+        self.initEnv(dom_id, (world, limit) => {
 
             UI.show("toast", `World data load from network successful.`);
-
-            //1.1. set `block checker` and `resource check`.
-            self.setChecker(dom_id, world);
-
-            //1.2.load data
-            const [x, y] = player.block;
-            const ext = !player.extend ? 1 : player.extend;
-
+            const pos=VBW.cache.get(["env","player","location"]);
+            const [x, y] = pos.block;
+            const ext = !pos.extend ? 1 : pos.extend;
+            
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
-                self.syncPlayer(player, dom_id);
+                VBW.player.synchronous(pos);
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
             }, cfg);
