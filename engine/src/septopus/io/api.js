@@ -165,7 +165,9 @@ const API = {
      * @return {object}  - world setting
      */
     world: (index, ck, cfg) => {
-        if(config.debug) return ck && ck(mock.world(index));
+        const wd=mock.world(index);
+        wd.common=mock.common();
+        if(config.debug) return ck && ck(wd);
         const data={};
         return ck && ck(data);
     },

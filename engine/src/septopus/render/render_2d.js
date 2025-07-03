@@ -38,7 +38,7 @@ const env = {
     offset: [0, 0],       //
     size: [0, 0],         //canvas size as meter
     side: [0, 0],         //block side
-    limit: [4096, 4096],   //block number limit
+    limit: null,   //block number limit
     height: 100,         //canvas height
     width: 100,          //canvas width
     density: 0.21,       // px/meter,
@@ -218,7 +218,10 @@ const renderer = {
             self.construct(dom_id);
             self.start();
         }
-        //console.log(`Showing 2D map of ${dom_id}`, env.pen);
+
+        if(env.limit===null){
+            env.limit=VBW.cache.get(["env","world","common","world","range"]);
+        } 
         self.render();
     },
     clean: (dom_id) => {

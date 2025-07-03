@@ -218,10 +218,9 @@ const self = {
     },
 
     formatWorld: (wd) => {
-        console.log("format world....", JSON.stringify(wd.side));
         wd.side = [
-            wd.side[0] * wd.accuracy,
-            wd.side[1] * wd.accuracy,
+            wd.block.limit[0] * wd.accuracy,
+            wd.block.limit[1] * wd.accuracy,
         ];
         return wd;
     },
@@ -456,12 +455,13 @@ const self = {
     initEnv: (dom_id, ck) => {
         //{"block":[2025,502],"world":0,"position":[7.326341784000396,12.310100473087282,0],"rotation":[0,0.3875731999042833,0],"stop":-1,"extend":2}
         VBW.player.start(dom_id, (start) => {
-            console.log(JSON.stringify(start))
+            //console.log(JSON.stringify(start))
             const world = start.world;
             VBW.datasource.world(world, (wd) => {
+                //console.log(wd);
                 self.setup(wd);         //set world cache
                 const player = self.combinePlayer(start, wd.data.player);
-                return ck && ck(world, player, wd.range);
+                return ck && ck(world, player, wd.common.world.range);
             })
         });
     },
@@ -470,9 +470,6 @@ const self = {
         if (world_info !== undefined) {
             const w_chain = ["env", "world"];
             if (!VBW.cache.exsist(w_chain)) {
-                //world_info.index = index;
-                //FIXME, here need to get the right index of world
-                world_info.index = 0;
                 const wd = self.formatWorld(world_info);
                 VBW.cache.set(w_chain, wd);
             }
@@ -484,6 +481,7 @@ const self = {
         queue.push({ name: "block_checker", fun: self.checkBlock });
         queue.push({ name: "resource_checker", fun: self.checkResource });
     },
+
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
         VBW.datasource.view(x, y, ext, world, (map) => {
             //console.log(map);
@@ -540,7 +538,7 @@ const World = {
         }
 
         const ext = 0;
-        const limit = [4096, 4096];
+        const limit=VBW.cache.get(["env","world","common","world","range"]);
         self.launch(dom_id, x, y, ext, world, limit, (done) => {
             VBW[config.render].show(dom_id);
         });
@@ -589,6 +587,8 @@ const World = {
         self.runOnce(dom_id, cfg);
 
         self.initEnv(dom_id, (world, player, limit) => {
+            //console.log(world, player, limit)
+
             VBW.event.start(world, dom_id);      //listen to events
 
             UI.show("toast", `World data load from network successful.`);
@@ -599,6 +599,7 @@ const World = {
             //1.2.load data
             const [x, y] = player.block;
             const ext = !player.extend ? 1 : player.extend;
+
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
                 self.syncPlayer(player, dom_id);
                 VBW[config.controller].start(dom_id);

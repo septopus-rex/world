@@ -60,35 +60,60 @@ const self={
         const value=VBW.cache.get(config.mount);
         if(value.error) return false;
 
+        //console.log(JSON.stringify(value));
+
+        value.height=height;
+
         let diff=(height-def.start)*interval*def.speed;
-        if(diff>def.year){
+        if(diff >= def.year){
             value.year=Math.floor(diff/def.year);
             diff=diff%def.year;
+            if(diff===0){
+                value.month=0;
+                value.day=0;
+                value.hour=0;
+                value.minute=0;
+                return true;
+            }
         }
+        
 
-        if(diff>def.month){
+        if(diff >= def.month){
             value.month=Math.floor(diff/def.month);
             diff=diff%def.month;
+            if(diff===0){
+                value.day=0;
+                value.hour=0;
+                value.minute=0;
+                return true;
+            }
         }
 
-        if(diff>def.day){
+        if(diff >= def.day){
             value.day=Math.floor(diff/def.day);
             diff=diff%def.day;
+            if(diff===0){
+                value.hour=0;
+                value.minute=0;
+                return true;
+            }
         }
 
-        if(diff>def.hour){
+        if(diff >= def.hour){
             value.hour=Math.floor(diff/def.hour);
             diff=diff%def.hour;
+            if(diff===0){
+                value.minute=0;
+                return true;
+            }
         }
 
-        if(diff>def.minute){
+        if(diff >= def.minute){
             value.minute=Math.floor(diff/def.minute);
             diff=diff%def.minute;
         }
 
         value.second=diff;
-        value.height=height;
-        console.log(JSON.stringify(value));
     },
 }
 

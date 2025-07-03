@@ -18,10 +18,10 @@ const mock = {
     common: () => {
         return {
             world: {     //Septopus setting
-                name: "Septopus World",          //Septopus的名称
+                name: "Septopus Worlds",          //Septopus的名称
                 desc: "Septopus description.",   //Septopus世界的描述
-                size: [4096, 4096],              //每个世界的尺寸 
-                block: [16, 16, 64],             //单个block的尺寸限制
+                range: [4096, 4096],              //每个世界的尺寸 
+                side: [16, 16, 64],             //单个block的尺寸限制
                 max: 99,                          //最大世界发行数量
             },
             time: {      //time setting
@@ -173,34 +173,34 @@ const mock = {
     },
     world: (index) => {
         return {
-            name: "Septopus World",      //World name
-            desc: "Septopus world, a virtual block world on chain.",     //Description of world
-            range: [4096, 4096],        //limit of world 
-            side: [16, 16],             //size of block
+            name: `Septopus #${index} World`,      //World name
+            desc: "One , a virtual block world on chain.",     //Description of world
+            //range: [4096, 4096],        //limit of world 
+            //side: [16, 16],             //size of block
             accuracy: 1000,             //accuracy, 1000 as 1mm. Default data as "m"
             block: {
                 limit: [16, 16, 32],
                 diff: 4,
                 status: ["RAW", "PUBLIC", "PRIVATE", "LOCKED"],
             },
-            time: {         //time setting
-                year: 12,        // months/year
-                month: 30,       // days/month
-                day: 24,         // hours/day
-                hour: 60,        // minutes/hour
-                minute: 60,      // seconds/minute
-                second: 1000,    // microseconds/second
-                speed: 20,       // rate =  septopus year / reality year
-                start: 80000,    // septopus world start height
-            },
-            sky: {          //sky setting
-                sun: 1,         //amount of sun
-                moon: 3,        //amount of moon
-            },
-            weather: {
-                category: ["cloud", "rain", "snow"],
-                grading: 8,
-            },
+            // time: {         //time setting
+            //     year: 12,        // months/year
+            //     month: 30,       // days/month
+            //     day: 24,         // hours/day
+            //     hour: 60,        // minutes/hour
+            //     minute: 60,      // seconds/minute
+            //     second: 1000,    // microseconds/second
+            //     speed: 20,       // rate =  septopus year / reality year
+            //     start: 80000,    // septopus world start height
+            // },
+            // sky: {          //sky setting
+            //     sun: 1,         //amount of sun
+            //     moon: 3,        //amount of moon
+            // },
+            // weather: {
+            //     category: ["cloud", "rain", "snow"],
+            //     grading: 8,
+            // },
             address: "SOLANA_ACCOUNT_ADDRESS",      //signature of this world init
             blockheight: 1123456,                   //slot height when this world starts
             index: index,                       //index of world     
