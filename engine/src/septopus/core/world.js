@@ -433,7 +433,9 @@ const self = {
                 self.setup(wd);   
 
                 //2.2. format player data and calc capacity
-                VBW.player.format(start, wd.data.player);
+                const local = VBW.player.format(start, wd.data.player);
+
+                VBW.player.setLocation(local,dom_id);
 
                 //2.3. add listener
                 VBW.event.start(world, dom_id);
@@ -571,7 +573,7 @@ const World = {
             const ext = !pos.extend ? 1 : pos.extend;
             
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
-                VBW.player.synchronous(pos);
+                
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
             }, cfg);

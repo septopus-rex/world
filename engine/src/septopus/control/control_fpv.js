@@ -17,9 +17,6 @@ import VBW from "../core/framework";
 import UI from "../io/io_ui";
 import ThreeObject from "../three/entry";
 import Touch from "../lib/touch";
-import Toolbox from "../lib/toolbox";
-
-import * as THREE from "three";
 
 const reg = {
     name: "con_first",
@@ -123,6 +120,33 @@ const self = {
         const chain = ["block", cache.container, cache.world, `${x}_${y}`, 'std', adjunct, index === undefined ? 0 : index];
         return VBW.cache.get(chain);
     },
+    getAngle:(ak)=>{
+        if(env.mobile){
+            const rate=env.screen.distance/env.screen.width
+            return Math.PI * 0.5 * rate;
+        }else{
+            return ak;
+        }
+    },
+    getElevation: (x, y) => {
+        const active = VBW.cache.get(["active"]);
+        const chain = ["block", active.current, active.world, `${x}_${y}`, "elevation"];
+        return VBW.cache.get(chain);
+    },
+        getClickPosition: (ev) => {
+        return [ev.clientY, ev.clientX];
+    },
+    getSingle: (objs) => {
+        let dis = 0;
+        let selected = 0;
+        for (let i = 0; i < objs.length; i++) {
+            const row = objs[i];
+            if (dis === 0) dis = row.distance;
+            if (row.distance < dis) selected = i;
+        }
+        const target = objs[selected];
+        return target.object.userData;
+    },
     keyboard: () => {
         self.bind('keydown', (ev) => {
             const code = ev.which;
@@ -176,96 +200,6 @@ const self = {
             return acc;
         }, {});
     },
-    cross: (from, to, ext) => {
-        const delta = [to[0] - from[0], to[1] - from[1]];
-        //console.log(JSON.stringify(from), JSON.stringify(to), JSON.stringify(delta), ext);
-        const dlist = [], glist = [], rg = ext + ext + 1;
-        const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
-        if (delta[0] != 0 && delta[1] == 0) {
-            for (let i = -ext; i <= ext; i++) {
-                dlist.push([x, from[1] + i]);
-                glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i])
-            }
-        } else if (delta[0] == 0 && delta[1] != 0) {
-            for (let i = -ext; i <= ext; i++) {
-                dlist.push([from[0] + i, y]);
-                glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
-            }
-        } else if (delta[0] != 0 && delta[1] != 0) {
-            const sx = delta[0] > 0 ? 1 : 0, ex = delta[0] > 0 ? 0 : -1;
-            const sy = delta[1] > 0 ? 1 : 0, ey = delta[1] > 0 ? 0 : -1;
-
-            //1.get the remove list
-            for (let i = -ext; i <= ext; i++) dlist.push([x, from[1] + i]);
-            for (let i = -ext + sx; i <= ext + ex; i++) dlist.push([from[0] + i, y]);
-
-            //2.get the load list
-            for (let i = -ext + sy; i <= ext + ey; i++)glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i]);
-            for (let i = -ext + sx; i <= ext + ex; i++)glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
-            glist.push([from[0] + (delta[0] > 0 ? ext + 1 : -ext - 1), from[1] + (delta[1] > 0 ? ext + 1 : -ext - 1)]);
-
-        }
-        return { load: glist, destroy: dlist };
-    },
-    updateLocation: (camera, total, moved, rotated) => {
-        const px = camera.position.x;
-        const py = -camera.position.z;
-        const player = cache.player;
-        const side = cache.side;
-
-        //1.set player position
-        if (moved) {
-            const x = Math.floor(px / side[0] + 1);
-            const y = Math.floor(py / side[1] + 1);
-            //console.log(`Current ${JSON.stringify([x,y])}, player: ${JSON.stringify(player.location)}`)
-
-            //2.处理跨越block的数据获取
-            const [bx, by] = player.location.block;
-            if (bx !== x || by !== y) {
-                //console.log(`Cross block from ${JSON.stringify(player.location)} to ${JSON.stringify([x, y])}`);
-                const change = self.cross(player.location.block, [x, y], player.location.extend);
-                const tasks = VBW.cache.get(["task", cache.container, cache.world]);
-
-                if (change.load.length !== 0) {
-                    for (let i = 0; i < change.load.length; i++) {
-                        const bk = change.load[i];
-                        tasks.push({ block: bk, action: "load" });
-                    }
-                }
-
-                if (change.destroy.length !== 0) {
-                    for (let i = 0; i < change.destroy.length; i++) {
-                        const bk = change.destroy[i];
-                        tasks.push({ block: bk, action: "unload" });
-                    }
-                }
-            }
-
-            VBW.update(cache.container, cache.world);
-
-            player.location.block = [x, y];
-        }
-
-        //2.check whether stop
-        //TODO, need to check stop station, include nearby blocks
-
-        //3.player sync
-        const cvt = cache.convert;
-        player.location.position[0] = px % side[0] / cvt;
-        player.location.position[1] = py % side[1] / cvt;
-        //!important, total is base on three.js coordinaration
-        player.location.position[2] = player.location.position[2] + total.position[1] / cvt;
-
-        player.location.rotation[0] = player.location.rotation[0] + total.rotation[0];
-        player.location.rotation[1] = player.location.rotation[1] + total.rotation[1];
-        player.location.rotation[2] = player.location.rotation[2] + total.rotation[2];
-
-        //4.update compass value
-        if (rotated) {
-            self.setCompass( player.location.rotation[1]);
-        }
-    },
-
     setCompass: (ak) => {
         const angle=-180 * ak / Math.PI;
         const cfg_compass = {
@@ -303,13 +237,6 @@ const self = {
         }
         return stops;
     },
-
-    getElevation: (x, y) => {
-        const active = VBW.cache.get(["active"]);
-        const chain = ["block", active.current, active.world, `${x}_${y}`, "elevation"];
-        return VBW.cache.get(chain);
-    },
-
     checkStop: (delta) => {
         const cvt = cache.convert;
         const player = cache.player;
@@ -334,26 +261,15 @@ const self = {
         return VBW.stop.check(pos, stops, cfg);
     },
 
-    getAngle:(ak)=>{
-        if(env.mobile){
-            const rate=env.screen.distance/env.screen.width
-            return Math.PI * 0.5 * rate;
-        }else{
-            return ak;
-        }
-    },
-
     //Frame Synchronization, movement here to imply
     action: () => {
         const camera = cache.camera;
         const dis = [config.move.distance, self.getAngle(config.move.angle)];
         const ak = camera.rotation.y;
 
-        //console.log(JSON.stringify(env.screen));
-
         //1.deal with keyboard inputs.
-        let moved = false, rotated = false;
-        const total = { position: [0, 0, 0], rotation: [0, 0, 0] }
+        //let moved = false, rotated = false;
+        //const total = { position: [0, 0, 0], rotation: [0, 0, 0] }
         //console.log(JSON.stringify(cache.actions));
         for (let i = 0; i < cache.actions.length; i++) {
             const act = cache.actions[i];
@@ -361,113 +277,18 @@ const self = {
             const diff = todo[act](dis, ak);
 
             if (diff.position) {
-                //1.1.check whether stop by stops
                 const check = self.checkStop(diff.position);
                 if (!check.move) {
-                    //console.log(`Stopped.`,check);
+                    console.log(`Stopped.`,check);
                     continue;
                 }
 
-                //1.3.if delta, set the player
                 if (check.delta) {
-                    //console.log(`Here to set the player height. diff: ${check.delta}`);
-                    diff.position[2] += check.delta;      //add rise to diff
-                }
-
-                //1.2.movement here
-                moved = true;
-
-                //!important, adopation of coordination here.
-                total.position[0] += diff.position[0];
-                total.position[1] += diff.position[2];       //!important, transform from Septopus to three.js
-                total.position[2] += -diff.position[1];      //!important, transform from Septopus to three.js
-
-                camera.position.set(
-                    camera.position.x + total.position[0],
-                    camera.position.y + total.position[1],
-                    camera.position.z + total.position[2],
-                );
-            }
-
-
-            //FIXME, here to solve the header rise up/down issue
-            //console.log(diff.rotation)
-            if (diff.rotation) {
-                rotated = true;
-                //z ax rotation
-                if (diff.rotation[2]) {
-                    total.rotation[1] += diff.rotation[2];
-                    camera.rotation.set(
-                        camera.rotation.x + total.rotation[0],
-                        camera.rotation.y + total.rotation[1],
-                        camera.rotation.z + total.rotation[2],
-                    );
-                }
-
-                //x ax rotation
-                // if(diff.rotation[0]){
-                //     const ak_deg=camera.rotation.z;
-                //     const bk_deg=diff.rotation[0];
-
-                //     const ak = THREE.MathUtils.degToRad(ak_deg); // 朝向角
-                //     const bk = THREE.MathUtils.degToRad(bk_deg); // 抬头角
-                //     const qFacing = new THREE.Quaternion().setFromAxisAngle(
-                //         new THREE.Vector3(0, 0, 1), ak
-                //     );
-                //     const localXAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(qFacing);
-                //     const qPitch = new THREE.Quaternion().setFromAxisAngle(localXAxis, bk);
-                //     const qFinal = qFacing.clone().multiply(qPitch);
-                //     const euler = new THREE.Euler().setFromQuaternion(qFinal, 'XYZ');
-                //     camera.rotation.set(
-                //         camera.rotation.x + euler.x,
-                //         camera.rotation.y + euler.y,
-                //         camera.rotation.z + euler.z,
-                //     );
-                // }
-
-                // total.rotation[0] += diff.rotation[0];
-                // total.rotation[1] += diff.rotation[1];
-                // total.rotation[2] += diff.rotation[2];
-
-                // camera.rotation.set(
-                //     camera.rotation.x + total.rotation[0],
-                //     camera.rotation.y + total.rotation[1],
-                //     camera.rotation.z + total.rotation[2],
-                // );
-            }
-
-            //TODO, here to check movementp[]. if so, lock and do act. Support more actions, such as JUMP
-            //2.[{position:[0,0,0],rotation:[0,0,0]},...], action array
-            if (diff.group) {
-                self.lock();
-                for (let i = 0; i < diff.group.length; i++) {
-                    const single = diff.group[i];
-
-                    //2.1.check whether stopped.
-
-                    //2.2.rotation
+                    diff.position[2] += check.delta;
                 }
             }
+            VBW.player.synchronous(diff);
         }
-
-        //2.update player location
-        if (!env.lock) {
-            self.updateLocation(cache.camera, total, moved, rotated);
-        }
-    },
-    getClickPosition: (ev) => {
-        return [ev.clientY, ev.clientX];
-    },
-    getSingle: (objs) => {
-        let dis = 0;
-        let selected = 0;
-        for (let i = 0; i < objs.length; i++) {
-            const row = objs[i];
-            if (dis === 0) dis = row.distance;
-            if (row.distance < dis) selected = i;
-        }
-        const target = objs[selected];
-        return target.object.userData;
     },
     formatGroups: (groups) => {
         const ss = [];

@@ -40,20 +40,25 @@ const capacity = {
     strength: 1,         //strength time for jump. Not used yet.
 }
 
-let count = 0;          //count to fresh, reduce the fresh frequence
-let player = null;      //player link to cache
-let camera = null;      //camera to sync
+const env={
+    count:0,
+    player:null,
+    lock:false,
+    camera:{},        //camera to sync
+    diff:{ 
+        position: [0, 0, 0], 
+        rotation: [0, 0, 0],
+        moved:false,
+        rotated:true,
+    }
+}
+
 const self = {
     hooks: {
         reg: () => {
             return reg;
         },
         init: () => {
-            // const py = Toolbox.clone(config);
-            // py.avatar = "";
-            // py.address = "";
-            // py.stamp = Toolbox.stamp();
-
             const py = {
                 address: "",
                 stamp: Toolbox.stamp(),
@@ -62,7 +67,6 @@ const self = {
                     height: 1.7,
                 },
             }
-
             return {
                 chain: ["env", "player"],
                 value: py,
@@ -86,7 +90,7 @@ const self = {
             }
         }
     },
-    updateStatus: () => {
+    statusUI: () => {
         //1.show block information and bind status click function
         const cfg_status = {
             events: {
@@ -98,7 +102,7 @@ const self = {
                 },
             },
         }
-        UI.show("status", JSON.stringify(player.block), cfg_status);
+        UI.show("status", JSON.stringify(env.player.location.block), cfg_status);
     },
     showMap: (ev) => {
         const dom_id = config.map.id;
@@ -136,72 +140,208 @@ const self = {
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
     },
+    checkLocation: (camera, total, moved, rotated) => {
+        const px = camera.position.x;
+        const py = -camera.position.z;
+        const player = cache.player;
+        const side = cache.side;
+
+        //1.set player position
+        if (moved) {
+            const x = Math.floor(px / side[0] + 1);
+            const y = Math.floor(py / side[1] + 1);
+            //console.log(`Current ${JSON.stringify([x,y])}, player: ${JSON.stringify(player.location)}`)
+
+            //2.处理跨越block的数据获取
+            const [bx, by] = player.location.block;
+            if (bx !== x || by !== y) {
+                //console.log(`Cross block from ${JSON.stringify(player.location)} to ${JSON.stringify([x, y])}`);
+                const change = self.cross(player.location.block, [x, y], player.location.extend);
+                const tasks = VBW.cache.get(["task", cache.container, cache.world]);
+
+                if (change.load.length !== 0) {
+                    for (let i = 0; i < change.load.length; i++) {
+                        const bk = change.load[i];
+                        tasks.push({ block: bk, action: "load" });
+                    }
+                }
+
+                if (change.destroy.length !== 0) {
+                    for (let i = 0; i < change.destroy.length; i++) {
+                        const bk = change.destroy[i];
+                        tasks.push({ block: bk, action: "unload" });
+                    }
+                }
+            }
+
+            VBW.update(cache.container, cache.world);
+
+            player.location.block = [x, y];
+        }
+
+        //2.check whether stop
+        //TODO, need to check stop station, include nearby blocks
+
+        //3.player sync
+        const cvt = cache.convert;
+        player.location.position[0] = px % side[0] / cvt;
+        player.location.position[1] = py % side[1] / cvt;
+        //!important, total is base on three.js coordinaration
+        player.location.position[2] = player.location.position[2] + total.position[1] / cvt;
+
+        player.location.rotation[0] = player.location.rotation[0] + total.rotation[0];
+        player.location.rotation[1] = player.location.rotation[1] + total.rotation[1];
+        player.location.rotation[2] = player.location.rotation[2] + total.rotation[2];
+
+        //4.update compass value
+        if (rotated) {
+            self.setCompass( player.location.rotation[1]);
+        }
+    },
+    cross: (from, to, ext) => {
+        const delta = [to[0] - from[0], to[1] - from[1]];
+        //console.log(JSON.stringify(from), JSON.stringify(to), JSON.stringify(delta), ext);
+        const dlist = [], glist = [], rg = ext + ext + 1;
+        const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
+        if (delta[0] != 0 && delta[1] == 0) {
+            for (let i = -ext; i <= ext; i++) {
+                dlist.push([x, from[1] + i]);
+                glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i])
+            }
+        } else if (delta[0] == 0 && delta[1] != 0) {
+            for (let i = -ext; i <= ext; i++) {
+                dlist.push([from[0] + i, y]);
+                glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
+            }
+        } else if (delta[0] != 0 && delta[1] != 0) {
+            const sx = delta[0] > 0 ? 1 : 0, ex = delta[0] > 0 ? 0 : -1;
+            const sy = delta[1] > 0 ? 1 : 0, ey = delta[1] > 0 ? 0 : -1;
+
+            //1.get the remove list
+            for (let i = -ext; i <= ext; i++) dlist.push([x, from[1] + i]);
+            for (let i = -ext + sx; i <= ext + ex; i++) dlist.push([from[0] + i, y]);
+
+            //2.get the load list
+            for (let i = -ext + sy; i <= ext + ey; i++)glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i]);
+            for (let i = -ext + sx; i <= ext + ex; i++)glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
+            glist.push([from[0] + (delta[0] > 0 ? ext + 1 : -ext - 1), from[1] + (delta[1] > 0 ? ext + 1 : -ext - 1)]);
+
+        }
+        return { load: glist, destroy: dlist };
+    },
+
+    auto: () => {
+        if (env.player === null) {
+            env.player = VBW.cache.get(["env", "player"]);
+        }
+
+        //1. save player status
+        if (env.count > config.autosave.interval) {
+            const key = config.autosave.key;
+            localStorage.setItem(key, JSON.stringify(env.player.location));
+            env.count = 0;
+            self.statusUI();
+        } else {
+            env.count++;
+        }
+    },
+
+    syncCameraPosition:(pos)=>{
+
+        for(let dom_id in env.camera){
+            //1. change camera position
+            const cam=env.camera[dom_id];
+            cam.position.set(                    //!important, transform from Septopus to three.js
+                cam.position.x + pos[0],
+                cam.position.y + pos[2],
+                cam.position.z - pos[1],
+            );
+
+            //2. increate player action
+        }
+    },
+    syncCameraRotation:(ro)=>{
+        for(let dom_id in env.camera){
+            //1. change camera position
+            const cam=env.camera[dom_id];
+            cam.rotation.set(
+                cam.rotation.x + ro[0],
+                cam.rotation.y + ro[2],
+                cam.rotation.z + ro[1],
+            );
+
+            //2. increate player rotation
+        }
+    },
 }
 
 const vbw_player = {
     hooks: self.hooks,
-    autosave: () => {
-        if (player === null) {
-            player = VBW.cache.get(["env", "player"]);
-        }
-
-        if (count > config.autosave.interval) {
-            const key = config.autosave.key;
-            localStorage.setItem(key, JSON.stringify(player.location));
-            count = 0;
-            self.updateStatus();
-        } else {
-            count++;
-        }
-    },
 
     //get the player status.
     start: (dom_id, ck) => {
         const data = self.getPlayerLocation();
-        if (player === null) player = VBW.cache.get(["env", "player"])
+        if (env.player === null) env.player = VBW.cache.get(["env", "player"])
         //1.set body height
         //data.position[2]+=config.body.height;
 
-        //2. set auto update
-        const chain = ["block", dom_id, data.world, "loop"];
+        //2. set auto update and camera synchronous keyframe loop
+        const world= data.world;
+        const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
-        queue.push({ name: "player", fun: vbw_player.autosave });
+        queue.push({ name: "player", fun: self.auto });
 
         //3.set camera
-        if (camera === null) {
-            camera = VBW.cache.get(["active", "containers", dom_id, "camera"]);
+        if (env.camera[dom_id] === undefined) {
+            env.camera[dom_id] = VBW.cache.get(["active", "containers", dom_id, "camera"]);
         }
 
         return ck && ck(data);
     },
 
     format: (local, basic) => {
-        console.log(local, basic, player);
+        console.log(local, basic);
 
         //1. set basic location
         if (local.block === undefined) {
-            player.location = basic.start;
+            env.player.location = basic.start;
         } else {
-            player.location = local;
+            env.player.location = local;
         }
 
         //2. caculate capacity
-        player.body = basic.body
-        player.body.height = self.getHeight(basic.body.section);
-        self.calcCapacity(player.body);
-    },
+        env.player.body = basic.body
+        env.player.body.height = self.getHeight(basic.body.section);
+        self.calcCapacity(env.player.body);
 
-    synchronous: (local) => {
+        return env.player.location;
+    },
+    
+    setLocation: (local,dom_id) => {
+        //console.log(camera,dom_id);
         const side = self.getSide();
         const cvt = self.getConvert();
         const pos = [
-            camera.position.x + (local.block[0] - 1) * side[0] + local.position[0] * cvt,
-            camera.position.y + (local.block[1] - 1) * side[1] + local.position[1] * cvt,
+            env.camera[dom_id].position.x + (local.block[0] - 1) * side[0] + local.position[0] * cvt,
+            env.camera[dom_id].position.y + (local.block[1] - 1) * side[1] + local.position[1] * cvt,
             local.position[2] * cvt
         ]
-        camera.position.set(pos[0], pos[2], -pos[1]);
-        camera.rotation.set(...local.rotation);
+        env.camera[dom_id].position.set(pos[0], pos[2], -pos[1]);
+        env.camera[dom_id].rotation.set(...local.rotation);
+    },
+
+    /**
+    * synchronous player movement to camera
+    * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0]}
+    */
+    synchronous:(diff)=>{
+        if(Array.isArray(diff)){
+
+        }else{
+            if(diff.position) self.syncCameraPosition(diff.position);
+            if(diff.rotation) self.syncCameraRotation(diff.rotation);
+        }
     },
 }
 

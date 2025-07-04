@@ -78,6 +78,24 @@ const vbw_movement={
         },
         down:(diff,ak)=>{
 
+            //     const ak_deg=camera.rotation.z;
+            //     const bk_deg=diff.rotation[0];
+
+            //     const ak = THREE.MathUtils.degToRad(ak_deg); // 朝向角
+            //     const bk = THREE.MathUtils.degToRad(bk_deg); // 抬头角
+            //     const qFacing = new THREE.Quaternion().setFromAxisAngle(
+            //         new THREE.Vector3(0, 0, 1), ak
+            //     );
+            //     const localXAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(qFacing);
+            //     const qPitch = new THREE.Quaternion().setFromAxisAngle(localXAxis, bk);
+            //     const qFinal = qFacing.clone().multiply(qPitch);
+            //     const euler = new THREE.Euler().setFromQuaternion(qFinal, 'XYZ');
+            //     camera.rotation.set(
+            //         camera.rotation.x + euler.x,
+            //         camera.rotation.y + euler.y,
+            //         camera.rotation.z + euler.z,
+            //     );
+
             return {rotation:[-diff[1],0,0]};
         },
         left:(diff,ak)=>{

@@ -20,12 +20,43 @@ const self={
     hooks:{
         reg:()=>{
             return reg;
-        }
-    }
+        },
+        // init:()=>{
+
+        // },
+        // animate:(meshes,cfg)=>{
+            
+        // },
+    },
+    attribute:{
+        add:(p,raw) => {},
+        remove: (p,raw) => {},
+        set:(p,raw,limit)=>{},
+        combine: (p,row) => {},
+    },
+    transform:{
+        raw_std:(arr,cvt)=>{
+            // return STD[]
+        },
+        std_raw:(arr,cvt)=>{
+            // return RAW[]
+        },
+        std_3d:(arr,va)=>{
+            // return 3D_STD[]
+        },
+        std_acitve:(std, va)=>{
+            // return 3D_STD[]
+        },
+        std_box:(std)=>{
+            // return STD
+        },
+    },
 }
 
 const basic_light={
     hooks:self.hooks,
+    transform:self.transform,
+    attribute:self.attribute,
 }
 
 export default basic_light;
