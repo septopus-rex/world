@@ -435,7 +435,7 @@ const self = {
                 //2.2. format player data and calc capacity
                 const local = VBW.player.format(start, wd.data.player);
 
-                VBW.player.setLocation(local,dom_id);
+                VBW.player.initial(local,dom_id);
 
                 //2.3. add listener
                 VBW.event.start(world, dom_id);

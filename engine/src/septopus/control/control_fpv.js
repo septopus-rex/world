@@ -1,12 +1,13 @@
 /**
- * 3D FPV controller for PC
+ * 3D FPV controller for PC/Mobile
  *
  * @fileoverview
- *  1. keyboard support
- *  2. block cross checking
- *  3. base on three.js coordinate system
- *  4. object selection
- *  5. sidebar and popup menu orginazation
+ *  1. base on `Septopus Coordinaration`
+ *  2. keyboard support
+ *  3. block cross checking
+ *  4. base on three.js coordinate system
+ *  5. object selection
+ *  6. sidebar and popup menu orginazation
  * 
  * @author Fuu
  * @date 2025-04-25
@@ -242,10 +243,17 @@ const self = {
         const player = cache.player;
 
         const [x, y] = player.location.block;
+        // const pos = [
+        //     player.location.position[0] * cvt,
+        //     player.location.position[1] * cvt,
+        //     player.location.position[2] * cvt
+        // ];
+        
+        //!important, need to add the movement to check whether stop
         const pos = [
-            player.location.position[0] * cvt,
-            player.location.position[1] * cvt,
-            player.location.position[2] * cvt
+            player.location.position[0] * cvt + delta[0],
+            player.location.position[1] * cvt + delta[1],
+            player.location.position[2] * cvt + delta[2]
         ];
         const side = cache.side;
         const arr = VBW.stop.calculate.blocks(pos, delta, x, y, side);
@@ -265,12 +273,10 @@ const self = {
     action: () => {
         const camera = cache.camera;
         const dis = [config.move.distance, self.getAngle(config.move.angle)];
-        const ak = camera.rotation.y;
+        //TODO, change to use player rotation[2]
+        const ak = camera.rotation.y;   //!important, need the 
 
         //1.deal with keyboard inputs.
-        //let moved = false, rotated = false;
-        //const total = { position: [0, 0, 0], rotation: [0, 0, 0] }
-        //console.log(JSON.stringify(cache.actions));
         for (let i = 0; i < cache.actions.length; i++) {
             const act = cache.actions[i];
             if (!todo[act]) continue;
@@ -283,6 +289,7 @@ const self = {
                     continue;
                 }
 
+                //if on stop, change player position
                 if (check.delta) {
                     diff.position[2] += check.delta;
                 }
@@ -504,7 +511,7 @@ const controller = {
         if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
 
         //5. init compass;
-        const ak=cache.player.location.rotation[1];
+        const ak=cache.player.location.rotation[2];
         self.setCompass(ak);
     },
 }

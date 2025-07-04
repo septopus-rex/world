@@ -40,16 +40,16 @@ const capacity = {
     strength: 1,         //strength time for jump. Not used yet.
 }
 
-const env={
-    count:0,
-    player:null,
-    lock:false,
-    camera:{},        //camera to sync
-    diff:{ 
-        position: [0, 0, 0], 
+const env = {
+    count: 0,
+    player: null,
+    lock: false,
+    camera: {},        //camera to sync
+    diff: {
+        position: [0, 0, 0],
         rotation: [0, 0, 0],
-        moved:false,
-        rotated:true,
+        moved: false,
+        rotated: true,
     }
 }
 
@@ -140,65 +140,49 @@ const self = {
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
     },
-    checkLocation: (camera, total, moved, rotated) => {
+    checkLocation: (camera,pos,dom_id) => {
         const px = camera.position.x;
         const py = -camera.position.z;
-        const player = cache.player;
-        const side = cache.side;
+        const player = env.player;
+        const side = self.getSide();
+        const cvt = self.getConvert();
+        const world=player.location.world;
 
         //1.set player position
-        if (moved) {
-            const x = Math.floor(px / side[0] + 1);
-            const y = Math.floor(py / side[1] + 1);
-            //console.log(`Current ${JSON.stringify([x,y])}, player: ${JSON.stringify(player.location)}`)
+        const x = Math.floor(px / side[0] + 1);
+        const y = Math.floor(py / side[1] + 1);
 
-            //2.处理跨越block的数据获取
-            const [bx, by] = player.location.block;
-            if (bx !== x || by !== y) {
-                //console.log(`Cross block from ${JSON.stringify(player.location)} to ${JSON.stringify([x, y])}`);
-                const change = self.cross(player.location.block, [x, y], player.location.extend);
-                const tasks = VBW.cache.get(["task", cache.container, cache.world]);
-
-                if (change.load.length !== 0) {
-                    for (let i = 0; i < change.load.length; i++) {
-                        const bk = change.load[i];
-                        tasks.push({ block: bk, action: "load" });
-                    }
-                }
-
-                if (change.destroy.length !== 0) {
-                    for (let i = 0; i < change.destroy.length; i++) {
-                        const bk = change.destroy[i];
-                        tasks.push({ block: bk, action: "unload" });
-                    }
+        //2.deal with the cross stuff, load more data
+        const [bx, by] = player.location.block;
+        if (bx !== x || by !== y) {
+            const change = self.cross(player.location.block, [x, y], player.location.extend);
+            const tasks = VBW.cache.get(["task", dom_id, world]);
+            if (change.load.length !== 0) {
+                for (let i = 0; i < change.load.length; i++) {
+                    const bk = change.load[i];
+                    tasks.push({ block: bk, action: "load" });
                 }
             }
 
-            VBW.update(cache.container, cache.world);
-
-            player.location.block = [x, y];
+            if (change.destroy.length !== 0) {
+                for (let i = 0; i < change.destroy.length; i++) {
+                    const bk = change.destroy[i];
+                    tasks.push({ block: bk, action: "unload" });
+                }
+            }
         }
+        
+        VBW.update(dom_id, world);
+        player.location.block = [x, y];
 
-        //2.check whether stop
-        //TODO, need to check stop station, include nearby blocks
-
-        //3.player sync
-        const cvt = cache.convert;
+        //update player position
         player.location.position[0] = px % side[0] / cvt;
         player.location.position[1] = py % side[1] / cvt;
-        //!important, total is base on three.js coordinaration
-        player.location.position[2] = player.location.position[2] + total.position[1] / cvt;
+        player.location.position[2] = player.location.position[2] + pos[2] / cvt;
 
-        player.location.rotation[0] = player.location.rotation[0] + total.rotation[0];
-        player.location.rotation[1] = player.location.rotation[1] + total.rotation[1];
-        player.location.rotation[2] = player.location.rotation[2] + total.rotation[2];
-
-        //4.update compass value
-        if (rotated) {
-            self.setCompass( player.location.rotation[1]);
-        }
     },
     cross: (from, to, ext) => {
+        console.log(from, to, ext);
         const delta = [to[0] - from[0], to[1] - from[1]];
         //console.log(JSON.stringify(from), JSON.stringify(to), JSON.stringify(delta), ext);
         const dlist = [], glist = [], rg = ext + ext + 1;
@@ -245,12 +229,25 @@ const self = {
             env.count++;
         }
     },
+    setCompass: (ak) => {
+        const angle = -180 * ak / Math.PI;
+        const cfg_compass = {
+            events: {
+                click: (ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    console.log(`Compass clicked`);
+                },
+            },
+        }
+        UI.show("compass", angle, cfg_compass);
+    },
 
-    syncCameraPosition:(pos)=>{
+    syncCameraPosition: (pos) => {
 
-        for(let dom_id in env.camera){
+        for (let dom_id in env.camera) {
             //1. change camera position
-            const cam=env.camera[dom_id];
+            const cam = env.camera[dom_id];
             cam.position.set(                    //!important, transform from Septopus to three.js
                 cam.position.x + pos[0],
                 cam.position.y + pos[2],
@@ -258,12 +255,14 @@ const self = {
             );
 
             //2. increate player action
+            //deal with the cross stuff, not update the player position directly.
+            self.checkLocation(cam,pos,dom_id);  
         }
     },
-    syncCameraRotation:(ro)=>{
-        for(let dom_id in env.camera){
+    syncCameraRotation: (ro) => {
+        for (let dom_id in env.camera) {
             //1. change camera position
-            const cam=env.camera[dom_id];
+            const cam = env.camera[dom_id];
             cam.rotation.set(
                 cam.rotation.x + ro[0],
                 cam.rotation.y + ro[2],
@@ -271,7 +270,12 @@ const self = {
             );
 
             //2. increate player rotation
+            env.player.location.rotation[0] += ro[0];
+            env.player.location.rotation[1] += ro[1];
+            env.player.location.rotation[2] += ro[2];
         }
+        const ak = env.player.location.rotation[2];
+        self.setCompass(ak);
     },
 }
 
@@ -286,7 +290,7 @@ const vbw_player = {
         //data.position[2]+=config.body.height;
 
         //2. set auto update and camera synchronous keyframe loop
-        const world= data.world;
+        const world = data.world;
         const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
@@ -317,30 +321,37 @@ const vbw_player = {
 
         return env.player.location;
     },
-    
-    setLocation: (local,dom_id) => {
-        //console.log(camera,dom_id);
+
+    initial: (local, dom_id) => {
         const side = self.getSide();
         const cvt = self.getConvert();
         const pos = [
             env.camera[dom_id].position.x + (local.block[0] - 1) * side[0] + local.position[0] * cvt,
             env.camera[dom_id].position.y + (local.block[1] - 1) * side[1] + local.position[1] * cvt,
-            local.position[2] * cvt
+            local.position[2] * cvt + env.player.body.height * cvt
         ]
-        env.camera[dom_id].position.set(pos[0], pos[2], -pos[1]);
-        env.camera[dom_id].rotation.set(...local.rotation);
+        env.camera[dom_id].position.set(
+            pos[0],
+            pos[2],
+            -pos[1]
+        );
+        env.camera[dom_id].rotation.set(
+            local.rotation[0],
+            local.rotation[2],
+            local.rotation[1]
+        );
     },
 
     /**
     * synchronous player movement to camera
     * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0]}
     */
-    synchronous:(diff)=>{
-        if(Array.isArray(diff)){
+    synchronous: (diff) => {
+        if (Array.isArray(diff)) {
 
-        }else{
-            if(diff.position) self.syncCameraPosition(diff.position);
-            if(diff.rotation) self.syncCameraRotation(diff.rotation);
+        } else {
+            if (diff.position) self.syncCameraPosition(diff.position);
+            if (diff.rotation) self.syncCameraRotation(diff.rotation);
         }
     },
 }
