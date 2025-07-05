@@ -25,12 +25,13 @@ const reg={
     category:"basic",
     desc:"Trigger of engine, for building games.",
     version:"1.0.0",
-}
+};
 
 const events={
     in:{
         origin:["player","adjunct"],
         condition:[],
+        index:0,
         action:()=>{
 
         },
@@ -38,6 +39,7 @@ const events={
     out:{
         origin:["player","adjunct"],
         condition:[],
+        index:1,
         action:()=>{
 
         },
@@ -45,6 +47,7 @@ const events={
     hold:{
         origin:["player","adjunct"],
         condition:[],
+        index:2,
         action:()=>{
 
         },
@@ -52,6 +55,7 @@ const events={
     on:{
         origin:["player","adjunct"],
         condition:[],
+        index:3,
         action:()=>{
 
         },
@@ -59,6 +63,7 @@ const events={
     beside:{
         origin:["player","adjunct"],
         condition:[],
+        index:4,
         action:()=>{
 
         },

@@ -377,10 +377,10 @@ const self = {
 
         UI.show("menu", menus, cfg_menu);
     },
-    autoBind: () => {
+    subcribe: () => {
         const target = "height";
         const key = "getSlot"
-        API.bind(target, key, (data) => {
+        API.subcribe(target, key, (data) => {
             VBW.time.calc(data);
             VBW.weather.calc(data);
         });
@@ -414,7 +414,7 @@ const self = {
         self.layout();
 
         //0.2. start listener.
-        self.autoBind();
+        self.subcribe();
 
         //0.3. set contract requests.
         if (cfg && cfg.contract && VBW.datasource && VBW.datasource.contract) {
@@ -566,7 +566,7 @@ const World = {
 
         self.runOnce(dom_id, cfg);
         self.initEnv(dom_id, (world, limit) => {
-
+            console.log("Inited,",VBW);
             UI.show("toast", `World data load from network successful.`);
             const pos=VBW.cache.get(["env","player","location"]);
             const [x, y] = pos.block;

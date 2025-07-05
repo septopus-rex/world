@@ -43,7 +43,6 @@ const events={
     world:{},       //world update event
 }
 
-
 const self = {
     hooks: {
         reg: () => {
@@ -278,7 +277,7 @@ const API = {
      * Set listener of events.
      * 
     */
-    bind:(event,key,fun)=>{
+    subcribe:(event,key,fun)=>{
         if(!events[event]) return {error:`"${event}" is not support yet.`}
         if(listener===null){
             self.listenerStart();
@@ -290,7 +289,7 @@ const API = {
      * Remove listener of events.
      * 
     */
-    unbind:(event,key)=>{
+    off:(event,key)=>{
         if(!events[event]) return {error:`Invalid event.`};
         delete events[event][key];
         return true;

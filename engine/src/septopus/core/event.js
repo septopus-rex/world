@@ -17,16 +17,51 @@ const reg={
     version:"1.0.0",
 }
 
-const runtime={
+const config={
+    hold:{
+        block:20000,
+        trigger:5000,
+    },
+    beside:{
+        block:1,
+        trigger:1,
+    },
+}
+
+const events={
     system:{            //system events
         load:{},
-        block:{},
     },
-    object:{            //object events
-        
+    block:{
+        in:{},
+        out:{},
+        hold:{},
     },
+    stop:{
+        on:{},
+        beside:{},
+        under:{},
+    },
+    trigger:{           //trigger events
+        in:{},
+        out:{},
+        hold:{},
+        on:{},
+        beside:{},
+        under:{},
+    },
+}
+
+const runtime={
     player:null,        //player detail
     active:null,        //active instance
+    block:[0,0],
+    trigger:{           //trigger in list 
+
+    },
+    system:{
+        init:false,
+    }
 }
 
 const cache={};
@@ -47,16 +82,22 @@ const self={
     //function put on queue of frame sync
     checker:()=>{
         //console.log(`Event check.`);
-
         //1. check player position
 
+        //2. check whether trigger event on
     },
 }
 
 const vbw_event = {
     hooks: self.hooks,
+
+    //print support events list.
+    list:()=>{
+
+    },
+    
     on:(name,fun,cfg)=>{
-        console.log(name,fun,cfg);
+        //console.log(name,fun,cfg);
         const type=!cfg.type?"object":cfg.type;
         if(!runtime[type]) return {error:"Invalid event type"};
 

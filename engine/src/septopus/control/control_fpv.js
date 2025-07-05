@@ -243,12 +243,6 @@ const self = {
         const player = cache.player;
 
         const [x, y] = player.location.block;
-        // const pos = [
-        //     player.location.position[0] * cvt,
-        //     player.location.position[1] * cvt,
-        //     player.location.position[2] * cvt
-        // ];
-        
         //!important, need to add the movement to check whether stop
         const pos = [
             player.location.position[0] * cvt + delta[0],
@@ -271,10 +265,13 @@ const self = {
 
     //Frame Synchronization, movement here to imply
     action: () => {
-        const camera = cache.camera;
         const dis = [config.move.distance, self.getAngle(config.move.angle)];
-        //TODO, change to use player rotation[2]
-        const ak = camera.rotation.y;   //!important, need the 
+        
+        //!important, need to confirm the `AK` definition, it is camera coordination
+        //FIXME, change to calculate on the player rotation.
+
+        //const ak = cache.player.location.rotation[2];
+        const ak = cache.camera.rotation.y;
 
         //1.deal with keyboard inputs.
         for (let i = 0; i < cache.actions.length; i++) {
@@ -440,6 +437,8 @@ const self = {
 
         Touch.on(id,"touchStart",(point)=>{
             env.screen.touch = point;
+            VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_LEFT]);
+            VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
         });
 
         //2.touchmove for head rotation

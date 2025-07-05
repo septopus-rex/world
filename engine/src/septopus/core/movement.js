@@ -10,6 +10,7 @@
  */
 
 import VBW from "./framework";
+import * as THREE from "three";
 
 const reg={
     name:"movement",
@@ -61,7 +62,6 @@ const vbw_movement={
         },
         fall:(diff,ak)=>{
             return { position: [ 0,0, -diff[0]] }
-            //return { position: [ 0,-diff[0],0 ] }
         },
 
         //返回jump运动的数组，模拟运动操作
@@ -73,38 +73,60 @@ const vbw_movement={
         },
     },
     head:{
+        //[sin-sin, sin-cos, cos-sin, cos-cos]
+        // up:(diff,ak)=>{
+        //     const bk=-diff[1]*0.1;
+        //     const x = Math.sin(bk) * Math.sin(ak);
+        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
+        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
+        //     return {rotation:[0,x,y]};
+        // },
+        // down:(diff,ak)=>{
+        //     const bk=diff[1]*0.1;
+        //     const x = Math.sin(bk) * Math.sin(ak);
+        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
+        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
+        //     return {rotation:[0,x,y]};
+        // },
         up:(diff,ak)=>{
-            return {rotation:[diff[1],0,0]};
+            //const bs=-diff[1]*0.1 * Math.cos(ak);
+            const bs=-diff[1]*0.1
+            return {rotation:[
+                bs*Math.cos(ak),
+                bs*Math.cos(ak),
+                0,
+            ]};
         },
         down:(diff,ak)=>{
-
-            //     const ak_deg=camera.rotation.z;
-            //     const bk_deg=diff.rotation[0];
-
-            //     const ak = THREE.MathUtils.degToRad(ak_deg); // 朝向角
-            //     const bk = THREE.MathUtils.degToRad(bk_deg); // 抬头角
-            //     const qFacing = new THREE.Quaternion().setFromAxisAngle(
-            //         new THREE.Vector3(0, 0, 1), ak
-            //     );
-            //     const localXAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(qFacing);
-            //     const qPitch = new THREE.Quaternion().setFromAxisAngle(localXAxis, bk);
-            //     const qFinal = qFacing.clone().multiply(qPitch);
-            //     const euler = new THREE.Euler().setFromQuaternion(qFinal, 'XYZ');
-            //     camera.rotation.set(
-            //         camera.rotation.x + euler.x,
-            //         camera.rotation.y + euler.y,
-            //         camera.rotation.z + euler.z,
-            //     );
-
-            return {rotation:[-diff[1],0,0]};
+            //const bs=diff[1]*0.1 * Math.cos(ak);
+            const bs=diff[1]*0.1
+            return {rotation:[
+                bs*Math.cos(ak),
+                bs*Math.cos(ak),
+                0,
+            ]};
         },
         left:(diff,ak)=>{
-
-            return {rotation:[0,0,diff[1]]};
-        },
-        right:(diff,ak)=>{
             return {rotation:[0,0,-diff[1]]};
         },
+        right:(diff,ak)=>{
+            return {rotation:[0,0,diff[1]]};
+        },
+
+        // left:(diff,ak)=>{
+        //     const bk=-diff[1];
+        //     const x = Math.sin(bk) * Math.sin(ak);
+        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
+        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
+        //     return {rotation:[x,y,0]};
+        // },
+        // right:(diff,ak)=>{
+        //     const bk=diff[1];
+        //     const x = Math.sin(bk) * Math.sin(ak);
+        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
+        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
+        //     return {rotation:[x,y,0]};
+        // },
     },
     scale:{
 

@@ -213,22 +213,6 @@ const self = {
         }
         return { load: glist, destroy: dlist };
     },
-
-    auto: () => {
-        if (env.player === null) {
-            env.player = VBW.cache.get(["env", "player"]);
-        }
-
-        //1. save player status
-        if (env.count > config.autosave.interval) {
-            const key = config.autosave.key;
-            localStorage.setItem(key, JSON.stringify(env.player.location));
-            env.count = 0;
-            self.statusUI();
-        } else {
-            env.count++;
-        }
-    },
     setCompass: (ak) => {
         const angle = -180 * ak / Math.PI;
         const cfg_compass = {
@@ -265,17 +249,32 @@ const self = {
             const cam = env.camera[dom_id];
             cam.rotation.set(
                 cam.rotation.x + ro[0],
-                cam.rotation.y + ro[2],
+                cam.rotation.y - ro[2],
                 cam.rotation.z + ro[1],
             );
 
             //2. increate player rotation
-            env.player.location.rotation[0] += ro[0];
-            env.player.location.rotation[1] += ro[1];
-            env.player.location.rotation[2] += ro[2];
+            // env.player.location.rotation[0] += ro[0];
+            // env.player.location.rotation[1] += ro[1];
+            // env.player.location.rotation[2] += ro[2];
         }
         const ak = env.player.location.rotation[2];
         self.setCompass(ak);
+    },
+    auto: () => {
+        if (env.player === null) {
+            env.player = VBW.cache.get(["env", "player"]);
+        }
+
+        //1. save player status
+        if (env.count > config.autosave.interval) {
+            const key = config.autosave.key;
+            localStorage.setItem(key, JSON.stringify(env.player.location));
+            env.count = 0;
+            self.statusUI();
+        } else {
+            env.count++;
+        }
     },
 }
 

@@ -8,8 +8,33 @@
  * @date 2025-06-18
  */
 
+//["不等于","等于","大于","小于","大于等于","小于等于"]
+
+const operator={
+    "!=":(pa,pb)=>{
+
+    },
+    "==":(pa,pb)=>{
+
+    },
+    ">":(pa,pb)=>{
+
+    },
+    "<":(pa,pb)=>{
+
+    },
+    ">=":(pa,pb)=>{
+
+    },
+    "<=":(pa,pb)=>{
+
+    },
+}
+
 const self={
-    
+    getValueByOrgin:()=>{
+
+    },
 };
 
 const TriggerBuilder = {

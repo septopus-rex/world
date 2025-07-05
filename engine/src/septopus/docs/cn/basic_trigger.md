@@ -16,9 +16,26 @@
 * 选择数组不存在属性选择的时候，就是对象选择。
 * 选择的主要类型为["系统","附属物","玩家","背包"]。
 
+```Javascript
+    
+```
+
+```Javascript
+    {
+        "SELECTION_SYSTEM":0,
+        "SELECTION_ADJUNCT":1,
+        "SELECTION_PLAYER":1,
+        "SELECTION_BAG":1,
+        "SYSTEM_UI":0,
+        "SYSTEM_TIME":1,
+        "SYSTEM_WEATHER":2,
+        "SYSTEM_SKY":2,
+    }
+```
+
 ### 系统环境
 
-* 系统环境的可选类型为["UI","天气","天空"]。
+* 系统环境的可选类型为["UI","时间","天气","天空"]。
 
 ```Javascript
     [ 
