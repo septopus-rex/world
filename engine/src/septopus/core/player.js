@@ -20,7 +20,7 @@ const reg = {
 
 const config = {
     autosave: {
-        interval: 60,        //frames for player status autosaving
+        interval: 120,        //frames for player status autosaving
         key: "vbw_player",
     },
     map: {
@@ -182,7 +182,7 @@ const self = {
 
     },
     cross: (from, to, ext) => {
-        console.log(from, to, ext);
+        //console.log(from, to, ext);
         const delta = [to[0] - from[0], to[1] - from[1]];
         //console.log(JSON.stringify(from), JSON.stringify(to), JSON.stringify(delta), ext);
         const dlist = [], glist = [], rg = ext + ext + 1;
@@ -254,12 +254,25 @@ const self = {
             );
 
             //2. increate player rotation
-            // env.player.location.rotation[0] += ro[0];
-            // env.player.location.rotation[1] += ro[1];
-            // env.player.location.rotation[2] += ro[2];
+            env.player.location.rotation[0] += ro[0];
+            env.player.location.rotation[1] += ro[1];
+            env.player.location.rotation[2] += ro[2];
         }
         const ak = env.player.location.rotation[2];
         self.setCompass(ak);
+    },
+    saveLocation:()=>{
+        const data=Toolbox.clone(env.player.location);
+        const fun=Toolbox.toF;
+        for(let i=0;i<data.position.length;i++){
+            data.position[i]=fun(data.position[i]);
+        }
+
+        for(let i=0;i<data.rotation.length;i++){
+            data.rotation[i]=fun(data.rotation[i],6);
+        }
+
+        localStorage.setItem(key, JSON.stringify(data));
     },
     auto: () => {
         if (env.player === null) {
@@ -269,7 +282,9 @@ const self = {
         //1. save player status
         if (env.count > config.autosave.interval) {
             const key = config.autosave.key;
-            localStorage.setItem(key, JSON.stringify(env.player.location));
+
+            self.saveLocation();
+
             env.count = 0;
             self.statusUI();
         } else {
@@ -352,6 +367,15 @@ const vbw_player = {
             if (diff.position) self.syncCameraPosition(diff.position);
             if (diff.rotation) self.syncCameraRotation(diff.rotation);
         }
+    },
+
+    stand:(check)=>{
+        if(!check.orgin) return false;
+        env.player.location.stop.on=true;
+        env.player.location.stop.adjunct=check.orgin.adjunct;
+        env.player.location.stop.index=check.orgin.index;
+        self.saveLocation();
+        return true;
     },
 }
 

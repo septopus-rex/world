@@ -576,13 +576,17 @@ const World = {
                 
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
+
+                // debug, get events list.
+                // const list=VBW.event.list();
+                // console.log(list);
             }, cfg);
         });
     },
 
     /**
      * set block to edit mode
-     * @param{string}    dom_id  - container DOM id
+     * @param   {string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {number}    x       - coordination X
      * @param   {number}    y       - coordination y
@@ -634,7 +638,7 @@ const World = {
 
     /**
      * set block back to normal mode
-     * @param{string}    dom_id  - container DOM id
+     * @param   {string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {function}  ck      - callback function
      * @callback - whether done callback

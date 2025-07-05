@@ -310,8 +310,8 @@ const self = {
          * 
          * */
         relationZ: (stand, body, cap, elevation, list) => {
-            console.log(`Basic, player stand height: ${stand}, 
-                body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
+            // console.log(`Basic, player stand height: ${stand}, 
+            //     body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
             const arr = [];
             const def = {
                 "BODY_STOP": 1,  //stop the body
@@ -387,6 +387,7 @@ const self = {
                 }
             }
             if (max != null) {
+                //console.log("Max:",JSON.stringify(max));
                 rst.index = max.index;
                 rst.orgin = arr[max.index].orgin;
                 rst.delta = max.delta;
@@ -440,7 +441,8 @@ const basic_stop = {
         rst.move = !fs.stop;
         rst.index = fs.index;
         if (fs.delta != undefined) rst.delta = fs.delta;
-
+        if (fs.orgin) rst.orgin=fs.orgin;
+        
         return rst;
     },
 }

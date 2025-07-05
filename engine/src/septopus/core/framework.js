@@ -268,6 +268,7 @@ const self = {
 
         const rdata = {};
         const stops=[];
+        const triggers=[];
         const preload = {module: [],texture: []};
 
         //2.filter out special components
@@ -292,18 +293,19 @@ const self = {
             }
             rdata[name] = data;
 
+            //TODO, construct triggers here.
             //2.2. event trigger construct
-            if(Framework.event){
-                for(let i=0;i<map[name].length;i++){
-                    const single=map[name][i];
-                    if(!single.event) continue;
-                    const key=`${name}_${i}_event`;
-                    if(!Framework.event.exsist(key,x,y,world,dom_id)){
-                        const fun=TriggerBuilder.get(single.event,{},Framework);
-                        Framework.event.on(key,fun,{x:x,y:y,world:world,container:dom_id});
-                    }
-                }
-            }
+            // if(Framework.event){
+            //     for(let i=0;i<map[name].length;i++){
+            //         const single=map[name][i];
+            //         if(!single.event) continue;
+            //         const key=`${name}_${i}_event`;
+            //         if(!Framework.event.exsist(key,x,y,world,dom_id)){
+            //             const fun=TriggerBuilder.get(single.event,{},Framework);
+            //             Framework.event.on(key,fun,{x:x,y:y,world:world,container:dom_id});
+            //         }
+            //     }
+            // }
         }
 
         //3.save stop data;
@@ -314,6 +316,10 @@ const self = {
         //3.2.set STOP data
         const stop_chain = ["block", dom_id, world, key, "stop"];
         self.cache.set(stop_chain, stops);
+
+        //3.3.set TRIGGER data
+        const trigger_chain = ["block", dom_id, world, key, "trigger"];
+        self.cache.set(trigger_chain, triggers);
 
         return preload;
     },
@@ -680,8 +686,7 @@ const Framework = {
 
         const ans = self.getAnimateQueue(world, dom_id);
         const map = self.getAnimateMap(world, dom_id);         
-        //console.log(ans);
-        //console.log(map);
+
         //3.animate here. scene as parameters to functions
         // `x_y_adj_index` --> ThreeObject[]
         for (let i = 0; i < ans.length; i++) {

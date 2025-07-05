@@ -289,6 +289,7 @@ const self = {
                 //if on stop, change player position
                 if (check.delta) {
                     diff.position[2] += check.delta;
+                    VBW.player.stand(check);
                 }
             }
             VBW.player.synchronous(diff);
