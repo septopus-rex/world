@@ -371,7 +371,8 @@ const self = {
             buttons.edit,
             buttons.normal,
             buttons.mint,
-            buttons.world
+            buttons.clean,
+            buttons.world,
         ];
         const cfg_menu = {}
 
@@ -580,7 +581,7 @@ const World = {
                 // debug, get events list.
                 // const list=VBW.event.list();
                 // console.log(list);
-                VBW.event.on("stop","beside","test",(ev)=>{
+                VBW.event.on("stop","beside",{x:2025,y:619,world:0,index:0,adjunct:"wall"},(ev)=>{
                     console.log(`Stop beside event triggered`,ev);
                 });
             }, cfg);

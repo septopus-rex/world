@@ -44,6 +44,7 @@ const env = {
     count: 0,
     player: null,
     lock: false,
+    clean:false,
     camera: {},        //camera to sync
     diff: {
         position: [0, 0, 0],
@@ -275,6 +276,9 @@ const self = {
         localStorage.setItem(config.autosave.key, JSON.stringify(data));
     },
     auto: () => {
+        if ( env.clean ){
+            return false;
+        }
         if (env.count > config.autosave.interval) {
             env.count = 0;
             self.saveLocation();
@@ -308,6 +312,13 @@ const vbw_player = {
         }
 
         return ck && ck(data);
+    },
+
+    clean:()=>{
+        env.clean=true;
+        setTimeout(()=>{
+            localStorage.removeItem(config.autosave.key);
+        },50);
     },
 
     format: (local, basic) => {

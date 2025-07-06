@@ -53,10 +53,18 @@ const buttons = {
             UI.show("dialog", ctx, { position: "center" });
         }
     },
+
     mint: {
         label: "Mint", icon: "", action: async () => {
             const res = await VBW.datasource.contract.call("mint", [2000, 1290, 0]);
             console.log(res);
+        }
+    },
+
+    clean: {
+        label: "Clean", icon: "", action: async () => {
+            VBW.player.clean();
+            console.log(`Player location is cleaned, please reset system.`);
         }
     },
     world: {

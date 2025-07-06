@@ -81,6 +81,31 @@
     }
 ```
 
+* 对象选择数据标准，在event和trigger里使用
+
+```Javascript
+    // 附属物的选中
+    {
+        x:2025,
+        y:619,
+        world:0,
+        adjunct:"wall"
+        index:0,
+    }
+
+    // 系统组件的选中
+    {
+        category:"system",
+        chain:["time","year"],
+    }
+
+    // UI组件的选中
+    {
+        category:"UI",
+        chain:["pop"],
+    }
+```
+
 ### 资源加载标准
 
 * 资源的统一格式，保存在IPFS。支持多种不同类型，例如，纹理、模型等3D资源。

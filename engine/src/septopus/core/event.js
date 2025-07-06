@@ -48,8 +48,10 @@ const events={
         touch:null,
     },
     stop:{
+        on:null,
         beside:null,
         under:null,
+        out:null,
     },
     trigger:{           //trigger events
         in:{},
@@ -80,6 +82,11 @@ const monitor={
         out:()=>{
 
         }
+    },
+    stop:{
+        beside:()=>{
+
+        },
     }
 }
 
@@ -108,6 +115,9 @@ const self={
 
         //2. check whether trigger event on
     },
+    getNameByObj:(obj)=>{
+        return `${obj.x}_${obj.y}_${obj.adjunct}_${obj.index}`;
+    },
 }
 
 const vbw_event = {
@@ -127,15 +137,16 @@ const vbw_event = {
      *  
      * @param   {string}    cat      - event cat
      * @param   {string}    event    - special event
-     * @param   {string}    name     - binding name
+     * @param   {object}    obj      - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
      * @param   {function}  fun      - binding function
      * 
      * */
-    on:(cat,event,name,fun)=>{
+    on:(cat,event,obj,fun)=>{
         //console.log(name,fun,cfg);
         //const type=!cfg.type?"object":cfg.type;
         if(!events[cat]) return {error:"Invalid event type"};
         if(!events[cat][event]) return {error:"Invalid special event"};
+        const name=self.getNameByObj(obj);
         events[cat][event][name]=fun;
         
     },
@@ -151,16 +162,19 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
-        //1. event monitor
-        if(monitor[cat] && monitor[cat][event]){
-            monitor[cat][event](param);
-        }
-
-        //2. binding functions running
         for(let name in events[cat][event]){
-            const fun=events[cat][event][name]
-            fun(param);
-            
+            //1. confirm the sepcial trigger object
+            const target=self.getNameByObj(param);
+            if(name===target){
+
+                const fun=events[cat][event][name]
+                fun(param);
+
+                //2 event monitor
+                if(monitor[cat] && monitor[cat][event]){
+                    monitor[cat][event](param);
+                }
+            }
         }
     },
 
