@@ -36,6 +36,10 @@ const events={
         off:null,
         restart:null,
     },
+    player:{
+        fall:null,
+        death:null,
+    },
     block:{
         in:null,
         out:null,

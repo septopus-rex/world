@@ -244,8 +244,8 @@ const self = {
     checkStop: (delta) => {
         const cvt = cache.convert;
         const player = cache.player;
-
         const [x, y] = player.location.block;
+        
         //!important, need to add the movement to check whether stop
         const pos = [
             player.location.position[0] * cvt + delta[0],
@@ -275,7 +275,7 @@ const self = {
 
         //const ak = cache.player.location.rotation[2];
         const ak = cache.camera.rotation.y;
-
+        const local=cache.player.location;
         //1.deal with keyboard inputs.
         for (let i = 0; i < cache.actions.length; i++) {
             const act = cache.actions[i];
@@ -285,16 +285,29 @@ const self = {
             if (diff.position) {
                 const check = self.checkStop(diff.position);
                 if (!check.move) {
-                    //console.log(`Stopped.`,check);
                     VBW.event.trigger("stop","beside",check.orgin);
-
                     continue;
+                }
+
+                //player action checking
+                if(local.stop.on){
+                    //console.log(`On stop:`,JSON.stringify(check));
+                    if(!check.orgin){
+                        //console.log(`No stop, check elevation`);
+                        VBW.player.leave();
+                    }else{
+                        if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
+                            console.log(`Same stop.`);
+                        }else{
+                            console.log(`New stop.`);
+                        }
+                    }
                 }
 
                 //if on stop, change player position
                 if (check.delta) {
                     diff.position[2] += check.delta;
-                    VBW.player.stand(check);
+                    if(check.orgin)VBW.player.stand(check.orgin);
                 }
             }
             VBW.player.synchronous(diff);

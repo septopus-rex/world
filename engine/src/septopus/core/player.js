@@ -20,7 +20,7 @@ const reg = {
 
 const config = {
     autosave: {
-        interval: 120,        //frames for player status autosaving
+        interval: 60,        //frames for player status autosaving
         key: "vbw_player",
     },
     map: {
@@ -30,14 +30,14 @@ const config = {
 }
 
 const capacity = {
-    move: 0.03,          //move speed, meter/second
-    rotate: 0.05,        //rotate speed of head
-    span: 0.31,          //max height of walking
-    squat: 0.1,          //height of squat
-    jump: 1,            //max height of jump
-    death: 3,            //min height of fall death
-    speed: 1.5,          //move speed, meter/second
-    strength: 1,         //strength time for jump. Not used yet.
+    move: 0.03,             //move speed, meter/second
+    rotate: 0.05,           //rotate speed of head
+    span: 0.31,             //max height of walking
+    squat: 0.1,             //height of squat
+    jump: 1,                //max height of jump
+    death: 3,               //min height of fall death
+    speed: 1.5,             //move speed, meter/second
+    strength: 1,            //strength time for jump. Not used yet.
 }
 
 const env = {
@@ -185,7 +185,7 @@ const self = {
     cross: (from, to, ext) => {
         //console.log(from, to, ext);
         const delta = [to[0] - from[0], to[1] - from[1]];
-        //console.log(JSON.stringify(from), JSON.stringify(to), JSON.stringify(delta), ext);
+
         const dlist = [], glist = [], rg = ext + ext + 1;
         const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
         if (delta[0] != 0 && delta[1] == 0) {
@@ -276,9 +276,11 @@ const self = {
         localStorage.setItem(config.autosave.key, JSON.stringify(data));
     },
     auto: () => {
+
         if ( env.clean ){
             return false;
         }
+
         if (env.count > config.autosave.interval) {
             env.count = 0;
             self.saveLocation();
@@ -372,11 +374,28 @@ const vbw_player = {
         }
     },
 
-    stand:(check)=>{
-        if(!check.orgin) return false;
+    /**
+    * player stand on special object
+    * @param   {object}    check   - {"interact":true,"move":true,"index":0,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
+    */
+    stand:(orgin)=>{
         env.player.location.stop.on=true;
-        env.player.location.stop.adjunct=check.orgin.adjunct;
-        env.player.location.stop.index=check.orgin.index;
+        env.player.location.stop.adjunct=orgin.adjunct;
+        env.player.location.stop.index=orgin.index;
+        self.saveLocation();
+        return true;
+    },
+
+    leave:()=>{
+        //env.player.location.position[2]=0;      //set to block
+        //console.log([0,0,-env.player.location.position[2]]);
+        const cvt=self.getConvert();
+        self.syncCameraPosition([0,0,-env.player.location.position[2]*cvt]);
+        env.player.location.position[2]=0;
+
+        env.player.location.stop.on=false;
+        env.player.location.stop.adjunct="";
+        env.player.location.stop.index=0;
         self.saveLocation();
         return true;
     },
