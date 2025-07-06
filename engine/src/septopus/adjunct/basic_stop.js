@@ -388,9 +388,13 @@ const self = {
             }
             if (max != null) {
                 //console.log("Max:",JSON.stringify(max));
-                rst.index = max.index;
-                rst.orgin = arr[max.index].orgin;
-                rst.delta = max.delta;
+                if(!arr[max.index]){
+                    console.log(`Error`,JSON.stringify(arr),JSON.stringify(max));
+                }else{
+                    rst.index = max.index;
+                    rst.orgin = arr[max.index].orgin;
+                    rst.delta = max.delta;
+                }
             }
             return rst;
         },
@@ -433,16 +437,16 @@ const basic_stop = {
         const body = cfg.height;
         const arr = self.calculate.relationZ(stand, body, cap, cfg.elevation, list);
 
-        console.log(arr);
+        //console.log(arr);
 
         //3.filter out the target stop for movement;
         const fs = self.calculate.filter(arr);
-        console.log(fs);
+        //console.log(fs);
         rst.move = !fs.stop;
         rst.index = fs.index;
         if (fs.delta != undefined) rst.delta = fs.delta;
         if (fs.orgin) rst.orgin=fs.orgin;
-        
+
         return rst;
     },
 }

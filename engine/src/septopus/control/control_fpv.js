@@ -13,7 +13,6 @@
  * @date 2025-04-25
  */
 
-import Movment from "../core/movement";
 import VBW from "../core/framework";
 import UI from "../io/io_ui";
 import ThreeObject from "../three/entry";
@@ -83,21 +82,7 @@ const env = {
     }         
 };
 
-const todo = {
-    FORWARD: Movment.body.forward,
-    BACKWARD: Movment.body.backward,
-    LEFT: Movment.body.leftward,
-    RIGHT: Movment.body.rightward,
-    BODY_RISE: Movment.body.rise,
-    BODY_FALL: Movment.body.fall,
-    JUMP: Movment.body.jump,
-    SQUAT: Movment.body.squat,
-    HEAD_LEFT: Movment.head.left,
-    HEAD_RIGHT: Movment.head.right,
-    HEAD_RISE: Movment.head.up,
-    HEAD_DOWN: Movment.head.down,
-}
-
+let todo = null
 const self = {
     hooks: {
         reg: () => { return reg },
@@ -147,6 +132,24 @@ const self = {
         }
         const target = objs[selected];
         return target.object.userData;
+    },
+    initTodo:()=>{
+        const body=VBW.movement.body;
+        const head=VBW.movement.head;
+        todo = {
+            FORWARD: body.forward,
+            BACKWARD: body.backward,
+            LEFT: body.leftward,
+            RIGHT: body.rightward,
+            BODY_RISE: body.rise,
+            BODY_FALL: body.fall,
+            JUMP: body.jump,
+            SQUAT: body.squat,
+            HEAD_LEFT: head.left,
+            HEAD_RIGHT: head.right,
+            HEAD_RISE: head.up,
+            HEAD_DOWN:head.down,
+        }
     },
     keyboard: () => {
         self.bind('keydown', (ev) => {
@@ -282,7 +285,9 @@ const self = {
             if (diff.position) {
                 const check = self.checkStop(diff.position);
                 if (!check.move) {
-                    console.log(`Stopped.`,check);
+                    //console.log(`Stopped.`,check);
+                    VBW.event.trigger("stop","beside",check.orgin);
+
                     continue;
                 }
 
@@ -486,6 +491,7 @@ const controller = {
 
         //0.get canvas width
         self.setWidth(dom_id);
+        self.initTodo();
 
         //1.add keyboard listener and screen control
         const device = VBW.cache.get(["env", "device"]);

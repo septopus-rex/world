@@ -10,8 +10,6 @@
  */
 
 import VBW from "../core/framework";
-//import TwoObject from "../lib/two";
-
 import Touch from "../lib/touch";
 
 const reg = {

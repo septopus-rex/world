@@ -580,6 +580,9 @@ const World = {
                 // debug, get events list.
                 // const list=VBW.event.list();
                 // console.log(list);
+                VBW.event.on("stop","beside","test",(ev)=>{
+                    console.log(`Stop beside event triggered`,ev);
+                });
             }, cfg);
         });
     },

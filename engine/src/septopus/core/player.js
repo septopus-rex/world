@@ -272,20 +272,12 @@ const self = {
             data.rotation[i]=fun(data.rotation[i],6);
         }
 
-        localStorage.setItem(key, JSON.stringify(data));
+        localStorage.setItem(config.autosave.key, JSON.stringify(data));
     },
     auto: () => {
-        if (env.player === null) {
-            env.player = VBW.cache.get(["env", "player"]);
-        }
-
-        //1. save player status
         if (env.count > config.autosave.interval) {
-            const key = config.autosave.key;
-
-            self.saveLocation();
-
             env.count = 0;
+            self.saveLocation();
             self.statusUI();
         } else {
             env.count++;

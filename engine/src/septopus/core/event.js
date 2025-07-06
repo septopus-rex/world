@@ -72,6 +72,17 @@ const runtime={
     },
 }
 
+const monitor={
+    block:{
+        in:()=>{
+
+        },
+        out:()=>{
+
+        }
+    }
+}
+
 const self={
     hooks:{
         reg: () => {
@@ -133,6 +144,24 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(!events[cat][event]) return {error:"Invalid special event"};
         delete events[cat][event][name];
+    },
+
+    trigger:(cat,event,param)=>{
+        console.log(cat,event,param);
+        if(!events[cat]) return {error:"Invalid event type"};
+        if(self.empty(events[cat][event])) return {error:"Invalid special event"};
+
+        //1. event monitor
+        if(monitor[cat] && monitor[cat][event]){
+            monitor[cat][event](param);
+        }
+
+        //2. binding functions running
+        for(let name in events[cat][event]){
+            const fun=events[cat][event][name]
+            fun(param);
+            
+        }
     },
 
     // exsist:(cat,event,name)=>{
