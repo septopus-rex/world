@@ -503,6 +503,10 @@ const World = {
     init: async (cfg) => {
         //1.register all components;
         self.register();
+
+        //!important, `system.init` event trigger 
+        VBW.event.trigger("system","init",{stamp:Toolbox.stamp()});
+        
         UI.show("toast", `Septopus World running env done.`, {});
         if (config.debug) VBW.cache.dump();   //dump when debug
         return true;
@@ -539,7 +543,10 @@ const World = {
      * */
     stop: (dom_id) => {
         const { render } = VBW.cache.get(["active", "containers", dom_id]);
-        render.setAnimationLoop(null)
+        render.setAnimationLoop(null);
+        
+        //!important, `system.stop` event trigger 
+        VBW.event.trigger("system","stop",{stamp:Toolbox.stamp()});
     },
 
     /**
@@ -549,7 +556,10 @@ const World = {
      * */
     start: (dom_id) => {
         const { render } = VBW.cache.get(["active", "containers", dom_id]);
-        render.setAnimationLoop(VBW.loop)
+        render.setAnimationLoop(VBW.loop);
+
+        //!important, `system.stop` event trigger 
+        VBW.event.trigger("system","restart",{stamp:Toolbox.stamp()});
     },
 
 
@@ -575,6 +585,9 @@ const World = {
             
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
                 
+                //!important, `system.done` event trigger 
+                VBW.event.trigger("system","launch",{stamp:Toolbox.stamp()});
+
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
 

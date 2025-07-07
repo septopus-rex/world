@@ -119,7 +119,7 @@ const self = {
         const chain = ["block", active.current, active.world, `${x}_${y}`, "elevation"];
         return VBW.cache.get(chain);
     },
-        getClickPosition: (ev) => {
+    getClickPosition: (ev) => {
         return [ev.clientY, ev.clientX];
     },
     getSingle: (objs) => {
@@ -266,6 +266,10 @@ const self = {
         return VBW.stop.check(pos, stops, cfg);
     },
 
+    checkTrigger:()=>{
+        //console.log(`Trigger check`);
+    },
+
     //Frame Synchronization, movement here to imply
     action: () => {
         const dis = [config.move.distance, self.getAngle(config.move.angle)];
@@ -312,6 +316,8 @@ const self = {
             }
             VBW.player.synchronous(diff);
         }
+
+        self.checkTrigger();
     },
     formatGroups: (groups) => {
         const ss = [];

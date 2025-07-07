@@ -18,11 +18,16 @@ const self={
         VBW.init();       
         const done = await UI.init(container);
         if(done.error) return ck && ck(done);
-
         const great = await World.init();
 
-        self.autoSize(container,cfg);
+        VBW.event.on("system","init","sys_init",(ev)=>{
+            console.log("system.init",ev);
+        });
+        VBW.event.on("system","launch","sys_init",(ev)=>{
+            console.log("system.done",ev);
+        });
 
+        self.autoSize(container,cfg);
         return ck && ck(great);
     },
 

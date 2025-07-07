@@ -33,12 +33,14 @@ const config={
 const events={
     system:{            //system events
         init:null,
+        launch:null,
         off:null,
         restart:null,
     },
     player:{
         fall:null,
         death:null,
+        start:null,
     },
     block:{
         in:null,
@@ -55,10 +57,10 @@ const events={
         on:null,
         beside:null,
         under:null,
-        out:null,
+        leave:null,
     },
     trigger:{           //trigger events
-        in:{},
+        in:null,
         out:null,
         hold:null,
         on:null,
@@ -113,6 +115,7 @@ const self={
         return true;
     },
     //function put on queue of frame sync
+    // abandon, leave to special component to trigger event
     checker:()=>{
         //console.log(`Event check.`);
         //1. check player position
@@ -120,6 +123,7 @@ const self={
         //2. check whether trigger event on
     },
     getNameByObj:(obj)=>{
+        if(typeof obj === 'string' || obj instanceof String) return obj;
         return `${obj.x}_${obj.y}_${obj.adjunct}_${obj.index}`;
     },
 }
@@ -152,7 +156,6 @@ const vbw_event = {
         if(!events[cat][event]) return {error:"Invalid special event"};
         const name=self.getNameByObj(obj);
         events[cat][event][name]=fun;
-        
     },
 
     off:(cat,event,name)=>{
@@ -198,9 +201,9 @@ const vbw_event = {
 
     start:(world,dom_id)=>{
         //1. set frame sync function
-        const frame_chain = ["block", dom_id, world, "loop"];
-        const queue = VBW.cache.get(frame_chain);
-        queue.push({ name: "event_checker", fun: self.checker});
+        // const frame_chain = ["block", dom_id, world, "loop"];
+        // const queue = VBW.cache.get(frame_chain);
+        // queue.push({ name: "event_checker", fun: self.checker});
 
         //2. get the env for checking
         if(runtime.player===null) runtime.player=VBW.cache.get(["env", "player"]);

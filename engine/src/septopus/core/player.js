@@ -356,7 +356,7 @@ const vbw_player = {
         );
         env.camera[dom_id].rotation.set(
             local.rotation[0],
-            local.rotation[2],
+            -local.rotation[2],
             local.rotation[1]
         );
     },
@@ -386,9 +386,10 @@ const vbw_player = {
         return true;
     },
 
+    /**
+    * player leave special object to block
+    */
     leave:()=>{
-        //env.player.location.position[2]=0;      //set to block
-        //console.log([0,0,-env.player.location.position[2]]);
         const cvt=self.getConvert();
         self.syncCameraPosition([0,0,-env.player.location.position[2]*cvt]);
         env.player.location.position[2]=0;
