@@ -47,6 +47,7 @@ const events={
         in:null,
         out:null,
         hold:null,
+        stop:null,
     },
     adjunct:{
         in:null,

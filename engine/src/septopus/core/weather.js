@@ -42,17 +42,14 @@ const self={
     },
     setDef:()=>{
         def = VBW.cache.get(["env","world","common","weather"],true);
-
     },
 
     getValue:(hash,start,step)=>{
         const str=hash.substring(start+2,start+2+step);
-        //console.log(hash,str,start,step);
         return parseInt(`0x${str}`);
     },
 
     convert:(hash)=>{
-        //console.log(hash);
         const cat=self.getValue(hash,def.data.category[0],def.data.category[1]);
         const grade=self.getValue(hash,def.data.grade[0],def.data.grade[1]);
         const cat_index=cat%def.category.length;

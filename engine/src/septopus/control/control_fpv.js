@@ -45,8 +45,8 @@ const config = {
         BACKWARD: 83,       //S
         LEFT: 65,           //A
         RIGHT: 68,          //D
-        BODY_RISE: 82,      //R
-        BODY_FALL: 70,      //F
+        //BODY_RISE: 82,      //R
+        //BODY_FALL: 70,      //F
         HEAD_LEFT: 37,      //Arrow left
         HEAD_RIGHT: 39,     //Arrow right
         HEAD_RISE: 38,      //Arrow up
@@ -116,7 +116,8 @@ const self = {
     },
     getElevation: (x, y) => {
         const active = VBW.cache.get(["active"]);
-        const chain = ["block", active.current, active.world, `${x}_${y}`, "elevation"];
+        const chain = ["block", active.current, cache.player.location.world, `${x}_${y}`, "elevation"];
+        //console.log(chain);
         return VBW.cache.get(chain);
     },
     getClickPosition: (ev) => {
@@ -241,26 +242,42 @@ const self = {
         }
         return stops;
     },
-    checkStop: (delta) => {
-        const cvt = cache.convert;
-        const player = cache.player;
-        const [x, y] = player.location.block;
-        
-        //!important, need to add the movement to check whether stop
-        const pos = [
-            player.location.position[0] * cvt + delta[0],
-            player.location.position[1] * cvt + delta[1],
-            player.location.position[2] * cvt + delta[2]
-        ];
-        const side = cache.side;
-        const arr = VBW.stop.calculate.blocks(pos, delta, x, y, side);
-        const stops = self.getStops(arr, side);
+    stopByBlock:()=>{
 
-        const { body, capacity } = VBW.cache.get(["env", "player"]);
+    },
+    checkStop: (delta) => {
+        const cvt = cache.convert,side = cache.side;
+        const player = cache.player;
+        const { body, capacity } = player;
+        const [x, y] = player.location.block;
+        const va=self.getElevation(x, y);
+
+        //!important, need to add the movement to check whether stop
+        const nx=player.location.position[0] * cvt + delta[0];
+        const ny=player.location.position[1] * cvt + delta[1];
+        const nz=player.location.position[2] * cvt + delta[2];
+        const bx=x+Math.floor(nx/side[0]);
+        const by=y + Math.floor(ny/side[1]);
+
+        if(bx!==x || by!==y){
+            //1.check whether stopped by block, only check block elevation here
+            
+            const vb=self.getElevation(bx,by);
+            
+            if(vb-va > capacity.span*cvt){
+                return { move: false, block:[bx,by]}
+            }
+        }
+        
+        //2.check whether stopped by stops
+        //also check the nearby block stops if not stopped by block
+        const pos = [nx,ny,nz];
+        const arr = VBW.stop.calculate.blocks(pos, delta, bx, by, side);
+        const stops = self.getStops(arr, side);
         const cfg = {
             cap: capacity.span * cvt,            //cross limit
             height: body.height * cvt,           //player body height
-            elevation: self.getElevation(x, y),  //block elevation
+            elevation: va,                       //block elevation
             pre: 0 * cvt,                        //pre stand height
         };
         return VBW.stop.check(pos, stops, cfg);
@@ -289,7 +306,11 @@ const self = {
             if (diff.position) {
                 const check = self.checkStop(diff.position);
                 if (!check.move) {
-                    VBW.event.trigger("stop","beside",check.orgin);
+                    if(!check.block){
+                        VBW.event.trigger("stop","beside",check.orgin);
+                    }else{
+                        VBW.event.trigger("block","stop",check.block);
+                    }
                     continue;
                 }
 
@@ -297,21 +318,23 @@ const self = {
                 if(local.stop.on){
                     //console.log(`On stop:`,JSON.stringify(check));
                     if(!check.orgin){
-                        //console.log(`No stop, check elevation`);
-                        VBW.player.leave();
+                        VBW.player.leave(check);
                     }else{
-                        if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
-                            console.log(`Same stop.`);
-                        }else{
-                            console.log(`New stop.`);
-                        }
+                        // if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
+                        //     console.log(`Same stop.`);
+                        // }else{
+                        //     console.log(`New stop.`);
+                        // }
                     }
                 }
 
                 //if on stop, change player position
                 if (check.delta) {
+                    console.log(`Height delta: ${check.delta}`);
+                    //check whether fall to death;
+
                     diff.position[2] += check.delta;
-                    if(check.orgin)VBW.player.stand(check.orgin);
+                    if(check.orgin) VBW.player.stand(check.orgin);
                 }
             }
             VBW.player.synchronous(diff);

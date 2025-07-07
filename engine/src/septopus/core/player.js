@@ -184,9 +184,8 @@ const self = {
 
     },
     cross: (from, to, ext) => {
-        //console.log(from, to, ext);
+        
         const delta = [to[0] - from[0], to[1] - from[1]];
-
         const dlist = [], glist = [], rg = ext + ext + 1;
         const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
         if (delta[0] != 0 && delta[1] == 0) {
@@ -405,7 +404,8 @@ const vbw_player = {
     /**
     * player leave special object to block
     */
-    leave:()=>{
+    leave:(check)=>{
+        console.log("Player leave:", JSON.stringify(check));
         //1. location update
         const cvt=self.getConvert();
         const player=env.player;
