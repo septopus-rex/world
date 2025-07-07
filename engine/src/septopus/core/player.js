@@ -4,6 +4,7 @@
  * @fileoverview
  *  1. save the location of player
  *  2. save the body parameters of player.
+ *  3. player events trigger
  *
  * @author Fuu
  * @date 2025-04-23
@@ -379,10 +380,25 @@ const vbw_player = {
     * @param   {object}    check   - {"interact":true,"move":true,"index":0,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
     */
     stand:(orgin)=>{
-        env.player.location.stop.on=true;
-        env.player.location.stop.adjunct=orgin.adjunct;
-        env.player.location.stop.index=orgin.index;
+        //1. location update
+        const player=env.player;
+        player.location.stop.on=true;
+        player.location.stop.adjunct=orgin.adjunct;
+        player.location.stop.index=orgin.index;
         self.saveLocation();
+        
+        //2. event trigger
+        //!important, `player.stop.on` event trigger
+        const evt={
+            stamp:Toolbox.stamp(),
+            adjunct:orgin.adjunct,
+            index:orgin.index,
+            world:player.location.world,
+            x:player.location.block[0],
+            y:player.location.block[1],
+        }
+        console.log(evt);
+        VBW.event.trigger("stop","on",evt);
         return true;
     },
 
@@ -390,14 +406,30 @@ const vbw_player = {
     * player leave special object to block
     */
     leave:()=>{
+        //1. location update
         const cvt=self.getConvert();
+        const player=env.player;
         self.syncCameraPosition([0,0,-env.player.location.position[2]*cvt]);
-        env.player.location.position[2]=0;
+        player.location.position[2]=0;
 
-        env.player.location.stop.on=false;
-        env.player.location.stop.adjunct="";
-        env.player.location.stop.index=0;
+        const stop=Toolbox.clone(player.location.stop);
+        player.location.stop.on=false;
+        player.location.stop.adjunct="";
+        player.location.stop.index=0;
         self.saveLocation();
+
+        //2. event trigger
+        //!important, `player.stop.on` event trigger
+        const evt={
+            stamp:Toolbox.stamp(),
+            adjunct:stop.adjunct,
+            index:stop.index,
+            world:player.location.world,
+            x:player.location.block[0],
+            y:player.location.block[1],
+        }
+        VBW.event.trigger("stop","leave",evt);
+
         return true;
     },
 }

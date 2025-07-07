@@ -18,6 +18,7 @@ const reg={
 const config={
     network:"solana",
     chain:["env","weather"],
+    interval:60*30,
 };
 
 
@@ -51,35 +52,36 @@ const self={
     },
 
     convert:(hash)=>{
-        const value=VBW.cache.get(config.chain);
+        //console.log(hash);
         const cat=self.getValue(hash,def.data.category[0],def.data.category[1]);
         const grade=self.getValue(hash,def.data.grade[0],def.data.grade[1]);
         const cat_index=cat%def.category.length;
         const cat_name=def.category[cat_index];
 
+        const value=VBW.cache.get(config.chain);
         value.hash=hash;
         value.category=cat_index;
         value.grade=grade%def.detail[cat_name].length;
-
-        //console.log(JSON.stringify(value));
     },
 }
 
 const vbw_weather={
     hooks:self.hooks,
     calc:(data)=>{
+
         if(data.network!==config.network) return false;
         if(!data.hash) return false;
-        if(def===null) self.setDef();
+        if(def===null){
+            self.setDef();
+            self.convert(data.hash);
+        } 
 
-        if(counter >= def.data.interval){
+        if(counter >= config.interval){
             self.convert(data.hash);
             counter=0;
         }else{
             counter+=60;
         }
-
-        //console.log(counter);
     },
 }
 

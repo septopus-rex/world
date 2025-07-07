@@ -2,7 +2,8 @@
  * Core - event
  *
  * @fileoverview
-*  1. event management, trigger support
+ *  1. event management, trigger support
+ *  2. event checking in frame sync function
  *
  * @author Fuu
  * @date 2025-06-18
@@ -55,9 +56,9 @@ const events={
     },
     stop:{
         on:null,
+        leave:null,
         beside:null,
         under:null,
-        leave:null,
     },
     trigger:{           //trigger events
         in:null,
@@ -122,9 +123,11 @@ const self={
 
         //2. check whether trigger event on
     },
+
     getNameByObj:(obj)=>{
         if(typeof obj === 'string' || obj instanceof String) return obj;
-        return `${obj.x}_${obj.y}_${obj.adjunct}_${obj.index}`;
+        if(!obj.x || !obj.y || !obj.adjunct || obj.index===undefined) return {erro:"Invalid event object."}
+        return `${obj.x}_${obj.y}_${!obj.world?0:obj.world}_${obj.adjunct}_${obj.index}`;
     },
 }
 
@@ -155,6 +158,8 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(!events[cat][event]) return {error:"Invalid special event"};
         const name=self.getNameByObj(obj);
+
+        if(name.error) return name;
         events[cat][event][name]=fun;
     },
 
@@ -165,7 +170,9 @@ const vbw_event = {
     },
 
     trigger:(cat,event,param)=>{
+
         console.log(cat,event,param);
+        
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
