@@ -76,10 +76,14 @@ const valid={
     },
 }
 
+let definition=null;       //cache adjunct definition here.
 const self={
     hooks:{
         reg:()=>{
             return reg;
+        },
+        def:(data)=>{
+            definition=data;
         },
         //`cfg` to support more complex animation
         animate:(meshes,cfg)=>{

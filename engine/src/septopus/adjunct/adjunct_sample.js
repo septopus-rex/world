@@ -19,6 +19,7 @@ const config={
 
 }
 
+let definition=null;       //cache adjunct definition here.
 const self={
     hooks:{
         reg:()=>{
@@ -29,6 +30,10 @@ const self={
             //     chain:["env","player"],
             //     value:{}
             // };
+        },
+
+        def:(data)=>{
+            definition=data;
         },
 
         //`cfg` to support more complex animation. Rewrite the parameters for animation.

@@ -263,6 +263,25 @@ const mock = {
             return { x: x, y: y, world: world, data: [0.2, [], 1], owner: "LOCATION_ADDRESS" }
         }
 
+        if (x === 2024 && y === 619) {
+            return {
+                x: x,
+                y: y,
+                world: world,
+                data: [
+                    0.2,
+                    [
+                        [0x00b8,    //trigger
+                            [   
+                                [[1.5, 2, 2], [8, 6, 0], [0, 0, 0], 1, 2, [] , 4, 0]
+                            ]],
+                    ],
+                    1,  //block status
+                ],
+                owner: "UNIQUE_ADDRESS",
+            }
+        }
+
         if (x === 2025 && y === 618) {
             return {
                 x: x,
@@ -297,10 +316,6 @@ const mock = {
 
                                 [[6, 6, 0.25], [4, 4, 0.125], [0, 0, 0], rand(60, 90), [1, 1], 1, 1],    //single
                             ]],
-                        // [0x00b8,    //trigger
-                        //     [   
-                        //         [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [] , 4, 0]
-                        //     ]],
                     ],
                     1,  //block status
                 ],

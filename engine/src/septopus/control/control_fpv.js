@@ -242,9 +242,6 @@ const self = {
         }
         return stops;
     },
-    stopByBlock:()=>{
-
-    },
     checkStop: (delta) => {
         const cvt = cache.convert,side = cache.side;
         const player = cache.player;
@@ -280,9 +277,19 @@ const self = {
         };
         return VBW.stop.check(pos, stops, cfg);
     },
+    getTriggers:()=>{
+        const dom_id=VBW.cache.get(["active","current"]);
+        const world=cache.player.location.world;
+        const [x,y]=cache.player.location.block;
 
+        const trigger_chain=["block",dom_id,world,`${x}_${y}`,"trigger"];
+        return VBW.cache.get(trigger_chain);
+    },
     checkTrigger:()=>{
-        //console.log(`Trigger check`);
+        const arr=self.getTriggers();
+        if(arr.error || arr.length===0) return false;
+
+        console.log(arr);
     },
 
     //Frame Synchronization, movement here to imply
@@ -292,7 +299,6 @@ const self = {
         //!important, need to confirm the `AK` definition, it is camera coordination
         //FIXME, change to calculate on the player rotation.
 
-        //const ak = cache.player.location.rotation[2];
         const ak = cache.camera.rotation.y;
         const local=cache.player.location;
         //1.deal with keyboard inputs.

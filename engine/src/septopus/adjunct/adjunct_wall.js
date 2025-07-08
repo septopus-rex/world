@@ -99,10 +99,14 @@ const valid={
     },
 }
 
+let definition=null;       //cache adjunct definition here.
 const self = {
     hooks: {
         reg: () => {
             return reg;
+        },
+        def:(data)=>{
+            definition=data;
         },
         animate: (ms) => {
 

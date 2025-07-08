@@ -16,14 +16,15 @@ const reg={
     version:"1.0.0",
 }
 
+let definition=null;
 const self={
     hooks:{
         reg:()=>{
             return reg;
         },
-        // init:()=>{
-
-        // },
+        def:(data)=>{
+            definition=data;
+        },
         // animate:(meshes,cfg)=>{
             
         // },

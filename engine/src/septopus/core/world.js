@@ -86,6 +86,7 @@ const config = {
     hook: {
         register: "reg",
         initialize: "init",
+        definition:"def",
     },
     menu: {},
 };
@@ -102,7 +103,6 @@ const self = {
     register: () => {
         const regKey = config.hook.register;
         const initKey = config.hook.initialize;
-
         for (let cat in regs) {
             const coms = regs[cat];
             for (let i = 0; i < coms.length; i++) {
@@ -117,7 +117,6 @@ const self = {
                 }
 
                 //2.init the parts component
-                //console.log(cat);
                 if (component.hooks[initKey] !== undefined) {
                     const res = component.hooks[initKey]();
                     if (!res || !res.chain || !res.value) {
@@ -387,7 +386,7 @@ const self = {
         });
     },
     setup: (wd) => {
-        console.log(`setup system by data on chain`, wd);
+        //console.log(`setup system by data on chain`, wd);
 
         //1.create adjunct map;
         if (!wd.adjunct) UI.show("toast", `Adjunct definition missing.`, { type: "error" });
@@ -405,6 +404,14 @@ const self = {
         //2.save world info
         self.saveWorld(wd);
 
+        //3.set definition to adjunct
+        const key=config.hook.definition;
+        for(let adj in def){
+            if (adj === `common`) continue;
+            //console.log(adj,VBW[adj],);
+            if (!VBW[adj] || !VBW[adj].hooks || !VBW[adj].hooks[key]) continue;
+            VBW[adj].hooks[key](Toolbox.clone(def[adj]));
+        }
     },
     runOnce: (dom_id, cfg) => {
         //0.set current active dom_id
@@ -431,7 +438,8 @@ const self = {
             //2. get world setting
             VBW.datasource.world(world, (wd) => {
                 //2.1. setup world parameters
-                self.setup(wd);   
+                self.setup(wd);
+                //console.log(JSON.stringify(VBW.cache.get(["def"])))
 
                 //2.2. format player data and calc capacity
                 const local = VBW.player.format(start, wd.data.player);

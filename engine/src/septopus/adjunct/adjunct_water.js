@@ -25,8 +25,8 @@ const self={
         reg:()=>{
             return reg;
         },
-        task:()=>{
-            console.log(`wall task here.`);
+        def:(data)=>{
+            definition=data;
         },
     }
 }

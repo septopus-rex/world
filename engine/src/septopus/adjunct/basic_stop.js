@@ -80,10 +80,14 @@ const valid = {
     },
 }
 
+let definition=null;
 const self = {
     hooks: {
         reg: () => {
             return reg;
+        },
+        def:(data)=>{
+            definition=data;
         },
     },
     menu: {
@@ -205,6 +209,7 @@ const self = {
     },
     transform: {
         raw_std: (arr, cvt) => {
+            //console.log(definition);
             const rst = []
             for (let i in arr) {
                 const d = arr[i], s = d[0], p = d[1], r = d[2], type = d[3];

@@ -77,7 +77,7 @@ const events={
 //4. bag system
 
 const config={
-    default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [ "ACTION_0", "ACTION_1"] , 4, 0],
+    //default: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 1, 2, [ "ACTION_0", "ACTION_1"] , 4, 0],
     action:[     //action data struct
         ["CONDITIONS_TO_START"],        //check condition
         ["ACTIONS_TODO"],               //action todo format
@@ -100,17 +100,22 @@ const config={
     },
 }
 
+let definition=null;       //cache adjunct definition here.
 const self={
     hooks:{
         reg:()=>{
             return reg;
-        }
+        },
+        def:(data)=>{
+            definition=data;
+        },
     },
     attribute:{
 
     },
     transform:{
         raw_std: (arr, cvt) => {
+            console.log(definition);
             const rst = []
             for (let i in arr) {
                 const d = arr[i], s = d[0], p = d[1], r = d[2], tid = d[3], rpt = d[4];
@@ -140,6 +145,7 @@ const self={
                     material:{
                         color:config.style.color,
                     },
+                    hidden:true,        //whether hidden in scene
                 }
                 arr.push(obj);
             }
@@ -152,6 +158,7 @@ const self={
     },
     decode:(actions)=>{
         console.log(actions);
+
         return actions;
     },
     getObject:()=>{
