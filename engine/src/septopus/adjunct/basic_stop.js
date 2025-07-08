@@ -249,17 +249,6 @@ const self = {
         },
     },
     calculate: {
-        //TODO, calculate the related blocks;
-        blocks: (pos, delta, x, y, side) => {
-            const blocks = [[x, y]];
-            const to = [
-                pos[0] + delta[0],
-                pos[1] + delta[1]
-            ];
-
-            return blocks;
-        },
-
         // whether in stop projection surface
         projection: (px, py, stops) => {
             const list = {};
@@ -413,7 +402,7 @@ const basic_stop = {
      * @return {object}  - {on:[],stop:[]}
      */
     check: (pos, stops, cfg) => {
-        
+
         const result = { //stop result
             interact: false,     //whether on a stop
             move: true,          //whether allow to move

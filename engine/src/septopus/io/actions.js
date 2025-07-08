@@ -24,10 +24,9 @@ const buttons = {
     edit: {
         label: "Edit", icon: "", action: () => {
             const player=VBW.cache.get(["env", "player"]);
-            //console.log(player);
             if (player.error) return UI.show("toast", player.error, { type: "error" });
+            
             const {world,block}=player.location;
-            //console.log(world,block);
             const active=VBW.cache.get(["active"]);
             const dom_id=active.current;
             World.edit(dom_id, world, block[0], block[1]);

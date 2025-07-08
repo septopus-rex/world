@@ -581,8 +581,9 @@ const Framework = {
      * @return void
      */
     mode:(mode,target,ck,cfg)=>{
+        
         const {x,y,world,container}=target;
-        const def=cache.def;
+        const def=cache.def.common;
         switch (mode) {
             case def.MODE_NORMAL:
                 cache.active.mode=def.MODE_NORMAL;
@@ -595,11 +596,12 @@ const Framework = {
                 ck && ck();
                 break;
 
-            case def.MODE_NORMAL:
-                cache.active.mode=def.MODE_NORMAL;
+            case def.MODE_EDIT:
+                cache.active.mode=def.MODE_EDIT;
                 const pre=self.toEdit(x,y,world,container);
                 if(cfg && cfg.selected){
                     const more=self.toSelect(x,y,world,container);
+
                 }
                 ck && ck(pre);
                 

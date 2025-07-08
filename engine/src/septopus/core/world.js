@@ -638,9 +638,9 @@ const World = {
         });
 
         //2.create three objects
-        const target = { x: x, y: y, world: world, container: dom_id }
-        const mode = "edit";
-        //console.log(`Switch to edit mode.`);
+        const target = { x: x, y: y, world: world, container: dom_id };
+        const def=VBW.cache.get(["def","common"]);
+        const mode = def.MODE_EDIT;
         VBW.mode(mode, target, (pre) => {
             if (pre.error) {
                 UI.show("toast", pre.error, { type: "error" });
@@ -671,7 +671,8 @@ const World = {
         const x = cur.x, y = cur.y;
         const target = { x: x, y: y, world: world, container: dom_id }
 
-        const mode = "normal";
+        const def=VBW.cache.get(["def","common"]);
+        const mode = def.MODE_NORMAL;
         VBW.mode(mode, target, () => {
             VBW[config.render].show(dom_id, [x, y, world]);
         });

@@ -261,10 +261,9 @@ const self = {
 
         if(bx!==x || by!==y){
             //1.check whether stopped by block, only check block elevation here
-            
             const vb=self.getElevation(bx,by);
-            
-            if(vb-va > capacity.span*cvt){
+            const stand=va+player.location.position[2]*cvt;
+            if(vb-stand > capacity.span*cvt){
                 return { move: false, block:[bx,by]}
             }
         }
@@ -272,8 +271,7 @@ const self = {
         //2.check whether stopped by stops
         //also check the nearby block stops if not stopped by block
         const pos = [nx,ny,nz];
-        const arr = VBW.stop.calculate.blocks(pos, delta, bx, by, side);
-        const stops = self.getStops(arr, side);
+        const stops = self.getStops([[bx,by]], side);
         const cfg = {
             cap: capacity.span * cvt,            //cross limit
             height: body.height * cvt,           //player body height
