@@ -34,9 +34,13 @@ const mock = {
                     "MODE_GAME":3,                  //preload all block data
                     "MODE_GHOST":4,                 //anonymous player, no trig
                     "INDEX_OF_RAW_ON_CHAIN_DATA":1, //block raw data index on chain
+                    "VERSION_DEFAULT":2025,         //default version
                 },
                 source: "SOLANA_PDA_ACCOUNT_OF_WORLD_COMMON",
                 owner: "",
+                format:{
+                    "OBJECT_SELECTION":[],
+                },
             },
             stop: {
                 definition: {
@@ -314,7 +318,7 @@ const mock = {
                                 [[2, 4.8, 0.25],[2, 6, 0.375], [0, 0, 0], rand(60, 90), [1, 1], 1, 1],      //5
                                 [[2, 5.6, 0.25],[2, 6.4, 0.125], [0, 0, 0], rand(60, 90), [1, 1], 1, 1],    //6
 
-                                [[6, 6, 0.25], [4, 4, 0.125], [0, 0, 0], rand(60, 90), [1, 1], 1, 1],    //single
+                                [[6, 6, 0.25], [3, 3, 0.125], [0, 0, 0], rand(60, 90), [1, 1], 1, 1],    //single
                             ]],
                     ],
                     1,  //block status

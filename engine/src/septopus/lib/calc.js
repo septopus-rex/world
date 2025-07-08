@@ -1,6 +1,143 @@
+const self = {
+    // whether in stop projection surface
+    projection: (px, py, stops) => {
+        const list = {};
 
-const Calc={
-    distance:(pa,pb)=>{
+        for (let i in stops) {
+            const row = stops[i];
+            const { size, position, side, block, orgin } = row;
+
+            switch (orgin.type) {
+                case "box":
+                    const xmin = position[0] - size[0] * 0.5, xmax = position[0] + size[0] * 0.5;
+                    const ymin = position[1] - size[1] * 0.5, ymax = position[1] + size[1] * 0.5;
+                    //const cx=px+(block[0]-1)*side[0];
+                    //const cy=py+(block[1]-1)*side[1];
+
+                    //console.log();
+
+                    if ((px > xmin && px < xmax) &&
+                        (py > ymin && py < ymax)) {
+                        list[i] = row;
+                    }
+                    break;
+
+                case "ball":
+                    const radius = 0.5 * size[0];
+                    const center = [position[0], position[1]];     //ball center
+                    const dis = Calc.distance([px, py], center);
+                    //console.log(radius,dis);
+                    if (dis < radius) {
+                        list[i] = row;
+                    }
+                    break;
+
+                default:
+                    break;
+            }
+
+        }
+        return list;
+    },
+    /** player Z position calculation
+         * @param   {number}    stand       //player stand height
+         * @param{number}    body        //player body height
+         * @param{number}    cap         //max height player can go cross
+         * @param{number}    elevation    //player elevacation
+         * @param{object[]}  list        //{id:stop,id:stop,...}, stop list to check
+         * 
+         * */
+    relationZ: (stand, body, cap, elevation, list) => {
+        // console.log(`Basic, player stand height: ${stand}, 
+        //     body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
+        const arr = [];
+        const def = {
+            "BODY_STOP": 1,  //stop the body
+            "FOOT_STOP": 2,  //stop on foot
+            "HEAD_STOP": 3,  //stop beyond header
+        }
+
+        for (let id in list) {
+            const row = list[id];
+            const { position, size } = row;
+            const zmin = position[2] - size[2] * 0.5 - row.elevation;
+            const zmax = position[2] + size[2] * 0.5 - row.elevation;
+
+            //console.log(`Object[${id}], stop from ${zmin} to ${zmax}`,row);
+
+            //TODO, here to check BALL type stop
+
+            if (zmin >= stand + body) {
+                //a.stop upon header
+                arr.push({
+                    stop: false,
+                    way: def.HEAD_STOP,
+                    index: parseInt(id),
+                    orgin: row.orgin,
+                });
+            } else if (zmin < stand + body && zmin >= stand + cap) {
+                //b.normal stop 
+                arr.push({
+                    stop: true,
+                    way: def.BODY_STOP,
+                    index: parseInt(id),
+                    orgin: row.orgin,
+                });
+            } else {
+                //c.stop on foot
+                const zd = zmax - stand; //height to cross
+                if (zd > cap) {
+                    arr.push({
+                        stop: true,
+                        way: def.FOOT_STOP,
+                        index: parseInt(id),
+                        orgin: row.orgin,
+                    });
+                } else {
+                    arr.push({
+                        stop: false,
+                        delta: zd,
+                        index: parseInt(id),
+                        orgin: row.orgin,
+                    });
+                }
+            }
+        }
+        return arr;
+    },
+    filter: (arr) => {
+        const result = { stop: false, index: -1 }
+        let max = null;
+        for (let i in arr) {
+            const row = arr[i];
+            if (row.stop == true) {
+                result.stop = true;
+                result.index = row.index;
+                result.way = row.way;
+                result.orgin = row.orgin;
+                return result;
+            }
+
+            if (row.delta != undefined) {
+                if (max == null) max = row;
+                if (row.delta > max.delta) max = row;
+            }
+        }
+        if (max != null) {
+            result.index = max.index;
+            result.orgin = max.orgin;
+            result.delta = max.delta;
+        }
+        return result;
+    },
+    empty: (obj) => {
+        if (JSON.stringify(obj) === "{}") return true;
+        return false;
+    },
+}
+
+const Calc = {
+    distance: (pa, pb) => {
         const dx = pb[0] - pa[0];
         const dy = pb[1] - pa[1];
         return Math.sqrt(dx * dx + dy * dy);
@@ -9,6 +146,36 @@ const Calc={
     reviseSizeOffset: (o, d, s) => {
         const fs = d > s ? s * 0.5 : d * .5 + o > s ? s - 0.5 * d : o < 0.5 * d ? 0.5 * d : o, sz = d > s ? s : d;
         return { offset: fs, size: sz }
+    },
+
+    check: (pos, stops, cfg) => {
+
+        const result = { //stop result
+            interact: false,     //whether on a stop
+            move: true,          //whether allow to move
+            index: -1            //index of stops
+        }
+        if (stops.length < 1) return result;
+
+        //1.check whether interact with stop from top view ( in projection ).
+        const [dx, dy, stand] = pos;       //player position
+        const list = self.projection(dx, dy, stops);
+        if (self.empty(list)) return result;
+        result.interact = true;
+
+        //2.check position of stop;
+        const cap = cfg.cap + (cfg.pre !== undefined ? cfg.pre : 0)
+        const body = cfg.height;
+        const arr = self.relationZ(stand, body, cap, cfg.elevation, list);
+
+        //3.filter out the target stop for movement;
+        const fs = self.filter(arr);
+        result.move = !fs.stop;
+        result.index = fs.index;
+        if (fs.delta != undefined) result.delta = fs.delta;
+        if (fs.orgin) result.orgin = fs.orgin;
+
+        return result;
     },
 }
 

@@ -158,7 +158,6 @@ const self={
     },
     decode:(actions)=>{
         console.log(actions);
-
         return actions;
     },
     getObject:()=>{

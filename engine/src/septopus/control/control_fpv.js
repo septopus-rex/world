@@ -15,6 +15,7 @@
 
 import VBW from "../core/framework";
 import UI from "../io/io_ui";
+import Calc from "../lib/calc";
 import ThreeObject from "../three/entry";
 import Touch from "../lib/touch";
 
@@ -275,21 +276,20 @@ const self = {
             elevation: va,                       //block elevation
             pre: 0 * cvt,                        //pre stand height
         };
-        return VBW.stop.check(pos, stops, cfg);
+        //return VBW.stop.check(pos, stops, cfg);
+        return Calc.check(pos, stops, cfg);
     },
     getTriggers:()=>{
-        const dom_id=VBW.cache.get(["active","current"]);
-        const world=cache.player.location.world;
         const [x,y]=cache.player.location.block;
+        const trigger_chain=["block",cache.container, cache.world,`${x}_${y}`,"trigger"];
 
-        const trigger_chain=["block",dom_id,world,`${x}_${y}`,"trigger"];
         return VBW.cache.get(trigger_chain);
     },
     checkTrigger:()=>{
         const arr=self.getTriggers();
         if(arr.error || arr.length===0) return false;
 
-        console.log(arr);
+        //console.log(arr);
     },
 
     //Frame Synchronization, movement here to imply

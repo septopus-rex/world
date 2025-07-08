@@ -290,22 +290,16 @@ const self = {
                     }
                     stops.push(obj);
                 }
+                
+                if(name==="trigger"){
+                    const tgr=self.clone(row.params);
+                    tgr.material=row.material;
+                    triggers.push(tgr);
+                }
             }
             rdata[name] = data;
 
             //TODO, construct triggers here.
-            //2.2. event trigger construct
-            // if(Framework.event){
-            //     for(let i=0;i<map[name].length;i++){
-            //         const single=map[name][i];
-            //         if(!single.event) continue;
-            //         const key=`${name}_${i}_event`;
-            //         if(!Framework.event.exsist(key,x,y,world,dom_id)){
-            //             const fun=TriggerBuilder.get(single.event,{},Framework);
-            //             Framework.event.on(key,fun,{x:x,y:y,world:world,container:dom_id});
-            //         }
-            //     }
-            // }
         }
 
         //3.save stop data;
