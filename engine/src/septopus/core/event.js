@@ -33,41 +33,42 @@ const config={
 //saving all bind functions, run when trigger
 const events={
     system:{            //system events
-        init:null,
-        launch:null,
-        off:null,
-        restart:null,
+        init:{},
+        launch:{},
+        off:{},
+        restart:{},
     },
     player:{
-        fall:null,
-        death:null,
-        start:null,
+        fall:{},
+        death:{},
+        start:{},
     },
     block:{
-        in:null,
-        out:null,
-        hold:null,
-        stop:null,
+        in:{},
+        out:{},
+        hold:{},
+        stop:{},
+        loaded:{},
     },
     adjunct:{
-        in:null,
-        out:null,
-        hold:null,
-        touch:null,
+        in:{},
+        out:{},
+        hold:{},
+        touch:{},
     },
     stop:{
-        on:null,
-        leave:null,
-        beside:null,
-        under:null,
+        on:{},
+        leave:{},
+        beside:{},
+        under:{},
     },
     trigger:{           //trigger events
-        in:null,
-        out:null,
-        hold:null,
-        on:null,
-        beside:null,
-        under:null,
+        in:{},
+        out:{},
+        hold:{},
+        on:{},
+        beside:{},
+        under:{},
     },
 }
 
@@ -154,14 +155,18 @@ const vbw_event = {
      * 
      * */
     on:(cat,event,obj,fun)=>{
-        //console.log(name,fun,cfg);
+        //console.log(cat,event,obj,fun);
         //const type=!cfg.type?"object":cfg.type;
         if(!events[cat]) return {error:"Invalid event type"};
+        //console.log(events[cat])
         if(!events[cat][event]) return {error:"Invalid special event"};
         const name=self.getNameByObj(obj);
 
+        //console.log(name)
+
         if(name.error) return name;
         events[cat][event][name]=fun;
+        return true;
     },
 
     off:(cat,event,name)=>{
@@ -172,7 +177,7 @@ const vbw_event = {
 
     trigger:(cat,event,param)=>{
 
-        console.log(cat,event,param);
+        //console.log(cat,event,param);
         
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
@@ -180,6 +185,7 @@ const vbw_event = {
         for(let name in events[cat][event]){
             //1. confirm the sepcial trigger object
             const target=self.getNameByObj(param);
+            //console.log(name,target);
             if(name===target){
 
                 const fun=events[cat][event][name]

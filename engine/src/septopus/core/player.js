@@ -341,9 +341,17 @@ const vbw_player = {
         return env.player.location;
     },
 
+    elevation:(x,y,world,dom_id)=>{
+        const chain = ["block", dom_id, world, `${x}_${y}`, "elevation"];
+        const va=VBW.cache.get(chain);
+        const now=env.camera[dom_id].position;
+        env.camera[dom_id].position.set(now.x,now.y + va,now.z);
+    },
+
     initial: (local, dom_id) => {
         const side = self.getSide();
         const cvt = self.getConvert();
+
         const pos = [
             env.camera[dom_id].position.x + (local.block[0] - 1) * side[0] + local.position[0] * cvt,
             env.camera[dom_id].position.y + (local.block[1] - 1) * side[1] + local.position[1] * cvt,

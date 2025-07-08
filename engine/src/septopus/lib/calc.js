@@ -11,10 +11,6 @@ const self = {
                 case "box":
                     const xmin = position[0] - size[0] * 0.5, xmax = position[0] + size[0] * 0.5;
                     const ymin = position[1] - size[1] * 0.5, ymax = position[1] + size[1] * 0.5;
-                    //const cx=px+(block[0]-1)*side[0];
-                    //const cy=py+(block[1]-1)*side[1];
-
-                    //console.log();
 
                     if ((px > xmin && px < xmax) &&
                         (py > ymin && py < ymax)) {
@@ -26,7 +22,7 @@ const self = {
                     const radius = 0.5 * size[0];
                     const center = [position[0], position[1]];     //ball center
                     const dis = Calc.distance([px, py], center);
-                    //console.log(radius,dis);
+
                     if (dis < radius) {
                         list[i] = row;
                     }
@@ -39,17 +35,19 @@ const self = {
         }
         return list;
     },
+
     /** player Z position calculation
-         * @param   {number}    stand       //player stand height
-         * @param{number}    body        //player body height
-         * @param{number}    cap         //max height player can go cross
-         * @param{number}    elevation    //player elevacation
-         * @param{object[]}  list        //{id:stop,id:stop,...}, stop list to check
-         * 
-         * */
+     * @param   {number}    stand       //player stand height
+     * @param{number}    body        //player body height
+     * @param{number}    cap         //max height player can go cross
+     * @param{number}    elevation    //player elevacation
+     * @param{object[]}  list        //{id:stop,id:stop,...}, stop list to check
+     * 
+     * */
     relationZ: (stand, body, cap, elevation, list) => {
         // console.log(`Basic, player stand height: ${stand}, 
-        //     body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
+        // body height ${body}, able to cross ${cap}, elevation: ${elevation}`);
+        
         const arr = [];
         const def = {
             "BODY_STOP": 1,  //stop the body
@@ -177,6 +175,7 @@ const Calc = {
 
         return result;
     },
+    
 }
 
 export default Calc

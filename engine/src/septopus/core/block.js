@@ -154,7 +154,7 @@ const self={
             const bh=config.basic*cvt;
             const data={
                 x:s,y:s,z:va*cvt+bh,        //if va===0, there still be a box
-                ox:hs,oy:hs,oz:va*cvt*0.5-bh*0.5,
+                ox:hs,oy:hs,oz:va*cvt*0.5-0.5*bh,
                 rx:0,ry:0,rz:0,
                 status:status,
                 elevation:va*cvt,

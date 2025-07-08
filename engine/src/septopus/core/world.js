@@ -273,23 +273,29 @@ const self = {
 
         //2. check the first whether loaded
         const todo = queue[0];
-        //console.log(JSON.stringify(todo));
         const world = todo.world;
         const dom_id = todo.container;
         const chain = ["block", dom_id, world, todo.key, "raw"];
         const dt = VBW.cache.get(chain);
         if (dt.error) return false;
-
+        //console.log(JSON.stringify(dt))
         //3. if loaded, deal with the restruct and get the resource list
         if (!dt.loading) {
-            //console.log(`Restruct the whole system here.`);
-
             //3.1. add the resource to loading queue.
             const arr = todo.key.split("_");
             const x = parseInt(arr[0]), y = parseInt(arr[1]);
             const range = { x: x, y: y, world: world, container: dom_id };
+
             VBW.prepair(range, (pre) => {
+                //!important, `block.loaded` event trigger 
+                const evt={
+                    x:x,y:y,world:world,index:0,adjunct:"block",
+                    stamp:Toolbox.stamp(),
+                };
+                VBW.event.trigger("block","loaded",evt);
+
                 self.loadingResourceQueue(pre, x, y, world, dom_id);
+
                 VBW[config.render].show(dom_id, [x, y, world]);
             }, {});
             queue.shift();
@@ -443,7 +449,6 @@ const self = {
 
                 //2.2. format player data and calc capacity
                 const local = VBW.player.format(start, wd.data.player);
-
                 VBW.player.initial(local,dom_id);
 
                 //2.3. add listener
@@ -592,12 +597,18 @@ const World = {
             const ext = !pos.extend ? 1 : pos.extend;
             
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
-                
+
                 //!important, `system.done` event trigger 
                 VBW.event.trigger("system","launch",{stamp:Toolbox.stamp()});
 
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
+
+                const target={x:x,y:y,world:0,index:0,adjunct:"block"}
+                const binded=VBW.event.on("block","loaded",target,(ev)=>{
+                    VBW.player.elevation(ev.x,ev.y,ev.world,dom_id);
+                });
+                //console.log(`"block.loaded" binded?"`,binded);
 
                 // debug, get events list.
                 // const list=VBW.event.list();

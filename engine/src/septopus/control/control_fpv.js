@@ -118,7 +118,6 @@ const self = {
     getElevation: (x, y) => {
         const active = VBW.cache.get(["active"]);
         const chain = ["block", active.current, cache.player.location.world, `${x}_${y}`, "elevation"];
-        //console.log(chain);
         return VBW.cache.get(chain);
     },
     getClickPosition: (ev) => {
@@ -289,7 +288,24 @@ const self = {
         const arr=self.getTriggers();
         if(arr.error || arr.length===0) return false;
 
-        //console.log(arr);
+        const cvt = cache.convert,side = cache.side;
+        const player = cache.player;
+        const { body, capacity } = player;
+        const [x, y] = player.location.block;
+        const va=self.getElevation(x, y);
+        const nx=player.location.position[0] * cvt;
+        const ny=player.location.position[1] * cvt;
+        const nz=player.location.position[2] * cvt;
+        
+        const pos = [nx,ny,nz];
+        const cfg = {
+            cap: capacity.span * cvt,            //cross limit
+            height: body.height * cvt,           //player body height
+            elevation: va,                       //block elevation
+            pre: 0 * cvt,                        //pre stand height
+        };
+        const result = Calc.check(pos,arr, cfg);
+
     },
 
     //Frame Synchronization, movement here to imply
@@ -343,7 +359,6 @@ const self = {
             }
             VBW.player.synchronous(diff);
         }
-
         self.checkTrigger();
     },
     formatGroups: (groups) => {
@@ -533,7 +548,7 @@ const controller = {
 
     start: (dom_id) => {
         if (cache.container !== null) return false;
-        console.log(`Start to get the input from outside, bind html events.`);
+        //console.log(`Start to get the input from outside, bind html events.`);
 
         //0.get canvas width
         self.setWidth(dom_id);

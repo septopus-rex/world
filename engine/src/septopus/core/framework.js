@@ -294,6 +294,11 @@ const self = {
                 if(name==="trigger"){
                     const tgr=self.clone(row.params);
                     tgr.material=row.material;
+                    tgr.orgin={
+                        type:row.type,
+                        index:i,
+                        adjunct:name,
+                    }
                     triggers.push(tgr);
                 }
             }
