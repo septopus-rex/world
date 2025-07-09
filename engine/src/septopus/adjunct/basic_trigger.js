@@ -121,7 +121,7 @@ const self={
                 const d = arr[i], s = d[0], p = d[1], r = d[2], tid = d[3], rpt = d[4];
                 const dt = {
                     x: s[0] * cvt, y: s[1] * cvt, z: s[2] * cvt,
-                    ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt + s[2] * cvt * 0.5,
+                    ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt,
                     rx: r[0], ry: r[1], rz: r[2],
                     type: "box",
                     event:self.decode(d[5]),           //construct event function here

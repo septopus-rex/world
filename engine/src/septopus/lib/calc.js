@@ -132,6 +132,13 @@ const self = {
         if (JSON.stringify(obj) === "{}") return true;
         return false;
     },
+    zCheck:(stand,body,objs)=>{
+        console.log(`Stand on ${stand}, body height ${body}`,objs);
+        for(let k in objs){
+            const row=objs[k];
+            console.log(row);
+        }
+    },
 }
 
 const Calc = {
@@ -146,18 +153,18 @@ const Calc = {
         return { offset: fs, size: sz }
     },
 
-    check: (pos, stops, cfg) => {
+    check: (pos, objs, cfg) => {
 
         const result = { //stop result
             interact: false,     //whether on a stop
             move: true,          //whether allow to move
             index: -1            //index of stops
         }
-        if (stops.length < 1) return result;
+        if (objs.length < 1) return result;
 
         //1.check whether interact with stop from top view ( in projection ).
         const [dx, dy, stand] = pos;       //player position
-        const list = self.projection(dx, dy, stops);
+        const list = self.projection(dx, dy, objs);
         if (self.empty(list)) return result;
         result.interact = true;
 
@@ -175,6 +182,15 @@ const Calc = {
 
         return result;
     },
+
+    inside: (pos, objs, height) => {
+        if (objs.length < 1) return false;
+        const [dx, dy, stand] = pos;       //player position
+        const list = self.projection(dx, dy, objs);
+        if (!list || self.empty(list)) return false;
+        
+        const arr = self.zCheck(stand, height,list);
+    }
     
 }
 

@@ -285,27 +285,33 @@ const self = {
         return VBW.cache.get(trigger_chain);
     },
     checkTrigger:()=>{
+        //1. get trigger list
         const arr=self.getTriggers();
         if(arr.error || arr.length===0) return false;
+       
 
-        const cvt = cache.convert,side = cache.side;
+        //2. prepare parameters to check trigger
+        const cvt = cache.convert;
         const player = cache.player;
-        const { body, capacity } = player;
-        const [x, y] = player.location.block;
-        const va=self.getElevation(x, y);
+        //const [x, y] = player.location.block;
+        //const va=self.getElevation(x, y);
+
         const nx=player.location.position[0] * cvt;
         const ny=player.location.position[1] * cvt;
         const nz=player.location.position[2] * cvt;
         
         const pos = [nx,ny,nz];
-        const cfg = {
-            cap: capacity.span * cvt,            //cross limit
-            height: body.height * cvt,           //player body height
-            elevation: va,                       //block elevation
-            pre: 0 * cvt,                        //pre stand height
-        };
-        const result = Calc.check(pos,arr, cfg);
+        // const cfg = {
+        //     cap: capacity.span * cvt,            //cross limit
+        //     height: body.height * cvt,           //player body height
+        //     elevation: va,                       //block elevation
+        //     pre: 0 * cvt,                        //pre stand height
+        // };
 
+        const orgin = Calc.inside(pos,arr, player.body.height * cvt);
+        if(orgin!==false){
+            console.log(orgin);
+        }
     },
 
     //Frame Synchronization, movement here to imply
