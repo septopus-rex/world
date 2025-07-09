@@ -68,7 +68,8 @@ const config = {
     },
     swipe:{
         distance: 15,
-    }   
+    },
+    hold:3000,          //3s as holding  
 }
 
 const env = {
@@ -298,17 +299,32 @@ const self = {
         const world= player.location.world;
         if(env.trigger===null){
             if(orgin!==false){
-                const target={x:x,y:y,world:world,index:orgin.index,adjunct:orgin.adjunct};
+                const target={
+                    x:x,y:y,world:world,
+                    index:orgin.index,
+                    adjunct:orgin.adjunct,
+                    start:Toolbox.stamp(),
+                    hold:false,
+                };
                 
                 //!important, `trigger.in` event trigger 
-                //console.log(`Trigger ${JSON.stringify(target)}`);
                 env.trigger=target;
-                VBW.event.trigger("trigger","in",target);
+                VBW.event.trigger("trigger","in",Toolbox.clone(target));
             
             }
         }else{
+            //2. check hold event
+            if(env.trigger.hold===false){
+                const delta=Toolbox.stamp()-env.trigger.start;
+                if(delta > config.hold){
+                    //!important, `trigger.hold` event trigger 
+                    VBW.event.trigger("trigger","hold",Toolbox.clone(env.trigger));
+                    env.trigger.hold=true;
+                }
+            }
+
+            //3. check leaving event
             if(orgin===false){
-                //const target={x:x,y:y,world:world,index:orgin.index,adjunct:orgin.adjunct};
                 //!important, `trigger.in` event trigger 
                 VBW.event.trigger("trigger","out",Toolbox.clone(env.trigger));
                 env.trigger=null;
