@@ -18,6 +18,7 @@ import UI from "../io/io_ui";
 import Calc from "../lib/calc";
 import ThreeObject from "../three/entry";
 import Touch from "../lib/touch";
+import Toolbox from "../lib/toolbox";
 
 const reg = {
     name: "con_first",
@@ -283,7 +284,7 @@ const self = {
         //1. get trigger list
         const arr=self.getTriggers();
         if(arr.error || arr.length===0) return false;
-       
+
         //2. prepare parameters to check trigger
         const cvt = cache.convert;
         const player = cache.player;
@@ -293,15 +294,24 @@ const self = {
         const pos = [nx,ny,nz];
 
         const orgin = Calc.inside(pos,arr, player.body.height * cvt);
-        if(orgin!==false){
-            //console.log(orgin);
-            const [x, y] = player.location.block;
-            const world= player.location.world;
-            const target={x:x,y:y,world:world,index:orgin.index,adjunct:orgin.adjunct};
-            if(env.trigger===null){
-                console.log(`Trigger ${JSON.stringify(target)}`);
+        const [x, y] = player.location.block;
+        const world= player.location.world;
+        if(env.trigger===null){
+            if(orgin!==false){
+                const target={x:x,y:y,world:world,index:orgin.index,adjunct:orgin.adjunct};
+                
+                //!important, `trigger.in` event trigger 
+                //console.log(`Trigger ${JSON.stringify(target)}`);
                 env.trigger=target;
                 VBW.event.trigger("trigger","in",target);
+            
+            }
+        }else{
+            if(orgin===false){
+                //const target={x:x,y:y,world:world,index:orgin.index,adjunct:orgin.adjunct};
+                //!important, `trigger.in` event trigger 
+                VBW.event.trigger("trigger","out",Toolbox.clone(env.trigger));
+                env.trigger=null;
             }
         }
     },

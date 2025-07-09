@@ -66,9 +66,6 @@ const events={
         in:{},
         out:{},
         hold:{},
-        on:{},
-        beside:{},
-        under:{},
     },
 }
 
@@ -176,8 +173,7 @@ const vbw_event = {
     },
 
     trigger:(cat,event,param)=>{
-
-        //console.log(cat,event,param);
+        console.log(cat,event,param);
         
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
