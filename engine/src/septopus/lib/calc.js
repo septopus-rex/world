@@ -132,12 +132,16 @@ const self = {
         if (JSON.stringify(obj) === "{}") return true;
         return false;
     },
-    zCheck:(stand,body,objs)=>{
-        console.log(`Stand on ${stand}, body height ${body}`,objs);
+    zCheck:(stand,height,objs)=>{
+        //console.log(`Stand on ${stand}, body height ${height}`,objs);
+        const head=stand+height;
         for(let k in objs){
             const row=objs[k];
-            console.log(row);
+            const bottom=row.position[2]-0.5*row.size[2];
+            const top=row.position[2]+0.5*row.size[2];
+            if(head>bottom && head<top) return row.orgin;
         }
+        return false;
     },
 }
 
@@ -189,7 +193,7 @@ const Calc = {
         const list = self.projection(dx, dy, objs);
         if (!list || self.empty(list)) return false;
         
-        const arr = self.zCheck(stand, height,list);
+        return self.zCheck(stand, height,list);
     }
     
 }

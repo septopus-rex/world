@@ -73,17 +73,18 @@ const config = {
 const env = {
     //position: [0, 0],       //[left,top],DOM offset      
     mobile:false,
-    locked: false,          //whether lock the movement input
     limit: null,            //limit of movement
     moving: false,          //whether moving, for mobile  
     screen:{
         touch:null,
         distance:0,
         width:0,
-    }         
+    },
+    trigger:null,      
 };
 
-let todo = null
+let todo = null;
+let trigger = null;   
 const self = {
     hooks: {
         reg: () => { return reg },
@@ -93,12 +94,6 @@ const self = {
     },
     bind: (evt, fun, dom_id) => {
         if (!dom_id) document.addEventListener(evt, fun);
-    },
-    lock: () => {
-        env.locked = true;
-    },
-    recover: () => {
-        env.locked = false;
     },
     getEditActive: () => {
         return VBW.cache.get(["block", cache.container, cache.world, "edit"]);
@@ -289,28 +284,25 @@ const self = {
         const arr=self.getTriggers();
         if(arr.error || arr.length===0) return false;
        
-
         //2. prepare parameters to check trigger
         const cvt = cache.convert;
         const player = cache.player;
-        //const [x, y] = player.location.block;
-        //const va=self.getElevation(x, y);
-
         const nx=player.location.position[0] * cvt;
         const ny=player.location.position[1] * cvt;
         const nz=player.location.position[2] * cvt;
-        
         const pos = [nx,ny,nz];
-        // const cfg = {
-        //     cap: capacity.span * cvt,            //cross limit
-        //     height: body.height * cvt,           //player body height
-        //     elevation: va,                       //block elevation
-        //     pre: 0 * cvt,                        //pre stand height
-        // };
 
         const orgin = Calc.inside(pos,arr, player.body.height * cvt);
         if(orgin!==false){
-            console.log(orgin);
+            //console.log(orgin);
+            const [x, y] = player.location.block;
+            const world= player.location.world;
+            const target={x:x,y:y,world:world,index:orgin.index,adjunct:orgin.adjunct};
+            if(env.trigger===null){
+                console.log(`Trigger ${JSON.stringify(target)}`);
+                env.trigger=target;
+                VBW.event.trigger("trigger","in",target);
+            }
         }
     },
 
