@@ -115,7 +115,7 @@ const self={
     },
     transform:{
         raw_std: (arr, cvt) => {
-            console.log(definition);
+            //console.log(definition);
             const rst = []
             for (let i in arr) {
                 const d = arr[i], s = d[0], p = d[1], r = d[2], tid = d[3], rpt = d[4];
@@ -157,7 +157,7 @@ const self={
         },
     },
     decode:(actions)=>{
-        console.log(actions);
+        //console.log(actions);
         return actions;
     },
     getObject:()=>{

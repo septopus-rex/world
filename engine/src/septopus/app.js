@@ -20,10 +20,10 @@ const self={
         if(done.error) return ck && ck(done);
         const great = await World.init();
 
-        VBW.event.on("system","init","sys_init",(ev)=>{
+        VBW.event.on("system","init",(ev)=>{
             console.log("system.init",ev);
         });
-        VBW.event.on("system","launch","sys_init",(ev)=>{
+        VBW.event.on("system","launch",(ev)=>{
             console.log("system.done",ev);
         });
 

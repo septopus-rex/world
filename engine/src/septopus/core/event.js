@@ -80,22 +80,6 @@ const runtime={
     },
 }
 
-const monitor={
-    block:{
-        in:()=>{
-
-        },
-        out:()=>{
-
-        }
-    },
-    stop:{
-        beside:()=>{
-
-        },
-    }
-}
-
 const self={
     hooks:{
         reg: () => {
@@ -128,6 +112,15 @@ const self={
         if(!obj.x || !obj.y || !obj.adjunct || obj.index===undefined) return {erro:"Invalid event object."}
         return `${obj.x}_${obj.y}_${!obj.world?0:obj.world}_${obj.adjunct}_${obj.index}`;
     },
+    randomName:(n)=>{
+        const len=!n?12:n;
+        let hash = 'event_';
+        const hexChars = '0123456789abcdef';
+        for (let i = 0; i < n; i++) {
+            hash += hexChars[Math.floor(Math.random() * 16)];
+        }
+        return hash;
+    },
 }
 
 const vbw_event = {
@@ -147,23 +140,24 @@ const vbw_event = {
      *  
      * @param   {string}    cat      - event cat
      * @param   {string}    event    - special event
-     * @param   {object}    obj      - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
      * @param   {function}  fun      - binding function
+     * @param   {object}    [obj]      - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
      * 
      * */
-    on:(cat,event,obj,fun)=>{
-        //console.log(cat,event,obj,fun);
-        //const type=!cfg.type?"object":cfg.type;
+    on:(cat,event,fun,obj)=>{
         if(!events[cat]) return {error:"Invalid event type"};
-        //console.log(events[cat])
         if(!events[cat][event]) return {error:"Invalid special event"};
-        const name=self.getNameByObj(obj);
-
-        //console.log(name)
-
-        if(name.error) return name;
-        events[cat][event][name]=fun;
-        return true;
+        
+        if(obj===undefined){
+            const name=self.randomName();
+            events[cat][event][name]=fun;
+            return true;
+        }else{
+            const name=self.getNameByObj(obj);
+            if(name.error) return name;
+            events[cat][event][name]=fun;
+            return true;
+        }
     },
 
     off:(cat,event,name)=>{
@@ -172,24 +166,34 @@ const vbw_event = {
         delete events[cat][event][name];
     },
 
-    trigger:(cat,event,param)=>{
-        console.log(cat,event,param);
-        
+    /**
+     *  
+     * @param   {string}    cat      - event cat
+     * @param   {string}    event    - special event
+     * @param   {object}    param    - special event
+     * @param   {object}    [obj]      - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
+     * 
+     * */
+    trigger:(cat,event,param,obj)=>{
+        // if(cat==="player" && event==="fall"){
+        //     console.log(events);
+        // }
+
+        console.log(cat,event,param,obj)
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
-        for(let name in events[cat][event]){
-            //1. confirm the sepcial trigger object
-            const target=self.getNameByObj(param);
-            //console.log(name,target);
-            if(name===target){
-
-                const fun=events[cat][event][name]
-                fun(param);
-
-                //2 event monitor
-                if(monitor[cat] && monitor[cat][event]){
-                    monitor[cat][event](param);
+        if(obj===undefined){
+            //1. normal event, not 
+            for(let name in events[cat][event]){
+                events[cat][event][name](param)
+            }
+        }else{
+            for(let name in events[cat][event]){
+                const target=self.getNameByObj(obj);
+                if(name===target){
+                    const fun=events[cat][event][name]
+                    fun(param);
                 }
             }
         }

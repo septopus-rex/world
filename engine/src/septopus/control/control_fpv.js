@@ -309,8 +309,7 @@ const self = {
                 
                 //!important, `trigger.in` event trigger 
                 env.trigger=target;
-                VBW.event.trigger("trigger","in",Toolbox.clone(target));
-            
+                VBW.event.trigger("trigger","in",{stamp:Toolbox.stamp()},Toolbox.clone(target));
             }
         }else{
             //2. check hold event
@@ -318,7 +317,7 @@ const self = {
                 const delta=Toolbox.stamp()-env.trigger.start;
                 if(delta > config.hold){
                     //!important, `trigger.hold` event trigger 
-                    VBW.event.trigger("trigger","hold",Toolbox.clone(env.trigger));
+                    VBW.event.trigger("trigger","hold",{stamp:Toolbox.stamp()},Toolbox.clone(env.trigger));
                     env.trigger.hold=true;
                 }
             }
@@ -326,7 +325,7 @@ const self = {
             //3. check leaving event
             if(orgin===false){
                 //!important, `trigger.in` event trigger 
-                VBW.event.trigger("trigger","out",Toolbox.clone(env.trigger));
+                VBW.event.trigger("trigger","out",{stamp:Toolbox.stamp()},Toolbox.clone(env.trigger));
                 env.trigger=null;
             }
         }
@@ -341,6 +340,7 @@ const self = {
 
         const ak = cache.camera.rotation.y;
         const local=cache.player.location;
+
         //1.deal with keyboard inputs.
         for (let i = 0; i < cache.actions.length; i++) {
             const act = cache.actions[i];
@@ -350,10 +350,13 @@ const self = {
             if (diff.position) {
                 const check = self.checkStop(diff.position);
                 if (!check.move) {
+
                     if(!check.block){
-                        VBW.event.trigger("stop","beside",check.orgin);
+                        //!important, `stop.beside` event trigger 
+                        VBW.event.trigger("stop","beside",{stamp:Toolbox.stamp()},check.orgin);
                     }else{
-                        VBW.event.trigger("block","stop",check.block);
+                        //!important, `block.stop` event trigger 
+                        VBW.event.trigger("block","stop",{stamp:Toolbox.stamp()},check.block);
                     }
                     continue;
                 }
@@ -364,11 +367,13 @@ const self = {
                     if(!check.orgin){
                         VBW.player.leave(check);
                     }else{
-                        // if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
-                        //     console.log(`Same stop.`);
-                        // }else{
-                        //     console.log(`New stop.`);
-                        // }
+                        if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
+                            //console.log(`Same stop.`);
+                        }else{
+                            //console.log(`New stop.`);
+                            //!important, `stop.on` event trigger 
+                            VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},check.block);
+                        }
                     }
                 }
 
@@ -385,6 +390,7 @@ const self = {
         }
         self.checkTrigger();
     },
+
     formatGroups: (groups) => {
         const ss = [];
         for (let title in groups) {

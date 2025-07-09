@@ -288,11 +288,14 @@ const self = {
 
             VBW.prepair(range, (pre) => {
                 //!important, `block.loaded` event trigger 
-                const evt={
+                const target={
                     x:x,y:y,world:world,index:0,adjunct:"block",
                     stamp:Toolbox.stamp(),
                 };
-                VBW.event.trigger("block","loaded",evt);
+                const evt={
+                    x:x,y:y,world:world,
+                }
+                VBW.event.trigger("block","loaded",evt,target);
 
                 self.loadingResourceQueue(pre, x, y, world, dom_id);
 
@@ -605,17 +608,13 @@ const World = {
                 VBW[config.render].show(dom_id);
 
                 const target={x:x,y:y,world:0,index:0,adjunct:"block"}
-                const binded=VBW.event.on("block","loaded",target,(ev)=>{
+                const binded=VBW.event.on("block","loaded",(ev)=>{
                     VBW.player.elevation(ev.x,ev.y,ev.world,dom_id);
-                });
-                //console.log(`"block.loaded" binded?"`,binded);
+                },target);
 
-                // debug, get events list.
-                // const list=VBW.event.list();
-                // console.log(list);
-                const res = VBW.event.on("stop","beside",{x:2025,y:619,world:0,index:0,adjunct:"wall"},(ev)=>{
+                const res = VBW.event.on("stop","beside",(ev)=>{
                     console.log(`Stop beside event triggered`,ev);
-                });
+                },{x:2025,y:619,world:0,index:0,adjunct:"wall"});
             }, cfg);
         });
     },

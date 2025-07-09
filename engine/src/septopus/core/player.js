@@ -28,6 +28,7 @@ const config = {
         id: "map_2d",
     },
     defaultWorld: 0,
+    hold:3000,              //holding check time
 }
 
 const capacity = {
@@ -52,7 +53,7 @@ const env = {
         rotation: [0, 0, 0],
         moved: false,
         rotated: true,
-    }
+    },
 }
 
 const self = {
@@ -157,6 +158,11 @@ const self = {
         //2.deal with the cross stuff, load more data
         const [bx, by] = player.location.block;
         if (bx !== x || by !== y) {
+
+            //!important, `block.in` event trigger 
+            VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},{x:x,y:y});
+            VBW.event.trigger("block","out",{stamp:Toolbox.stamp()},{x:bx,y:by});
+
             const change = self.cross(player.location.block, [x, y], player.location.extend);
             const tasks = VBW.cache.get(["task", dom_id, world]);
             if (change.load.length !== 0) {
@@ -313,6 +319,15 @@ const vbw_player = {
             env.camera[dom_id] = VBW.cache.get(["active", "containers", dom_id, "camera"]);
         }
 
+        //4. player event
+        VBW.event.on("player","fall",(ev)=>{
+            console.log(`fall`,ev)
+        });
+
+        VBW.event.on("player","death",(ev)=>{
+            console.log(`death`,ev)
+        });
+
         return ck && ck(data);
     },
 
@@ -396,7 +411,7 @@ const vbw_player = {
         
         //2. event trigger
         //!important, `player.stop.on` event trigger
-        const evt={
+        const target={
             stamp:Toolbox.stamp(),
             adjunct:orgin.adjunct,
             index:orgin.index,
@@ -404,8 +419,7 @@ const vbw_player = {
             x:player.location.block[0],
             y:player.location.block[1],
         }
-        console.log(evt);
-        VBW.event.trigger("stop","on",evt);
+        VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},target);
         return true;
     },
 
@@ -414,9 +428,11 @@ const vbw_player = {
     */
     leave:(check)=>{
         console.log("Player leave:", JSON.stringify(check));
+
         //1. location update
         const cvt=self.getConvert();
         const player=env.player;
+        const fall=player.location.position[2];
         self.syncCameraPosition([0,0,-env.player.location.position[2]*cvt]);
         player.location.position[2]=0;
 
@@ -427,17 +443,37 @@ const vbw_player = {
         self.saveLocation();
 
         //2. event trigger
-        //!important, `player.stop.on` event trigger
-        const evt={
+        //!important, `stop.on` event trigger
+        const target={
             stamp:Toolbox.stamp(),
             adjunct:stop.adjunct,
             index:stop.index,
             world:player.location.world,
+            fall:fall,
             x:player.location.block[0],
             y:player.location.block[1],
         }
-        VBW.event.trigger("stop","leave",evt);
+        VBW.event.trigger("stop","leave",{stamp:Toolbox.stamp()},target);
 
+        console.log(fall,capacity.span)
+        if(fall>=capacity.death){
+            const evt={
+                from:{},
+                fall:fall,
+                stamp:Toolbox.stamp(),
+            }
+            //!important, `player.death` event trigger
+            VBW.event.trigger("player","death",evt);
+        }else if(fall>=capacity.span){
+            console.log(`Falling...`)
+            const evt={
+                from:{},
+                fall:fall,
+                stamp:Toolbox.stamp(),
+            }
+            //!important, `player.fall` event trigger
+            VBW.event.trigger("player","fall",evt);
+        }
         return true;
     },
 }
