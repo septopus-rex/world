@@ -339,8 +339,7 @@ const vbw_player = {
     },
 
     format: (local, basic) => {
-        console.log(local, basic);
-
+        //console.log(local, basic);
         //1. set basic location
         if (local.block === undefined) {
             env.player.location = basic.start;

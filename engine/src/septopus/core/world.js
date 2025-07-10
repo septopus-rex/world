@@ -524,7 +524,7 @@ const World = {
         VBW.event.trigger("system","init",{stamp:Toolbox.stamp()});
         
         UI.show("toast", `Septopus World running env done.`, {});
-        if (config.debug) VBW.cache.dump();   //dump when debug
+        //if (config.debug) VBW.cache.dump();   //dump when debug
         return true;
     },
 
@@ -593,7 +593,6 @@ const World = {
 
         self.runOnce(dom_id, cfg);
         self.initEnv(dom_id, (world, limit) => {
-            console.log("Inited,",VBW);
             UI.show("toast", `World data load from network successful.`);
             const pos=VBW.cache.get(["env","player","location"]);
             const [x, y] = pos.block;

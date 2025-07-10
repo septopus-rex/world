@@ -305,6 +305,9 @@ const self = {
             rdata[name] = data;
 
             //TODO, construct triggers here.
+            if(name==="trigger"){
+                console.log(`Bind trigger functions here.`);
+            }    
         }
 
         //3.save stop data;

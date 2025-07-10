@@ -66,6 +66,7 @@ const events={
         in:{},
         out:{},
         hold:{},
+        touch:{},
     },
 }
 
@@ -171,15 +172,11 @@ const vbw_event = {
      * @param   {string}    cat      - event cat
      * @param   {string}    event    - special event
      * @param   {object}    param    - special event
-     * @param   {object}    [obj]      - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
+     * @param   {object}    [obj]    - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
      * 
      * */
     trigger:(cat,event,param,obj)=>{
-        // if(cat==="player" && event==="fall"){
-        //     console.log(events);
-        // }
-
-        console.log(cat,event,param,obj)
+        //console.log(cat,event,param,obj)
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
@@ -198,20 +195,6 @@ const vbw_event = {
             }
         }
     },
-
-    // exsist:(cat,event,name)=>{
-    //     if(!events[cat]) return {error:"Invalid event type"};
-    //     if(!events[cat][event]) return {error:"Invalid special event"};
-    //     if(![cat][event][name]) return false;
-    //     return true;
-    // },
-
-    //check event whether loaded.
-    // exsist:(name,x,y,world,dom_id)=>{
-    //     const key=`${world}_${x}_${y}_${name}`;
-    //     if(cache[key]===undefined) return false;
-    //     return true;
-    // },
 
     start:(world,dom_id)=>{
         //1. set frame sync function

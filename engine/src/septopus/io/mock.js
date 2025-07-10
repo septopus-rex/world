@@ -56,15 +56,75 @@ const mock = {
             trigger: {
                 definition: {
                     "TRIGGER_SHAPE_OPTION":     3,      //["box","ball","more"]
-                    "TRIGGER_OPTION":           4,      //[""]
-                    "ACTION_GROUP":             5, 
+                    "TRIGGER_OPTION":           4,      //["in","out","hold"]
+                    "ACTION_GROUP":             5,      //
                     "CONTRACT_ID_ON_CHAIN":     6,
-                    "RUN_ONE_TIME":             7,
+                    "RUN_ONCE":                 7,
+
+                    //action array [ "condition", "todo_task", "abord_task", "recover_task" ]
+                    "ACTION_INDEX_CONDITION":   0,
+                    "ACTION_INDEX_TODO":        1,
+                    "ACTION_INDEX_ABORD":       2,
+                    "ACTION_INDEX_RECOVER":     3,
+                    //condition array [ "selection_array", "operator", "value" ]
+                    "CONDITION_INDEX_SELECTION":    0,
+                    "CONDITION_INDEX_OPERATOR":     1,
+                    "CONDITION_INDEX_VALUE":        2,
+                    //task array    [ "selection", ]
+
+                    //section array,
+                    "SELECTION_INDEX_TYPE":     0,
+                    "SELECTION_TYPE_OPETION_SYSTEM":    1,
+                    "SELECTION_TYPE_OPETION_ADJUNCT":   2,
+                    "SELECTION_TYPE_OPETION_PLAYER":    3,
+                    "SELECTION_TYPE_OPETION_BAG":       4,
+
+                    //system selection
+                    "SELECTION_SYSTEM_SUB":     1,
+                    "SYSTEM_SUB_OPTION_UI":     1,
+                    "SYSTEM_SUB_OPTION_TIME":   2,
+                    "SYSTEM_SUB_OPTION_WEATHER":3,
+                    "SYSTEM_SUB_OPTION_SKY":    4,
+
+                    //adjunct selection
+                    "SELECTION_ADJUNCT_SHORT":  1,
+                    "SELECTION_ADJUNCT_INDEX":  2,
+
+                    //player selection
+                    //["position","rotation","body","block","capacity","blood","magic"]
+                    "SELECTION_PLAYER_ATTIBUTION":  1,
+                    "PLAYER_ATTIBUTION_OPTION_POSITION":    0,
+                    "PLAYER_ATTIBUTION_OPTION_ROTATION":    1,
+                    "PLAYER_ATTIBUTION_OPTION_BODY":        2,
+                    "PLAYER_ATTIBUTION_OPTION_BLOCK":       3,
+                    "PLAYER_ATTIBUTION_OPTION_CAPACITY":    4,
+                    "PLAYER_ATTIBUTION_OPTION_BLOOD":       5,
+                    "PLAYER_ATTIBUTION_OPTION_MAGIC":       6,
+
+                    //bag selection
+                    "SELECTION_BAG_OBJECT":             1,
+                    "SELECTION_BAG_OBJECT_AMOUNT":      2,
+
                     "EVENT_OPTION_IN":          1,
                     "EVENT_OPTION_OUT":         2,
                     "EVENT_OPTION_HOLD":        3,
+                    "SHAPE_OPTION_BOX":         1,
+                    "SHAPE_OPTION_BALL":        2,
+                    "OPERATOR_!=":              0,
+                    "OPERATOR_==":              1,
+                    "OPERATOR_>":               2,
+                    "OPERATOR_<":               3,
+                    "OPERATOR_>=":              4,
+                    "OPERATOR_<=":              5,
                 },
-                sample:[],
+                sample:[[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
+                    [
+                        [[1],1,0],      //condition
+                        [],             //task_todo
+                        [],             //task_abord
+                        []              //task_recover
+                    ],
+                ], 0, 1],
                 version:2025,
                 short:0x00b8,
                 code:"JAVASCRIPT_BASE64_CODE_STRING",
