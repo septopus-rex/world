@@ -1,6 +1,6 @@
 # Septopus World
 
-* [Septopus](https://septopus.xyz) virtual world project at [Launch Period](https://septopus.xyz/declaration#launch-period) 2025.6.19 00:00 ~ 2027.6.18 23:59.
+* [Septopus](https://septopus.xyz) virtual world project is at [Launch Period](https://septopus.xyz/declaration#launch-period) 2025.6.19 00:00 ~ 2027.6.18 23:59.
 
 ## Goal
 

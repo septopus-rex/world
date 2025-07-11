@@ -107,6 +107,7 @@ const self={
             return reg;
         },
         def:(data)=>{
+            console.log(data);
             definition=data;
         },
     },

@@ -47,8 +47,8 @@ const config = {
         BACKWARD: 83,       //S
         LEFT: 65,           //A
         RIGHT: 68,          //D
-        //BODY_RISE: 82,      //R
-        //BODY_FALL: 70,      //F
+        BODY_RISE: 82,      //R
+        BODY_FALL: 70,      //F
         HEAD_LEFT: 37,      //Arrow left
         HEAD_RIGHT: 39,     //Arrow right
         HEAD_RISE: 38,      //Arrow up
