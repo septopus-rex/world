@@ -44,9 +44,21 @@ const vbw_bag={
     list:()=>{
 
     },
-    exsiste:()=>{
+    exsist:()=>{
 
-    }
+    },
+
+    //task for trigger
+    task:()=>{
+        return {
+            mint:()=>{
+
+            },
+            consume:()=>{
+
+            },
+        }
+    },
 }
 
 export default vbw_bag;

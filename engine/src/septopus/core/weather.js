@@ -60,6 +60,9 @@ const self={
         value.category=cat_index;
         value.grade=grade%def.detail[cat_name].length;
     },
+    setWeather:()=>{
+
+    },
 }
 
 const vbw_weather={
@@ -80,6 +83,13 @@ const vbw_weather={
             counter+=60;
         }
     },
+
+    //task for trigger
+    task:()=>{
+        return {
+            set:self.setWeather(),
+        }
+    }
 }
 
 export default vbw_weather;

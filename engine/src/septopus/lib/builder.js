@@ -59,10 +59,17 @@ const self={
 };
 
 const TriggerBuilder = {
+
+    definition:(def)=>{
+        console.log(def);
+        
+    },
+
     /**  set funs for trigger
      * @param   {object[]}    funs   //[{},{}]
      * */
     set:(funs)=>{
+        console.log(funs);
         for(let i=0;i<funs.length;i++){
             if(!objects[i]) continue;
             const row=funs[i];

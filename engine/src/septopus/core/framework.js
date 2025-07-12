@@ -15,7 +15,6 @@
  */
 
 import Toolbox from "../lib/toolbox";
-import TriggerBuilder from "../lib/builder";
 
 const cache = {};       //global cache
 const config = {

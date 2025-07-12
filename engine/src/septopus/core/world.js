@@ -27,6 +27,7 @@ import vbw_detect from "./detect";
 import vbw_player from "./player";
 import vbw_movement from "./movement";
 import vbw_event from "./event";
+import vbw_bag from "./bag";
 import API from "../io/api";
 
 import render_3d from "../render/render_3d";
@@ -48,9 +49,10 @@ import basic_trigger from "../adjunct/basic_trigger";
 
 import plug_link from "../plugin/plug_link";
 import Toolbox from "../lib/toolbox";
+import TriggerBuilder from "../lib/builder";
 
 const regs = {
-    core: [vbw_detect,vbw_sky,vbw_time,vbw_weather,vbw_block,vbw_player,vbw_movement,vbw_event,API],
+    core: [vbw_detect,vbw_sky,vbw_time,vbw_weather,vbw_block,vbw_player,vbw_movement,vbw_event,vbw_bag,API],
     render: [render_3d,render_2d,render_observe],
     controller: [control_fpv,control_2d,control_observe],
     adjunct: [ basic_stop,basic_trigger,basic_light,basic_box,basic_module,adj_wall,adj_water],
@@ -421,6 +423,34 @@ const self = {
             if (!VBW[adj] || !VBW[adj].hooks || !VBW[adj].hooks[key]) continue;
             VBW[adj].hooks[key](Toolbox.clone(def[adj]));
         }
+
+        //4.group trigger definition
+        self.setTrigger(def);
+    },
+    setTrigger:(def)=>{
+        TriggerBuilder.definition(def);
+
+        const adjs=self.getAdjunctTriggerFuns();
+        const funs=[
+            {
+                ui:UI.task(),
+                weather:VBW.weather.task(),
+            },
+            adjs,
+            VBW.player.task(),
+            VBW.bag.task(),
+        ]
+        TriggerBuilder.set(funs);
+    },
+    getAdjunctTriggerFuns:()=>{
+        const map=VBW.component.map();
+        const funs={};
+        for(let name in map){
+            if(!isNaN(parseInt(name))) continue;
+            if(!VBW[name] || !VBW[name].task) continue;
+            funs[name]=VBW[name].task;
+        }
+        return funs;
     },
     runOnce: (dom_id, cfg) => {
         //0.set current active dom_id
