@@ -86,6 +86,9 @@ const mock = {
                     "SYSTEM_SUB_OPTION_WEATHER":3,
                     "SYSTEM_SUB_OPTION_SKY":    4,
 
+                    "SYSTEM_UI_OPTION_DIALOG": 1,
+                    "SYSTEM_UI_OPTION_TOAST":  2,
+
                     //adjunct selection
                     "SELECTION_ADJUNCT_SHORT":  1,
                     "SELECTION_ADJUNCT_INDEX":  2,
@@ -101,9 +104,20 @@ const mock = {
                     "PLAYER_ATTIBUTION_OPTION_BLOOD":       5,
                     "PLAYER_ATTIBUTION_OPTION_MAGIC":       6,
 
+                    //task definition
+                    "TASK_SYSTEM_UI_":      1,
+
                     //bag selection
                     "SELECTION_BAG_OBJECT":             1,
                     "SELECTION_BAG_OBJECT_AMOUNT":      2,
+
+                    //adjuction task action
+                    "ACTION_ADJUNCT_SHOW":      1,
+                    "ACTION_ADJUNCT_HIDE":      2,
+                    "ACTION_ADJUNCT_UPDATE":    3,
+
+                    "ADJUNCT_UPDATE_OPTION_INC":   1,
+                    "ADJUNCT_UPDATE_OPTION_DEC":   1,
 
                     "EVENT_OPTION_IN":          1,
                     "EVENT_OPTION_OUT":         2,
@@ -119,10 +133,10 @@ const mock = {
                 },
                 sample:[[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
                     [
-                        [[1],1,0],      //condition
-                        [],             //task_todo
-                        [],             //task_abord
-                        []              //task_recover
+                        [[1,3],1,0],                            //`condition`, can be empty, run anyway
+                        [[1,1,2],[1,20]],                       //`task_todo`, system.ui.toast()
+                        [[1,1,2],[1,33]],                       //`task_abord`, system.ui.toast()
+                        [[2,0x00a1,1],[3,[[0,2],1,0.78]],[10]]    //`task_recover`, adjunct.wall --> update --> position[2] -->
                     ],
                 ], 0, 1],
                 version:2025,
@@ -288,7 +302,7 @@ const mock = {
                     position: [12, 12, 0],   //默认开始的位置[x,y,z],z为站立高度
                     rotation: [0, 0, 0],   //默认的旋转位置
                     world:0,              //
-                    extend:2,              
+                    extend:3,              
                     stop:{
                         on:false,               //whether on stop ( including adjunct type )
                         adjunct:"",             //adjunct support stop attribution, need to figure out
@@ -331,6 +345,9 @@ const mock = {
         }
 
         if (x === 2024 && y === 619) {
+            const actions=[
+                [],
+            ];
             return {
                 x: x,
                 y: y,
@@ -339,9 +356,17 @@ const mock = {
                     0.2,
                     [
                         [0x00b8,    //trigger
-                            [   
-                                [[2, 2, 3], [8, 6, 1.5], [0, 0, 0], 1, 2, [] , 4, 0]
-                            ]],
+                            [
+                                [[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
+                                    [
+                                        [[1,3],1,0],            //`condition`, can be empty, run anyway
+                                        [[1,1,2],[1,20]],       //`task_todo`, system.ui.toast()
+                                        [[1,1,2],[1,33]],       //`task_abord`, system.ui.toast()
+                                        [[2,0x00a1,1],[]]       //`task_recover`, adjunct.wall
+                                    ],
+                                ], 0, 1]
+                            ]
+                        ]
                     ],
                     1,  //block status
                 ],
@@ -440,6 +465,29 @@ const mock = {
                                 [[1,1,3],[1,1,12.75], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
                                 [[1,1,3],[1,2,13], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
                                 [[1,1,3],[1,3,13.25], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,4,13.5], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,5,13.75], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,6,14], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,7,14.25], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,8,14.5], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,9,14.75], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,10,15], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,11,15.25], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,12,15.5], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,13,15.75], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,14,16], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[1,15,16.25], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[2,15,16.5], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[3,15,16.75], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[4,15,17], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[5,15,17.25], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[6,15,17.5], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[7,15,17.75], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[8,15,18], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[9,15,18.25], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[10,15,18.5], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[11,15,18.75], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
+                                [[1,1,3],[12,15,19], [0, 0, 0], rand(60, 90), [1, 1], 1,1],
                             ]],
                     ],
                     1,  //block status
@@ -508,6 +556,14 @@ const mock = {
             owner: "SOLANA_ADDRESS",
         };
     },
+
+    //unique resource mock data
+    resource:(id)=>{
+
+    },
+    content: (id) => {
+
+    },
     texture: (id) => {
         const arr = [
             "texture/vbw.png",
@@ -531,7 +587,7 @@ const mock = {
 
             },
         }
-    }
+    },
 }
 
 export default mock;

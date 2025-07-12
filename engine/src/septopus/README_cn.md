@@ -119,6 +119,15 @@
     }
 ```
 
+```Javascript
+    {
+        type:"text",                //文本资源类型，用于给trigger进行显示调用
+        format:"json",              //文件格式
+        more:{lang:"cn"},           //更多附属的属性，按照需要加载
+        data:"BASE64_FILE_STRING",  //原始文件base64编码后的数据
+    }
+```
+
 ### 3D格式
 
 * 中间态的3D描述数据，可以从`3D格式`转换成渲染器需要的数据。

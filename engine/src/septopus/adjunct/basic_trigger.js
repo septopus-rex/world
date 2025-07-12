@@ -116,10 +116,10 @@ const self={
     },
     transform:{
         raw_std: (arr, cvt) => {
-            //console.log(definition);
+            console.log(arr);
             const rst = []
             for (let i in arr) {
-                const d = arr[i], s = d[0], p = d[1], r = d[2], tid = d[3], rpt = d[4];
+                const d = arr[i], s = d[0], p = d[1], r = d[2];
                 const dt = {
                     x: s[0] * cvt, y: s[1] * cvt, z: s[2] * cvt,
                     ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt,
