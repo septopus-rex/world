@@ -3,6 +3,7 @@
  *
  * @fileoverview
  *  1. build a function from script
+ *  2. task router
  *
  * @author Fuu
  * @date 2025-06-18
@@ -31,6 +32,26 @@ const operator={
     },
 }
 
+//support function attatch here.
+const objects=[
+    {
+        name:"system",
+        default:{},
+    },
+    {
+        name:"adjunct",
+        default:{},
+    },
+    {
+        name:"player",
+        default:{},
+    },
+    {
+        name:"bag",
+        default:{},
+    },
+];
+
 const self={
     getValueByOrgin:()=>{
 
@@ -38,6 +59,17 @@ const self={
 };
 
 const TriggerBuilder = {
+    /**  set funs for trigger
+     * @param   {object[]}    funs   //[{},{}]
+     * */
+    set:(funs)=>{
+        for(let i=0;i<funs.length;i++){
+            if(!objects[i]) continue;
+            const row=funs[i];
+            objects[i].default=row;
+        }
+    },  
+
     /**  get frame sync function
      * @param   {object[]}    actions   //formatted action array
      * @param   {object}      cfg       //{}

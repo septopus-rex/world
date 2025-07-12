@@ -278,6 +278,17 @@ const self={
 
         },
     },
+    task:{
+        update:(action,meshes)=>{
+
+        },
+        show:(action,meshes)=>{
+
+        },
+        hide:(action,meshes)=>{
+
+        },
+    },
 };
 
 const basic_box={
@@ -285,6 +296,7 @@ const basic_box={
     transform:self.transform,
     attribute:self.attribute,
     menu:self.menu,
+    task:self.task,
 }
 
 export default basic_box;

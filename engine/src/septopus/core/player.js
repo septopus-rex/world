@@ -295,6 +295,24 @@ const self = {
             env.count++;
         }
     },
+    task:{
+        
+        fly:()=>{
+
+        },
+        fix:()=>{
+
+        },
+        body:()=>{
+
+        },
+        capacity:()=>{
+
+        },
+    },
+    backup:(sub)=>{
+
+    },
 }
 
 const vbw_player = {
@@ -474,6 +492,16 @@ const vbw_player = {
             VBW.event.trigger("player","fall",evt);
         }
         return true;
+    },
+    /**
+    * Trigger task here.
+    */
+    task:()=>{
+        return {
+            fly:self.task.fly,
+            capacity:self.task.capacity,
+            body:self.task.body,
+        }
     },
 }
 

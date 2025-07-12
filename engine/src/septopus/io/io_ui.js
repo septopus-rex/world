@@ -528,6 +528,16 @@ const UI={
     format:(type,param)=>{
         
     },
+
+    /**
+    * Trigger task, supply functions for trigger
+    */
+    task:()=>{
+        return {
+            dialog:self.dialog,
+            toast:self.toast,
+        }
+    },
 }
 
 export default UI;

@@ -60,6 +60,7 @@ const mock = {
                     "RAW_ACTION_GROUP":             5,      //
                     "RAW_CONTRACT_ID_ON_CHAIN":     6,
                     "RAW_RUN_ONCE":                 7,
+                    "RAW_ONLY_GAME_MODE":           8,
 
                     //action array [ "condition", "todo_task", "abord_task", "recover_task" ]
                     "ACTION_INDEX_CONDITION":   0,
@@ -133,12 +134,12 @@ const mock = {
                 },
                 sample:[[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
                     [
-                        [[1,3],1,0],                            //`condition`, can be empty, run anyway
-                        [[1,1,2],[1,20]],                       //`task_todo`, system.ui.toast()
-                        [[1,1,2],[1,33]],                       //`task_abord`, system.ui.toast()
-                        [[2,0x00a1,1],[3,[[0,2],1,0.78]],[10]]    //`task_recover`, adjunct.wall --> update --> position[2] -->
+                        [[1,3],1,0],                                //`condition`, can be empty, run anyway
+                        [[1,1,2],[1,20]],                           //`task_todo`, system.ui.toast()
+                        [[1,1,2],[1,33]],                           //`task_abord`, system.ui.toast()
+                        [[2,0x00a1,1],[3,[[0,2],1,0.78]],[10]]      //`task_recover`, adjunct.wall --> update --> position[2] -->
                     ],
-                ], 0, 1],
+                ], 0, 1, 1],
                 version:2025,
                 short:0x00b8,
                 code:"JAVASCRIPT_BASE64_CODE_STRING",
