@@ -393,7 +393,7 @@ const self = {
                 }
 
                 //2.2. whether cross block
-                if(check.cross && !check.delta){
+                if(check.cross){
                     console.log(`Block crossed, need to justify camera Z height ${check.edelta}`);
                     self.justifyCamera(check.edelta);
                 }
