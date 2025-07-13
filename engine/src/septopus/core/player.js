@@ -450,7 +450,12 @@ const vbw_player = {
         const cvt=self.getConvert();
         const player=env.player;
         const fall=player.location.position[2];
-        self.syncCameraPosition([0,0,-env.player.location.position[2]*cvt]);
+        if(check.cross){
+            console.log(`Crossed, camera z change: ${check.edelta-fall*cvt}`)
+            self.syncCameraPosition([0,0,check.edelta-fall*cvt]);
+        }else{
+            self.syncCameraPosition([0,0,-fall*cvt]);
+        }
         player.location.position[2]=0;
 
         const stop=Toolbox.clone(player.location.stop);
@@ -472,7 +477,7 @@ const vbw_player = {
         }
         VBW.event.trigger("stop","leave",{stamp:Toolbox.stamp()},target);
 
-        console.log(fall,capacity.span)
+        //console.log(fall,capacity.span)
         if(fall>=capacity.death){
             const evt={
                 from:{},

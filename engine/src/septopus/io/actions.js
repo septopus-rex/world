@@ -14,6 +14,26 @@ import World from "../core/world";
 import UI from "./io_ui";
 
 const buttons = {
+    stop: {
+        label: "Stop", icon: "", action: async () => {
+            console.log(`Stop rendering button clicked.`);
+            //const res = await VBW.datasource.contract.call("buy", [2000, 1290, 0]);
+            //console.log(res);
+            const active=VBW.cache.get(["active"]);
+            const dom_id=active.current;
+            World.stop(dom_id);
+        }
+    },
+    start: {
+        label: "Start", icon: "", action: async () => {
+            console.log(`Restart rendering button clicked.`);
+            //const res = await VBW.datasource.contract.call("buy", [2000, 1290, 0]);
+            //console.log(res);
+            const active=VBW.cache.get(["active"]);
+            const dom_id=active.current;
+            World.start(dom_id);
+        }
+    },
     buy: {
         label: "Buy", icon: "", action: async () => {
             console.log(`Buy button clicked.`);

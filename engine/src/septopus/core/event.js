@@ -49,6 +49,7 @@ const events={
         hold:{},
         stop:{},
         loaded:{},
+        cross:{},
     },
     adjunct:{
         in:{},

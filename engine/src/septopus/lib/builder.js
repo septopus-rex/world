@@ -61,7 +61,7 @@ const self={
 const TriggerBuilder = {
 
     definition:(def)=>{
-        console.log(def);
+        //console.log(def);
         
     },
 
@@ -69,7 +69,7 @@ const TriggerBuilder = {
      * @param   {object[]}    funs   //[{},{}]
      * */
     set:(funs)=>{
-        console.log(funs);
+        //console.log(funs);
         for(let i=0;i<funs.length;i++){
             if(!objects[i]) continue;
             const row=funs[i];

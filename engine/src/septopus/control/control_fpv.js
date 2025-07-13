@@ -51,8 +51,8 @@ const config = {
         BODY_FALL: 70,      //F
         HEAD_LEFT: 37,      //Arrow left
         HEAD_RIGHT: 39,     //Arrow right
-        HEAD_RISE: 38,      //Arrow up
-        HEAD_DOWN: 40,      //Arrow down
+        //HEAD_RISE: 38,      //Arrow up
+        //HEAD_DOWN: 40,      //Arrow down
         JUMP: 32,           //Space
         SQUAT: 17,          //Ctrl
     },
@@ -244,35 +244,51 @@ const self = {
         const player = cache.player;
         const { body, capacity } = player;
         const [x, y] = player.location.block;
-        const va=self.getElevation(x, y);
 
         //!important, need to add the movement to check whether stop
         const nx=player.location.position[0] * cvt + delta[0];
         const ny=player.location.position[1] * cvt + delta[1];
         const nz=player.location.position[2] * cvt + delta[2];
-        const bx=x+Math.floor(nx/side[0]);
+        const bx=x + Math.floor(nx/side[0]);
         const by=y + Math.floor(ny/side[1]);
 
+        const va=self.getElevation(x, y);
+        const stand=va + player.location.position[2]*cvt;
+        let cross=false;
+
+        //1. block cross status checking
+        
         if(bx!==x || by!==y){
-            //1.check whether stopped by block, only check block elevation here
+            cross=true;
             const vb=self.getElevation(bx,by);
-            const stand=va+player.location.position[2]*cvt;
+            //1.1.check whether stopped by block, only check block elevation here
+            //const stand=va + player.location.position[2]*cvt;
             if(vb-stand > capacity.span*cvt){
                 return { move: false, block:[bx,by]}
             }
+
+            //1.2.check elevation delta
+            // console.log(`Stand on ${stand}, cross block elevation ${vb}`);
+            // const delta=stand-vb;
+            // console.log(`Cross delta: ${delta}`);
+            //return { move: true, delta:delta, cross:cross};
         }
-        
+
         //2.check whether stopped by stops
         //also check the nearby block stops if not stopped by block
         const pos = [nx,ny,nz];
         const stops = self.getStops([[bx,by]], side);
+        
         const cfg = {
-            cap: capacity.span * cvt,            //cross limit
-            height: body.height * cvt,           //player body height
-            elevation: va,                       //block elevation
-            pre: 0 * cvt,                        //pre stand height
+            cap: capacity.span * cvt,               //cross limit
+            height: body.height * cvt,              //player body height
+            elevation: va,                          //block elevation
+            pre: 0 * cvt,                           //pre stand height
+            stand:stand,                            //player stand height
+            cross:cross,                            //whether block cross
         };
-        //return VBW.stop.check(pos, stops, cfg);
+        if(cross) cfg.next=self.getElevation(bx,by);    //if cross, prepare the next block elevation
+
         return Calc.check(pos, stops, cfg);
     },
     getTriggers:()=>{
@@ -347,8 +363,10 @@ const self = {
             if (!todo[act]) continue;
             const diff = todo[act](dis, ak);
 
+            //2.check moving 
             if (diff.position) {
                 const check = self.checkStop(diff.position);
+                //2.1. stopped, stop moving.
                 if (!check.move) {
 
                     if(!check.block){
@@ -361,9 +379,8 @@ const self = {
                     continue;
                 }
 
-                //player action checking
+                //2.2. if moving and stand on stop now
                 if(local.stop.on){
-                    //console.log(`On stop:`,JSON.stringify(check));
                     if(!check.orgin){
                         VBW.player.leave(check);
                     }else{
@@ -377,7 +394,7 @@ const self = {
                     }
                 }
 
-                //if on stop, change player position
+                //2.3. if there is delta of Z, deal with it.
                 if (check.delta) {
                     console.log(`Height delta: ${check.delta}`);
                     //check whether fall to death;

@@ -107,7 +107,7 @@ const self={
             return reg;
         },
         def:(data)=>{
-            console.log(data);
+            //console.log(data);
             definition=data;
         },
     },
@@ -116,7 +116,7 @@ const self={
     },
     transform:{
         raw_std: (arr, cvt) => {
-            console.log(arr);
+            //console.log(arr);
             const rst = []
             for (let i in arr) {
                 const d = arr[i], s = d[0], p = d[1], r = d[2];

@@ -381,8 +381,10 @@ const self = {
             buttons.edit,
             buttons.normal,
             buttons.mint,
-            buttons.clean,
             buttons.world,
+            buttons.stop,
+            buttons.start,
+            buttons.clean,
         ];
         const cfg_menu = {}
 

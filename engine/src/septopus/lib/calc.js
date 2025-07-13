@@ -158,33 +158,64 @@ const Calc = {
     },
 
     check: (pos, objs, cfg) => {
-
+        console.log(JSON.stringify(cfg));
         const result = { //stop result
             interact: false,     //whether on a stop
             move: true,          //whether allow to move
-            index: -1            //index of stops
+            index: -1,            //index of stops
+            cross:!cfg.cross?false:cfg.cross,       //whether cross block
         }
-        if (objs.length < 1) return result;
+        if(!cfg.cross){
+            if (objs.length < 1) return result;
 
-        //1.check whether interact with stop from top view ( in projection ).
-        const [dx, dy, stand] = pos;       //player position
-        const list = self.projection(dx, dy, objs);
-        if (self.empty(list)) return result;
-        result.interact = true;
+            //1.check whether interact with stop from top view ( in projection ).
+            const [dx, dy, stand] = pos;       //player position
+            const list = self.projection(dx, dy, objs);
+            if (self.empty(list)) return result;
+            result.interact = true;
 
-        //2.check position of stop;
-        const cap = cfg.cap + (cfg.pre !== undefined ? cfg.pre : 0)
-        const body = cfg.height;
-        const arr = self.relationZ(stand, body, cap, cfg.elevation, list);
+            //2.check position of stop;
+            const cap = cfg.cap + (cfg.pre !== undefined ? cfg.pre : 0)
+            const body = cfg.height;
+            const arr = self.relationZ(stand, body, cap, cfg.elevation, list);
 
-        //3.filter out the target stop for movement;
-        const fs = self.filter(arr);
-        result.move = !fs.stop;
-        result.index = fs.index;
-        if (fs.delta != undefined) result.delta = fs.delta;
-        if (fs.orgin) result.orgin = fs.orgin;
+            //3.filter out the target stop for movement;
+            const fs = self.filter(arr);
+            result.move = !fs.stop;
+            result.index = fs.index;
+            if (fs.delta != undefined) result.delta = fs.delta;
+            if (fs.orgin) result.orgin = fs.orgin;
 
-        return result;
+            return result;
+        }else{
+            if (objs.length < 1){
+                console.log(`Crossed, no stop, just justify the delta of elevation`);
+                result.edelta=cfg.next-cfg.elevation;
+                return result;
+            }
+
+            const [dx, dy, stand] = pos;       //player position
+            const list = self.projection(dx, dy, objs);
+            if (self.empty(list)){
+
+                console.log(`Crossed, not in stop, need to  justify the delta of elevation`);
+                result.edelta=cfg.next-cfg.elevation;
+                return result;
+            }
+
+            //2.check position of stop;
+            const cap = cfg.cap + (cfg.pre !== undefined ? cfg.pre : 0)
+            const body = cfg.height;
+            const arr = self.relationZ(stand, body, cap, cfg.elevation, list);
+
+            //3.filter out the target stop for movement;
+            const fs = self.filter(arr);
+            result.move = !fs.stop;
+            result.index = fs.index;
+            if (fs.delta != undefined) result.delta = fs.delta;
+            if (fs.orgin) result.orgin = fs.orgin;
+            return result;
+        }
     },
 
     inside: (pos, objs, height) => {
