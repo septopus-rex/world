@@ -450,12 +450,13 @@ const vbw_player = {
         const cvt=self.getConvert();
         const player=env.player;
         const fall=player.location.position[2];
-        if(check.cross){
-            console.log(`Crossed, camera z change: ${check.edelta-fall*cvt}`)
-            self.syncCameraPosition([0,0,check.edelta-fall*cvt]);
-        }else{
-            self.syncCameraPosition([0,0,-fall*cvt]);
-        }
+        self.syncCameraPosition([0,0,-fall*cvt]);
+        // if(check.cross){
+        //     console.log(`Crossed, camera z change: ${check.edelta-fall*cvt}`)
+        //     self.syncCameraPosition([0,0,check.edelta-fall*cvt]);
+        // }else{
+        //     self.syncCameraPosition([0,0,-fall*cvt]);
+        // }
         player.location.position[2]=0;
 
         const stop=Toolbox.clone(player.location.stop);

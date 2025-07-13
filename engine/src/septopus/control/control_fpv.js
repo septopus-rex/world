@@ -239,6 +239,8 @@ const self = {
         }
         return stops;
     },
+    // good player position
+    //{"block":[2025,618],"position":[8.2,15.696,0],"rotation":[0,0,-6.408849],"world":0,"extend":3,"stop":{"on":false,"adjunct":"","index":0}}
     checkStop: (delta) => {
         const cvt = cache.convert,side = cache.side;
         const player = cache.player;
@@ -276,18 +278,19 @@ const self = {
 
         //2.check whether stopped by stops
         //also check the nearby block stops if not stopped by block
-        const pos = [nx,ny,nz];
+        const pos = cross?[nx%side[0],ny%side[1],nz]:[nx,ny,nz];
         const stops = self.getStops([[bx,by]], side);
         
         const cfg = {
             cap: capacity.span * cvt,               //cross limit
             height: body.height * cvt,              //player body height
             elevation: va,                          //block elevation
-            pre: 0 * cvt,                           //pre stand height
-            stand:stand,                            //player stand height
             cross:cross,                            //whether block cross
         };
         if(cross) cfg.next=self.getElevation(bx,by);    //if cross, prepare the next block elevation
+
+        //{"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
+        //Stop check result: {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
 
         return Calc.check(pos, stops, cfg);
     },
@@ -347,6 +350,15 @@ const self = {
         }
     },
 
+    justifyCamera:(delta)=>{
+        const current=cache.camera.position;
+        cache.camera.position.set(                    //!important, transform from Septopus to three.js
+            current.x,
+            current.y + delta,
+            current.z,
+        );
+    },
+
     //Frame Synchronization, movement here to imply
     action: () => {
         const dis = [config.move.distance, self.getAngle(config.move.angle)];
@@ -366,9 +378,10 @@ const self = {
             //2.check moving 
             if (diff.position) {
                 const check = self.checkStop(diff.position);
+                
+                console.log(`Stop check result: ${JSON.stringify(check)}`)
                 //2.1. stopped, stop moving.
                 if (!check.move) {
-
                     if(!check.block){
                         //!important, `stop.beside` event trigger 
                         VBW.event.trigger("stop","beside",{stamp:Toolbox.stamp()},check.orgin);
@@ -379,25 +392,30 @@ const self = {
                     continue;
                 }
 
-                //2.2. if moving and stand on stop now
+                //2.2. whether cross block
+                if(check.cross){
+                    console.log(`Block crossed, need to justify camera Z height ${check.edelta}`);
+                    self.justifyCamera(check.edelta);
+                }
+
+                //a. if moving and stand on stop now
                 if(local.stop.on){
                     if(!check.orgin){
                         VBW.player.leave(check);
                     }else{
                         if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
-                            //console.log(`Same stop.`);
+                                
                         }else{
-                            //console.log(`New stop.`);
-                            //!important, `stop.on` event trigger 
+                                //!important, `stop.on` event trigger 
                             VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},check.block);
                         }
                     }
                 }
 
-                //2.3. if there is delta of Z, deal with it.
+                    //b. if there is delta of Z, deal with it.
                 if (check.delta) {
                     console.log(`Height delta: ${check.delta}`);
-                    //check whether fall to death;
+                        //check whether fall to death;
 
                     diff.position[2] += check.delta;
                     if(check.orgin) VBW.player.stand(check.orgin);
