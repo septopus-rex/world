@@ -393,7 +393,7 @@ const self = {
                 }
 
                 //2.2. whether cross block
-                if(check.cross){
+                if(check.cross && !check.delta){
                     console.log(`Block crossed, need to justify camera Z height ${check.edelta}`);
                     self.justifyCamera(check.edelta);
                 }
@@ -414,10 +414,12 @@ const self = {
 
                     //b. if there is delta of Z, deal with it.
                 if (check.delta) {
-                    console.log(`Height delta: ${check.delta}`);
-                        //check whether fall to death;
-
-                    diff.position[2] += check.delta;
+                    if(check.cross){
+                        diff.position[2] += check.delta-check.edelta;
+                    }else{
+                        //console.log(`Height delta: ${check.delta}`);
+                        diff.position[2] += check.delta;
+                    }
                     if(check.orgin) VBW.player.stand(check.orgin);
                 }
             }
