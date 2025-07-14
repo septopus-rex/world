@@ -87,6 +87,17 @@ const buttons = {
             console.log(`Player location is cleaned, please reset system.`);
         }
     },
+
+    game: {
+        label: "Game", icon: "", action: async () => {
+            const def=VBW.cache.get(["def","common"]);
+            const current=VBW.cache.get(["active","current"]);
+            const cfg={range:4};
+            VBW.mode(def.MODE_GAME,{container:current},()=>{
+
+            },cfg);
+        }
+    },
     world: {
         label: "World", icon: "", action: () => {
             const inputs = [

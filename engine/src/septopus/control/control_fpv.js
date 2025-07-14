@@ -38,6 +38,8 @@ const runtime = {
     raycaster: null,         //raycast checker
     selected: null,            //edit selection
     convert: null,           //system convert
+    active:null,
+    def:null,
 }
 
 const config = {
@@ -193,6 +195,16 @@ const self = {
         if (runtime.convert === null) {
             runtime.convert = VBW.cache.get(["env", "world", "accuracy"]);;
         }
+
+        if (runtime.def === null) {
+            const chain = ["def", "common"];
+            runtime.def = VBW.cache.get(chain);
+        }
+
+        if (runtime.active === null) {
+            const chain = ["active", "containers",dom_id];
+            runtime.active = VBW.cache.get(chain);
+        }
     },
 
     flip: (obj) => {
@@ -298,10 +310,12 @@ const self = {
         const [x,y]=runtime.player.location.block;
         const world=runtime.player.location.world;
         const trigger_chain=["block",runtime.container, world,`${x}_${y}`,"trigger"];
-
         return VBW.cache.get(trigger_chain);
     },
     checkTrigger:()=>{
+        //console.log(runtime.active.mode,runtime.def);
+        if(runtime.active.mode!==runtime.def.MODE_GAME) return false;
+
         //1. get trigger list
         const arr=self.getTriggers();
         if(arr.error || arr.length===0) return false;
@@ -379,8 +393,8 @@ const self = {
             //2.check moving 
             if (diff.position) {
                 const check = self.checkStop(diff.position);
-                
-                console.log(`Stop check result: ${JSON.stringify(check)}`)
+                //console.log(`Stop check result: ${JSON.stringify(check)}`)
+
                 //2.1. stopped, stop moving.
                 if (!check.move) {
                     if(!check.block){
@@ -395,7 +409,7 @@ const self = {
 
                 //2.2. whether cross block
                 if(check.cross){
-                    console.log(`Block crossed, need to justify camera Z height ${check.edelta}`);
+                    //console.log(`Block crossed, need to justify camera Z height ${check.edelta}`);
                     self.justifyCamera(check.edelta);
                 }
 
@@ -407,18 +421,17 @@ const self = {
                         if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
                                 
                         }else{
-                                //!important, `stop.on` event trigger 
+                            //!important, `stop.on` event trigger 
                             VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},check.block);
                         }
                     }
                 }
 
-                    //b. if there is delta of Z, deal with it.
+                //b. if there is delta of Z, deal with it.
                 if (check.delta) {
                     if(check.cross){
                         diff.position[2] += check.delta-check.edelta;
                     }else{
-                        //console.log(`Height delta: ${check.delta}`);
                         diff.position[2] += check.delta;
                     }
                     if(check.orgin) VBW.player.stand(check.orgin);

@@ -215,7 +215,11 @@ const self = {
                 }
             }
         }
-        UI.show("toast", `Cache data successful.`);
+
+        // const list=[];
+        // for(let k in map)list.push(k);
+        // UI.show("toast", `Cache data successful, list: ${JSON.stringify(list)}`);
+
         return failed;
     },
 
@@ -386,6 +390,7 @@ const self = {
             buttons.normal,
             buttons.mint,
             buttons.world,
+            buttons.game,
             buttons.stop,
             buttons.start,
             buttons.clean,
@@ -524,14 +529,14 @@ const self = {
                     //2.1. add loading queue
                     delete map.loaded;
                     self.loadingBlockQueue(map, dom_id);
-                    UI.show("toast", `Loading data, show block holder.`);
+                    //UI.show("toast", `Loading data, show block holder.`);
                     const failed = self.save(dom_id, world, map);
                     if (failed) return UI.show("toast", `Failed to set cache, internal error, abort.`, { type: "error" });
                     //2.2. struct holder
                     const range = { x: x, y: y, ext: ext, world: world, container: dom_id };
                     
                     VBW.load(range, cfg, (pre) => {
-                        UI.show("toast", `Struct all components, ready to show.`);
+                        //UI.show("toast", `Struct all components, ready to show.`);
                         self.prefetch(pre.texture, pre.module, (failed) => {
                             UI.show("toast", `Fetch texture and module successful.`);
                             return ck && ck(true);
@@ -539,12 +544,28 @@ const self = {
                     });
                 } else {
                     delete map.loaded;
-                    UI.show("toast", `Load block data successful.`);
+                    //UI.show("toast", `Load block data successful.`);
                     const failed = self.save(dom_id, world, map);
                     if (failed) return UI.show("toast", `Failed to set cache, internal error, abort.`, { type: "error" });
                 }
             }
         }, limit);
+    },
+    autoMode:(dom_id)=>{
+        const player=VBW.cache.get(["env","player"]);
+        const def=VBW.cache.get(["def","common"]);
+        console.log(def);
+        if(!player.address){
+            console.log(`Set to ghost mode`);
+            VBW.mode(def.MODE_GHOST,{container:dom_id},()=>{
+
+            });
+        }else{
+            console.log(`Set to normal mode`);
+            VBW.mode(def.MODE_NORMAL,{container:dom_id},()=>{
+
+            });
+        }
     },
 }
 
@@ -634,6 +655,8 @@ const World = {
             const pos=VBW.cache.get(["env","player","location"]);
             const [x, y] = pos.block;
             const ext = !pos.extend ? 1 : pos.extend;
+
+            self.autoMode(dom_id);
             
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
 

@@ -45,8 +45,8 @@ const self = {
      * 
      * */
     relationZ: (stand, body, cap, list) => {
-        console.log(`Basic, player stand height: ${stand}, 
-        body height ${body}, able to cross ${cap}`);
+        //console.log(`Basic, player stand height: ${stand}, 
+        //body height ${body}, able to cross ${cap}`);
         
         const arr = [];
         const def = {
@@ -158,8 +158,8 @@ const Calc = {
     },
 
     check: (pos, objs, cfg) => {
-        console.log(JSON.stringify(cfg),JSON.stringify(pos));
-        console.log(`Amount of stop: ${objs.length}`);
+        //console.log(JSON.stringify(cfg),JSON.stringify(pos));
+        //console.log(`Amount of stop: ${objs.length}`);
         //{"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
 
         const result = {         //stop result
@@ -189,7 +189,7 @@ const Calc = {
         const stand=pz+(cfg.cross?(cfg.elevation-cfg.next):0);
         const arr = self.relationZ(stand, body, cap, list);
 
-        console.log(JSON.stringify(arr))
+        //console.log(JSON.stringify(arr))
 
         //3.filter out the target stop for movement;
         const fs = self.filter(arr);
