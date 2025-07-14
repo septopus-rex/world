@@ -45,7 +45,7 @@ const capacity = {
 const env = {
     count: 0,
     player: null,
-    lock: false,
+    lock: false,        //movement input locker
     clean:false,
     camera: {},        //camera to sync
     diff: {
@@ -235,6 +235,7 @@ const self = {
     },
 
     syncCameraPosition: (pos) => {
+        if(env.lock) return false;
 
         for (let dom_id in env.camera) {
             //1. change camera position
@@ -246,9 +247,51 @@ const self = {
             );
 
             //2. increate player action
-            //deal with the cross stuff, not update the player position directly.
             self.checkLocation(cam,pos,dom_id);  
         }
+    },
+    fallCamera:(fall,ck)=>{
+        UI.show("toast",`set camera position as fall, ${fall}m`);
+        const cvt=self.getConvert();
+        const single=20,total=1000;
+        const step=fall*cvt*single/total;
+        const tt=setInterval(()=>{
+            for (let dom_id in env.camera) {
+                const cam = env.camera[dom_id];
+                cam.position.set(                    //!important, transform from Septopus to three.js
+                    cam.position.x ,
+                    cam.position.y - step,
+                    cam.position.z ,
+                );
+            }
+        },single);
+
+        setTimeout(()=>{
+            clearInterval(tt);
+            return ck && ck();
+        },total);
+    },
+    deathCamera:(height,ck)=>{
+        UI.show("toast",`set camera position as death, ${fall}m`);
+        const cvt=self.getConvert();
+        const single=20,total=2000;
+        const step=height*cvt*single/total;
+        const tt=setInterval(()=>{
+            for (let dom_id in env.camera) {
+                const cam = env.camera[dom_id];
+                cam.position.set(                    //!important, transform from Septopus to three.js
+                    cam.position.x ,
+                    cam.position.y - step,
+                    cam.position.z ,
+                );
+            }
+        },single);
+
+        setTimeout(()=>{
+            clearInterval(tt);
+            return ck && ck();
+        },total);
+        return ck && ck();
     },
     syncCameraRotation: (ro) => {
         for (let dom_id in env.camera) {
@@ -313,6 +356,7 @@ const self = {
     backup:(sub)=>{
 
     },
+    
 }
 
 const vbw_player = {
@@ -339,11 +383,20 @@ const vbw_player = {
 
         //4. player event
         VBW.event.on("player","fall",(ev)=>{
-            console.log(`fall`,ev)
+            env.lock=true;      //set to lock movement;
+
+            //console.log(`fall`,ev)
+            self.fallCamera(ev.fall,()=>{
+                env.lock=false;
+            });
         });
 
         VBW.event.on("player","death",(ev)=>{
+            env.lock=true;      //set to lock movement;
             console.log(`death`,ev)
+            self.fallCamera(ev.fall,()=>{
+                env.lock=false;
+            });
         });
 
         return ck && ck(data);
@@ -450,13 +503,6 @@ const vbw_player = {
         const cvt=self.getConvert();
         const player=env.player;
         const fall=player.location.position[2];
-        self.syncCameraPosition([0,0,-fall*cvt]);
-        // if(check.cross){
-        //     console.log(`Crossed, camera z change: ${check.edelta-fall*cvt}`)
-        //     self.syncCameraPosition([0,0,check.edelta-fall*cvt]);
-        // }else{
-        //     self.syncCameraPosition([0,0,-fall*cvt]);
-        // }
         player.location.position[2]=0;
 
         const stop=Toolbox.clone(player.location.stop);
@@ -496,6 +542,10 @@ const vbw_player = {
             }
             //!important, `player.fall` event trigger
             VBW.event.trigger("player","fall",evt);
+        }else{
+
+            self.syncCameraPosition([0,0,-fall*cvt]);
+
         }
         return true;
     },
