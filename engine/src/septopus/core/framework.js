@@ -699,12 +699,13 @@ const Framework = {
         // `x_y_adj_index` --> ThreeObject[]
         for (let i = 0; i < ans.length; i++) {
             const row = ans[i];
+            //console.log(row);
             const name = row.adjunct;
             if (!Framework[name] || !Framework[name].hooks || !Framework[name].hooks.animate) continue;
             const key = `${row.x}_${row.y}_${name}_${row.index}`;
             if (map[key] === undefined) continue;
 
-            Framework[name].hooks.animate(map[key]);
+            Framework[name].hooks.animate(map[key],row);
         }
 
         //4.frame synchronization queue

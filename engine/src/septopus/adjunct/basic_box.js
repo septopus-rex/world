@@ -24,6 +24,7 @@ const config={
     },
     animate:[
         {way:"rotate",param:{speed:0.2,ax:"x"}},
+        {way:"shake",param:{speed:0.2,ax:"x"}},
     ],
 }
 
@@ -87,6 +88,9 @@ const self={
         },
         //`cfg` to support more complex animation
         animate:(meshes,cfg)=>{
+            console.log(cfg);
+            const effect=cfg.effect;
+            
             for(let i=0;i<meshes.length;i++){
                 const mesh=meshes[i];
                 mesh.rotation.x+=0.1;
