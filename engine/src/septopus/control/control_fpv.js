@@ -27,7 +27,7 @@ const reg = {
     version: "1.0.0",
 }
 
-const cache = {
+const runtime = {
     player: null,            //player information 
     camera: null,            //FPV camera object
     scene: null,             //scene for raycast checking
@@ -98,10 +98,12 @@ const self = {
         if (!dom_id) document.addEventListener(evt, fun);
     },
     getEditActive: () => {
-        return VBW.cache.get(["block", cache.container, cache.world, "edit"]);
+        const world=runtime.player.location.world;
+        return VBW.cache.get(["block", runtime.container, world, "edit"]);
     },
     getSTD: (x, y, adjunct, index) => {
-        const chain = ["block", cache.container, cache.world, `${x}_${y}`, 'std', adjunct, index === undefined ? 0 : index];
+        const world=runtime.player.location.world;
+        const chain = ["block", runtime.container, world, `${x}_${y}`, 'std', adjunct, index === undefined ? 0 : index];
         return VBW.cache.get(chain);
     },
     getAngle:(ak)=>{
@@ -113,8 +115,9 @@ const self = {
         }
     },
     getElevation: (x, y) => {
-        const active = VBW.cache.get(["active"]);
-        const chain = ["block", active.current, cache.player.location.world, `${x}_${y}`, "elevation"];
+        //const active = VBW.cache.get(["active"]);
+        const world=runtime.player.location.world;
+        const chain = ["block", runtime.container, world, `${x}_${y}`, "elevation"];
         return VBW.cache.get(chain);
     },
     getClickPosition: (ev) => {
@@ -164,35 +167,31 @@ const self = {
         });
     },
     autocache: (dom_id) => {
-        cache.container = dom_id;
+        runtime.container = dom_id;
 
-        if (cache.world === null) {
-            cache.world = VBW.cache.get(["active", "world"]);
+        if (runtime.actions === null) {
+            runtime.actions = VBW.queue.get(config.queue);
         }
 
-        if (cache.actions === null) {
-            cache.actions = VBW.queue.get(config.queue);
-        }
-
-        if (cache.camera === null) {
+        if (runtime.camera === null) {
             const chain = ["active", "containers", dom_id, "camera"];
-            cache.camera = VBW.cache.get(chain);
+            runtime.camera = VBW.cache.get(chain);
         }
-        if (cache.scene === null) {
+        if (runtime.scene === null) {
             const chain = ["active", "containers", dom_id, "scene"];
-            cache.scene = VBW.cache.get(chain);
+            runtime.scene = VBW.cache.get(chain);
         }
 
-        if (cache.player === null) {
+        if (runtime.player === null) {
             const chain = ["env", "player"];
-            cache.player = VBW.cache.get(chain);
+            runtime.player = VBW.cache.get(chain);
         }
 
-        if (cache.side === null) {
-            cache.side = VBW.cache.get(["env", "world", "side"]);
+        if (runtime.side === null) {
+            runtime.side = VBW.cache.get(["env", "world", "side"]);
         }
-        if (cache.convert === null) {
-            cache.convert = VBW.cache.get(["env", "world", "accuracy"]);;
+        if (runtime.convert === null) {
+            runtime.convert = VBW.cache.get(["env", "world", "accuracy"]);;
         }
     },
 
@@ -221,18 +220,19 @@ const self = {
         //console.log(bks);
         const stops = [];
         const fun = VBW.cache.get;
+        const world=runtime.player.location.world;
         for (let i = 0; i < bks.length; i++) {
             const [x, y] = bks[i];
             if (!x || !y) continue;
 
             const key = `${x}_${y}`;
-            const arr = fun(["block", cache.container, cache.world, key, "stop"]);
+            const arr = fun(["block", runtime.container, world, key, "stop"]);
             if (arr.error || arr.length === 0) continue;
 
             for (let j = 0; j < arr.length; j++) {
                 const stop = arr[j];
                 if (!stop.block) stop.block = [x, y];
-                if (!stop.elevation) stop.elevation = fun(["block", cache.container, cache.world, key, "elevation"]);
+                if (!stop.elevation) stop.elevation = fun(["block", runtime.container, world, key, "elevation"]);
                 if (!stop.side) stop.side = side;
                 stops.push(stop);
             }
@@ -242,8 +242,8 @@ const self = {
     // good player position
     //{"block":[2025,618],"position":[8.2,15.696,0],"rotation":[0,0,-6.408849],"world":0,"extend":3,"stop":{"on":false,"adjunct":"","index":0}}
     checkStop: (delta) => {
-        const cvt = cache.convert,side = cache.side;
-        const player = cache.player;
+        const cvt = runtime.convert,side = runtime.side;
+        const player = runtime.player;
         const { body, capacity } = player;
         const [x, y] = player.location.block;
 
@@ -295,8 +295,9 @@ const self = {
         return Calc.check(pos, stops, cfg);
     },
     getTriggers:()=>{
-        const [x,y]=cache.player.location.block;
-        const trigger_chain=["block",cache.container, cache.world,`${x}_${y}`,"trigger"];
+        const [x,y]=runtime.player.location.block;
+        const world=runtime.player.location.world;
+        const trigger_chain=["block",runtime.container, world,`${x}_${y}`,"trigger"];
 
         return VBW.cache.get(trigger_chain);
     },
@@ -306,8 +307,8 @@ const self = {
         if(arr.error || arr.length===0) return false;
 
         //2. prepare parameters to check trigger
-        const cvt = cache.convert;
-        const player = cache.player;
+        const cvt = runtime.convert;
+        const player = runtime.player;
         const nx=player.location.position[0] * cvt;
         const ny=player.location.position[1] * cvt;
         const nz=player.location.position[2] * cvt;
@@ -351,8 +352,8 @@ const self = {
     },
 
     justifyCamera:(delta)=>{
-        const current=cache.camera.position;
-        cache.camera.position.set(                    //!important, transform from Septopus to three.js
+        const current=runtime.camera.position;
+        runtime.camera.position.set(                    //!important, transform from Septopus to three.js
             current.x,
             current.y + delta,
             current.z,
@@ -366,12 +367,12 @@ const self = {
         //!important, need to confirm the `AK` definition, it is camera coordination
         //FIXME, change to calculate on the player rotation.
 
-        const ak = cache.camera.rotation.y;
-        const local=cache.player.location;
+        const ak = runtime.camera.rotation.y;
+        const local=runtime.player.location;
 
         //1.deal with keyboard inputs.
-        for (let i = 0; i < cache.actions.length; i++) {
-            const act = cache.actions[i];
+        for (let i = 0; i < runtime.actions.length; i++) {
+            const act = runtime.actions[i];
             if (!todo[act]) continue;
             const diff = todo[act](dis, ak);
 
@@ -471,27 +472,27 @@ const self = {
         return selected;
     },
     select: (ev) => {
-        if (cache.scene === null) return false;
+        if (runtime.scene === null) return false;
 
         //1.check 
-        if (cache.raycaster === null) {
-            cache.raycaster = ThreeObject.get("basic", "raycast", {});
+        if (runtime.raycaster === null) {
+            runtime.raycaster = ThreeObject.get("basic", "raycast", {});
         }
-        const raycaster = cache.raycaster;
+        const raycaster = runtime.raycaster;
 
-        const dv = VBW.cache.get(["block", cache.container, "basic"]);
+        const dv = VBW.cache.get(["block", runtime.container, "basic"]);
         const { width, height } = dv;
         raycaster.mouse.x = (ev.clientX / width) * 2 - 1;
         raycaster.mouse.y = -(ev.clientY / height) * 2 + 1;
-        raycaster.checker.setFromCamera(raycaster.mouse, cache.camera);
+        raycaster.checker.setFromCamera(raycaster.mouse, runtime.camera);
 
-        const objs = cache.scene.children;
-        const selected = cache.raycaster.checker.intersectObjects(objs);
+        const objs = runtime.scene.children;
+        const selected = runtime.raycaster.checker.intersectObjects(objs);
 
         //2.filter out 
         if (selected.length > 0) {
-            const [x, y] = cache.player.location.block;
-            const target = self.getSelection(selected, x, y, cache.side);
+            const [x, y] = runtime.player.location.block;
+            const target = self.getSelection(selected, x, y, runtime.side);
             return target;
         }
     },
@@ -506,17 +507,17 @@ const self = {
             if (mode === 2) {
                 //1. raycast check the selected object
                 const target = self.select(ev);
+                const world=runtime.player.location.world;
 
                 //2. set active
                 const editing = self.getEditActive();
-                const [x, y] = cache.player.location.block;
+                const [x, y] = runtime.player.location.block;
                 if (!target.adjunct) {
                     target.adjunct = "block"; //set default adjunct
                 } else {
                     editing.selected.adjunct = target.adjunct;
                     editing.selected.index = target.index;
                     editing.selected.face = "x";
-                    //VBW[config.render].show(cache.container,[x,y,cache.world]);
                 }
 
                 //3. show pop menu
@@ -530,21 +531,21 @@ const self = {
                 const cfg_side = {
                     title: `${target.adjunct}-${target.index} Modification`,
                     prefix: "sd",
-                    convert: cache.convert,
+                    convert: runtime.convert,
                     events: {
                         change: (obj) => {
                             console.log(obj);
 
                             obj.index = target.index;
                             const task = { x: x, y: y, adjunct: "wall", action: "set", param: obj };
-                            const queue = VBW.cache.get(["task", cache.container, cache.world]);
+                            const queue = VBW.cache.get(["task", runtime.container, world]);
                             queue.push(task);
 
-                            VBW.update(cache.container, cache.world);
-                            const range = { x: x, y: y, world: cache.world, container: cache.container }
+                            VBW.update(runtime.container, world);
+                            const range = { x: x, y: y, world: world, container: runtime.container }
                             VBW.prepair(range, (pre) => {
                                 console.log(pre);
-                                VBW[config.render].show(cache.container, [x, y, cache.world]);
+                                VBW[config.render].show(runtime.container, [x, y, world]);
                             });
                         },
                     }
@@ -614,8 +615,8 @@ const controller = {
     },
 
     start: (dom_id) => {
-        if (cache.container !== null) return false;
-        //console.log(`Start to get the input from outside, bind html events.`);
+        if (runtime.container !== null) return false;
+        UI.show("toast", `Start FPV controller.`);
 
         //0.get canvas width
         self.setWidth(dom_id);
@@ -636,7 +637,8 @@ const controller = {
         self.autocache(dom_id);
 
         //3.set frame sync function
-        const chain = ["block", dom_id, cache.world, "loop"];
+        const world=runtime.player.location.world;
+        const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
         queue.push({ name: "movement", fun: self.action });
@@ -645,8 +647,9 @@ const controller = {
         if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
 
         //5. init compass;
-        const ak=cache.player.location.rotation[2];
+        const ak=runtime.player.location.rotation[2];
         self.setCompass(ak);
+        UI.show("toast", `FPV controller is loaded.`);
     },
 }
 

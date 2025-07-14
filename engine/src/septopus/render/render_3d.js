@@ -26,6 +26,10 @@ const config = {
     color: 0xff0000,
 }
 
+const env={
+    player:null,
+}
+
 const self = {
     hooks: {
         reg: () => { return reg },
@@ -207,7 +211,7 @@ const self = {
         return arr;
     },
     setSunLight: (scene, dom_id) => {
-        const player = VBW.cache.get(["env", "player"]);
+        const player = env.player;
         const [x, y] = player.location.block;
         const side = self.getSide();
         const cvt = self.getConvert();
@@ -221,7 +225,7 @@ const self = {
         scene.add(sun);
     },
     setSky: (scene, dom_id) => {
-        const player = VBW.cache.get(["env", "player"]);
+        const player = env.player;
         const [x, y] = player.location.block;
         const world = player.location.world;
         const side = self.getSide();
@@ -249,7 +253,8 @@ const self = {
     //FIXME, player can go out of editing block, this can effect the active block 
     //!important, in edit mode, player can go out the editing block, so the info of editing is isolated.
     loadEdit: (scene, dom_id) => {
-        const world = VBW.cache.get(["active", "world"]);
+
+        const world=env.player.location.world;
         const chain = ["block", dom_id, world, "edit"];
         if (!VBW.cache.exsist(chain)) return false;
 
@@ -346,13 +351,12 @@ const self = {
         }
     },
     loadBlocks: (scene, dom_id) => {
-        const player_chain = ["env", "player"];
-        const player = VBW.cache.get(player_chain);
+        const player = env.player;
         const limit = VBW.setting("limit");
-        const active = VBW.cache.get(["active"]);
+        
         const ext = player.location.extend;
         const [x, y] = player.location.block;
-        const world = active.world;
+        const world = player.location.world;
 
         for (let i = -ext; i < ext + 1; i++) {
             for (let j = -ext; j < ext + 1; j++) {
@@ -424,10 +428,6 @@ const self = {
 
     },
     clean: (scene, x, y, world, dom_id) => {
-        //console.log(`Cleaning...`,x,y,world,dom_id);
-
-        //console.log(`Scene before lenght: ${scene.children.length}`);
-
         //1. remove related objects from scene
         //1.1. filter out Mesh to remove
         const todo = [];
@@ -452,8 +452,6 @@ const self = {
                 }
             });
         }
-
-        //console.log(`Scene after lenght: ${scene.children.length}`);
 
         //2.remove related animate object from scene and aniamte queue
         const ani_chain = ["block", dom_id, world, "queue"];
@@ -482,6 +480,7 @@ const renderer={
     hooks: self.hooks,
 
     construct: (width, height, dom_id) => {
+        //1.prepare 3D objects
         const chain = ["active", "containers", dom_id];
         if (!VBW.cache.exsist(chain)) {
             const scene = ThreeObject.get("basic", "scene", {});
@@ -490,6 +489,9 @@ const renderer={
             const camera = ThreeObject.get("basic", "camera", cfg);
             VBW.cache.set(chain, { render: render, camera: camera, scene: scene });
         }
+
+        //2. set env
+        if(env.player===null) env.player= VBW.cache.get(["env", "player"]);
         const dt = VBW.cache.get(chain);
         return dt.render.domElement;
     },
@@ -503,13 +505,14 @@ const renderer={
         if (!VBW.cache.exsist(chain)) return UI.show(`Construct the renderer before rendering.`, { type: "error" });
 
         const data = VBW.cache.get(chain);
-        const { render, scene, camera } = data;
+        const { render, scene } = data;
 
         const info = render.info.render;
         const first = info.frame === 0 ? true : false;  //check frames to confirm whether first running.
 
         //first running functions
         if (first) {
+            UI.show("toast", `Start 3D renderer.`);
             //1.load basic component
             //1.1. set sun light
             self.setSunLight(scene, dom_id);
@@ -522,6 +525,8 @@ const renderer={
 
             //2.set the loop to support animation
             render.setAnimationLoop(VBW.loop);
+
+            UI.show("toast", `3D renderer is loaded.`);
         }
 
         //update target block and fresh scene

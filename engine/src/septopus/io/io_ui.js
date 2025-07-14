@@ -385,15 +385,15 @@ const router={
     },
     toast:(ctx,cfg)=>{
         const msg=`[UI.toast]:`+ctx;
-        if(cfg && cfg.type==="error") return console.error(msg);
-        const id=`${config.prefix}toast`;
+        console.log(msg);
+        // if(cfg && cfg.type==="error") return console.error(msg);
+        // const id=`${config.prefix}toast`;
 
-        const el=document.getElementById(id);
-        if(el===null) return console.error(`No container to show "toast"`);
+        // const el=document.getElementById(id);
+        // if(el===null) return console.error(`No container to show "toast"`);
 
-        el.textContent = ctx;
-        el.hidden = false;
-        
+        // el.textContent = ctx;
+        // el.hidden = false;
     },
     menu:(arr,cfg)=>{
         const id=`${config.prefix}menu`;

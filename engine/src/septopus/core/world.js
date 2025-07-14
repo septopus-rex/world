@@ -179,8 +179,8 @@ const self = {
      * @return {boolean}    - whether saved successful
      */
     save: (dom_id, world, map, world_info) => {
-        const fun = VBW.cache.set;
 
+        const fun = VBW.cache.set;
         //1.save the world data;
         if (world_info !== undefined) {
             const w_chain = ["env", "world"];
@@ -215,6 +215,7 @@ const self = {
                 }
             }
         }
+        UI.show("toast", `Cache data successful.`);
         return failed;
     },
 
@@ -267,6 +268,7 @@ const self = {
     },
 
     checkBlock: () => {
+        //console.log(`Checking block.`);
         //1. get the block loading queue.
         const name = config.queue.block;
         const queue = VBW.queue.get(name);
@@ -275,12 +277,13 @@ const self = {
 
         //2. check the first whether loaded
         const todo = queue[0];
+        //console.log(JSON.stringify(todo));
         const world = todo.world;
         const dom_id = todo.container;
         const chain = ["block", dom_id, world, todo.key, "raw"];
         const dt = VBW.cache.get(chain);
         if (dt.error) return false;
-        //console.log(JSON.stringify(dt))
+
         //3. if loaded, deal with the restruct and get the resource list
         if (!dt.loading) {
             //3.1. add the resource to loading queue.
@@ -314,9 +317,9 @@ const self = {
         if (queue.length === 0) return false;
 
         const todo = queue[0];
+        //console.log(JSON.stringify(todo));
         const { x, y, world, container, preload } = todo;
         if (self.checkLoaded(preload.texture, preload.module)) {
-            //console.log(`---- Rerender [ ${x}, ${y} ]`);
             queue.shift();
 
             //rebuild 3D data then render
@@ -362,6 +365,7 @@ const self = {
         return true;
     },
     loadingBlockQueue: (map, dom_id) => {
+        //console.log(dom_id);
         const name = config.queue.block;
         const push = VBW.queue.push;
         for (let key in map) {
@@ -474,6 +478,7 @@ const self = {
         //{"block":[2025,502],"world":0,"position":[7.326341784000396,12.310100473087282,0],"rotation":[0,0.3875731999042833,0],"stop":-1,"extend":2}
         //1. get player location
         VBW.player.start(dom_id, (start) => {
+            //console.log(JSON.stringify(start));
             const world = start.world;
 
             //2. get world setting
@@ -514,7 +519,6 @@ const self = {
 
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
         VBW.datasource.view(x, y, ext, world, (map) => {
-            //console.log(map);
             if (map.loaded !== undefined) {
                 if (!map.loaded) {
                     //2.1. add loading queue
@@ -525,6 +529,7 @@ const self = {
                     if (failed) return UI.show("toast", `Failed to set cache, internal error, abort.`, { type: "error" });
                     //2.2. struct holder
                     const range = { x: x, y: y, ext: ext, world: world, container: dom_id };
+                    
                     VBW.load(range, cfg, (pre) => {
                         UI.show("toast", `Struct all components, ready to show.`);
                         self.prefetch(pre.texture, pre.module, (failed) => {
@@ -638,14 +643,14 @@ const World = {
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
 
-                const target={x:x,y:y,world:0,index:0,adjunct:"block"}
-                const binded=VBW.event.on("block","loaded",(ev)=>{
-                    VBW.player.elevation(ev.x,ev.y,ev.world,dom_id);
-                },target);
+                // const target={x:x,y:y,world:0,index:0,adjunct:"block"}
+                // const binded=VBW.event.on("block","loaded",(ev)=>{
+                //     VBW.player.elevation(ev.x,ev.y,ev.world,dom_id);
+                // },target);
 
-                const res = VBW.event.on("stop","beside",(ev)=>{
-                    console.log(`Stop beside event triggered`,ev);
-                },{x:2025,y:619,world:0,index:0,adjunct:"wall"});
+                // const res = VBW.event.on("stop","beside",(ev)=>{
+                //     console.log(`Stop beside event triggered`,ev);
+                // },{x:2025,y:619,world:0,index:0,adjunct:"wall"});
             }, cfg);
         });
     },

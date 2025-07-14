@@ -150,8 +150,9 @@ const self = {
 
         },
         dump: (copy) => {
-            if (!copy) return console.log(cache);
-            return console.log(self.clone(cache));
+            console.log("VBW:",Framework);
+            if (!copy) return console.log("Cache:",cache);
+            return console.log("Cache:",self.clone(cache));
         },
     },
     queue: {
@@ -206,10 +207,10 @@ const self = {
     },
     initActive: () => {
         cache.active = {
-            world: 0,           // default world
+            //world: 0,           // default world
             containers: {},     // dom_id -->  raw data and structed data here
             current: "",        // current active render
-            mode:cache.def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
+            //mode:cache.def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
         }
         return true;
     },
@@ -685,8 +686,8 @@ const Framework = {
         const active = self.getActive(dom_id);
 
         //2.group cache.block.id.world.animate
-        const world = self.cache.get(["active", "world"]);
-
+        //TODO, need to think about this carefully, how to get default world.
+        const world = self.cache.get(["env","player","location","world"]);
         const ans = self.getAnimateQueue(world, dom_id);
         const map = self.getAnimateMap(world, dom_id);         
 
