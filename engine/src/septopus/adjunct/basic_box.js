@@ -24,7 +24,8 @@ const config={
     },
     animate:[
         {way:"rotate",param:{speed:0.2,ax:"x"}},
-        {way:"shake",param:{speed:0.2,ax:"x"}},
+        {way:"rotateZ",param:{speed:0.2,ax:"x"}},
+        {way:"rotateX",param:{speed:0.2,ax:"x"}},
     ],
 }
 
@@ -88,14 +89,41 @@ const self={
         },
         //`cfg` to support more complex animation
         animate:(meshes,cfg)=>{
-            console.log(cfg);
-            const effect=cfg.effect;
+            //console.log(cfg);
+            const effect=cfg.effect-1;
+            if(effect<0) return false;
+            if(config.animate[effect]===undefined) return false;
+            const param=config.animate[effect];
+
+            switch (effect) {
+                case 0:
+                    for(let i=0;i<meshes.length;i++){
+                        const mesh=meshes[i];
+                        mesh.rotation.x+=0.1;
+                        mesh.rotation.y+=0.1;
+                        mesh.rotation.z+=0.1;
+                    }
+                    break;
+                
+                case 1:
+                    for(let i=0;i<meshes.length;i++){
+                        const mesh=meshes[i];
+                        //mesh.rotation.x+=0.1;
+                        mesh.rotation.y+=0.1;
+                        //mesh.rotation.z+=0.1;
+                    }
+                    break;
+                case 2:
+                    for(let i=0;i<meshes.length;i++){
+                        const mesh=meshes[i];
+                        mesh.rotation.x+=0.1;
+                        //mesh.rotation.y+=0.1;
+                        //mesh.rotation.z+=0.1;
+                    }
+                    break;
             
-            for(let i=0;i<meshes.length;i++){
-                const mesh=meshes[i];
-                mesh.rotation.x+=0.1;
-                mesh.rotation.y+=0.1;
-                mesh.rotation.z+=0.1;
+                default:
+                    break;
             }
         },
     },
@@ -227,7 +255,7 @@ const self={
                     stop:!d[6]?false:true,
                 }
                 
-                if(d[5]!==undefined && config.animate[d[5]]!==undefined){
+                if(d[5]!==undefined && config.animate[d[5]-1]!==undefined){
                     dt.animate=d[5];
                 }
                 
