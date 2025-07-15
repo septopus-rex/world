@@ -20,6 +20,8 @@
 //     "RUN_ONE_TIME":             7,
 // };
 
+import TriggerBuilder from "../lib/builder";
+
 const reg={
     name:"trigger",
     category:"basic",
@@ -98,6 +100,7 @@ const config={
         color: 0xff3298,
         opacity:0.8,
     },
+    events:["in","out","hold","touch"],
 }
 
 let definition=null;       //cache adjunct definition here.
@@ -125,7 +128,10 @@ const self={
                     ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt,
                     rx: r[0], ry: r[1], rz: r[2],
                     type: "box",
-                    event:self.decode(d[5]),           //construct event function here
+                    event:{
+                        type:config.events[d[4]],
+                        fun:self.decode(d[5]),           //construct event function here
+                    }
                 }
                 rst.push(dt);
             }
@@ -158,8 +164,16 @@ const self={
         },
     },
     decode:(actions)=>{
-        //console.log(actions);
-        return actions;
+        const cfg={
+
+        }
+        const core = TriggerBuilder.get(actions,cfg);
+
+        // const fun=(x,y,world,dom_id)=>{
+            
+        // };
+        
+        return core;
     },
     getObject:()=>{
 

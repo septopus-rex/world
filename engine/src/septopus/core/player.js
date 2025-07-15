@@ -397,10 +397,10 @@ const vbw_player = {
             });
         });
 
-        const target={x:2024,y:619,world:0,index:0,adjunct:"trigger"}
-        VBW.event.on("trigger","in",(ev)=>{
-            console.log(`Trigger in, `, ev);
-        },target);
+        // const target={x:2024,y:619,world:0,index:0,adjunct:"trigger"}
+        // VBW.event.on("trigger","in",(ev)=>{
+        //     console.log(`Trigger in, `, ev);
+        // },target);
 
         return ck && ck(data);
     },

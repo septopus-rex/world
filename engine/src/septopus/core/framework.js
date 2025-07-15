@@ -275,7 +275,8 @@ const self = {
         const va = self.getElevation(x, y, world, dom_id);
         for (let name in map) {
             //2.1 construct standard 3D object;
-            const data = Framework[name].transform.std_3d(map[name], va);
+            const std=map[name];
+            const data = Framework[name].transform.std_3d(std, va);
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
                 if (row.material && row.material.texture) preload.texture.push(row.material.texture);
@@ -306,7 +307,13 @@ const self = {
 
             //TODO, construct triggers here.
             if(name==="trigger"){
-                console.log(`Bind trigger functions here.`);
+                console.log(`Bind trigger functions here.`,std);
+                for(let i=0;i<std.length;i++){
+                    const single=std[i];
+                    if(!single.event || !single.event.type || !single.event.fun) continue;
+                    const target={x:x,y:y,world:world,index:i,adjunct:"trigger"}
+                    Framework.event.on("trigger",single.event.type,single.event.fun,target);
+                }
             }    
         }
 

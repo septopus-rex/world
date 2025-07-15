@@ -358,7 +358,7 @@ const mock = {
                     [
                         [0x00b8,    //trigger
                             [
-                                [[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
+                                [[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 0, [
                                     [
                                         [[1,3],1,0],            //`condition`, can be empty, run anyway
                                         [[1,1,2],[1,20]],       //`task_todo`, system.ui.toast()
