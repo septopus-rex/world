@@ -339,11 +339,15 @@ const self = {
                     adjunct:orgin.adjunct,
                     start:Toolbox.stamp(),
                     hold:false,
+                    container:runtime.container,
                 };
                 
                 //!important, `trigger.in` event trigger 
                 env.trigger=target;
-                VBW.event.trigger("trigger","in",{stamp:Toolbox.stamp()},Toolbox.clone(target));
+                const evt=Toolbox.clone(target);
+                evt.stamp=Toolbox.stamp();
+
+                VBW.event.trigger("trigger","in",evt,Toolbox.clone(target));
             }
         }else{
             //2. check hold event
@@ -351,7 +355,9 @@ const self = {
                 const delta=Toolbox.stamp()-env.trigger.start;
                 if(delta > config.hold){
                     //!important, `trigger.hold` event trigger 
-                    VBW.event.trigger("trigger","hold",{stamp:Toolbox.stamp()},Toolbox.clone(env.trigger));
+                    const evt=Toolbox.clone(env.trigger);
+                    evt.stamp=Toolbox.stamp();
+                    VBW.event.trigger("trigger","hold",evt,Toolbox.clone(env.trigger));
                     env.trigger.hold=true;
                 }
             }
@@ -359,7 +365,9 @@ const self = {
             //3. check leaving event
             if(orgin===false){
                 //!important, `trigger.in` event trigger 
-                VBW.event.trigger("trigger","out",{stamp:Toolbox.stamp()},Toolbox.clone(env.trigger));
+                const evt=Toolbox.clone(env.trigger);
+                evt.stamp=Toolbox.stamp();
+                VBW.event.trigger("trigger","out",evt,Toolbox.clone(env.trigger));
                 env.trigger=null;
             }
         }

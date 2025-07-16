@@ -451,7 +451,7 @@ const self = {
             VBW.player.task(),
             VBW.bag.task(),
         ]
-        TriggerBuilder.set(funs,VBW);
+        TriggerBuilder.set(funs,VBW.cache);
     },
     getAdjunctTriggerFuns:()=>{
         const map=VBW.component.map();

@@ -134,7 +134,7 @@ const mock = {
                 },
                 sample:[[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
                     [
-                        [[1,3],1,0],                                //`condition`, can be empty, run anyway
+                        [[1,3],1,0],                                //`condition`, system.weather == 0 ,can be empty, run anyway
                         [[1,1,2],[1,20]],                           //`task_todo`, system.ui.toast()
                         [[1,1,2],[1,33]],                           //`task_abord`, system.ui.toast()
                         [[2,0x00a1,1],[3,[[0,2],1,0.78]],[10]]      //`task_recover`, adjunct.wall --> update --> position[2] -->
@@ -345,7 +345,7 @@ const mock = {
             return { x: x, y: y, world: world, data: [0.2, [], 1], owner: "LOCATION_ADDRESS" }
         }
 
-        if (x === 2024 && y === 619) {
+        if (x === 2024 && (y === 619 || y===618)) {
             const actions=[
                 [],
             ];

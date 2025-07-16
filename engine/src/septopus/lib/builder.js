@@ -37,6 +37,7 @@ const objects=[
     {
         name:"system",
         default:{},
+        router:["","","",""],
     },
     {
         name:"adjunct",
@@ -45,25 +46,42 @@ const objects=[
     {
         name:"player",
         default:{},
+        router:["","","",""],
     },
     {
         name:"bag",
         default:{},
+        router:["","","",""],
     },
 ];
 
+let Reader=null;
 const self={
-    getValueByOrgin:()=>{
+    validCondition:(condition)=>{
+
+        return true;
+    },
+    //check whether win the task, if not, task abord
+    isAbort:(todo)=>{
 
     },
+    getTargetObject:()=>{
+
+    },
+    //!important, need closure function to keep the parameters from adjunct `trigger`
     single:(act)=>{
-        const [condition,todo,abord,recover]=act;
-
-        return (ev)=>{
-            console.log(`Single action`);
-            
-        };
+        return ((act)=>{
+            let [condition,todo,abord,recover]=act;
+            return (ev)=>{
+                if(!self.validCondition(condition)) return false;
+                console.log(ev)
+                console.log(`Reader`,Reader);
+                console.log(`Todo`,todo);
+            };
+        })(act);
     },
+
+    //!important, need closure function to isolate the actions
     decode:(actions)=>{
         const funs=[];
         for(let i=0;i<actions.length;i++){
@@ -83,7 +101,7 @@ const self={
     },
 };
 
-let vbw=null;
+
 const TriggerBuilder = {
 
     definition:(def)=>{
@@ -92,17 +110,19 @@ const TriggerBuilder = {
     },
 
     /**  set funs for trigger
-     * @param   {object[]}    funs   //[{},{}]
+     * @param   {object[]}    funs      //[{},{}]
+     * @param   {function}    root      //VBW.cache
      * */
     set:(funs,root)=>{
-        //console.log(funs);
+        //1. cache task functions
         for(let i=0;i<funs.length;i++){
             if(!objects[i]) continue;
             const row=funs[i];
             objects[i].default=row;
         }
 
-        vbw=root;
+        //2. set VBW as root
+        Reader=root;
     },  
 
     /**  get frame sync function
