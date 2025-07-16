@@ -88,6 +88,7 @@ const vbw_weather={
     task:()=>{
         return {
             set:self.setWeather(),
+            router:["set"],
         }
     }
 }

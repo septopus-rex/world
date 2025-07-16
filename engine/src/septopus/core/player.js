@@ -560,6 +560,7 @@ const vbw_player = {
             fly:self.task.fly,
             capacity:self.task.capacity,
             body:self.task.body,
+            router:["body","capacity","fly"],
         }
     },
 }

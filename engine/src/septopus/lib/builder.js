@@ -9,6 +9,8 @@
  * @date 2025-06-18
  */
 
+import Toolbox from "./toolbox";
+
 //["不等于","等于","大于","小于","大于等于","小于等于"]
 
 const operator={
@@ -36,22 +38,23 @@ const operator={
 const objects=[
     {
         name:"system",
-        default:{},
-        router:["","","",""],
+        //default:{},
+        //router:["ui","","",""],
     },
     {
         name:"adjunct",
-        default:{},
+        //default:{},
+        //router:["hide","show"],
     },
     {
         name:"player",
-        default:{},
-        router:["","","",""],
+        //default:{},
+        //router:["","","",""],
     },
     {
         name:"bag",
-        default:{},
-        router:["","","",""],
+        //default:{},
+        //router:["","","",""],
     },
 ];
 
@@ -83,6 +86,7 @@ const self={
 
     //!important, need closure function to isolate the actions
     decode:(actions)=>{
+        console.log(objects);
         const funs=[];
         for(let i=0;i<actions.length;i++){
             const row=actions[i];
@@ -118,7 +122,15 @@ const TriggerBuilder = {
         for(let i=0;i<funs.length;i++){
             if(!objects[i]) continue;
             const row=funs[i];
-            objects[i].default=row;
+            // if(row.router){
+            //     objects[i].router=Toolbox.clone(row.router);
+            //     delete row.router;
+            // }
+
+            for(let k in row){
+                objects[i][k]=row[k];
+            }
+            //objects[i].default=row;
         }
 
         //2. set VBW as root
@@ -133,7 +145,14 @@ const TriggerBuilder = {
         //console.log(actions);
         const fun=self.decode(actions);
         return fun;
-    }
+    },
+
+    /**  filter out on-chain content, download when in game mode
+     * @param   {object[]}    actions   //formatted action array
+     * */
+    filter:(actions)=>{
+
+    },
 }
 
 export default TriggerBuilder;

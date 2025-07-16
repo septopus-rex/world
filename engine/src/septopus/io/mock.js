@@ -571,10 +571,21 @@ const mock = {
 
     //unique resource mock data
     resource:(id)=>{
-
+        
     },
     content: (id) => {
-
+        const txts=[
+            "跌落死亡，请稍后再试",
+            "我是触发器，被触发了哟。这段话是存在IPFS的哟",
+            "欢迎来玩爬梯子的游戏，跑到顶就赢啦！",
+        ]
+        return {
+            data:txts,
+            format:"json",
+            type:"text",
+            more:{lang:"cn"},  
+            index:id,                   //content index in contract counter
+        }
     },
     texture: (id) => {
         const arr = [

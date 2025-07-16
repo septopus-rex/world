@@ -329,6 +329,18 @@ const self = {
         const fs = d > s ? s * 0.5 : d * .5 + o > s ? s - 0.5 * d : o < 0.5 * d ? 0.5 * d : o, sz = d > s ? s : d;
         return { offset: fs, size: sz }
     },
+    task:{
+        hide:(meshes)=>{
+
+        },
+        show:(meshes)=>{
+
+        },
+        crash:(meshes)=>{
+
+        },
+        router:["hide","show","crash"],
+    }
 };
 
 const adj_wall = {
@@ -336,6 +348,7 @@ const adj_wall = {
     transform: self.transform,
     attribute: self.attribute,
     menu: self.menu,
+    task:self.task,
 }
 
 export default adj_wall;

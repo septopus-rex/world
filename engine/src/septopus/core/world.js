@@ -446,6 +446,7 @@ const self = {
             {
                 ui:UI.task(),
                 weather:VBW.weather.task(),
+                router:["ui","weather"],
             },
             adjs,
             VBW.player.task(),

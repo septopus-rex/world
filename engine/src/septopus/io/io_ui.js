@@ -534,8 +534,9 @@ const UI={
     */
     task:()=>{
         return {
-            dialog:self.dialog,
-            toast:self.toast,
+            dialog:router.dialog,
+            toast:router.toast,
+            router:["toast","dialog"],
         }
     },
 }

@@ -311,16 +311,17 @@ const self={
         },
     },
     task:{
-        update:(action,meshes)=>{
+        dance:(meshes)=>{
 
         },
-        show:(action,meshes)=>{
+        hide:(meshes)=>{
 
         },
-        hide:(action,meshes)=>{
+        show:(meshes)=>{
 
         },
-    },
+        router:["hide","show","dance"],
+    }
 };
 
 const basic_box={

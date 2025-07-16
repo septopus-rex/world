@@ -57,6 +57,7 @@ const vbw_bag={
             consume:()=>{
 
             },
+            router:["consume","mint"],
         }
     },
 }
