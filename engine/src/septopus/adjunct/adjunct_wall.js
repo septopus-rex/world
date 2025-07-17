@@ -330,14 +330,14 @@ const self = {
         return { offset: fs, size: sz }
     },
     task:{
-        hide:(meshes)=>{
-            console.log(`Wall adjunct hide.`);
+        hide:(meshes,cfg)=>{
+            console.log(`Wall adjunct hide.`,meshes,cfg);
         },
-        show:(meshes)=>{
+        show:(meshes,cfg)=>{
 
         },
-        crash:(meshes)=>{
-
+        crash:(meshes,cfg)=>{
+            console.log(`Wall crash.`,meshes,cfg);
         },
         router:["hide","show","crash"],
     }

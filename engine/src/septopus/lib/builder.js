@@ -93,9 +93,51 @@ const self={
             return res;
         }
     },
-    getTaskParams:(arr,type)=>{
-        console.log(`Parameter array`,arr);
-        return ["Hello world","trigger title"];
+    getMeshes:(target)=>{
+        //console.log(target);
+        if( target.x===undefined || 
+            target.y === undefined || 
+            target.adjunct===undefined) return [];
+
+        const chain=["active","containers",target.container,"scene"];
+        const scene=Reader.get(chain);
+        if(scene.error) return [];
+
+        const arr=[];
+        for(let i=0;i<scene.children.length;i++){
+            const data=scene.children[i].userData;
+            //console.log(data);
+            if(data.x===undefined || 
+                data.y===undefined || 
+                data.name===undefined ||
+                !scene.children[i].isMesh
+            ) continue;
+
+            //console.log(scene.children[i])
+
+            if(data.x===target.x && 
+                data.y===target.y && 
+                data.name===target.adjunct) arr.push(scene.children[i]);
+        }
+        //console.log(arr);
+        return arr;
+    },
+    getTaskParams:(arr,ev,type)=>{
+        //console.log(`Parameter array`,arr,ev,type);
+        switch (type) {
+            case 'system':
+                return ["Hello world","trigger title"];
+                break;
+            case 'adjunct':
+                
+                const target={x:ev.x,y:ev.y,adjunct:"box",container:ev.container};
+                //console.log(`Get meshes by`,target);
+                const meshes=self.getMeshes(target);
+                return [meshes,arr];
+                break;
+            default:
+                break;
+        }
     },
     //!important, need closure function to keep the parameters from adjunct `trigger`
     single:(act)=>{
@@ -104,12 +146,17 @@ const self={
             //console.log(act);
             //2. return handle function 
             return (ev)=>{
+                //console.log(ev);
                 if(!self.validCondition(condition)) return false;
-                //console.log(todo);
 
                 const task=self.getTaskFunction(Toolbox.clone(todo[0]));
-                const params=self.getTaskParams(Toolbox.clone(todo[1]));
-                if(task.error || params.error) return false;
+                if(task.error) return false;
+                const cat=todo[0][0];
+                const type=objects[cat-1].name;
+                const params=self.getTaskParams(Toolbox.clone(todo[1]),ev,type);
+                console.log(params);
+                console.log(task);
+                if(params.error) return false;
 
                 task(...params);        //run task defined in trigger.
             };
@@ -118,7 +165,7 @@ const self={
 
     //!important, need closure function to isolate the actions
     decode:(actions)=>{
-        console.log(objects);
+        //console.log(objects);
         const funs=[];
         for(let i=0;i<actions.length;i++){
             const row=actions[i];
@@ -127,7 +174,6 @@ const self={
 
         return ((funs)=>{
             return (ev)=>{
-                console.log(ev);
                 for(let i=0;i<funs.length;i++){
                     const fun=funs[i];
                     fun(ev);

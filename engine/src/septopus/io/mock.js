@@ -361,10 +361,10 @@ const mock = {
                                 [[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 0, [
                                     [
                                         [[1,3],1,0],            //`condition`, can be empty, run anyway
-                                        [[2,0x00a1,1],[]],       //`task_todo`, adjunct.wall
+                                        [[2,0x00a2,3],[0]],      //`task_todo`, adjunct.wall.hide, [index]
                                         //[[1,1,2],[1,20]],      //`task_todo`, system.ui.toast()
                                         [[1,1,2],[1,33]],       //`task_abord`, system.ui.toast()
-                                        [[2,0x00a1,1],[]],       //`task_recover`, adjunct.wall
+                                        [[2,0x00a1,1],[]],      //`task_recover`, adjunct.wall
                                     ],
                                 ], 0, 1]
                             ]

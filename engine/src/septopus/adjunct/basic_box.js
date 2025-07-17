@@ -311,13 +311,13 @@ const self={
         },
     },
     task:{
-        dance:(meshes)=>{
+        dance:(meshes,cfg)=>{
+            console.log(`Box dance.`,meshes,cfg);
+        },
+        hide:(meshes,cfg)=>{
 
         },
-        hide:(meshes)=>{
-
-        },
-        show:(meshes)=>{
+        show:(meshes,cfg)=>{
 
         },
         router:["hide","show","dance"],
