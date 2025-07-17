@@ -34,28 +34,18 @@ const operator={
     },
 }
 
-//support function attatch here.
+//!import, there is key `router` is an array, help to link to the task function
+// {
+//     fun_a:()=>{},
+//     fun_b:()=>{},
+//     fun_c:()=>{},
+//     router:["fun_a","fun_b","fun_c"]
+// }
 const objects=[
-    {
-        name:"system",
-        //default:{},
-        //router:["ui","","",""],
-    },
-    {
-        name:"adjunct",
-        //default:{},
-        //router:["hide","show"],
-    },
-    {
-        name:"player",
-        //default:{},
-        //router:["","","",""],
-    },
-    {
-        name:"bag",
-        //default:{},
-        //router:["","","",""],
-    },
+    {name:"system"},
+    {name:"adjunct"},
+    {name:"player"},
+    {name:"bag"},
 ];
 
 let Reader=null;
@@ -71,15 +61,57 @@ const self={
     getTargetObject:()=>{
 
     },
+    getAdjunctNameByIndex:(index)=>{
+        const data=Reader.get(["map",index]);
+        if(data.error) return false;
+        return data;
+    },
+    getTaskByRouter:(arr,group)=>{
+        if(arr.length===0) return group;
+        const index=arr.shift();
+        if(index<1 || !group.router || !group.router[index-1]) return false;
+        const key=group.router[index-1];
+        return  self.getTaskByRouter(arr,group[key]);
+    },
+    getTaskFunction:(arr)=>{
+        console.log(`Function array`,JSON.stringify(arr));
+        const cat=arr.shift();
+        if(cat < 1 || !objects[cat-1]) return {error:"Invalid task category"};
+        const group=objects[cat-1];
+        //console.log(group,JSON.stringify(arr));
+        if(group.name==="adjunct"){
+            //console.log(arr);
+            const index=arr.shift();
+            const adj=self.getAdjunctNameByIndex(index);
+            if(adj===false) return {error:"Invalid adjunct index."};
+            const res=self.getTaskByRouter(arr,group[adj]);
+            if(!res) return {error:"Failed to get task function."}
+            return res;
+        }else{
+            const res=self.getTaskByRouter(arr,group);
+            if(!res) return {error:"Failed to get task function."}
+            return res;
+        }
+    },
+    getTaskParams:(arr,type)=>{
+        console.log(`Parameter array`,arr);
+        return ["Hello world","trigger title"];
+    },
     //!important, need closure function to keep the parameters from adjunct `trigger`
     single:(act)=>{
         return ((act)=>{
             let [condition,todo,abord,recover]=act;
+            //console.log(act);
+            //2. return handle function 
             return (ev)=>{
                 if(!self.validCondition(condition)) return false;
-                console.log(ev)
-                console.log(`Reader`,Reader);
-                console.log(`Todo`,todo);
+                //console.log(todo);
+
+                const task=self.getTaskFunction(Toolbox.clone(todo[0]));
+                const params=self.getTaskParams(Toolbox.clone(todo[1]));
+                if(task.error || params.error) return false;
+
+                task(...params);        //run task defined in trigger.
             };
         })(act);
     },
@@ -119,18 +151,13 @@ const TriggerBuilder = {
      * */
     set:(funs,root)=>{
         //1. cache task functions
+       
         for(let i=0;i<funs.length;i++){
             if(!objects[i]) continue;
             const row=funs[i];
-            // if(row.router){
-            //     objects[i].router=Toolbox.clone(row.router);
-            //     delete row.router;
-            // }
-
             for(let k in row){
                 objects[i][k]=row[k];
             }
-            //objects[i].default=row;
         }
 
         //2. set VBW as root

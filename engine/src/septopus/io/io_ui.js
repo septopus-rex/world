@@ -363,10 +363,10 @@ const router={
         el.hidden=false;
 
         //2. auto run to support more function
-        if(cfg.auto) cfg.auto();
+        if(cfg && cfg.auto) cfg.auto();
 
         //3.attatch events;
-        if(cfg.events){
+        if(cfg && cfg.events){
             for(let evt in cfg.events){
                 console.log(evt,doms.dialog.events);
                 if(doms.dialog.events[evt]===undefined) continue;
@@ -534,7 +534,13 @@ const UI={
     */
     task:()=>{
         return {
-            dialog:router.dialog,
+            dialog:(txt,title)=>{
+                const ctx={
+                    title:txt,
+                    content:title,
+                }
+                router.dialog(ctx,{});
+            },
             toast:router.toast,
             router:["toast","dialog"],
         }

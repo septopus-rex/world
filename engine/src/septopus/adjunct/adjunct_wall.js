@@ -331,7 +331,7 @@ const self = {
     },
     task:{
         hide:(meshes)=>{
-
+            console.log(`Wall adjunct hide.`);
         },
         show:(meshes)=>{
 
