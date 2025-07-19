@@ -521,6 +521,11 @@ const self = {
         const queue = VBW.cache.get(chain);
         queue.push({ name: "block_checker", fun: self.checkBlock });
         queue.push({ name: "resource_checker", fun: self.checkResource });
+        queue.push({ name: "trigger_runtime", fun: self.runTrigger });
+    },
+
+    runTrigger:()=>{
+        //console.log(``);
     },
 
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {

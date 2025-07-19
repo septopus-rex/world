@@ -158,7 +158,8 @@ const self={
                 console.log(task);
                 if(params.error) return false;
 
-                task(...params);        //run task defined in trigger.
+                const keyfun = task(...params);        //run task defined in trigger.
+                //!important, if there is animation, return framesync function
             };
         })(act);
     },
