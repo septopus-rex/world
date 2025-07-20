@@ -272,7 +272,7 @@ const self = {
         },total);
     },
     deathCamera:(height,ck)=>{
-        UI.show("toast",`set camera position as death, ${fall}m`);
+        UI.show("toast",`set camera position as death, ${height}m`);
         const cvt=self.getConvert();
         const single=20,total=2000;
         const step=height*cvt*single/total;
@@ -392,8 +392,11 @@ const vbw_player = {
         VBW.event.on("player","death",(ev)=>{
             env.lock=true;      //set to lock movement;
             console.log(`death`,ev)
-            self.fallCamera(ev.fall,()=>{
-                env.lock=false;
+            self.deathCamera(ev.fall,()=>{
+
+                UI.show("countdown", 10, {callback:()=>{
+                    env.lock=false;
+                }});
             });
         });
 

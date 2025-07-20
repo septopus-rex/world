@@ -452,6 +452,15 @@ const router={
             el.addEventListener("click",doms.compass.events.click)
         }
     },
+    countdown:(val,cfg)=>{
+        const id=`${config.prefix}countdown`;
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "countdown"`);
+        console.log(`Ready to count down from ${val}s to 0`);
+
+
+        //if(cfg && cfg.callback) cfg.callback();
+    },
     status:(val,cfg)=>{
         const id=`${config.prefix}status`;
         const el=document.getElementById(id);
@@ -542,7 +551,8 @@ const UI={
                 router.dialog(ctx,{});
             },
             toast:router.toast,
-            router:["toast","dialog"],
+            countdown:router.countdown,
+            router:["toast","dialog","countdown"],
         }
     },
 }
