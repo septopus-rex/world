@@ -79,6 +79,18 @@ const self = {
     clone: (obj) => {
         return JSON.parse(JSON.stringify(obj));
     },
+    middle:(fun)=>{
+        return ((fun)=>{
+            return (...args)=>{
+                const dom_id=cache.active.current;
+                console.log(dom_id);
+                 if(!dom_id || !cache.active.containers[dom_id] || !cache.def.common || !cache.def.common.MODE_GAME) return fun(...args);
+                const mode=cache.active.containers[dom_id].mode;
+                if(mode===cache.def.common.MODE_GAME) return {error:"In game mode, failed to get data from network."}
+                    return fun(...args);
+                }
+        })(fun)
+    },
     component: {
         //component registion
         reg: (cfg, component) => {
@@ -94,7 +106,18 @@ const self = {
 
             //3.filter out datasource API
             if(cfg.type==="datasource"){
-                Framework.datasource=component;
+                Framework.datasource={};
+                for(let k in component){
+                    if(typeof component[k] === "function"){
+                        Framework.datasource[k]=self.middle(component[k]);
+                    }else{
+                        Framework.datasource[k]={};
+                        for(let kk in component[k]){
+                            Framework.datasource[k][kk]=self.middle(component[k][kk]);
+                        }
+                    }
+                }
+
                 cache.env.datasource={
                     pending:false,       //set to `true`, when loading the data from network
                     map:{},              //data need to load
