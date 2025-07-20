@@ -83,12 +83,12 @@ const self = {
         return ((fun)=>{
             return (...args)=>{
                 const dom_id=cache.active.current;
-                console.log(dom_id);
-                 if(!dom_id || !cache.active.containers[dom_id] || !cache.def.common || !cache.def.common.MODE_GAME) return fun(...args);
+                if(!dom_id || !cache.active.containers[dom_id] || !cache.def.common || !cache.def.common.MODE_GAME) return fun(...args);
                 const mode=cache.active.containers[dom_id].mode;
-                if(mode===cache.def.common.MODE_GAME) return {error:"In game mode, failed to get data from network."}
-                    return fun(...args);
-                }
+                if(mode!==cache.def.common.MODE_GAME) return fun(...args); 
+                console.log("Stop requesting in game mode.");
+                return {error:"In game mode, failed to get data from network."}
+            }
         })(fun)
     },
     component: {
@@ -607,8 +607,8 @@ const Framework = {
      * set range mode
      * @param {string}   mode   - block mode, ["edit","normal","game"]
      * @param {object}   target - {x:2051,y:1247,world:0,container:"DOM_ID"}
-     * @param {object}   cfg    - more setting for rebuild
      * @param {function} ck     - callback function
+     * @param {object}   cfg    - more setting for rebuild
      * @returns
      * @return void
      */
