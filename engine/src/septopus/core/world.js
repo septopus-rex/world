@@ -722,6 +722,8 @@ const World = {
                 // const res = VBW.event.on("stop","beside",(ev)=>{
                 //     console.log(`Stop beside event triggered`,ev);
                 // },{x:2025,y:619,world:0,index:0,adjunct:"wall"});
+
+                UI.show("countdown",10);
             }, cfg);
         });
     },

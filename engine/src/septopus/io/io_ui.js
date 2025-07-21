@@ -66,7 +66,12 @@ const doms={
         events:{
 
         },
-    }
+    },
+    countdown:{
+        events:{
+            click:null,
+        },
+    },
 }
 
 const inputs={
@@ -437,8 +442,7 @@ const router={
                     <circle cx="50%" cy="50%" r="2%" fill="black" />
                 </g>
             </svg>`;
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(pointer, 'text/html');
+        const doc = self.getDom(pointer);
         el.appendChild(doc.body.firstChild);
 
         //TODO, need to manage events to avoid multi bind.
@@ -456,10 +460,27 @@ const router={
         const id=`${config.prefix}countdown`;
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "countdown"`);
-        console.log(`Ready to count down from ${val}s to 0`);
+        //console.log(`Ready to count down from ${val}s to 0`);
 
+        const second=`<h1>${val}</h1>`;
+        const doc = self.getDom(second);
+        el.appendChild(doc.body.firstChild);
+        el.style.display="block";
+        el.hidden=false;
 
-        //if(cfg && cfg.callback) cfg.callback();
+        const timer = setInterval(()=>{
+            if(val===0){
+                clearInterval(timer);
+                el.style.display="none";
+                el.hidden=true;
+                return true;
+            }
+            val--;
+            el.innerHTML="";
+            const second=`<h1>${val}</h1>`;
+            const doc = self.getDom(second);
+            el.appendChild(doc.body.firstChild);
+        },1000);
     },
     status:(val,cfg)=>{
         const id=`${config.prefix}status`;

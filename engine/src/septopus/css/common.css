@@ -37,6 +37,43 @@
   border-bottom-right-radius: 3rem; */
 }
 
+.countdown{
+  position: absolute;
+  width: 28%;
+  aspect-ratio: 1;
+  border-radius: 15rem;
+  background: #1f2937;
+  top:20%;
+  left:36%;
+  z-index: 8866;
+  display: none;
+  text-align: center;
+  vertical-align: middle;
+  user-select: none;
+  opacity: 0.8;
+}
+
+.countdown h1{
+  font-size: 8rem;
+  margin: 0 auto;
+  padding-top: 2.5rem;
+  color: #FFFFFF;
+}
+
+.dialog{
+  background-color: #333333;
+  position: absolute;
+  color: white;
+  width: 80%;
+  min-height: 20rem;
+  left:10%;
+  top:40px;
+  z-index: 8888;
+  display: none;
+  border-radius: 1rem;
+  padding: 0.5rem;
+}
+
 .zoom{
   position: absolute;
   top:5rem;
@@ -82,20 +119,6 @@
   height: 1rem;
   border-radius: 0.5rem;
   background-color: #4b75af;
-}
-
-.dialog{
-  background-color: #333333;
-  position: absolute;
-  color: white;
-  width: 80%;
-  min-height: 20rem;
-  left:10%;
-  top:40px;
-  z-index: 8888;
-  display: none;
-  border-radius: 1rem;
-  padding: 0.5rem;
 }
 
 .form{
