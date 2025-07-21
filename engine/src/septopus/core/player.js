@@ -144,8 +144,7 @@ const self = {
         return VBW.cache.get(["env", "world", "side"]);
     },
     checkLocation: (camera,pos,dom_id,skip) => {
-        console.log(`Check location:`,JSON.stringify(pos));
-
+        //console.log(`Check location:`,JSON.stringify(pos));
         const px = camera.position.x;
         const py = -camera.position.z;
         const player = env.player;

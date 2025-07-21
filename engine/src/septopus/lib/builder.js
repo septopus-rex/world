@@ -49,6 +49,7 @@ const objects=[
 ];
 
 let Reader=null;
+let Pusher=null;
 const self={
     validCondition:(condition)=>{
 
@@ -143,10 +144,8 @@ const self={
     single:(act)=>{
         return ((act)=>{
             let [condition,todo,abord,recover]=act;
-            //console.log(act);
-            //2. return handle function 
+
             return (ev)=>{
-                //console.log(ev);
                 if(!self.validCondition(condition)) return false;
 
                 const task=self.getTaskFunction(Toolbox.clone(todo[0]));
@@ -154,12 +153,16 @@ const self={
                 const cat=todo[0][0];
                 const type=objects[cat-1].name;
                 const params=self.getTaskParams(Toolbox.clone(todo[1]),ev,type);
-                console.log(params);
-                console.log(task);
+                //console.log(params);
+                //console.log(task);
                 if(params.error) return false;
 
-                const keyfun = task(...params);        //run task defined in trigger.
+                const keyFun = task(...params);        //run task defined in trigger.
+                //console.log(keyFun);
+
                 //!important, if there is animation, return framesync function
+                if(Pusher!==null) Pusher(keyFun[0],keyFun[1]);
+                
             };
         })(act);
     },
@@ -207,8 +210,9 @@ const TriggerBuilder = {
             }
         }
 
-        //2. set VBW as root
-        Reader=root;
+        //2. set system functions
+        Reader=root.get;
+        Pusher=root.push;
     },  
 
     /**  get frame sync function

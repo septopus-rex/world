@@ -84,6 +84,7 @@ const config = {
     queue: {
         block: "block_loading",
         resource: "resource_loading",
+        trigger:"trigger_runtime",
     },
     hook: {
         register: "reg",
@@ -436,13 +437,16 @@ const self = {
         }
 
         //4.group trigger definition
-        self.setTrigger(def);
+        self.setupTrigger(def);
     },
-    setTrigger:(def)=>{
+    setupTrigger:(def)=>{
+        //1. set trigger definition
         TriggerBuilder.definition(def);
-
         const adjs=self.getAdjunctTriggerFuns();
-        const funs=[
+
+        //2. set functions
+        //2.1. component task functions
+        const funs=[    
             {
                 ui:UI.task(),
                 weather:VBW.weather.task(),
@@ -451,8 +455,16 @@ const self = {
             adjs,
             VBW.player.task(),
             VBW.bag.task(),
-        ]
-        TriggerBuilder.set(funs,VBW.cache);
+        ];
+        //2.2. VBW system function
+        const system={
+            get:VBW.cache,
+            push:self.pushRuntime,
+        };
+        TriggerBuilder.set(funs,system);
+
+        //2. create trigger runtime queue
+        VBW.queue.init(config.queue.trigger);
     },
     getAdjunctTriggerFuns:()=>{
         const map=VBW.component.map();
@@ -519,13 +531,23 @@ const self = {
     setChecker: (dom_id, world) => {
         const chain = ["block", dom_id, world, "loop"];
         const queue = VBW.cache.get(chain);
-        queue.push({ name: "block_checker", fun: self.checkBlock });
-        queue.push({ name: "resource_checker", fun: self.checkResource });
-        queue.push({ name: "trigger_runtime", fun: self.runTrigger });
+        queue.push({name: "block_checker", fun: self.checkBlock });
+        queue.push({name: "resource_checker", fun: self.checkResource });
+        queue.push({name: "trigger_runtime", fun: self.runTrigger });
     },
-
+    pushRuntime:(fun,n)=>{
+        //console.log(fun,n);
+        const run={
+            auto:fun,
+            left:n,
+        }
+        VBW.queue.push(config.queue.trigger,run);
+    },
     runTrigger:()=>{
-        //console.log(``);
+        const queue=VBW.queue.get(config.queue.trigger);
+        if(!queue || queue.length===0) return false;
+        
+        console.log(queue);
     },
 
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {

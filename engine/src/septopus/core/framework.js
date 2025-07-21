@@ -328,16 +328,15 @@ const self = {
             }
             rdata[name] = data;
 
-            //TODO, construct triggers here.
             if(name==="trigger"){
-                console.log(`Bind trigger functions here.`,std);
                 for(let i=0;i<std.length;i++){
                     const single=std[i];
                     if(!single.event || !single.event.type || !single.event.fun) continue;
                     const target={x:x,y:y,world:world,index:i,adjunct:"trigger"}
+                    //console.log(single.event.fun);
                     Framework.event.on("trigger",single.event.type,single.event.fun,target);
                 }
-            }    
+            }
         }
 
         //3.save stop data;

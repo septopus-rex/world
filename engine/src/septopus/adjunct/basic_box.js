@@ -313,6 +313,12 @@ const self={
     task:{
         dance:(meshes,cfg)=>{
             console.log(`Box dance.`,meshes,cfg);
+            let count=10000;
+            let fun=()=>{
+
+            };
+
+            return [fun,count];
         },
         hide:(meshes,cfg)=>{
 
