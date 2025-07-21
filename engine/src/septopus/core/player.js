@@ -143,7 +143,9 @@ const self = {
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
     },
-    checkLocation: (camera,pos,dom_id) => {
+    checkLocation: (camera,pos,dom_id,skip) => {
+        console.log(`Check location:`,JSON.stringify(pos));
+
         const px = camera.position.x;
         const py = -camera.position.z;
         const player = env.player;
@@ -186,8 +188,7 @@ const self = {
         //update player position
         player.location.position[0] = px % side[0] / cvt;
         player.location.position[1] = py % side[1] / cvt;
-        player.location.position[2] = player.location.position[2] + pos[2] / cvt;
-
+        if(!skip) player.location.position[2] = player.location.position[2] + pos[2] / cvt;
     },
     cross: (from, to, ext) => {
         
@@ -234,7 +235,7 @@ const self = {
         UI.show("compass", angle, cfg_compass);
     },
 
-    syncCameraPosition: (pos) => {
+    syncCameraPosition: (pos,skip) => {
         if(env.lock) return false;
 
         for (let dom_id in env.camera) {
@@ -246,8 +247,8 @@ const self = {
                 cam.position.z - pos[1],
             );
 
-            //2. increate player action
-            self.checkLocation(cam,pos,dom_id);  
+            //2. inc player action
+            self.checkLocation(cam,pos,dom_id,skip);  
         }
     },
     fallCamera:(fall,ck)=>{
@@ -465,6 +466,7 @@ const vbw_player = {
     * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0]}
     */
     synchronous: (diff) => {
+        //console.log(`Changing: `,JSON.stringify(diff))
         if (Array.isArray(diff)) {
 
         } else {
@@ -511,6 +513,8 @@ const vbw_player = {
         const fall=player.location.position[2];
         player.location.position[2]=0;
 
+        console.log(`Leave height:`,fall);
+
         const stop=Toolbox.clone(player.location.stop);
         player.location.stop.on=false;
         player.location.stop.adjunct="";
@@ -533,25 +537,24 @@ const vbw_player = {
         //console.log(fall,capacity.span)
         if(fall>=capacity.death){
             const evt={
-                from:{},
+                from:target,
                 fall:fall,
                 stamp:Toolbox.stamp(),
             }
             //!important, `player.death` event trigger
             VBW.event.trigger("player","death",evt);
         }else if(fall>=capacity.span){
-            console.log(`Falling...`)
+            //console.log(`Falling...`)
             const evt={
-                from:{},
+                from:target,
                 fall:fall,
                 stamp:Toolbox.stamp(),
             }
             //!important, `player.fall` event trigger
             VBW.event.trigger("player","fall",evt);
         }else{
-
-            self.syncCameraPosition([0,0,-fall*cvt]);
-
+            const skip=true;
+            self.syncCameraPosition([0,0,-fall*cvt],skip);
         }
         return true;
     },

@@ -437,6 +437,7 @@ const self = {
 
                 //b. if there is delta of Z, deal with it.
                 if (check.delta) {
+                    //console.log(JSON.stringify(check));
                     if(check.cross){
                         diff.position[2] += check.delta-check.edelta;
                     }else{
