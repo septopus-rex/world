@@ -50,6 +50,7 @@ import basic_trigger from "../adjunct/basic_trigger";
 import plug_link from "../plugin/plug_link";
 import Toolbox from "../lib/toolbox";
 import TriggerBuilder from "../lib/builder";
+import ThreeObject from "../three/entry";
 
 const regs = {
     core: [vbw_detect,vbw_sky,vbw_time,vbw_weather,vbw_block,vbw_player,vbw_movement,vbw_event,vbw_bag,API],
@@ -239,11 +240,30 @@ const self = {
         const failed = [];
         //1.get data from IPFS
         VBW.datasource.module(arr, (map) => {
+            //console.log(map);
             for (let id in map) {
+                const row=map[id];
                 const chain = ["resource", "module", id];
-                VBW.cache.set(chain, map[id]);
-            }
 
+                //2.parse module;
+                if(row.type && row.three===undefined){
+                    const type=row.type.toLocaleLowerCase();
+                    row.three=null;
+                    const cfg={
+                        type:type,
+                        target:row.raw,
+                        callback:((row)=>{
+                            return (obj)=>{
+                                console.log(obj);
+                                row.three=obj;
+                            };
+                        })(row),
+                    }
+                    ThreeObject.get("basic","loader",cfg);
+                }
+
+                VBW.cache.set(chain, row);
+            }
             return ck && ck(failed);
         })
 

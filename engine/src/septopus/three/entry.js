@@ -18,6 +18,7 @@ import Group from "./basic/group";
 import Sky from "./basic/sky";
 import Raycast from "./basic/raycast";
 import Helper from "./basic/helper";
+import Loader from "./basic/loader";
 
 import light_direct from "./light/light_direct";
 import light_point from "./light/light_point";
@@ -46,7 +47,8 @@ const router={
         group:Group,
         sky:Sky, 
         raycast:Raycast, 
-        helper:Helper,           
+        helper:Helper, 
+        loader:Loader,       
     },
     light:{
         spot:light_spot,
@@ -78,13 +80,13 @@ const router={
         pano:null,              //cube pano sky
         outline:null,           //adjunct outline
     },
-    loader:{            //3D module loader
-        ds3:null,
-        fxb:null,
-        mmd:null,
-        dae:null,
-        json:null,
-    },
+    // loader:{            //3D module loader
+    //     ds3:null,
+    //     fbx:null,
+    //     mmd:null,
+    //     dae:null,
+    //     json:null,
+    // },
 }
 
 const self = {

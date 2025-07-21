@@ -552,7 +552,7 @@ const mock = {
                     [0x00a2,    //box
                         [[[rand(1, 3), rand(1, 3), rand(1, 3)], [8, 8, 2], [0, 0, 0], rand(100, 300), [1, 1], 1, 1]]],
                     [0x00a4,    //module
-                        [[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], rand(1, 30), 0, 2025]]],
+                        [[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], rand(1, 10), 0, 2025]]],
                     [0x00b4,    //stop
                         [[[rand(2, 4), 0, 0], [3, 2, 0.5], [0, 0, 0], 2, 2025]]],
 
@@ -603,6 +603,16 @@ const mock = {
         }
     },
     module: (id) => {
+        if(id===6){
+            return {
+                index: id,
+                type: "FBX",
+                raw: "module/house.fbx",
+                params: {
+
+                },
+            }
+        }
         return {
             index: id,
             type: ["3DS", "DAE", "FBX", "MMD"][Toolbox.rand(0, 3)],
