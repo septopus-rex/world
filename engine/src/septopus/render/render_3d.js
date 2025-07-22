@@ -103,8 +103,10 @@ const self = {
                                 row.three=obj;
 
                                 //3.replace module in active scene;
-                                const ev={id:id,stamp:Toolbox.stamp()}
-                                VBW.event.trigger("module","parsed",ev);
+                                setTimeout(()=>{
+                                    const ev={id:id,stamp:Toolbox.stamp()}
+                                    VBW.event.trigger("module","parsed",ev);
+                                },1000);
                             };
                         })(index),
                     }
@@ -244,6 +246,8 @@ const self = {
 
                 //FIXME, need to fix the scale issue. Get setting from IPFS resource
                 md.scale.set(500,500,500);
+                md.rotation.set(md.rotation.x - Math.PI*0.5, md.rotation.y,md.rotation.z);
+    
                 scene.add(md);
 
                 //3.2. remove replace mesh

@@ -498,8 +498,8 @@ const mock = {
                                 [[13,13,1],[8,8,20], [0, 0, 0], rand(60, 90), [1, 1], 0,1],
                                 //[[1,1,3],[12,15,19], [0, 0, 0], rand(60, 90), [1, 1], 1,1],    //planet to stay
 
-                                [[3,3,3],[8,8,6], [0, 0, 0], rand(60, 90), [1, 1], 3,1], //ad
-                                [[3,3,3],[8,8,12], [0, 0, 0], rand(60, 90), [1, 1], 2,1], //ad
+                                [[3,3,3],[8,8,6], [0, 0, 0], 666, [1, 1], 3,1], //ad
+                                [[3,3,3],[8,8,12], [0, 0, 0], 666, [1, 1], 2,1], //ad
                             ]],
                     ],
                     1,  //block status
@@ -595,11 +595,21 @@ const mock = {
             "texture/grass.jpg",
             "texture/avatar.jpg",
             "texture/qr.png",
+            "texture/ad.png",
         ];
+
+        //special ad png
+        if(id===666){
+            return {
+                index: id,
+                image: arr[4],
+                repeat: [1, 1]
+            }
+        }
 
         return {
             index: id,
-            image: arr[Toolbox.rand(0, arr.length - 1)],
+            image: arr[Toolbox.rand(0, arr.length - 2)],
             repeat: [1, 1]
         }
     },
