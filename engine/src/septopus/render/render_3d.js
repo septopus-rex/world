@@ -80,10 +80,34 @@ const self = {
         const set = VBW.cache.set;
         for (let i = 0; i < arr.length; i++) {
             const index = arr[i];
-            const s_chain = ["resource", "texture", index];
             const chain = ["block", dom_id, world, "module", index];
-            const dt = { mock: "parsed 3D module." };
-            set(chain, dt);
+
+            const orgin = ["resource","module",index];
+            if(!VBW.cache.exsist(orgin)){
+                set(chain, { error: "No module resource" });
+            }else{
+                const row=VBW.cache.get(orgin);
+                if(row.type && row.three === undefined){
+                    row.three=null;    //set null to avoid multi decoding
+                    const type=row.type.toLocaleLowerCase();
+                    const cfg={
+                        type:type,
+                        target:row.raw,
+                        callback:((id,chain)=>{
+                            return (obj)=>{
+                                //console.log(obj,parseInt(id));
+                                const o_chain = ["resource", "module", parseInt(id)];
+                                const row=VBW.cache.get(o_chain);
+                                row.three=obj;
+
+                                //set to world
+                                VBW.cache.set(chain,obj.clone());
+                            };
+                        })(index,chain),
+                    }
+                    ThreeObject.get("basic","loader",cfg);
+                }
+            }
         }
 
         return ck && ck(failed);

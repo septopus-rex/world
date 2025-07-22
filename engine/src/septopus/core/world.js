@@ -240,27 +240,29 @@ const self = {
         const failed = [];
         //1.get data from IPFS
         VBW.datasource.module(arr, (map) => {
-            //console.log(map);
+
             for (let id in map) {
                 const row=map[id];
                 const chain = ["resource", "module", id];
-
+                if(VBW.cache.exsist(chain)) continue;
                 //2.parse module;
-                if(row.type && row.three===undefined){
-                    const type=row.type.toLocaleLowerCase();
-                    row.three=null;
-                    const cfg={
-                        type:type,
-                        target:row.raw,
-                        callback:((row)=>{
-                            return (obj)=>{
-                                console.log(obj);
-                                row.three=obj;
-                            };
-                        })(row),
-                    }
-                    ThreeObject.get("basic","loader",cfg);
-                }
+                // if(row.type && !VBW.cache.exsist(chain)){
+                //     const type=row.type.toLocaleLowerCase();
+                //     const cfg={
+                //         type:type,
+                //         target:row.raw,
+                //         callback:((id)=>{
+                //             return (obj)=>{
+                //                 console.log(obj,parseInt(id));
+                //                 const chain = ["resource", "module", parseInt(id)];
+                //                 const row=VBW.cache.get(chain);
+                //                 row.three=obj;
+                //                 console.log(row);
+                //             };
+                //         })(id),
+                //     }
+                //     ThreeObject.get("basic","loader",cfg);
+                // }
 
                 VBW.cache.set(chain, row);
             }
@@ -723,7 +725,7 @@ const World = {
                 //     console.log(`Stop beside event triggered`,ev);
                 // },{x:2025,y:619,world:0,index:0,adjunct:"wall"});
 
-                UI.show("countdown",10);
+                //UI.show("countdown",10);
             }, cfg);
         });
     },

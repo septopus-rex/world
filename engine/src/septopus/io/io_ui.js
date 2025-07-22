@@ -473,6 +473,7 @@ const router={
                 clearInterval(timer);
                 el.style.display="none";
                 el.hidden=true;
+                if(cfg && cfg.callback) cfg.callback();
                 return true;
             }
             val--;
