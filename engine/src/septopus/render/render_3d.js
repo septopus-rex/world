@@ -95,21 +95,18 @@ const self = {
                     const cfg={
                         type:type,
                         target:row.raw,
-                        callback:((id,chain)=>{
+                        callback:((id)=>{
                             return (obj)=>{
                                 //2.1. save to resource 
                                 const o_chain = ["resource", "module", parseInt(id)];
                                 const row=VBW.cache.get(o_chain);
                                 row.three=obj;
 
-                                //2.2. save to world resource
-                                VBW.cache.set(chain,obj.clone());
-
                                 //3.replace module in active scene;
                                 const ev={id:id,stamp:Toolbox.stamp()}
                                 VBW.event.trigger("module","parsed",ev);
                             };
-                        })(index,chain),
+                        })(index),
                     }
                     ThreeObject.get("basic","loader",cfg);
                 }
@@ -204,19 +201,58 @@ const self = {
         }
         return { type: "linebasic", params: { color: config.color, opacity: 1 } };
     },
-    replace:()=>{
-        console.log(`Here to check module`);
-    },
-    setReplace:(dom_id)=>{
-        // const chain = ["block", dom_id, "loop"];
-        // const queue = VBW.cache.get(chain);
-        // queue.push({name: "module_replace", fun: self.replace });
+    getMeshes:(target,scene)=>{
+        for(let i=0;i<scene.children.length;i++){
+            const data=scene.children[i].userData;
+            //console.log(data);
+            if(data.x===undefined || 
+                data.y===undefined || 
+                data.name===undefined ||
+                !scene.children[i].isMesh
+            ) continue;
+
+            //console.log(scene.children[i])
+
+            if(data.x===target.x && 
+                data.y===target.y && 
+                data.name===target.adjunct) return scene.children[i];
+        }
+        return false;
     },
     replaceFun:(target)=>{
         return ((adj)=>{
             return (ev)=>{
                 if(adj.module!==ev.id) return false;
-                console.log(adj,ev);
+                //1. get module mesh
+                const active=VBW.cache.get(["active"]);
+                const dom_id=active.current;
+                const scene=active.containers[dom_id].scene;
+                const mesh=self.getMeshes(target,scene);
+                if(mesh===false) return false;
+
+                //2. get parsed module
+                const chain=["resource","module",ev.id,"three"];
+                const obj=VBW.cache.get(chain);
+                if(obj.error) return false;
+
+                //3. manage mesh in scene;
+                //3.1. add module to scene
+                const md=obj.clone();
+                md.position.copy(mesh.position);
+                md.rotation.copy(mesh.rotation);
+                md.userData=Toolbox.clone(mesh.userData);
+
+                //FIXME, need to fix the scale issue. Get setting from IPFS resource
+                md.scale.set(500,500,500);
+                scene.add(md);
+
+                //3.2. remove replace mesh
+                scene.remove(mesh);
+                if (mesh.material.map) {
+                    mesh.material.map.dispose();
+                }
+                mesh.geometry.dispose();
+                mesh.material.dispose();
             };
         })(target);
     },
@@ -262,7 +298,6 @@ const self = {
             arr.push(mesh);
         }
 
-        
         return arr;
     },
     setSunLight: (scene, dom_id) => {
@@ -577,14 +612,9 @@ const renderer={
             //1.3.load range of blocks
             self.loadBlocks(scene, dom_id);
 
-            //1.4.set module replace checker
-            self.setReplace(dom_id);
-
             //2.set the loop to support animation
             render.setAnimationLoop(VBW.loop);
 
-            
-            
             UI.show("toast", `3D renderer is loaded.`);
         }
 
