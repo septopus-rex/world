@@ -86,6 +86,8 @@ const self = {
             if(!VBW.cache.exsist(orgin)){
                 set(chain, { error: "No module resource" });
             }else{
+
+                //2. parse module and storage
                 const row=VBW.cache.get(orgin);
                 if(row.type && row.three === undefined){
                     row.three=null;    //set null to avoid multi decoding
@@ -95,13 +97,17 @@ const self = {
                         target:row.raw,
                         callback:((id,chain)=>{
                             return (obj)=>{
-                                //console.log(obj,parseInt(id));
+                                //2.1. save to resource 
                                 const o_chain = ["resource", "module", parseInt(id)];
                                 const row=VBW.cache.get(o_chain);
                                 row.three=obj;
 
-                                //set to world
+                                //2.2. save to world resource
                                 VBW.cache.set(chain,obj.clone());
+
+                                //3.replace module in active scene;
+                                const ev={id:id,stamp:Toolbox.stamp()}
+                                VBW.event.trigger("module","parsed",ev);
                             };
                         })(index,chain),
                     }
@@ -198,15 +204,44 @@ const self = {
         }
         return { type: "linebasic", params: { color: config.color, opacity: 1 } };
     },
-
-    getThree: (single, world, id, side) => {
-        //console.log(JSON.stringify(single));
+    replace:()=>{
+        console.log(`Here to check module`);
+    },
+    setReplace:(dom_id)=>{
+        // const chain = ["block", dom_id, "loop"];
+        // const queue = VBW.cache.get(chain);
+        // queue.push({name: "module_replace", fun: self.replace });
+    },
+    replaceFun:(target)=>{
+        return ((adj)=>{
+            return (ev)=>{
+                if(adj.module!==ev.id) return false;
+                console.log(adj,ev);
+            };
+        })(target);
+    },
+    getThree: (single, world, dom_id, side) => {
         const arr = [];
+
+        //1. get module to show
+        if (single.module) {
+            const target={
+                x:single.x,
+                y:single.y,
+                world:world,
+                index:single.index,
+                adjunct:single.adjunct,
+                module:single.module
+            }
+            VBW.event.on("module","parsed",self.replaceFun(target),target);
+        }
+
+        //2. get geometry to show
         if (single.geometry && single.material) {
             const { geometry } = single;
             const { rotation, position } = geometry.params;
             //console.log(single.material);
-            const material = self.checkMaterial(single.material, world, id);
+            const material = self.checkMaterial(single.material, world, dom_id);
 
             //1.set position of 3D object
             position[0] += (single.x - 1) * side[0];
@@ -227,11 +262,7 @@ const self = {
             arr.push(mesh);
         }
 
-        //TODO, add parsed module to scene
-        if (single.module) {
-            //console.log(`Load module.`);
-        }
-
+        
         return arr;
     },
     setSunLight: (scene, dom_id) => {
@@ -413,7 +444,6 @@ const self = {
 
                 //3.1.create three object via three.js lib
                 const single = objs[i];
-                //console.log(single);
                 const side = self.getSide();
                 const ms = self.getThree(single, world, dom_id, side);
 
@@ -547,9 +577,14 @@ const renderer={
             //1.3.load range of blocks
             self.loadBlocks(scene, dom_id);
 
+            //1.4.set module replace checker
+            self.setReplace(dom_id);
+
             //2.set the loop to support animation
             render.setAnimationLoop(VBW.loop);
 
+            
+            
             UI.show("toast", `3D renderer is loaded.`);
         }
 

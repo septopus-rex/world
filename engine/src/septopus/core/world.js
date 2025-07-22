@@ -344,7 +344,6 @@ const self = {
         if (queue.length === 0) return false;
 
         const todo = queue[0];
-        //console.log(JSON.stringify(todo));
         const { x, y, world, container, preload } = todo;
         if (self.checkLoaded(preload.texture, preload.module)) {
             queue.shift();

@@ -333,7 +333,6 @@ const self = {
                     const single=std[i];
                     if(!single.event || !single.event.type || !single.event.fun) continue;
                     const target={x:x,y:y,world:world,index:i,adjunct:"trigger"}
-                    //console.log(single.event.fun);
                     Framework.event.on("trigger",single.event.type,single.event.fun,target);
                 }
             }

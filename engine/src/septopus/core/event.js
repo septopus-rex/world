@@ -69,6 +69,10 @@ const events={
         hold:{},
         touch:{},
     },
+    module:{
+        parsed:{},
+        failed:{},
+    }
 }
 
 const runtime={
@@ -172,7 +176,7 @@ const vbw_event = {
      *  
      * @param   {string}    cat      - event cat
      * @param   {string}    event    - special event
-     * @param   {object}    param    - special event
+     * @param   {object}    param    - params from event
      * @param   {object}    [obj]    - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
      * 
      * */
