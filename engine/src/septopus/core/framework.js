@@ -218,7 +218,13 @@ const self = {
             arr.splice(index, 1);
             return true;
         },
-
+        drop:(qu,index)=>{
+            const chain = ["queue", qu];
+            const arr = self.cache.get(chain);
+            if(arr.error) return arr;
+            arr.splice(index, 1);
+            return true;
+        },
     },
     structCache: () => {
         const keys = config.keys;

@@ -8,6 +8,8 @@
  * @date 2025-04-23
  */
 
+import Toolbox from "../lib/toolbox";
+
 const reg={
     name:"box",
     category:'basic',         
@@ -313,11 +315,20 @@ const self={
     task:{
         dance:(meshes,cfg)=>{
             console.log(`Box dance.`,meshes,cfg);
-            let count=10000;
-            let fun=()=>{
+            let count=20;
+            let fun=(n)=>{
+                console.log(n,meshes);
 
+                for(let i=0;i<meshes.length;i++){
+                    const mesh=meshes[i];
+                    // if(mesh.scale.x===0) mesh.scale.x=1;
+                    // if(mesh.scale.y===0) mesh.scale.y=1;
+                    // if(mesh.scale.z===0) mesh.scale.z=1;
+                    // mesh.scale.x=mesh.scale.x*Toolbox.rand(0.3,1.9);
+                    // mesh.scale.y=mesh.scale.y*Toolbox.rand(0.3,1.9);
+                    // mesh.scale.z=mesh.scale.z*Toolbox.rand(0.3,1.9);
+                }
             };
-
             return [fun,count];
         },
         hide:(meshes,cfg)=>{

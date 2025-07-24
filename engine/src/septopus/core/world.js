@@ -568,7 +568,17 @@ const self = {
         const queue=VBW.queue.get(config.queue.trigger);
         if(!queue || queue.length===0) return false;
         
-        console.log(queue);
+        for(let i=0;i<queue.length;i++){
+            const row=queue[i];
+            //console.log(JSON.stringify(row));
+            if(row.left<1){
+                VBW.queue.drop(config.queue.trigger,i);
+                i--;
+            }else{
+                row.left--;
+                row.auto(row.left);
+            }
+        }
     },
 
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
