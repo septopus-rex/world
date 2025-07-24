@@ -211,7 +211,7 @@ const self={
                 //root.core.setTextureQueue(tid);//推送材质队列
                 const dt={
                     x:s[0]*cvt,y:s[1]*cvt,z:s[2]*cvt,
-                    ox:p[0]*cvt,oy:p[1]*cvt,oz:p[2]*cvt+s[2]*cvt*0.5,
+                    ox:p[0]*cvt,oy:p[1]*cvt,oz:p[2]*cvt,
                     rx:r[0],ry:r[1],rz:r[2],
                     module:mid,
                     material:{

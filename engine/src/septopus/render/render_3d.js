@@ -243,9 +243,9 @@ const self = {
                 md.position.copy(mesh.position);
                 md.rotation.copy(mesh.rotation);
                 md.userData=Toolbox.clone(mesh.userData);
-
-                //FIXME, need to fix the scale issue. Get setting from IPFS resource
-                md.scale.set(500,500,500);
+                
+                const cvt=VBW.cache.get(["env", "world", "accuracy"]);
+                md.scale.set(cvt,cvt,cvt);
                 md.rotation.set(md.rotation.x - Math.PI*0.5, md.rotation.y,md.rotation.z);
     
                 scene.add(md);
