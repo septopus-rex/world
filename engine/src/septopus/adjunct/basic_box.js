@@ -314,8 +314,8 @@ const self={
     },
     task:{
         dance:(meshes,cfg)=>{
-            console.log(`Box dance.`,meshes,cfg);
-            let count=20;
+            //console.log(`Box dance.`,meshes,cfg);
+            let count=100;
             let fun=(n)=>{
                 console.log(n,meshes);
 

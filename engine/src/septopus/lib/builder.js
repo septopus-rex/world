@@ -141,7 +141,8 @@ const self={
         }
     },
     //!important, need closure function to keep the parameters from adjunct `trigger`
-    single:(act)=>{
+    single:(act,cfg)=>{
+        //console.log(cfg);
         return ((act)=>{
             let [condition,todo,abord,recover]=act;
 
@@ -153,37 +154,35 @@ const self={
                 const cat=todo[0][0];
                 const type=objects[cat-1].name;
                 const params=self.getTaskParams(Toolbox.clone(todo[1]),ev,type);
-                //console.log(params);
-                //console.log(task);
                 if(params.error) return false;
 
                 const keyFun = task(...params);        //run task defined in trigger.
-                //console.log(keyFun);
 
                 //!important, if there is animation, return framesync function
-                if(Pusher!==null) Pusher(keyFun[0],keyFun[1]);
+                const onetime=!cfg.onetime?false:!!cfg.onetime;
+                if(Pusher!==null) Pusher(keyFun[0],keyFun[1],onetime,!cfg.key?null:cfg.key);
                 
             };
         })(act);
     },
 
     //!important, need closure function to isolate the actions
-    decode:(actions)=>{
-        //console.log(objects);
+    decode:(actions,cfg)=>{
+        //console.log(actions);
         const funs=[];
         for(let i=0;i<actions.length;i++){
             const row=actions[i];
-            funs.push(self.single(row));
+            funs.push(self.single(row,cfg));
         }
 
-        return ((funs)=>{
+        return ((funs,cfg)=>{
             return (ev)=>{
                 for(let i=0;i<funs.length;i++){
                     const fun=funs[i];
-                    fun(ev);
+                    fun(ev,cfg);
                 }
             };
-        })(funs);
+        })(funs,cfg);
     },
 };
 
@@ -220,8 +219,7 @@ const TriggerBuilder = {
      * @param   {object}      cfg       //{}
      * */
     get: (actions, cfg) => {
-        //console.log(actions);
-        const fun=self.decode(actions);
+        const fun=self.decode(actions,cfg);
         return fun;
     },
 

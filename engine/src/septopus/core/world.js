@@ -50,7 +50,7 @@ import basic_trigger from "../adjunct/basic_trigger";
 import plug_link from "../plugin/plug_link";
 import Toolbox from "../lib/toolbox";
 import TriggerBuilder from "../lib/builder";
-import ThreeObject from "../three/entry";
+//import ThreeObject from "../three/entry";
 
 const regs = {
     core: [vbw_detect,vbw_sky,vbw_time,vbw_weather,vbw_block,vbw_player,vbw_movement,vbw_event,vbw_bag,API],
@@ -556,13 +556,25 @@ const self = {
         queue.push({name: "resource_checker", fun: self.checkResource });
         queue.push({name: "trigger_runtime", fun: self.runTrigger });
     },
-    pushRuntime:(fun,n)=>{
-        //console.log(fun,n);
+    pushRuntime:(fun,n,onetime,key)=>{
+        console.log(key);
         const run={
             auto:fun,
             left:n,
+            onetime:onetime,
+            key:key,
         }
-        VBW.queue.push(config.queue.trigger,run);
+
+        if(onetime){
+            const qu=VBW.queue.get(config.queue.trigger);
+            console.log(`Here to check unique call`,qu);
+            for(let i=0;i<qu.length;i++){
+                const row=qu[i];
+                if(row.key===run.key) return false;
+            }
+        }
+
+        VBW.queue.push(config.queue.trigger,run);  
     },
     runTrigger:()=>{
         const queue=VBW.queue.get(config.queue.trigger);
@@ -570,7 +582,6 @@ const self = {
         
         for(let i=0;i<queue.length;i++){
             const row=queue[i];
-            //console.log(JSON.stringify(row));
             if(row.left<1){
                 VBW.queue.drop(config.queue.trigger,i);
                 i--;

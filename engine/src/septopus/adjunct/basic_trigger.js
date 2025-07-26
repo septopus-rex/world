@@ -21,6 +21,7 @@
 // };
 
 import TriggerBuilder from "../lib/builder";
+import Toolbox from "../lib/toolbox";
 
 const reg={
     name:"trigger",
@@ -119,10 +120,11 @@ const self={
     },
     transform:{
         raw_std: (arr, cvt) => {
-            //console.log(arr);
             const rst = []
             for (let i in arr) {
                 const d = arr[i], s = d[0], p = d[1], r = d[2];
+                const onetime=d[7]===undefined?true:d[7];
+                const key=`tg_${Toolbox.char(8)}`;
                 const dt = {
                     x: s[0] * cvt, y: s[1] * cvt, z: s[2] * cvt,
                     ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt,
@@ -130,7 +132,10 @@ const self={
                     type: "box",
                     event:{
                         type:config.events[d[4]],
-                        fun:self.decode(d[5]),           //construct event function here
+                        fun:self.decode(d[5],key,onetime),           //construct event function here
+                        onetime:onetime,
+                        contract:d[6],
+                        key:key,
                     }
                 }
                 rst.push(dt);
@@ -163,16 +168,12 @@ const self={
             return ds;
         },
     },
-    decode:(actions)=>{
+    decode:(actions,key,ontime)=>{
         const cfg={
-
+            onetime:ontime,
+            key:key,
         }
         const core = TriggerBuilder.get(actions,cfg);
-
-        // const fun=(x,y,world,dom_id)=>{
-            
-        // };
-        
         return core;
     },
     getObject:()=>{
