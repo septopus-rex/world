@@ -510,9 +510,9 @@ const vbw_player = {
         const cvt=self.getConvert();
         const player=env.player;
         const fall=player.location.position[2];
-        player.location.position[2]=0;
-
         console.log(`Leave height:`,fall);
+
+        player.location.position[2]=0;  //reset player stand height
 
         const stop=Toolbox.clone(player.location.stop);
         player.location.stop.on=false;
@@ -534,19 +534,20 @@ const vbw_player = {
         VBW.event.trigger("stop","leave",{stamp:Toolbox.stamp()},target);
 
         //console.log(fall,capacity.span)
-        if(fall>=capacity.death){
+        const act_fall=check.cross?(fall-check.edelta/cvt):fall;
+        if(act_fall>=capacity.death){
             const evt={
                 from:target,
-                fall:fall,
+                fall:act_fall,
                 stamp:Toolbox.stamp(),
             }
             //!important, `player.death` event trigger
             VBW.event.trigger("player","death",evt);
-        }else if(fall>=capacity.span){
+        }else if(act_fall>=capacity.span){
             //console.log(`Falling...`)
             const evt={
                 from:target,
-                fall:fall,
+                fall:act_fall,
                 stamp:Toolbox.stamp(),
             }
             //!important, `player.fall` event trigger
