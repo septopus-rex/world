@@ -252,10 +252,18 @@ const self = {
     },
     fallCamera:(fall,ck)=>{
         UI.show("toast",`set camera position as fall, ${fall}m`);
+
+        const g=9.8;
+        const crouchDepth = 0.5;
+
+        const single=50;
+        const full=fall+crouchDepth;
+        const total = 1000*Math.sqrt(2 * full / g);
         const cvt=self.getConvert();
-        const single=20,total=1000;
+
+        
         const step=fall*cvt*single/total;
-        const tt=setInterval(()=>{
+        const tt = setInterval(()=>{
             for (let dom_id in env.camera) {
                 const cam = env.camera[dom_id];
                 cam.position.set(                    //!important, transform from Septopus to three.js
@@ -268,6 +276,9 @@ const self = {
 
         setTimeout(()=>{
             clearInterval(tt);
+            const recover=800;
+            
+
             return ck && ck();
         },total);
     },
