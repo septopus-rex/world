@@ -12,8 +12,13 @@ import Fall from "./camera/fall";
 import Linger from "./camera/linger";
 import Lightning from "./scene/lightning";
 
-let camera=null;
-let scene=null;
+// let camera=null;
+// let scene=null;
+
+const active={
+    camera:null,
+    scene:null
+}
 
 const router={
     camera:{
@@ -37,8 +42,8 @@ const Effects = {
      * @return boolean
      */
     set:(cam,sce)=>{
-        camera = cam;
-        scene = sce;
+        active.camera = cam;
+        active.scene = sce;
         return true;
     },
     
@@ -56,7 +61,9 @@ const Effects = {
      */
 
     get:(cat,type,params,ck)=>{
+        if(!router[cat] || !router[cat][type]) return {error:"Invalid effects."};
 
+        return router[cat][type](params,active,ck);
     },
 
     /** 

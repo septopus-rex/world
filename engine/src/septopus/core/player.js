@@ -13,6 +13,7 @@
 import Toolbox from "../lib/toolbox";
 import VBW from "./framework";
 import UI from "../io/io_ui";
+import Effects from "../effects/entry";
 
 const reg = {
     name: "player",
@@ -250,60 +251,6 @@ const self = {
             self.checkLocation(cam,pos,dom_id,skip);  
         }
     },
-    fallCamera:(fall,ck)=>{
-        UI.show("toast",`set camera position as fall, ${fall}m`);
-
-        const g=9.8;
-        const crouchDepth = 0.5;
-
-        const single=50;
-        const full=fall+crouchDepth;
-        const total = 1000*Math.sqrt(2 * full / g);
-        const cvt=self.getConvert();
-
-        
-        const step=fall*cvt*single/total;
-        const tt = setInterval(()=>{
-            for (let dom_id in env.camera) {
-                const cam = env.camera[dom_id];
-                cam.position.set(                    //!important, transform from Septopus to three.js
-                    cam.position.x ,
-                    cam.position.y - step,
-                    cam.position.z ,
-                );
-            }
-        },single);
-
-        setTimeout(()=>{
-            clearInterval(tt);
-            const recover=800;
-            
-
-            return ck && ck();
-        },total);
-    },
-    deathCamera:(height,ck)=>{
-        UI.show("toast",`set camera position as death, ${height}m`);
-        const cvt=self.getConvert();
-        const single=20,total=2000;
-        const step=height*cvt*single/total;
-        const tt=setInterval(()=>{
-            for (let dom_id in env.camera) {
-                const cam = env.camera[dom_id];
-                cam.position.set(                    //!important, transform from Septopus to three.js
-                    cam.position.x ,
-                    cam.position.y - step,
-                    cam.position.z ,
-                );
-            }
-        },single);
-
-        setTimeout(()=>{
-            clearInterval(tt);
-            return ck && ck();
-        },total);
-        return ck && ck();
-    },
     syncCameraRotation: (ro) => {
         for (let dom_id in env.camera) {
             //1. change camera position
@@ -376,9 +323,7 @@ const vbw_player = {
     //get the player status.
     start: (dom_id, ck) => {
         const data = self.getPlayerLocation();
-        if (env.player === null) env.player = VBW.cache.get(["env", "player"])
-        //1.set body height
-        //data.position[2]+=config.body.height;
+        if (env.player === null) env.player = VBW.cache.get(["env", "player"]);
 
         //2. set auto update and camera synchronous keyframe loop
         const world = data.world;
@@ -389,13 +334,18 @@ const vbw_player = {
 
         //3.set camera
         if (env.camera[dom_id] === undefined) {
-            env.camera[dom_id] = VBW.cache.get(["active", "containers", dom_id, "camera"]);
+            const camera=VBW.cache.get(["active", "containers", dom_id, "camera"]);
+            const scene=VBW.cache.get(["active", "containers", dom_id, "scene"]);
+            env.camera[dom_id] = camera
+            Effects.set(camera,scene);
         }
 
         //4. player event
         VBW.event.on("player","fall",(ev)=>{
             env.lock=true;      //set to lock movement;
-            self.fallCamera(ev.fall,()=>{
+
+            const cfg={height:ev.fall,convert:self.getConvert()};
+            Effects.get("camera","fall",cfg,()=>{
                 env.lock=false;
             });
         });
@@ -403,12 +353,19 @@ const vbw_player = {
         VBW.event.on("player","death",(ev)=>{
             env.lock=true;      //set to lock movement;
             console.log(`death`,ev)
-            self.deathCamera(ev.fall,()=>{
 
+            const cfg={height:ev.fall,convert:self.getConvert()};
+            Effects.get("camera","fall",cfg,()=>{
                 UI.show("countdown", 10, {callback:()=>{
                     env.lock=false;
                 }});
             });
+            // self.deathCamera(ev.fall,()=>{
+
+            //     UI.show("countdown", 10, {callback:()=>{
+            //         env.lock=false;
+            //     }});
+            // });
         });
 
         // const target={x:2024,y:619,world:0,index:0,adjunct:"trigger"}
