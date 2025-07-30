@@ -139,10 +139,11 @@ const self = {
      * 1. detect device;
      * 2. clean DOM already exsist;
      * 3. create DOM needed;
-     * @param {string}  container - container DOM id
+     * @param {string}  container   - container DOM id
+     * @param {object}  cfg         - {shadow:true}
      * @return {boolean}
      */
-    struct: (container) => {
+    struct: (container,cfg) => {
         if (VBW.block === undefined) return UI.show("toast", `No more component.`, { type: "error" });
 
         //0.device detect
@@ -151,7 +152,7 @@ const self = {
         VBW.cache.set(dev_chain, dt);
 
         //1.1.struct dom for render
-        const dom_render = VBW[config.render].construct(dt.width, dt.height, container);
+        const dom_render = VBW[config.render].construct(dt.width, dt.height, container,cfg);
 
         //1.2.struct dom for controller
         const dom_controller = VBW[config.controller].construct();
@@ -709,13 +710,13 @@ const World = {
 
     /**
      * Septopus World entry, start from 0 to start the 3D world
-     * @param{string}    id- container DOM id
+     * @param   {string}    id- container DOM id
      * @param   {function}  ck      - callback when loaded
-     * @param   {object}    [cfg]   - {contract:methods,fullscreen:false}, config setting
-     * @return {boolean} - whether load successful
+     * @param   {object}    [cfg]   - {contract:methods,fullscreen:false,shadow:true}, config setting
+     * @return  {boolean}   - whether load successful
      * */
     first: (dom_id, ck, cfg) => {
-        if (!self.struct(dom_id)) return UI.show("toast", `Failed to struct html dom for running.`, { type: "error" });
+        if (!self.struct(dom_id,cfg)) return UI.show("toast", `Failed to struct html dom for running.`, { type: "error" });
         if (!VBW.datasource) return UI.show("toast", `No datasource for the next step.`, { type: "error" });
         UI.show("toast", `Start to struct world. Framework:`, VBW);
 

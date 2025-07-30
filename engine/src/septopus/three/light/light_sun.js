@@ -33,7 +33,7 @@ const light_sun = {
         if (!self.valid(params)) return { error: "Invalid parameters to create BOX." };
         const { colorSky, colorGround, intensity } = params;
         const light = new THREE.HemisphereLight(colorSky, colorGround, intensity);
-        light.castShadow = true;
+        //light.castShadow = true;
         light.userData = { type: 'sun' };
         return light
     },

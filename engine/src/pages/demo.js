@@ -35,6 +35,7 @@ export default function Demo() {
         },
       },
       fullscreen:true,
+      shadow:true,
     };
     
     World.launch(dom_id,cfg,(done)=>{

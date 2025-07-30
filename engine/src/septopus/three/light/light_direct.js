@@ -30,7 +30,9 @@ const light_direct={
     create:(params)=>{
         if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
         const {size} = params;
-        return new THREE.BoxGeometry(size[0], size[1], size[2]);
+        const color=!params.color?0xffffff:params.color;
+        const intensity=!params.intensity?1:params.intensity;
+        return new THREE.DirectionalLight(color, intensity);
     },
     standard:()=>{
         return self.sample();

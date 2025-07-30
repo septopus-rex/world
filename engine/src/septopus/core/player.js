@@ -360,12 +360,6 @@ const vbw_player = {
                     env.lock=false;
                 }});
             });
-            // self.deathCamera(ev.fall,()=>{
-
-            //     UI.show("countdown", 10, {callback:()=>{
-            //         env.lock=false;
-            //     }});
-            // });
         });
 
         // const target={x:2024,y:619,world:0,index:0,adjunct:"trigger"}

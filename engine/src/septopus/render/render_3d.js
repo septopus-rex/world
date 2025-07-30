@@ -310,13 +310,23 @@ const self = {
         const side = self.getSide();
         const cvt = self.getConvert();
 
-        const sun = ThreeObject.get("light", "sun", { colorSky: 0xfffff, colorGround: 0xeeeee, intensity: 1 });
+        //1.set sun
+        const sun = ThreeObject.get("light", "sun", { colorSky: 0xffffff, colorGround: 0xeeeeee, intensity: 1 });
         sun.position.set(
             x * side[0],
             y * side[1],
             20 * cvt,
         )
         scene.add(sun);
+
+        //2.set directlight to create shadow
+        const light = ThreeObject.get("light", "direct", { color: 0xffffff,intensity: 1 });
+        light.position.set(
+            x * side[0],
+            y * side[1],
+            20 * cvt,
+        )
+        scene.add(light);
     },
     setSky: (scene, dom_id) => {
         const player = env.player;
@@ -501,9 +511,17 @@ const self = {
 
                 //3.4.add threeObjects to scene
                 for (let i = 0; i < ms.length; i++) {
-                    if (ms[i].error) {
+                    const obj=ms[i];
+                    if (obj.error) {
                         UI.show("toast", ms[i].error, { type: "error" });
                         continue;
+                    }
+                    
+                    //!important, here to set shadow
+                    if(obj.userData && obj.userData.name && obj.userData.name==="block"){
+                        obj.receiveShadow=true;   
+                    }else{
+                        obj.castShadow=true;
                     }
                     scene.add(ms[i]);
                 }
@@ -572,14 +590,22 @@ const self = {
 const renderer={
     hooks: self.hooks,
 
-    construct: (width, height, dom_id) => {
+    construct: (width, height, dom_id, cfg) => {
+        //console.log(cfg);
+
         //1.prepare 3D objects
         const chain = ["active", "containers", dom_id];
         if (!VBW.cache.exsist(chain)) {
-            const scene = ThreeObject.get("basic", "scene", {});
-            const render = ThreeObject.get("basic", "render", { width: width, height: height });
-            const cfg = { width: width, height: height, fov: 50, near: 0.1, far: 1000000 };
-            const camera = ThreeObject.get("basic", "camera", cfg);
+
+            const cfg_scene={}
+            const scene = ThreeObject.get("basic", "scene", cfg_scene);
+
+            const cfg_render={ width: width, height: height,shadow:(cfg.shadow===undefined?false:cfg.shadow)}
+            const render = ThreeObject.get("basic", "render", cfg_render);
+
+            const cfg_camera = { width: width, height: height, fov: 50, near: 0.1, far: 1000000 };
+            const camera = ThreeObject.get("basic", "camera", cfg_camera);
+
             VBW.cache.set(chain, { render: render, camera: camera, scene: scene });
         }
 
@@ -590,7 +616,7 @@ const renderer={
     },
 
     /**  renderer entry
-     * @param{string}    dom_id//container dom id
+     * @param   {string}    dom_id//container dom id
      * @param   {number[]}  block       //block coordinaration,[ x,y,world ]
      * */
     show: (dom_id, block) => {

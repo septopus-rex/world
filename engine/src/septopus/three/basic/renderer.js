@@ -14,9 +14,15 @@ import * as THREE from "three";
 const Renderer={
     create:(cfg)=>{
         if(!cfg.antialias) cfg.antialias=true;
-        const rd=new THREE.WebGLRenderer(cfg);
-        rd.setSize(cfg.width, cfg.height);
-        return rd;
+        const renderer=new THREE.WebGLRenderer(cfg);
+
+        if(cfg.shadow){
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
+
+        renderer.setSize(cfg.width, cfg.height);
+        return renderer;
     },
 }
 
