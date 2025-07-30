@@ -460,8 +460,8 @@ const router={
         const id=`${config.prefix}countdown`;
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "countdown"`);
-        //console.log(`Ready to count down from ${val}s to 0`);
-
+        el.innerHTML="";
+        
         const second=`<h1>${val}</h1>`;
         const doc = self.getDom(second);
         el.appendChild(doc.body.firstChild);

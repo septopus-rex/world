@@ -354,7 +354,7 @@ const vbw_player = {
             env.lock=true;      //set to lock movement;
             console.log(`death`,ev)
 
-            const cfg={height:ev.fall,convert:self.getConvert()};
+            const cfg={height:ev.fall,convert:self.getConvert(),skip:true};
             Effects.get("camera","fall",cfg,()=>{
                 UI.show("countdown", 10, {callback:()=>{
                     env.lock=false;
