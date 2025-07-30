@@ -416,13 +416,16 @@ const self = {
                 }
 
                 //2.2. whether cross block
-                if(check.cross){
-                    //console.log(`Block crossed, need to justify camera Z height ${check.edelta}`);
-                    self.justifyCamera(check.edelta);
-                }
+                // if(check.cross){
+                //     self.justifyCamera(check.edelta);
+                // }
 
                 //a. if moving and stand on stop now
                 if(local.stop.on){
+                    if(check.cross){
+                        self.justifyCamera(check.edelta);
+                    }
+                    
                     if(!check.orgin){
                         VBW.player.leave(check);
                     }else{
@@ -433,11 +436,22 @@ const self = {
                             VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},check.block);
                         }
                     }
+                }else{
+                    if(check.cross && check.edelta!==0){
+
+                        const fall=runtime.player.location.position[2];
+                        const act_fall=check.cross?(fall-check.edelta/runtime.convert):fall;
+                        VBW.player.cross(parseFloat(act_fall));
+                        //self.justifyCamera(check.edelta);
+                    }else{
+                        if(check.cross){
+                            self.justifyCamera(check.edelta);
+                        }
+                    }
                 }
 
                 //b. if there is delta of Z, deal with it.
-                if (check.delta) {
-                    //console.log(JSON.stringify(check));
+                if(check.delta) {
                     if(check.cross){
                         diff.position[2] += check.delta-check.edelta;
                     }else{

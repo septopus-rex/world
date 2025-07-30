@@ -38,7 +38,7 @@ const capacity = {
     span: 0.31,             //max height of walking
     squat: 0.1,             //height of squat
     jump: 1,                //max height of jump
-    death: 3,               //min height of fall death
+    death: 4,               //min height of fall death
     speed: 1.5,             //move speed, meter/second
     strength: 1,            //strength time for jump. Not used yet.
 }
@@ -352,7 +352,7 @@ const vbw_player = {
 
         VBW.event.on("player","death",(ev)=>{
             env.lock=true;      //set to lock movement;
-            console.log(`death`,ev)
+            //console.log(`death`,ev)
 
             const cfg={height:ev.fall,convert:self.getConvert(),skip:true};
             Effects.get("camera","fall",cfg,()=>{
@@ -463,6 +463,49 @@ const vbw_player = {
     },
 
     /**
+    * player go cross block and fall or death
+    */
+    cross:(fall)=>{
+        console.log(`Cross fall height:`,fall);
+        const cvt=self.getConvert();
+        const player=env.player;
+        const target={
+            stamp:Toolbox.stamp(),
+            world:player.location.world,
+            x:player.location.block[0],
+            y:player.location.block[1],
+        }
+
+        //player.location.position[2]=0;
+
+        if(fall>=capacity.death){
+            //2.1. player fall to death
+            const evt={
+                from:target,
+                fall:fall,
+                stamp:Toolbox.stamp(),
+            }
+            //!important, `player.death` event trigger
+            VBW.event.trigger("player","death",evt);
+        }else if(fall>=capacity.span){
+            //from [2025,618] to [2024,618]
+            //from [2025,618] to [2025,619]
+            //2.2 player fall normally
+            const evt={
+                from:target,
+                fall:fall,
+                stamp:Toolbox.stamp(),
+            }
+            //!important, `player.fall` event trigger
+            VBW.event.trigger("player","fall",evt);
+        }else{
+            const skip=true;
+            self.syncCameraPosition([0,0,-fall*cvt],skip);
+        }
+        return true;
+    },
+
+    /**
     * player leave special object to block
     */
     leave:(check)=>{
@@ -472,8 +515,6 @@ const vbw_player = {
         const cvt=self.getConvert();
         const player=env.player;
         const fall=player.location.position[2];
-        console.log(`Leave height:`,fall);
-
         player.location.position[2]=0;  //reset player stand height
 
         const stop=Toolbox.clone(player.location.stop);
@@ -495,9 +536,11 @@ const vbw_player = {
         }
         VBW.event.trigger("stop","leave",{stamp:Toolbox.stamp()},target);
 
-        //console.log(fall,capacity.span)
         const act_fall=check.cross?(fall-check.edelta/cvt):fall;
+        console.log(`Actual fall height`,act_fall);
+        
         if(act_fall>=capacity.death){
+            //2.1. player fall to death
             const evt={
                 from:target,
                 fall:act_fall,
@@ -506,7 +549,7 @@ const vbw_player = {
             //!important, `player.death` event trigger
             VBW.event.trigger("player","death",evt);
         }else if(act_fall>=capacity.span){
-            //console.log(`Falling...`)
+            //2.2 player fall normally
             const evt={
                 from:target,
                 fall:act_fall,

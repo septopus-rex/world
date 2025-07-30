@@ -9,6 +9,7 @@
  */
 
 const Fall = (cfg, active, ck) => {
+    console.log(`Falling: ${JSON.stringify(cfg)}`);
 
     const { camera } = active;
     const cvt = cfg.convert;
@@ -18,7 +19,7 @@ const Fall = (cfg, active, ck) => {
     const recover = 0.4;
 
     const single = 50;
-    const full = cfg.height + crouchDepth + recover;
+    const full =  cfg.height + crouchDepth + recover;
     const total = 1000 * Math.sqrt(2 * full / g);
 
     const step = full * cvt * single / total;
@@ -47,11 +48,11 @@ const Fall = (cfg, active, ck) => {
             setTimeout(() => {
                 clearInterval(r_tt);
                 return ck && ck();
-            },r_total+single);
+            },r_total);
         }else{
             return ck && ck();
         }
-    }, total+single);
+    }, total);
 }
 
 export default Fall;
