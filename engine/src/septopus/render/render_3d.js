@@ -304,6 +304,7 @@ const self = {
 
         return arr;
     },
+
     setSunLight: (scene, dom_id) => {
         const player = env.player;
         const [x, y] = player.location.block;
@@ -311,7 +312,7 @@ const self = {
         const cvt = self.getConvert();
 
         //1.set sun
-        const sun = ThreeObject.get("light", "sun", { colorSky: 0xffffff, colorGround: 0xeeeeee, intensity: 1 });
+        const sun = ThreeObject.get("light", "sun", { colorSky: 0xffffff, colorGround: 0xeeeeee, intensity: 0.5 });
         sun.position.set(
             x * side[0],
             y * side[1],
@@ -320,7 +321,7 @@ const self = {
         scene.add(sun);
 
         //2.set directlight to create shadow
-        const light = ThreeObject.get("light", "direct", { color: 0xffffff,intensity: 1 });
+        const light = ThreeObject.get("light", "direct", { color: 0xffffff,intensity:0.2 });
         light.position.set(
             x * side[0],
             y * side[1],
@@ -328,6 +329,7 @@ const self = {
         )
         scene.add(light);
     },
+
     setSky: (scene, dom_id) => {
         const player = env.player;
         const [x, y] = player.location.block;
@@ -516,7 +518,7 @@ const self = {
                         UI.show("toast", ms[i].error, { type: "error" });
                         continue;
                     }
-                    
+
                     //!important, here to set shadow
                     if(obj.userData && obj.userData.name && obj.userData.name==="block"){
                         obj.receiveShadow=true;   

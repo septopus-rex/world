@@ -25,9 +25,6 @@ const self={
         def:(data)=>{
             definition=data;
         },
-        // animate:(meshes,cfg)=>{
-            
-        // },
     },
     attribute:{
         add:(p,raw) => {},
