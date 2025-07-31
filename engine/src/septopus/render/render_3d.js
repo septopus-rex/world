@@ -591,11 +591,11 @@ const self = {
     },
     demo:(scene,dom_id)=>{
         const cvt=self.getConvert();
+        const bk=[2025,620],side=16000;
 
         //1. PointLight demo
         const cfg={convert:cvt,distance:cvt*100,intensity:0.2,color:0xff0000};
         const pointLight=ThreeObject.get("light","point",cfg);
-        const bk=[2025,620],side=16000;
         pointLight.position.set(
             (bk[0]-1)*side+0.5*side,
             side*0.1,
@@ -606,7 +606,23 @@ const self = {
         const lightHelper = new THREE.PointLightHelper(pointLight, 200);
         scene.add(lightHelper);
 
-        //1. SpotLight demo
+        //2. SpotLight demo
+        const target=[
+            (bk[0]-1)*side+0.5*side,
+            side*0.5,
+            -bk[1]*side+0.5*side
+        ]
+        const s_cfg={convert:cvt,distance:cvt*100,intensity:1,color:0x00ff00,target:target,angle:Math.PI / 6};
+        const spotLight=ThreeObject.get("light","spot",s_cfg);
+        spotLight.position.set(
+            (bk[0]-1)*side+0.2*side,
+            side*0.1,
+            -bk[1]*side+0.2*side,
+        );
+        scene.add(pointLight);
+
+        const helper = new THREE.SpotLightHelper(spotLight);
+        scene.add(helper);
     },  
 };
 
