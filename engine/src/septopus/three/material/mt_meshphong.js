@@ -28,7 +28,7 @@ const self={
 
 const material_meshphong={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create MeshPhong material."};
         const cfg={
             color: 0xFFFFFF,
             map:params.texture

@@ -18,7 +18,6 @@ const self={
         return true;
     },
 
-    //提供standard的数据输出，可以进行比较处理，也供valid来使用
     sample:()=>{
         return {
             size:[],
@@ -28,7 +27,7 @@ const self={
 
 const light_spot={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create SpotLight."};
         const {size} = params;
         return new THREE.BoxGeometry(size[0], size[1], size[2]);
     },

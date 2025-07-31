@@ -29,7 +29,7 @@ const self={
 
 const material_meshbasic={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create MeshBasic material."};
         if(!params.side) params.side=THREE.DoubleSide;
         //console.log(params);
         if(params.opacity) params.transparent=true;

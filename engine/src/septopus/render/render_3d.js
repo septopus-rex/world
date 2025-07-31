@@ -10,6 +10,8 @@
  * @date 2025-04-23
  */
 
+import * as THREE from "three";
+
 import VBW from "../core/framework";
 import ThreeObject from "../three/entry";
 import UI from "../io/io_ui";
@@ -586,7 +588,26 @@ const self = {
             arr.push(row);
         }
         VBW.cache.set(ani_chain, arr);
-    }
+    },
+    demo:(scene,dom_id)=>{
+        const cvt=self.getConvert();
+
+        //1. PointLight demo
+        const cfg={convert:cvt,distance:cvt*100,intensity:0.2,color:0xff0000};
+        const pointLight=ThreeObject.get("light","point",cfg);
+        const bk=[2025,620],side=16000;
+        pointLight.position.set(
+            (bk[0]-1)*side+0.5*side,
+            side*0.1,
+            -bk[1]*side+0.5*side,
+        );
+        scene.add(pointLight);
+
+        const lightHelper = new THREE.PointLightHelper(pointLight, 200);
+        scene.add(lightHelper);
+
+        //1. SpotLight demo
+    },  
 };
 
 const renderer={
@@ -648,6 +669,9 @@ const renderer={
             render.setAnimationLoop(VBW.loop);
 
             UI.show("toast", `3D renderer is loaded.`);
+
+            //3. demo code to test 3D object
+            self.demo(scene, dom_id);
         }
 
         //update target block and fresh scene

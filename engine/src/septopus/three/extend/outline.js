@@ -42,7 +42,7 @@ const self={
 
 const extend_outline={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create Outline of object."};
         const {size} = params;
         return new THREE.BoxGeometry(size[0], size[1], size[2] );
     },

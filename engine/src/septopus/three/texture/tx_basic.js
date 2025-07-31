@@ -28,7 +28,7 @@ const self={
 
 const texture_basic={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BASIC TEXTURE."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create basic texture."};
 
         const {image,repeat}=params;
         const texture = new THREE.TextureLoader().load(image);

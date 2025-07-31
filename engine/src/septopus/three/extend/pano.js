@@ -29,7 +29,7 @@ const self={
 
 const extend_pano={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create Pano."};
         const {size} = params;
         return null;
     },

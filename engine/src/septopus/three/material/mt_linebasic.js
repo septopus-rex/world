@@ -20,7 +20,7 @@ const self={
 
 const material_linebase={
     create:(params)=>{
-        if(!self.valid(params)) return {error:"Invalid parameters to create BOX."};
+        if(!self.valid(params)) return {error:"Invalid parameters to create LineBasic material."};
         const cfg={
 
         };
