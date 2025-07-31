@@ -190,7 +190,8 @@ const self = {
             const chain = ["block", id, world, "texture", cfg.texture];
             const dt = VBW.cache.get(chain);
             if (dt !== undefined && !dt.error) {
-                return { type: "meshphong", params: { texture: dt } };
+                //return { type: "meshphong", params: { texture: dt } };
+                return { type: "meshstandard", params: { texture: dt } };
             }
         }
 
@@ -612,7 +613,7 @@ const self = {
             side*0.5,
             -bk[1]*side+0.5*side
         ]
-        const s_cfg={convert:cvt,distance:cvt*100,intensity:1,color:0x00ff00,target:target,angle:Math.PI / 6};
+        const s_cfg={convert:cvt,distance:cvt*100,intensity:100,color:0x00ff00,target:target,angle:Math.PI / 6};
         const spotLight=ThreeObject.get("light","spot",s_cfg);
         spotLight.position.set(
             (bk[0]-1)*side+0.2*side,

@@ -35,6 +35,7 @@ import geometry_cylinder from "./geometry/ge_cylinder";
 import texture_basic from "./texture/tx_basic";
 import material_meshphong from "./material/mt_meshphong";
 import material_meshbasic from "./material/mt_meshbasic";
+import material_meshstandard from "./material/mt_meshstandard";
 
 import extend_grid from "./extend/grid";
 
@@ -64,6 +65,7 @@ const router={
         meshbasic:material_meshbasic,
         meshdepth:null,
         meshphong:material_meshphong,
+        meshstandard:material_meshstandard,
         linebasic:null,
         linedashed:null,
     },

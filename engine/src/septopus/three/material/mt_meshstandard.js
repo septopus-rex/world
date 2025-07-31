@@ -26,19 +26,18 @@ const self={
     },
 }
 
-const material_meshphong={
+const material_meshstandard={
     create:(params)=>{
         if(!self.valid(params)) return {error:"Invalid parameters to create MeshPhong material."};
         const cfg={
             color: 0xFFFFFF,
             map:params.texture,
-            shininess: 30,          //hightlight instensity
         };
-        return new THREE.MeshPhongMaterial(cfg);
+        return new THREE.MeshStandardMaterial(cfg);
     },
     standard:()=>{
         return self.sample();
     },
 };
 
-export default material_meshphong;
+export default material_meshstandard;
