@@ -619,16 +619,16 @@ const mock = {
         }
     },
     module: (id) => {
-        if(id===6){
-            return {
-                index: id,
-                type: "FBX",
-                raw: "module/house.fbx",
-                params: {
-                    size:[4,3,3],
-                },
-            }
-        }
+        // if(id===6){
+        //     return {
+        //         index: id,
+        //         type: "FBX",
+        //         raw: "module/house.fbx",
+        //         params: {
+        //             size:[4,3,3],
+        //         },
+        //     }
+        // }
         return {
             index: id,
             type: ["3DS", "DAE", "FBX", "MMD"][Toolbox.rand(0, 3)],

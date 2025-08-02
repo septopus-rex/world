@@ -595,7 +595,7 @@ const self = {
         const bk=[2025,620],side=16000;
 
         //1. PointLight demo
-        const cfg={convert:cvt,distance:cvt*100,intensity:0.2,color:0xff0000};
+        const cfg={convert:cvt,distance:cvt*100,intensity:200,color:0xff0000};
         const pointLight=ThreeObject.get("light","point",cfg);
         pointLight.position.set(
             (bk[0]-1)*side+0.5*side,
@@ -613,7 +613,7 @@ const self = {
             side*0.5,
             -bk[1]*side+0.5*side
         ]
-        const s_cfg={convert:cvt,distance:cvt*100,intensity:100,color:0x00ff00,target:target,angle:Math.PI / 6};
+        const s_cfg={convert:cvt,distance:cvt*8,intensity:200,color:0x00ff00,target:target,angle:Math.PI / 6};
         const spotLight=ThreeObject.get("light","spot",s_cfg);
         spotLight.position.set(
             (bk[0]-1)*side+0.2*side,

@@ -9,17 +9,17 @@
  */
 
 const Fall = (cfg, active, ck) => {
-    console.log(`Falling: ${JSON.stringify(cfg)}`);
-
     const { camera } = active;
     const cvt = cfg.convert;
 
+    console.log(`Falling: ${JSON.stringify(cfg)}`);
+    console.log(`Camere Z: `, camera.position.y);
+
     const g = 9.8;
-    const crouchDepth = 0.5;
     const recover = 0.4;
 
     const single = 50;
-    const full =  cfg.height + crouchDepth + recover;
+    const full =  cfg.height + recover;
     const total = 1000 * Math.sqrt(2 * full / g);
 
     const step = full * cvt * single / total;
@@ -29,10 +29,12 @@ const Fall = (cfg, active, ck) => {
             camera.position.y - step,       //!important, transform from Septopus to three.js     
             camera.position.z,
         );
+        console.log(`Changing Z: `, camera.position.y);
     }, single);
 
     setTimeout(() => {
         clearInterval(tt);
+        console.log(`Fall done Z: `, camera.position.y);
 
         if(!cfg.skip){
             const r_total = 300;        //recover from fall in 300ms
@@ -43,10 +45,12 @@ const Fall = (cfg, active, ck) => {
                     camera.position.y + r_step,       //!important, transform from Septopus to three.js     
                     camera.position.z,
                 );
+                console.log(`Recovering Z: `, camera.position.y);
             }, single);
 
             setTimeout(() => {
                 clearInterval(r_tt);
+                console.log(`Final Z: `, camera.position.y);
                 return ck && ck();
             },r_total);
         }else{
