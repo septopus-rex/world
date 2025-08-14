@@ -12,7 +12,7 @@
 const reg={
     name:"light",
     category:"basic",
-    desc:"",
+    desc:"Support different type of light.",
     version:"1.0.0",
 }
 

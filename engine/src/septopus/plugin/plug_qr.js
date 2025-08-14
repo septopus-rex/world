@@ -2,16 +2,17 @@
  * Plugin - QR
  *
  * @fileoverview
- *  1.show block owner QR, or donation QR.
+ *  1.show QR by 3D way.
  *
  * @author Fuu
  * @date 2025-04-29
  */
 
 const reg={
-    name:"qr", 
-    type:"plugin",
-    short:"e2",
+    name:"qr",
+    category: "adpluginjunct",
+    desc: "3D QR plugin, support different type of effects.",
+    version: "1.0.0",
 };
 
 const self={

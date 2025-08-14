@@ -12,6 +12,8 @@
 const reg={
     name:"detect",
     category:'system',
+    desc:"Septopus system detector.",
+    version:"1.0.0",
 }
 
 const self={
