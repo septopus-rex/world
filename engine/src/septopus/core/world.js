@@ -294,69 +294,6 @@ const self = {
             });
         });
     },
-
-    checkBlock: () => {
-        //console.log(`Checking block.`);
-        //1. get the block loading queue.
-        const name = config.queue.block;
-        const queue = VBW.queue.get(name);
-        if (queue.error) return false;
-        if (queue.length === 0) return false;
-
-        //2. check the first whether loaded
-        const todo = queue[0];
-        //console.log(JSON.stringify(todo));
-        const world = todo.world;
-        const dom_id = todo.container;
-        const chain = ["block", dom_id, world, todo.key, "raw"];
-        const dt = VBW.cache.get(chain);
-        if (dt.error) return false;
-
-        //3. if loaded, deal with the restruct and get the resource list
-        if (!dt.loading) {
-            //3.1. add the resource to loading queue.
-            const arr = todo.key.split("_");
-            const x = parseInt(arr[0]), y = parseInt(arr[1]);
-            const range = { x: x, y: y, world: world, container: dom_id };
-
-            VBW.prepair(range, (pre) => {
-                //!important, `block.loaded` event trigger 
-                const target={
-                    x:x,y:y,world:world,index:0,adjunct:"block",
-                    stamp:Toolbox.stamp(),
-                };
-                const evt={
-                    x:x,y:y,world:world,
-                }
-                VBW.event.trigger("block","loaded",evt,target);
-
-                self.loadingResourceQueue(pre, x, y, world, dom_id);
-
-                VBW[config.render].show(dom_id, [x, y, world]);
-            }, {});
-            queue.shift();
-        }
-    },
-
-    checkResource: () => {
-        const name = config.queue.resource;
-        const queue = VBW.queue.get(name);
-        if (queue.error) return false;
-        if (queue.length === 0) return false;
-
-        const todo = queue[0];
-        const { x, y, world, container, preload } = todo;
-        if (self.checkLoaded(preload.texture, preload.module)) {
-            queue.shift();
-
-            //rebuild 3D data then render
-            const range = { x: x, y: y, world: world, container: container };
-            VBW.prepair(range, (pre) => {
-                VBW[config.render].show(container, [x, y, world]);
-            }, {});
-        }
-    },
-
     checkLoaded: (txs, mds) => {
         const exsist = VBW.cache.exsist;
         for (let i = 0; i < txs.length; i++) {
@@ -550,13 +487,15 @@ const self = {
             }
         }
     },
-    setChecker: (dom_id, world) => {
-        const chain = ["block", dom_id, world, "loop"];
-        const queue = VBW.cache.get(chain);
-        queue.push({name: "block_checker", fun: self.checkBlock });
-        queue.push({name: "resource_checker", fun: self.checkResource });
-        queue.push({name: "trigger_runtime", fun: self.runTrigger });
-    },
+
+    /**
+     * push function to trigger queue.
+     * @param {function}    fun         - function need to push
+     * @param {integer}     n           - number of frames to run of the function
+     * @param {boolean}     onetime     - wether just run onetime.
+     * @param {string}      key         - key of trigger function
+     * @return void
+     */    
     pushRuntime:(fun,n,onetime,key)=>{
         console.log(key);
         const run={
@@ -577,6 +516,14 @@ const self = {
 
         VBW.queue.push(config.queue.trigger,run);  
     },
+
+    /**
+     * Frame-loop function to run trigger.
+     * @functions
+     * 1.check wether trigger queue.
+     * 2.run all functions in trigger queue and remove function from queue.
+     * @return void
+     */
     runTrigger:()=>{
         const queue=VBW.queue.get(config.queue.trigger);
         if(!queue || queue.length===0) return false;
@@ -592,7 +539,105 @@ const self = {
             }
         }
     },
+    /**
+     * Frame-loop function to check blocks loaded status.
+     * @functions
+     * 1.check wether block data loaded from network.
+     * 2.if loaded, construct the block one by one.
+     * @return void
+     */
+    checkBlock: () => {
+        //1. get the block loading queue.
+        const name = config.queue.block;
+        const queue = VBW.queue.get(name);
+        if (queue.error || queue.length === 0) return false;
 
+        //2. check the first whether loaded
+        const todo = queue[0];
+        const world = todo.world,dom_id = todo.container;
+        const dt = VBW.cache.get(["block", dom_id, world, todo.key, "raw"]);
+        if (dt.error) return false;
+
+        //3. if loaded, deal with the restruct and get the resource list
+        if (!dt.loading) {
+            //3.1. add the resource to loading queue.
+            const arr = todo.key.split("_");
+            const x = parseInt(arr[0]), y = parseInt(arr[1]);
+            const range = { x: x, y: y, world: world, container: dom_id };
+            VBW.prepair(range, (pre) => {
+                //!important, `block.loaded` event trigger 
+                const target={
+                    x:x,y:y,world:world,index:0,adjunct:"block",
+                    stamp:Toolbox.stamp(),
+                };
+                const evt={
+                    x:x,y:y,world:world,
+                }
+                VBW.event.trigger("block","loaded",evt,target);
+
+                self.loadingResourceQueue(pre, x, y, world, dom_id);
+
+                VBW[config.render].show(dom_id, [x, y, world]);
+            }, {});
+
+            queue.shift();      //remove frame-loop task
+        }
+    },
+
+    /**
+     * Frame-loop function to check resource loaded status.
+     * @functions
+     * 1.check wether resource loaded from network.
+     * 2.if loaded, construct the resource one by one.
+     * @return void
+     */
+    checkResource: () => {
+        const name = config.queue.resource;
+        const queue = VBW.queue.get(name);
+        if (queue.error || queue.length === 0) return false;
+
+        const todo = queue[0];
+        const { x, y, world, container, preload } = todo;
+        if (self.checkLoaded(preload.texture, preload.module)) {
+            //rebuild 3D data then render
+            const range = { x: x, y: y, world: world, container: container };
+            VBW.prepair(range, (pre) => {
+                VBW[config.render].show(container, [x, y, world]);
+            }, {});
+
+            queue.shift();      //remove frame-loop task
+        }
+    },
+
+    /**
+     * set frame loop queue.
+     * @param {string}  dom_id  - container DOM ID
+     * @param {integer} world   - world index
+     * @return void
+     */
+    setChecker: (dom_id, world) => {
+        const chain = ["block", dom_id, world, "loop"];
+        const queue = VBW.cache.get(chain);
+        queue.push({name: "block_checker", fun: self.checkBlock });
+        queue.push({name: "resource_checker", fun: self.checkResource });
+        queue.push({name: "trigger_runtime", fun: self.runTrigger });
+    },
+
+    /**
+     * launch blocks, showing holder when loading
+     * @functions
+     * 1. show holder of block before actual data loaded.
+     * 2. preload data and save them.
+     * @param {string}  dom_id  - container DOM ID
+     * @param {integer} x       - block X
+     * @param {integer} y       - block Y
+     * @param {integer} ext     - block Y
+     * @param {integer} world   - world index
+     * @param {integer} limit   - world range limit, [4096,4096]   
+     * @param {function}    ck      - callback function
+     * @param {object}      cfg     - reverse for more setting.
+     * @return void
+     */
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
         VBW.datasource.view(x, y, ext, world, (map) => {
             if (map.loaded !== undefined) {
@@ -622,17 +667,22 @@ const self = {
             }
         }, limit);
     },
+
+    /**
+     * set mode automatically.
+     * @param {string}  dom_id  - container dom ID
+     * @return void
+     */
     autoMode:(dom_id)=>{
         const player=VBW.cache.get(["env","player"]);
         const def=VBW.cache.get(["def","common"]);
-        console.log(def);
         if(!player.address){
-            console.log(`Set to ghost mode`);
+            //no player address, set to GHOST mode
             VBW.mode(def.MODE_GHOST,{container:dom_id},()=>{
 
             });
         }else{
-            console.log(`Set to normal mode`);
+            //got player address, set to NORMAL mode
             VBW.mode(def.MODE_NORMAL,{container:dom_id},()=>{
 
             });
@@ -683,7 +733,7 @@ const World = {
 
     /**
      * Stop render, needed in UI mode
-     * @param   {string}    dom_id- container DOM id
+     * @param   {string}    dom_id  - container DOM id
      * @void
      * */
     stop: (dom_id) => {
@@ -696,7 +746,7 @@ const World = {
 
     /**
      * start render, needed in UI mode
-     * @param   {string}    dom_id- container DOM id
+     * @param   {string}    dom_id  - container DOM id
      * @void
      * */
     start: (dom_id) => {
@@ -710,7 +760,7 @@ const World = {
 
     /**
      * Septopus World entry, start from 0 to start the 3D world
-     * @param   {string}    id- container DOM id
+     * @param   {string}    id      - container DOM id
      * @param   {function}  ck      - callback when loaded
      * @param   {object}    [cfg]   - {contract:methods,fullscreen:false,shadow:true}, config setting
      * @return  {boolean}   - whether load successful
@@ -832,7 +882,7 @@ const World = {
 
     /**
      * select single adjunct in a editing block
-     * @param{string}    dom_id  - container DOM id
+     * @param   {string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {number}    x       - coordination X
      * @param   {number}    y       - coordination y

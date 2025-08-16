@@ -233,8 +233,8 @@ const self = {
 
     /**
      * middle controller of datasource
-     * @param {function} fun       //datasource API function
-     * @return {function}  - new function of datasource
+     * @param {function} fun       - datasource API function
+     * @return {function}   - new function of datasource
      * @functions
      * 1.stop the request of datasource in game mode
      */
@@ -253,15 +253,15 @@ const self = {
 
     /**
      * construct render data, from STD to `three` (3D data format)
-     * @param {integer} x       //block X
-     * @param {integer} y       //block Y
-     * @param {integer} world   //world index
-     * @param {string}  dom_id  //container dom ID
-     * @return void
      * @functions
      * 1.attatch formatted THREE data to BLOCK_KEY.three
      * 2.filter out stop
      * 3.filter out trigger
+     * @param {integer} x       - block X
+     * @param {integer} y       - block Y
+     * @param {integer} world   - world index
+     * @param {string}  dom_id  - container DOM ID
+     * @return void
      */
     structRenderData: (x, y, world, dom_id) => {
         //1.get STD map from cache
@@ -336,14 +336,14 @@ const self = {
 
     /**
      * construct sinlge block raw data to STD data
-     * @param {integer} x       //block X
-     * @param {integer} y       //block Y
-     * @param {integer} world   //world index
-     * @param {string}  dom_id  //container dom ID
-     * @return void
      * @functions
-     * 1.attatch formatted STD data to BLOCK_KEY.std
-     * 2.set block parameters, such as elevation
+     * 1. attatch formatted STD data to BLOCK_KEY.std
+     * 2. set block parameters, such as elevation
+     * @param {integer} x       - block X
+     * @param {integer} y       - block Y
+     * @param {integer} world   - world index
+     * @param {string}  dom_id  - container DOM ID
+     * @return void
      */
     structSingle: (x, y, world, dom_id) => {
         //1.check whether constructed block;
@@ -381,17 +381,17 @@ const self = {
 
     /**
      * construct blocks and filter out preload
+     * @functions
+     * 1. construct blocks of formatted STD data.
+     * 2. filter out module and texture for preloading.
      * @param {integer}     x       - center block X
      * @param {integer}     y       - center block Y
      * @param {integer}     ext     - block extend from center
      * @param {integer}     world   - world index
-     * @param {string}      dom_id  - container dom ID
+     * @param {string}      dom_id  - container DOM ID
      * @param {function}    ck      - callback function
      * @param {object}      cfg     - reverse for more setting.
      * @return void
-     * @functions
-     * 1.construct blocks of formatted STD data.
-     * 2.filter out module and texture for preloading.
      */
     structEntire: (x, y, ext, world, dom_id, ck, cfg) => {
         //1.construct all blocks data
@@ -429,14 +429,14 @@ const self = {
 
     /**
      * set block to edit mode
+     * @functions
+     * 1. filter out module and texture for preloading.
+     * 2. restruct block adjuncts, including the active and hightlight.
      * @param {integer}     x       - center block X
      * @param {integer}     y       - center block Y
      * @param {integer}     world   - world index
-     * @param {string}      dom_id  - container dom ID
+     * @param {string}      dom_id  - container DOM ID
      * @return void
-     * @functions
-     * 1.filter out module and texture for preloading.
-     * 2.restruct block adjuncts, including the active and hightlight.
      */
     toEdit:(x,y,world,dom_id)=>{
         const preload={module:[],texture:[]};
@@ -487,14 +487,14 @@ const self = {
 
     /**
      * set selected adjunct, hightlight and show gtid
+     * @functions
+     * 1. hightlight selected adjunct.
+     * 2. create helper grid.
      * @param {integer}     x       - center block X
      * @param {integer}     y       - center block Y
      * @param {integer}     world   - world index
-     * @param {string}      dom_id  - container dom ID
+     * @param {string}      dom_id  - container DOM ID
      * @return void
-     * @functions
-     * 1.hightlight selected adjunct.
-     * 2.create helper grid.
      */
     toSelect:(x,y,world,dom_id)=>{
         const s_chain=["block",dom_id,world,"edit","selected"];
@@ -547,8 +547,12 @@ const self = {
 
     /** 
      * modify task entry. Change the "raw" data then rebuild all data.
+     * @functions
+     * 1. loop to excute tasks of modification.
+     * 2. save data for updating.
+     * 3. save data for recovering.
      * @param {object[]}    arr     - task array.
-     * @param {string}      dom_id  - container dom id.
+     * @param {string}      dom_id  - container DOM id.
      * @param {number}      world   - world index
      * @param {function}    ck      - callback function
      * @param {object[]}    failed  - failed task array.
@@ -558,7 +562,7 @@ const self = {
     excute:(arr, dom_id, world, ck, failed) => {
         if(failed===undefined) failed=[];
         if (arr.length === 0){
-            //before exit, clean all blocks need  fresh.
+            //before exit, clean all blocks need to fresh.
             const modified_chain = ["modified",dom_id,world];
             const ups = self.cache.get(modified_chain);
             if (!ups.error && !Toolbox.empty(ups)) {
