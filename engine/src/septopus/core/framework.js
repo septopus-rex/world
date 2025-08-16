@@ -76,21 +76,25 @@ const self = {
         }
         return {error:"No adjunct raw data."};
     },
-    clone: (obj) => {
-        return JSON.parse(JSON.stringify(obj));
+
+    structCache: () => {
+        const keys = config.keys;
+        for (let k in keys) {
+            const key = keys[k];
+            cache[key] = {};
+        }
+        return true;
     },
-    middle:(fun)=>{
-        return ((fun)=>{
-            return (...args)=>{
-                const dom_id=cache.active.current;
-                if(!dom_id || !cache.active.containers[dom_id] || !cache.def.common || !cache.def.common.MODE_GAME) return fun(...args);
-                const mode=cache.active.containers[dom_id].mode;
-                if(mode!==cache.def.common.MODE_GAME) return fun(...args); 
-                console.log("Stop requesting in game mode.");
-                return {error:"In game mode, failed to get data from network."}
-            }
-        })(fun)
+    initActive: () => {
+        cache.active = {
+            //world: 0,           // default world
+            containers: {},     // dom_id -->  raw data and structed data here
+            current: "",        // current active render
+            //mode:cache.def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
+        }
+        return true;
     },
+
     component: {
         //component registion
         reg: (cfg, component) => {
@@ -129,7 +133,7 @@ const self = {
 
         // short --> name relationship
         map: () => {
-            return self.clone(cache.map);
+            return Toolbox.clone(cache.map);
         },
     },
     cache: {
@@ -140,7 +144,7 @@ const self = {
                 if (tmp[chain[i]] === undefined) return { error: "Invalid data" };
                 tmp = tmp[chain[i]]
             }
-            return !clone ? tmp : self.clone(tmp);
+            return !clone ? tmp : Toolbox.clone(tmp);
         },
         exsist: (chain) => {
             if (!Array.isArray(chain)) return false;
@@ -175,7 +179,7 @@ const self = {
         dump: (copy) => {
             console.log("VBW:",Framework);
             if (!copy) return console.log("Cache:",cache);
-            return console.log("Cache:",self.clone(cache));
+            return console.log("Cache:",Toolbox.clone(cache));
         },
     },
     queue: {
@@ -226,22 +230,108 @@ const self = {
             return true;
         },
     },
-    structCache: () => {
-        const keys = config.keys;
-        for (let k in keys) {
-            const key = keys[k];
-            cache[key] = {};
-        }
-        return true;
+
+    /**
+     * middle controller of datasource
+     * @param {function} fun       //datasource API function
+     * @return {function}  - new function of datasource
+     * @functions
+     * 1.stop the request of datasource in game mode
+     */
+    middle:(fun)=>{
+        return ((fun)=>{
+            return (...args)=>{
+                const dom_id=cache.active.current;
+                if(!dom_id || !cache.active.containers[dom_id] || !cache.def.common || !cache.def.common.MODE_GAME) return fun(...args);
+                const mode=cache.active.containers[dom_id].mode;
+                if(mode!==cache.def.common.MODE_GAME) return fun(...args); 
+                console.log("Stop requesting in game mode.");
+                return {error:"In game mode, failed to get data from network."}
+            }
+        })(fun)
     },
-    initActive: () => {
-        cache.active = {
-            //world: 0,           // default world
-            containers: {},     // dom_id -->  raw data and structed data here
-            current: "",        // current active render
-            //mode:cache.def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
+
+    /**
+     * construct render data, from STD to `three` (3D data format)
+     * @param {integer} x       //block X
+     * @param {integer} y       //block Y
+     * @param {integer} world   //world index
+     * @param {string}  dom_id  //container dom ID
+     * @return void
+     * @functions
+     * 1.attatch formatted THREE data to BLOCK_KEY.three
+     * 2.filter out stop
+     * 3.filter out trigger
+     */
+    structRenderData: (x, y, world, dom_id) => {
+        //1.get STD map from cache
+        const key = `${x}_${y}`;
+        const std_chain = ["block", dom_id, world, key, "std"];
+        const map = self.cache.get(std_chain);
+
+        const rdata = {};
+        const stops=[];
+        const triggers=[];
+        const preload = {module: [],texture: []};
+
+        //2.filter out special components
+        const va = self.getElevation(x, y, world, dom_id);
+        for (let name in map) {
+            //2.1 construct standard 3D object;
+            const std=map[name];
+            const data = Framework[name].transform.std_3d(std, va);
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (row.material && row.material.texture) preload.texture.push(row.material.texture);
+                if (row.module) preload.module.push(row.module);
+                if (row.stop){
+                    const obj=Toolbox.clone(row.params);
+                    obj.material=row.stop;
+                    obj.orgin={
+                        adjunct:name,
+                        index:i,
+                        type:row.type,
+                    }
+                    stops.push(obj);
+                }
+                
+                if(name==="trigger"){
+                    const tgr=Toolbox.clone(row.params);
+                    tgr.material=row.material;
+                    tgr.orgin={
+                        type:row.type,
+                        index:i,
+                        adjunct:name,
+                    }
+                    triggers.push(tgr);
+                }
+            }
+            rdata[name] = data;
+
+            if(name==="trigger"){
+                for(let i=0;i<std.length;i++){
+                    const single=std[i];
+                    if(!single.event || !single.event.type || !single.event.fun) continue;
+                    const target={x:x,y:y,world:world,index:i,adjunct:"trigger"}
+                    Framework.event.on("trigger",single.event.type,single.event.fun,target);
+                }
+            }
         }
-        return true;
+
+        //3.save stop data;
+        //3.1.set THREE data;
+        const render_chain = ["block", dom_id, world, key, "three"];
+        self.cache.set(render_chain, rdata);
+
+        //3.2.set STOP data
+        const stop_chain = ["block", dom_id, world, key, "stop"];
+        self.cache.set(stop_chain, stops);
+
+        //3.3.set TRIGGER data
+        const trigger_chain = ["block", dom_id, world, key, "trigger"];
+        self.cache.set(trigger_chain, triggers);
+
+        return preload;
     },
 
     /**
@@ -250,8 +340,8 @@ const self = {
      * @param {integer} y       //block Y
      * @param {integer} world   //world index
      * @param {string}  dom_id  //container dom ID
-     * @returns 
-     * void
+     * @return void
+     * @functions
      * 1.attatch formatted STD data to BLOCK_KEY.std
      * 2.set block parameters, such as elevation
      */
@@ -289,78 +379,21 @@ const self = {
         return true;
     },
 
-    structRenderData: (x, y, world, dom_id) => {
-        //1.get STD map from cache
-        const key = `${x}_${y}`;
-        const std_chain = ["block", dom_id, world, key, "std"];
-        const map = self.cache.get(std_chain);
-
-        const rdata = {};
-        const stops=[];
-        const triggers=[];
-        const preload = {module: [],texture: []};
-
-        //2.filter out special components
-        const va = self.getElevation(x, y, world, dom_id);
-        for (let name in map) {
-            //2.1 construct standard 3D object;
-            const std=map[name];
-            const data = Framework[name].transform.std_3d(std, va);
-            for (let i = 0; i < data.length; i++) {
-                const row = data[i];
-                if (row.material && row.material.texture) preload.texture.push(row.material.texture);
-                if (row.module) preload.module.push(row.module);
-                if (row.stop){
-                    const obj=self.clone(row.params);
-                    obj.material=row.stop;
-                    obj.orgin={
-                        adjunct:name,
-                        index:i,
-                        type:row.type,
-                    }
-                    stops.push(obj);
-                }
-                
-                if(name==="trigger"){
-                    const tgr=self.clone(row.params);
-                    tgr.material=row.material;
-                    tgr.orgin={
-                        type:row.type,
-                        index:i,
-                        adjunct:name,
-                    }
-                    triggers.push(tgr);
-                }
-            }
-            rdata[name] = data;
-
-            if(name==="trigger"){
-                for(let i=0;i<std.length;i++){
-                    const single=std[i];
-                    if(!single.event || !single.event.type || !single.event.fun) continue;
-                    const target={x:x,y:y,world:world,index:i,adjunct:"trigger"}
-                    Framework.event.on("trigger",single.event.type,single.event.fun,target);
-                }
-            }
-        }
-
-        //3.save stop data;
-        //3.1.set THREE data;
-        const render_chain = ["block", dom_id, world, key, "three"];
-        self.cache.set(render_chain, rdata);
-
-        //3.2.set STOP data
-        const stop_chain = ["block", dom_id, world, key, "stop"];
-        self.cache.set(stop_chain, stops);
-
-        //3.3.set TRIGGER data
-        const trigger_chain = ["block", dom_id, world, key, "trigger"];
-        self.cache.set(trigger_chain, triggers);
-
-        return preload;
-    },
+    /**
+     * construct blocks and filter out preload
+     * @param {integer}     x       - center block X
+     * @param {integer}     y       - center block Y
+     * @param {integer}     ext     - block extend from center
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container dom ID
+     * @param {function}    ck      - callback function
+     * @param {object}      cfg     - reverse for more setting.
+     * @return void
+     * @functions
+     * 1.construct blocks of formatted STD data.
+     * 2.filter out module and texture for preloading.
+     */
     structEntire: (x, y, ext, world, dom_id, ck, cfg) => {
-
         //1.construct all blocks data
         //FIXME, get the limit by world not setting.
         const limit = self.cache.get(["setting", "limit"]);
@@ -393,6 +426,18 @@ const self = {
         prefetch.texture = Toolbox.unique(prefetch.texture);
         return ck && ck(prefetch);
     },
+
+    /**
+     * set block to edit mode
+     * @param {integer}     x       - center block X
+     * @param {integer}     y       - center block Y
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container dom ID
+     * @return void
+     * @functions
+     * 1.filter out module and texture for preloading.
+     * 2.restruct block adjuncts, including the active and hightlight.
+     */
     toEdit:(x,y,world,dom_id)=>{
         const preload={module:[],texture:[]};
 
@@ -439,6 +484,18 @@ const self = {
 
         return preload;
     },
+
+    /**
+     * set selected adjunct, hightlight and show gtid
+     * @param {integer}     x       - center block X
+     * @param {integer}     y       - center block Y
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container dom ID
+     * @return void
+     * @functions
+     * 1.hightlight selected adjunct.
+     * 2.create helper grid.
+     */
     toSelect:(x,y,world,dom_id)=>{
         const s_chain=["block",dom_id,world,"edit","selected"];
         if(!self.cache.exsist(s_chain)) return ck && ck({error:"No selected adjuct to highlight."});
@@ -488,7 +545,16 @@ const self = {
         return prefetch;
     },
 
-    //modify task entry. Change the "raw" data then rebuild all data.
+    /** 
+     * modify task entry. Change the "raw" data then rebuild all data.
+     * @param {object[]}    arr     - task array.
+     * @param {string}      dom_id  - container dom id.
+     * @param {number}      world   - world index
+     * @param {function}    ck      - callback function
+     * @param {object[]}    failed  - failed task array.
+     * @returns
+     * @return {object[]}    - failed task list, should be empty.
+     */
     excute:(arr, dom_id, world, ck, failed) => {
         if(failed===undefined) failed=[];
         if (arr.length === 0){
@@ -556,8 +622,7 @@ const self = {
 const Framework = {
     /** 
      * basic init function, run this before any actions.
-     * @returns 
-     * void
+     * @return void
      */
     init: () => {
         self.structCache();
@@ -599,7 +664,6 @@ const Framework = {
      * @param {object}   range  - {x:2051,y:1247,ext:2,world:0,container:"DOM_ID"}
      * @param {object}   cfg    - more setting for rebuild
      * @param {function} ck     - callback function
-     * @returns
      * @return void
      */
     load: (range,cfg,ck) => {
@@ -613,7 +677,6 @@ const Framework = {
      * @param {object}   target - {x:2051,y:1247,world:0,container:"DOM_ID"}
      * @param {function} ck     - callback function
      * @param {object}   cfg    - more setting for rebuild
-     * @returns
      * @return void
      */
     mode:(mode,target,ck,cfg)=>{
@@ -666,7 +729,6 @@ const Framework = {
      * @param {object}   target     - {x:100,y:200,world:0,container:DOM_ID}, spectial block to prepair
      * @param {function} ck         - callback function
      * @param {object}   [cfg]      - setting for fresh
-     * @returns
      * @return void
      */
     prepair:(target,ck,cfg)=>{
@@ -711,7 +773,6 @@ const Framework = {
      * @functions
      * 1.animation here
      * 2.frame synchronization queue
-     * @returns
      * @return void
      */
     loop: (ev) => {

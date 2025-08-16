@@ -79,7 +79,7 @@ const self = {
                 x:x,
                 y:y,
                 world:world,
-                data:VBW.block.format(),
+                data:VBW.block.holder(),
                 owner:"DEFAULT_DATA_NO_OWNER",
                 loading:true,
             }

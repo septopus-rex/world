@@ -9,7 +9,6 @@
  * @date 2025-04-23
  */
 
-
 import Toolbox from "../lib/toolbox";
 import VBW from "./framework";  //need to modify raw data, VBW import
 import World from "./world";
@@ -17,12 +16,8 @@ import World from "./world";
 const reg={
     name:"block",           //register key name
     category:"system",      //component category
-}
-
-const def={
-    "BLOCK_ELEVACATION_INDEX":0,
-    "BLOCK_ADJUNCTS_INDEX":1,
-    "BLOCK_STATUS_INDEX":2,
+    desc:"Block deocoder, basic component of system.",
+    version:"1.0.0",
 }
 
 const config={
@@ -32,12 +27,6 @@ const config={
     repeat:[10,10],     //texture repeat parameters
     active:{            //active ground cordon setting
         height: 0.5,    //cordon height
-        // color:[
-        //     0xff0000,       //red
-        //     0x00ff00,       //green
-        //     0x0000ff,       //blue
-        //     0xffff00,       //yellow
-        // ],
         color:{
             north:0xe11d48,     //red
             south:0x6b7280,     //black
@@ -45,8 +34,8 @@ const config={
             west:0x10b981,      //green
         }
     },
-    default:[0.2,1,[]],
-    basic:0.1,
+    //default:[0.2,1,[]],         //default block data
+    basic:0.1,                  //block default thickness
 };
 
 const funs={
@@ -276,8 +265,8 @@ const self={
 }
 
 const vbw_block={
-    format:()=>{
-        return Toolbox.clone(config.default);
+    holder:()=>{
+        return Toolbox.clone([0.2,1,[]]);
     },
     hooks:self.hooks,
     transform:self.transform,  

@@ -836,7 +836,7 @@ const World = {
      * @param   {number}    world   - world index
      * @param   {number}    x       - coordination X
      * @param   {number}    y       - coordination y
-     * @param{string}    name    - selected adjunct name
+     * @param   {string}    name    - selected adjunct name
      * @param   {number}    index   - selected adjunct index
      * @param   {number}    face    - selected adjunct face in ["x","y","z","-x","-y","-z"]
      * @param   {function}  ck      - callback function
@@ -866,8 +866,8 @@ const World = {
 
     /**
      * excute modify tasks entry
-     * @param{object[]}  tasks   - modify tasks need to do
-     * @param{string}    dom_id  - container DOM id
+     * @param   {object[]}  tasks   - modify tasks need to do
+     * @param   {string}    dom_id  - container DOM id
      * @param   {number}    world   - world index
      * @param   {function}  ck      - callback function
      * @callback - whether done callback

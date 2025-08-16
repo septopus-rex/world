@@ -42,6 +42,18 @@ const mock = {
                     "OBJECT_SELECTION":[],
                 },
             },
+            block:{
+                definition: {
+                    "BLOCK_INDEX_ELEVACATION":0,
+                    "BLOCK_INDEX_STATUS":1,
+                    "BLOCK_INDEX_ADJUNCTS":2,
+                },
+                sample:[0.2,1,[]],
+                version:2025,
+                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                source: "SOLANA_DATA_ACCOUNT",
+                owner: "SOLANA_PDA_ACCOUNT_OF_BLOCK",
+            },
             stop: {
                 definition: {
                     "TYPE_OF_STOP": 3,
