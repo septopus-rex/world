@@ -59,7 +59,7 @@ pub fn init(
 }
 
 pub fn start(
-    ctx: Context<NewWorld>,    //default from system
+    ctx: Context<NewWorld>,     //default from system
     index:u32,                  //index of world to  start
     data:String,                //world setting as JSON format
 ) -> Result<()> {
@@ -104,11 +104,12 @@ pub fn start(
 
 pub fn adjunct(
     ctx: Context<WorldAdjunct>,    //default from system
-    index: u32,                    //index of world to  start
+    index: u32,                    //index of world
     short: u32,                    //adjunct unique index
     name: String,                  //adjunct name
     format: String,
 ) -> Result<()> {
+
     //0. input check
     //0.1. index check
     //0.2. short limit
