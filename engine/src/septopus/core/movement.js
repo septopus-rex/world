@@ -38,7 +38,6 @@ const hooks={
 
 const vbw_movement={
     hooks:hooks,
-    
     body:{
         forward:(diff,ak)=>{
             return { position: [ -diff[0]*Math.sin(ak), diff[0]*Math.cos(ak), 0] }
@@ -73,60 +72,27 @@ const vbw_movement={
         },
     },
     head:{
-        //[sin-sin, sin-cos, cos-sin, cos-cos]
-        // up:(diff,ak)=>{
-        //     const bk=-diff[1]*0.1;
-        //     const x = Math.sin(bk) * Math.sin(ak);
-        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
-        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
-        //     return {rotation:[0,x,y]};
-        // },
-        // down:(diff,ak)=>{
-        //     const bk=diff[1]*0.1;
-        //     const x = Math.sin(bk) * Math.sin(ak);
-        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
-        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
-        //     return {rotation:[0,x,y]};
-        // },
         up:(diff,ak)=>{
-            //const bs=-diff[1]*0.1 * Math.cos(ak);
-            const bs=-diff[1]*0.1
-            return {rotation:[
-                bs*Math.cos(ak),
-                bs*Math.cos(ak),
-                0,
-            ]};
+            const bk = diff[1] * 0.1;
+            const EPS = 1e-4;
+            const maxPitch = Math.PI / 2 - EPS;
+            const pitch = Math.max(-maxPitch, Math.min(maxPitch, bk));
+
+            const rx = pitch; // X 轴：抬头/低头
+            const ry = 0;     // Y 轴：此方案不使用
+            const rz = ak;    // Z 轴：左右转头（世界 Z）
+            return {rotation:[rx, ry, rz],order:"ZXY"} ;
         },
         down:(diff,ak)=>{
-            //const bs=diff[1]*0.1 * Math.cos(ak);
-            const bs=diff[1]*0.1
-            return {rotation:[
-                bs*Math.cos(ak),
-                bs*Math.cos(ak),
-                0,
-            ]};
+            return {rotation:[0,0,0]};
         },
+
         left:(diff,ak)=>{
             return {rotation:[0,0,-diff[1]]};
         },
         right:(diff,ak)=>{
             return {rotation:[0,0,diff[1]]};
         },
-
-        // left:(diff,ak)=>{
-        //     const bk=-diff[1];
-        //     const x = Math.sin(bk) * Math.sin(ak);
-        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
-        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
-        //     return {rotation:[x,y,0]};
-        // },
-        // right:(diff,ak)=>{
-        //     const bk=diff[1];
-        //     const x = Math.sin(bk) * Math.sin(ak);
-        //     const y = -Math.sin(bk) * Math.cos(ak); // Three.js 的 Z → 你坐标系的 Y（负号）
-        //     const z = Math.cos(bk);                 // Three.js 的 Y → 你坐标系的 Z
-        //     return {rotation:[x,y,0]};
-        // },
     },
     scale:{
 

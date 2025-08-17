@@ -53,8 +53,8 @@ const config = {
         BODY_FALL: 70,      //F
         HEAD_LEFT: 37,      //Arrow left
         HEAD_RIGHT: 39,     //Arrow right
-        //HEAD_RISE: 38,      //Arrow up
-        //HEAD_DOWN: 40,      //Arrow down
+        HEAD_RISE: 38,      //Arrow up
+        HEAD_DOWN: 40,      //Arrow down
         JUMP: 32,           //Space
         SQUAT: 17,          //Ctrl
     },
@@ -135,6 +135,11 @@ const self = {
         }
         const target = objs[selected];
         return target.object.userData;
+    },
+    setWidth:(dom_id)=>{
+        const el=document.querySelector(`#${dom_id} canvas`);
+        if (!el) return false;
+        env.screen.width=el.width;
     },
     initTodo:()=>{
         const body=VBW.movement.body;
@@ -592,6 +597,7 @@ const self = {
 
         });
     },
+
     touch:(dom_id) =>{ 
         const id=`#${dom_id} canvas`;
         //1. double tap to go forward
@@ -631,15 +637,11 @@ const self = {
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
         });
     },
-    setWidth:(dom_id)=>{
-        const el=document.querySelector(`#${dom_id} canvas`);
-        if (!el) return false;
-        env.screen.width=el.width;
-    },
 }
 
 const controller = {
     hooks: self.hooks,
+
     construct: () => {
         const check = document.getElementById(config.id);
         if (check === null) {
@@ -650,6 +652,14 @@ const controller = {
         }
     },
 
+    /**
+     * entry of FPV controller
+     * @functions
+     * 1. add DOM to container.
+     * 2. set frame-loop function to check action.
+     * 3. set compass and other output.
+     * @param {string}  dom_id  - container DOM ID
+     */
     start: (dom_id) => {
         if (runtime.container !== null) return false;
         UI.show("toast", `Start FPV controller.`);

@@ -251,10 +251,11 @@ const self = {
             self.checkLocation(cam,pos,dom_id,skip);  
         }
     },
-    syncCameraRotation: (ro) => {
+    syncCameraRotation: (ro,order) => {
         for (let dom_id in env.camera) {
             //1. change camera position
             const cam = env.camera[dom_id];
+            if(!!order) cam.rotation.order = order; 
             cam.rotation.set(
                 cam.rotation.x + ro[0],
                 cam.rotation.y - ro[2],
@@ -424,7 +425,7 @@ const vbw_player = {
 
     /**
     * synchronous player movement to camera
-    * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0]}
+    * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0],order:"XYZ"}
     */
     synchronous: (diff) => {
         //console.log(`Changing: `,JSON.stringify(diff))
@@ -432,7 +433,7 @@ const vbw_player = {
 
         } else {
             if (diff.position) self.syncCameraPosition(diff.position);
-            if (diff.rotation) self.syncCameraRotation(diff.rotation);
+            if (diff.rotation) self.syncCameraRotation(diff.rotation,!diff.order?"":diff.order);
         }
     },
 

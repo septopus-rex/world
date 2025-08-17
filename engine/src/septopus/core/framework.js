@@ -233,10 +233,10 @@ const self = {
 
     /**
      * middle controller of datasource
-     * @param {function} fun       - datasource API function
-     * @return {function}   - new function of datasource
      * @functions
      * 1.stop the request of datasource in game mode
+     * @param {function} fun       - datasource API function
+     * @return {function}   - new function of datasource
      */
     middle:(fun)=>{
         return ((fun)=>{
