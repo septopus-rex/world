@@ -73,18 +73,18 @@ const vbw_movement={
     },
     head:{
         up:(diff,ak)=>{
-            const bk = diff[1] * 0.1;
+            const bk = diff[1]*0.2;
             const EPS = 1e-4;
             const maxPitch = Math.PI / 2 - EPS;
-            const pitch = Math.max(-maxPitch, Math.min(maxPitch, bk));
-
-            const rx = pitch; // X 轴：抬头/低头
-            const ry = 0;     // Y 轴：此方案不使用
-            const rz = ak;    // Z 轴：左右转头（世界 Z）
-            return {rotation:[rx, ry, rz],order:"ZXY"} ;
+            const rx = Math.max(-maxPitch, Math.min(maxPitch, bk));
+            return {rotation:[rx, 0, 0],order:"ZYX"} ;        //default ZXY
         },
         down:(diff,ak)=>{
-            return {rotation:[0,0,0]};
+            const bk = diff[1]*0.2;
+            const EPS = 1e-4;
+            const maxPitch = Math.PI / 2 - EPS;
+            const rx = Math.max(-maxPitch, Math.min(maxPitch, bk));
+            return {rotation:[-rx, 0, 0],order:"ZYX"} ;        //default ZXY
         },
 
         left:(diff,ak)=>{

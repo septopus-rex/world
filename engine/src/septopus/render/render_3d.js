@@ -645,6 +645,7 @@ const renderer={
 
             const cfg_camera = { width: width, height: height, fov: 50, near: 0.1, far: 1000000 };
             const camera = ThreeObject.get("basic", "camera", cfg_camera);
+            camera.rotation.order="ZYX";
 
             VBW.cache.set(chain, { render: render, camera: camera, scene: scene });
         }
