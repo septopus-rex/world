@@ -686,7 +686,7 @@ const Framework = {
     mode:(mode,target,ck,cfg)=>{
         const {x,y,world,container}=target;
         const def=cache.def.common;
-        //console.log(def);
+
         switch (mode) {
             case def.MODE_NORMAL:
                 cache.active.containers[container].mode=def.MODE_NORMAL;
@@ -696,6 +696,10 @@ const Framework = {
                 ){
                     delete cache.block[container][world].edit;
                 }
+
+                //TODO,here to check wether back to normal from game mode
+                //recover all trigger 
+
                 ck && ck();
                 break;
 

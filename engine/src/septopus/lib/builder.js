@@ -12,7 +12,6 @@
 import Toolbox from "./toolbox";
 
 //["不等于","等于","大于","小于","大于等于","小于等于"]
-
 const operator={
     "!=":(pa,pb)=>{
 
@@ -200,7 +199,6 @@ const TriggerBuilder = {
      * */
     set:(funs,root)=>{
         //1. cache task functions
-       
         for(let i=0;i<funs.length;i++){
             if(!objects[i]) continue;
             const row=funs[i];

@@ -974,6 +974,7 @@ const World = {
 
         const def=VBW.cache.get(["def","common"]);
         const mode = def.MODE_NORMAL;
+    
         VBW.mode(mode, target, () => {
             VBW[config.render].show(dom_id, [x, y, world]);
         });

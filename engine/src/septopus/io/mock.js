@@ -47,6 +47,7 @@ const mock = {
                     "BLOCK_INDEX_ELEVACATION":0,
                     "BLOCK_INDEX_STATUS":1,
                     "BLOCK_INDEX_ADJUNCTS":2,
+                    "BLOCK_INDEX_GAME_SETTING":3,
                 },
                 sample:[0.2,1,[]],
                 version:2025,
