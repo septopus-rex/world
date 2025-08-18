@@ -315,7 +315,7 @@ const mock = {
                     position: [12, 12, 0],   //默认开始的位置[x,y,z],z为站立高度
                     rotation: [0, 0, 0],   //默认的旋转位置
                     world:0,              //
-                    extend:3,              
+                    extend:2,              
                     stop:{
                         on:false,               //whether on stop ( including adjunct type )
                         adjunct:"",             //adjunct support stop attribution, need to figure out

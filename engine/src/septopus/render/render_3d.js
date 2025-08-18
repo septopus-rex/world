@@ -43,11 +43,21 @@ const self = {
         return VBW.cache.get(["env", "world", "side"]);
     },
 
-    //convert to satisfy the Three.js system
+    //coordination convert to satisfy to Three.js system
     transform: (arr) => {
         return [arr[0], arr[2], -arr[1]];
     },
 
+    /** 
+     * parse texture data
+     * @functions
+     * 1. parse module data and cache
+     * @param {integer[]}   arr         - texture id array
+     * @param {number}      world       - world index
+     * @param {string}      dom_id      - container DOM id
+     * @param {function}    ck          - callback function
+     * @callback  - callback failed to parse texture IDs.
+     */
     parseTexture: (arr, world, dom_id, ck) => {
         const failed = []
         const set = VBW.cache.set;
@@ -56,7 +66,7 @@ const self = {
             const index = arr[i];
             const chain = ["block", dom_id, world, "texture", index];
 
-            //1.看下资源是不是在
+            //1.check wether loaded
             const s_chain = ["resource", "texture", index];
             const tx = get(s_chain);
             if (tx.error) {
@@ -65,7 +75,7 @@ const self = {
                 continue;
             }
 
-            //2.生成three的object，挂载到对应位置
+            //2.cache for use
             const dt = ThreeObject.get("texture", "basic", { image: tx.image, repeat: tx.repeat });
             if (dt.error) {
                 failed.push(index);
@@ -77,6 +87,16 @@ const self = {
         return ck && ck(failed);
     },
 
+    /** 
+     * parse modules data
+     * @functions
+     * 1. parse module data and cache
+     * @param {integer[]}   arr         - module id array
+     * @param {number}      world       - world index
+     * @param {string}      dom_id      - container DOM id
+     * @param {function}    ck          - callback function
+     * @callback  - callback failed to parse module IDs.
+     */
     parseModule: (arr, world, dom_id, ck) => {
         const failed = []
         const set = VBW.cache.set;
@@ -119,6 +139,19 @@ const self = {
 
         return ck && ck(failed);
     },
+
+    /** 
+     * parse resource needed by 3D renderer
+     * @functions
+     * 1. parse texture data.
+     * 2. parse module data.
+     * @param {integer[]}   texture     -  texture id array
+     * @param {integer[]}   module      - module id array
+     * @param {number}      world       - world index
+     * @param {string}      dom_id      - container DOM id
+     * @param {function}    ck          - callback function
+     * @callback  - callback failed to parse IDs of module and texture
+     */
     parse: (texture, module, world, dom_id, ck) => {
         const failed = { module: [], texture: [] };
         //console.log(`3D Render to parse: ${JSON.stringify(texture)}, ${JSON.stringify(module)}`);
@@ -133,8 +166,21 @@ const self = {
         });
     },
 
-    //construct STD data to render data.
+    /** 
+     *construct STD data to render data.
+     * @functions
+     * 1. filter out texture and module.
+     * 2. filter animation
+     * 3. convert data to 3D_STD format, for the next step
+     * @param {integer}     x       - block X
+     * @param {integer}     y       - block Y
+     * @param {number}      world   - world index
+     * @param {object[]}    dt      - STD[], STD array
+     * @return void
+     */
     singleBlock: (x, y, world, dt) => {
+        //console.log(`Construct block: #${world} world [${x},${y}]`);
+        //console.log(JSON.stringify(dt));
         const result = { object: [], module: [], texture: [], animate: [] };
         for (let name in dt) {
             const list = dt[name];
@@ -170,8 +216,7 @@ const self = {
                     adjunct: name,
                     geometry: {
                         type: row.type,
-                        //!importrant, need to clone, when calc the position, will effect `raw data`
-                        params: Toolbox.clone(row.params),
+                        params: Toolbox.clone(row.params),  //!importrant, need to clone, when calc the position, will effect `raw data`
                     },
                 }
                 if (row.material !== undefined) obj3.material = row.material
@@ -185,9 +230,15 @@ const self = {
         return result;
     },
 
-    checkMaterial: (cfg, world, id) => {
+    /** create different type of material
+     * @param {object}      cfg     - {color:0x334455,texture:13}
+     * @param {integer}     world   - index of world
+     * @param {string}      dom_id  - container DOM id
+     * @return {object}     - standard 3D format to create material
+     * */
+    checkMaterial: (cfg, world, dom_id) => {
         if (cfg.texture) {
-            const chain = ["block", id, world, "texture", cfg.texture];
+            const chain = ["block", dom_id, world, "texture", cfg.texture];
             const dt = VBW.cache.get(chain);
             if (dt !== undefined && !dt.error) {
                 //return { type: "meshphong", params: { texture: dt } };
@@ -204,27 +255,39 @@ const self = {
                 }
             };
         }
+
         return { type: "linebasic", params: { color: config.color, opacity: 1 } };
     },
-    getMeshes:(target,scene)=>{
+
+    /** filter out the mesh for replacing
+     * @param {object}      target  - {x:100,y:201,world:0,adjunct:"module",index:0,module:19}
+     * @param {object}      scene   - 3D scene
+     * @return {false | object}     - false or 3D mesh for replacing
+     * */
+    filterMeshes:(target,scene)=>{
         for(let i=0;i<scene.children.length;i++){
             const data=scene.children[i].userData;
-            //console.log(data);
             if(data.x===undefined || 
                 data.y===undefined || 
                 data.name===undefined ||
                 !scene.children[i].isMesh
             ) continue;
-
-            //console.log(scene.children[i])
-
             if(data.x===target.x && 
                 data.y===target.y && 
                 data.name===target.adjunct) return scene.children[i];
         }
         return false;
     },
+
+    /** 3D module autoreplace function creator
+     * @functions
+     * 1. filter out the module mesh 
+     * 2. add parsed module to scene and remove holder mesh
+     * @param {object}      target  - {x:100,y:201,world:0,adjunct:"module",index:0,module:19}
+     * @return void
+     * */
     replaceFun:(target)=>{
+        //console.log(target);
         return ((adj)=>{
             return (ev)=>{
                 if(adj.module!==ev.id) return false;
@@ -232,7 +295,7 @@ const self = {
                 const active=VBW.cache.get(["active"]);
                 const dom_id=active.current;
                 const scene=active.containers[dom_id].scene;
-                const mesh=self.getMeshes(target,scene);
+                const mesh=self.filterMeshes(target,scene);
                 if(mesh===false) return false;
 
                 //2. get parsed module
@@ -249,11 +312,11 @@ const self = {
                 
                 const cvt=VBW.cache.get(["env", "world", "accuracy"]);
                 md.scale.set(cvt,cvt,cvt);
-                md.rotation.set(md.rotation.x - Math.PI*0.5, md.rotation.y,md.rotation.z);
+                md.rotation.set(md.rotation.x - Math.PI * 0.5, md.rotation.y,md.rotation.z);
     
                 scene.add(md);
 
-                //3.2. remove replace mesh
+                //3.2. remove replaced mesh
                 scene.remove(mesh);
                 if (mesh.material.map) {
                     mesh.material.map.dispose();
@@ -263,6 +326,19 @@ const self = {
             };
         })(target);
     },
+
+    
+    /** entry of getting 3D meshes
+     * @functions
+     * 1. create 3D object from `STD 3D` raw data
+     * 2. calc the position of new mesh
+     * 3. add userData to tag the 3D object
+     * @param {object}      single  - single standard 3D object
+     * @param {integer}     world   - index of world
+     * @param {integer[]}   side    - side size of single block
+     * @param {string}      dom_id  - container DOM id
+     * @return {object[]}   - 3D object array
+     * */
     getThree: (single, world, dom_id, side) => {
         const arr = [];
 
@@ -307,7 +383,15 @@ const self = {
 
         return arr;
     },
-
+        
+    /** set the sun of septopus world, run once at start point
+     * @functions
+     * 1. create the sunlight and add to scene
+     * 2. create directlight as shadow maker and add to the scene
+     * @param {object}      scene  - 3D scene
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
     setSunLight: (scene, dom_id) => {
         const player = env.player;
         const [x, y] = player.location.block;
@@ -333,6 +417,14 @@ const self = {
         scene.add(light);
     },
 
+    /** set the sky of septopus world, run once at start point
+     * @functions
+     * 1. create the sky object and add to scene.
+     * 2. add frame-loop function to update the sky.
+     * @param {object}      scene  - 3D scene
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
     setSky: (scene, dom_id) => {
         const player = env.player;
         const [x, y] = player.location.block;
@@ -359,10 +451,77 @@ const self = {
         queue.push({ name: "sky_checker", fun: VBW.sky.check });
     },
 
+    /** make the HELPER of special block visualable, in EDIT mode majoyly.
+     * @functions
+     * 1. get helper array.
+     * 2. create stop 3D objects and add to scene
+     * @param {object}      scene  - 3D scene
+     * @param {integer}     x       - block X
+     * @param {integer}     y       - block Y
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
+    showHelper: (scene, x, y, world, dom_id) => {
+        console.log(`Here to show helper on edit mode.`);
+    },
+
+    /** make the STOP of special block visualable, in EDIT mode majoyly.
+     * @functions
+     * 1. get stop array.
+     * 2. create stop 3D objects and add to scene
+     * @param {object}      scene  - 3D scene
+     * @param {integer}     x       - block X
+     * @param {integer}     y       - block Y
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
+    showStop: (scene, x, y, world, dom_id) => {
+        const stops = VBW.cache.get(["block", dom_id, world, `${x}_${y}`, "stop"]);
+        console.log(`Here to show stops on edit mode.`);
+        for (let i = 0; i < stops.length; i++) {
+            const row = stops[i];
+            const obj = {
+                geometry: {
+                    type: row.orgin.type,
+                    params: {
+                        size: row.size,
+                        position: row.position,
+                        rotation: row.rotation,
+                    },
+                },
+                material: row.material,
+                x: x,
+                y: y,
+                adjunct: `${row.orgin.adjunct}_stop`,
+            }
+
+            const side = self.getSide();
+            const ms = self.getThree(obj, world, dom_id, side);
+            for (let j = 0; j < ms.length; j++) {
+                if (ms[j].error) {
+                    UI.show("toast", ms[j].error, { type: "error" });
+                    continue;
+                }
+                scene.add(ms[j]);
+            }
+        }
+    },
+
+
     //FIXME, player can go out of editing block, this can effect the active block 
     //!important, in edit mode, player can go out the editing block, so the info of editing is isolated.
+    /** load the 3D object for EDIT mode
+     * @functions
+     * 1. load the border 3D objects.
+     * 2. load the helper grid.
+     * 3. load `stop` and `helper` of the block
+     * @param {object}      scene  - 3D scene
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
     loadEdit: (scene, dom_id) => {
-
         const world=env.player.location.world;
         const chain = ["block", dom_id, world, "edit"];
         if (!VBW.cache.exsist(chain)) return false;
@@ -425,44 +584,15 @@ const self = {
         self.showHelper(scene, edit.x, edit.y, world, dom_id);
         self.showStop(scene, edit.x, edit.y, world, dom_id);
     },
-    showHelper: (scene, x, y, world, dom_id) => {
-        console.log(`Here to show helper on edit mode.`);
-    },
-    showStop: (scene, x, y, world, dom_id) => {
-        const stops = VBW.cache.get(["block", dom_id, world, `${x}_${y}`, "stop"]);
-        console.log(`Here to show stops on edit mode.`);
-        for (let i = 0; i < stops.length; i++) {
-            const row = stops[i];
-            const obj = {
-                geometry: {
-                    type: row.orgin.type,
-                    params: {
-                        size: row.size,
-                        position: row.position,
-                        rotation: row.rotation,
-                    },
-                },
-                material: row.material,
-                x: x,
-                y: y,
-                adjunct: `${row.orgin.adjunct}_stop`,
-            }
 
-            const side = self.getSide();
-            const ms = self.getThree(obj, world, dom_id, side);
-            for (let j = 0; j < ms.length; j++) {
-                if (ms[j].error) {
-                    UI.show("toast", ms[j].error, { type: "error" });
-                    continue;
-                }
-                scene.add(ms[j]);
-            }
-        }
-    },
+    /** fresh blocks by player status
+     * @param {object}      scene  - 3D scene
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
     loadBlocks: (scene, dom_id) => {
         const player = env.player;
         const limit = VBW.setting("limit");
-        
         const ext = player.location.extend;
         const [x, y] = player.location.block;
         const world = player.location.world;
@@ -477,6 +607,17 @@ const self = {
         }
     },
 
+    /** fresh target block
+     * @functions
+     * 1. get all block 3D data and add to scene.
+     * 2. fresh animation queue for this block.
+     * @param {object}      scene  - 3D scene
+     * @param {integer}     x       - block X
+     * @param {integer}     y       - block Y
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
     fresh: (scene, x, y, world, dom_id) => {
         let mds = [], txs = [], objs = [], ans = [];
         const data_chain = ["block", dom_id, world, `${x}_${y}`, "three"];
@@ -541,8 +682,19 @@ const self = {
                 }
             }
         });
-
     },
+
+    /** clean target block data from scene
+     * @functions
+     * 1. remove meshes in scene.
+     * 2. remove animate objects.
+     * @param {object}      scene  - 3D scene
+     * @param {integer}     x       - block X
+     * @param {integer}     y       - block Y
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
     clean: (scene, x, y, world, dom_id) => {
         //1. remove related objects from scene
         //1.1. filter out Mesh to remove
@@ -590,6 +742,8 @@ const self = {
         }
         VBW.cache.set(ani_chain, arr);
     },
+
+    //demo code for 3D objects testing
     demo:(scene,dom_id)=>{
         const cvt=self.getConvert();
         const bk=[2025,620],side=16000;
@@ -630,6 +784,16 @@ const self = {
 const renderer={
     hooks: self.hooks,
 
+    /** struct the renderer env
+     * @functions
+     * 1. create basic 3D components [ scene, renderer, camera ]
+     * 2. cache player status
+     * @param   {integer}   width       - container width
+     * @param   {integer}   heigth      - container height
+     * @param   {string}    dom_id      - container DOM id
+     * @param   {object}    [cfg]       - more setting for 3D env.
+     * @return  {domElement}       - domElement for 3D renderer.
+     * */
     construct: (width, height, dom_id, cfg) => {
         //console.log(cfg);
 
@@ -656,9 +820,13 @@ const renderer={
         return dt.render.domElement;
     },
 
-    /**  renderer entry
-     * @param   {string}    dom_id//container dom id
-     * @param   {number[]}  block       //block coordinaration,[ x,y,world ]
+    /** 3D renderer entry to fresh scene
+     * @functions
+     * 1. check wether the first time to run, if so, set the env
+     * 2. if parameter `block` is set, reload it as editing block.
+     * 3. load DEMO test for 3D objects. [ for debug ]
+     * @param   {string}    dom_id      - container DOM id
+     * @param   {number[]}  [block]     - block coordinaration,[ x,y,world ]
      * */
     show: (dom_id, block) => {
         const chain = ["active", "containers", dom_id];
@@ -701,11 +869,20 @@ const renderer={
         }
     },
 
+    /** clean target block data in scene
+     * @functions
+     * 1. remove meshes in scene.
+     * 2. remove animate objects.
+     * @param {string}      dom_id  - container DOM id
+     * @param {integer}     world   - world index
+     * @param {integer}     x       - block X
+     * @param {integer}     y       - block Y
+     * @return void
+     * */
     clean: (dom_id, world, x, y) => {
         const chain = ["active", "containers", dom_id];
         const data = VBW.cache.get(chain);
-        const { render, scene, camera } = data;
-
+        const scene = data.scene;
         self.clean(scene, x, y, world, dom_id);
     },
 }
