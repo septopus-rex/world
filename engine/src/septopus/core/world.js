@@ -226,6 +226,11 @@ const self = {
         return failed;
     },
 
+    /**
+     * format basic world setting
+     * @param {object}   wd     - world setting
+     * @return void
+     */
     formatWorld: (wd) => {
         wd.side = [
             wd.block.limit[0] * wd.accuracy,
@@ -233,7 +238,14 @@ const self = {
         ];
         return wd;
     },
-
+        
+    /**
+     * fetch module data from network
+     * @param {integer[]}   arr     - module IDs
+     * @param {function}    ck      - callback function
+     * @callback
+     * @param {integer[]}   failed  - failed IDs
+     */
     fetchModules: (arr, ck) => {
         if (!VBW.datasource || !VBW.datasource.module) {
             return { eror: "No datasource method for module loading." };
@@ -241,36 +253,23 @@ const self = {
         const failed = [];
         //1.get data from IPFS
         VBW.datasource.module(arr, (map) => {
-
             for (let id in map) {
                 const row=map[id];
                 const chain = ["resource", "module", id];
                 if(VBW.cache.exsist(chain)) continue;
-                //2.parse module;
-                // if(row.type && !VBW.cache.exsist(chain)){
-                //     const type=row.type.toLocaleLowerCase();
-                //     const cfg={
-                //         type:type,
-                //         target:row.raw,
-                //         callback:((id)=>{
-                //             return (obj)=>{
-                //                 console.log(obj,parseInt(id));
-                //                 const chain = ["resource", "module", parseInt(id)];
-                //                 const row=VBW.cache.get(chain);
-                //                 row.three=obj;
-                //                 console.log(row);
-                //             };
-                //         })(id),
-                //     }
-                //     ThreeObject.get("basic","loader",cfg);
-                // }
-
                 VBW.cache.set(chain, row);
             }
             return ck && ck(failed);
         })
-
     },
+
+    /**
+     * fetch texture data from network
+     * @param {integer[]}   arr     - texture IDs
+     * @param {function}    ck      - callback function
+     * @callback
+     * @param {integer[]}   failed  - failed IDs
+     */
     fetchTextures: (arr, ck) => {
         if (!VBW.datasource || !VBW.datasource.texture) {
             return { eror: "No datasource method for texture loading." };
@@ -284,6 +283,15 @@ const self = {
             return ck && ck(failed);
         });
     },
+
+    /**
+     * fetch texture and module data from network
+     * @param {integer[]}   txs     - texture IDs
+     * @param {integer[]}   mds     - module IDs
+     * @param {function}    ck      - callback function
+     * @callback
+     * @param {object} failed  - {texture:[],module:[]}, failed IDs
+     */
     prefetch: (txs, mds, ck) => {
         const failed = { module: [], texture: [] };
         self.fetchTextures(txs, (tx_failed) => {
@@ -294,6 +302,13 @@ const self = {
             });
         });
     },
+
+    /**
+     * check wether all data need to load successful
+     * @param {integer[]}     txs     - texture IDs
+     * @param {integer[]}     mds     - module IDs
+     * @return {boolean}
+     */
     checkLoaded: (txs, mds) => {
         const exsist = VBW.cache.exsist;
         for (let i = 0; i < txs.length; i++) {
@@ -310,6 +325,16 @@ const self = {
 
         return true;
     },
+    
+    /**
+     * resource queue of on loading
+     * @param {object}      pre     - {texture:[],module:[]}, resource IDs for frefetch
+     * @param {integer}     x       - block X
+     * @param {integer}     y       - block Y
+     * @param {integer}     world   - world index
+     * @param {string}      dom_id  - container DOM ID
+     * @return void
+     */
     loadingResourceQueue: (pre, x, y, world, dom_id) => {
         //1. set resource queue;
         const name = config.queue.resource;
@@ -328,8 +353,15 @@ const self = {
         });
         return true;
     },
+
+    /**
+     * block queue of on loading
+     * @param {object}      map      - {`${x}_${y}`:BLOCK_HOLDER_RAW_DATA}
+     * @param {string}      dom_id   - container DOM ID
+     * @return void
+     */
     loadingBlockQueue: (map, dom_id) => {
-        //console.log(dom_id);
+        //{"2023_617":{"x":2023,"y":617,"world":0,"data":[0.2,1,[]],"owner":"DEFAULT_DATA_NO_OWNER","loading":true}}
         const name = config.queue.block;
         const push = VBW.queue.push;
         for (let key in map) {
@@ -341,7 +373,11 @@ const self = {
         }
         return true;
     },
-    //menu of layout, basic action
+
+    /**
+     * setup the UI of system
+     * @return void
+     */
     layout: () => {
         const buttons=actions.buttons;
         const menus = [
@@ -355,10 +391,18 @@ const self = {
             buttons.start,
             buttons.clean,
         ];
-        const cfg_menu = {}
+        const cfg = {}
 
-        UI.show("menu", menus, cfg_menu);
+        UI.show("menu", menus, cfg);
     },
+
+    /**
+     * subcribe network data update.
+     * @function
+     * 1. subcribe the block height update.
+     * 2. calculate time and weather to update system
+     * @return void
+     */
     subcribe: () => {
         const target = "height";
         const key = "getSlot"
@@ -367,9 +411,98 @@ const self = {
             VBW.weather.calc(data);
         });
     },
-    setup: (wd) => {
-        //console.log(`setup system by data on chain`, wd);
+    
+    /**
+     * get trigger functions from adjuncts
+     * @return {object}  - {adjunct:{}}, return the functions of adjunct for trigger
+     */ 
+    getAdjunctTriggerFuns:()=>{
+        const map=VBW.component.map();
+        const funs={};
+        for(let name in map){
+            if(!isNaN(parseInt(name))) continue;
+            if(!VBW[name] || !VBW[name].task) continue;
+            funs[name]=VBW[name].task;
+        }
+        return funs;
+    },
 
+    /**
+     * setup trigger runtime, definition from network
+     * @function
+     * 1. set definition of system.
+     * 2. set trigger functions. [sysetem,adjunct,player,bag]
+     * 3. create trigger runtime queue.
+     * @param {object}      def      - trigger definition from network
+     * @return void
+     */ 
+    setupTrigger:(def)=>{
+        //console.log(def);
+        //1. set trigger definition
+        TriggerBuilder.definition(def);
+        const adjs=self.getAdjunctTriggerFuns();
+
+        //2. set functions
+        //2.1. component task functions
+        const funs=[    
+            {
+                ui:UI.task(),
+                weather:VBW.weather.task(),
+                router:["ui","weather"],
+            },
+            adjs,
+            VBW.player.task(),
+            VBW.bag.task(),
+        ];
+
+        //2.2. VBW system function
+        const system={
+            get:VBW.cache,
+            push:self.pushRuntime,
+        };
+        //2.3. set to builder
+        TriggerBuilder.set(funs,system);
+
+        //2. create trigger runtime queue
+        VBW.queue.init(config.queue.trigger);
+    },
+
+    /**
+     * world setting run once
+     * @function
+     * 1. set UI
+     * 2. start listener to get data.
+     * 3. set contract methods
+     * @param {string}      dom_id   - container DOM ID
+     * @param {object}      cfg      - {contract:{}}
+     * @return void
+     */ 
+    runOnce: (dom_id, cfg) => {
+        //0.set current active dom_id
+        const current_chain = ["active", "current"];
+        VBW.cache.set(current_chain, dom_id);
+
+        //0.1. set UI layout
+        self.layout();
+
+        //0.2. start listener.
+        self.subcribe();
+
+        //0.3. set contract requests.
+        if (cfg && cfg.contract && VBW.datasource && VBW.datasource.contract) {
+            VBW.datasource.contract.set(cfg.contract);
+        }
+    },
+    /**
+     * setup system by basic world setting
+     * @function
+     * 1. create adjunct map
+     * 2. set definition to adjunct, for decoding.
+     * 3. set trigger runtime env
+     * @param {object}      wd   - basic world setting
+     * @return void
+     */ 
+    setup: (wd) => {
         //1.create adjunct map;
         if (!wd.adjunct) UI.show("toast", `Adjunct definition missing.`, { type: "error" });
         const map = {}, def = {};
@@ -398,59 +531,20 @@ const self = {
         //4.group trigger definition
         self.setupTrigger(def);
     },
-    setupTrigger:(def)=>{
-        //1. set trigger definition
-        TriggerBuilder.definition(def);
-        const adjs=self.getAdjunctTriggerFuns();
 
-        //2. set functions
-        //2.1. component task functions
-        const funs=[    
-            {
-                ui:UI.task(),
-                weather:VBW.weather.task(),
-                router:["ui","weather"],
-            },
-            adjs,
-            VBW.player.task(),
-            VBW.bag.task(),
-        ];
-        //2.2. VBW system function
-        const system={
-            get:VBW.cache,
-            push:self.pushRuntime,
-        };
-        TriggerBuilder.set(funs,system);
-
-        //2. create trigger runtime queue
-        VBW.queue.init(config.queue.trigger);
-    },
-    getAdjunctTriggerFuns:()=>{
-        const map=VBW.component.map();
-        const funs={};
-        for(let name in map){
-            if(!isNaN(parseInt(name))) continue;
-            if(!VBW[name] || !VBW[name].task) continue;
-            funs[name]=VBW[name].task;
-        }
-        return funs;
-    },
-    runOnce: (dom_id, cfg) => {
-        //0.set current active dom_id
-        const current_chain = ["active", "current"];
-        VBW.cache.set(current_chain, dom_id);
-
-        //0.1. set UI layout
-        self.layout();
-
-        //0.2. start listener.
-        self.subcribe();
-
-        //0.3. set contract requests.
-        if (cfg && cfg.contract && VBW.datasource && VBW.datasource.contract) {
-            VBW.datasource.contract.set(cfg.contract);
-        }
-    },
+    /**
+     * initialize the runtime of world, run once
+     * @function
+     * 1. get the world setting from network
+     * 2. format player data and calculat the capacity.
+     * 3. start event system of septopus world
+     * 4. set the frame-loop functions
+     * @param {string}      dom_id  - container DOM ID
+     * @param {function}    ck      - callback function
+     * @callback 
+     * @param {object}      world  - basic world setting
+     * @param {integer[]}   limit  - world size limit
+     */ 
     initEnv: (dom_id, ck) => {
         //{"block":[2025,502],"world":0,"position":[7.326341784000396,12.310100473087282,0],"rotation":[0,0.3875731999042833,0],"stop":-1,"extend":2}
         //1. get player location
@@ -477,12 +571,18 @@ const self = {
             })
         });
     },
-    saveWorld: (world_info) => {
+
+    /**
+     * save world setting
+     * @param {object}    info    - basic world information
+     * @return void
+     */ 
+    saveWorld: (info) => {
         //1.save the world data;
-        if (world_info !== undefined) {
+        if (info !== undefined) {
             const w_chain = ["env", "world"];
             if (!VBW.cache.exsist(w_chain)) {
-                const wd = self.formatWorld(world_info);
+                const wd = self.formatWorld(info);
                 VBW.cache.set(w_chain, wd);
             }
         }
@@ -771,6 +871,7 @@ const World = {
         UI.show("toast", `Start to struct world. Framework:`, VBW);
 
         self.runOnce(dom_id, cfg);
+
         self.initEnv(dom_id, (world, limit) => {
             UI.show("toast", `World data load from network successful.`);
             const pos=VBW.cache.get(["env","player","location"]);
