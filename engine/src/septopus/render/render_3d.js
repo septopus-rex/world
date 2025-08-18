@@ -98,6 +98,7 @@ const self = {
      * @callback  - callback failed to parse module IDs.
      */
     parseModule: (arr, world, dom_id, ck) => {
+        
         const failed = []
         const set = VBW.cache.set;
         for (let i = 0; i < arr.length; i++) {
@@ -108,12 +109,12 @@ const self = {
             if(!VBW.cache.exsist(orgin)){
                 set(chain, { error: "No module resource" });
             }else{
-
                 //2. parse module and storage
                 const row=VBW.cache.get(orgin);
                 if(row.type && row.three === undefined){
-                    row.three=null;    //set null to avoid multi decoding
-                    const type=row.type.toLocaleLowerCase();
+                    //!important, set null to avoid multi decoding
+                    row.three = null;    
+                    const type = row.type.toLocaleLowerCase();
                     const cfg={
                         type:type,
                         target:row.raw,
@@ -136,7 +137,6 @@ const self = {
                 }
             }
         }
-
         return ck && ck(failed);
     },
 

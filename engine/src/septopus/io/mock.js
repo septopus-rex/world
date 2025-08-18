@@ -355,7 +355,11 @@ const mock = {
     block: (x, y, world) => {
         const rand = Toolbox.rand;
         if (x === 2025 && y === 501) {
-            return { x: x, y: y, world: world, data: [0.2, [], 1], owner: "LOCATION_ADDRESS" }
+            return { x: x, y: y, world: world, data: [0.2, 1, []], owner: "LOCATION_ADDRESS" }
+        }
+
+        if (x === 2026 && y === 619 ) {
+            return { x: x, y: y, world: world, data: [0.2, 1, [], 999], owner: "LOCATION_ADDRESS" }
         }
 
         if (x === 2024 && (y === 619 || y===618)) {
@@ -632,16 +636,16 @@ const mock = {
         }
     },
     module: (id) => {
-        // if(id===6){
-        //     return {
-        //         index: id,
-        //         type: "FBX",
-        //         raw: "module/house.fbx",
-        //         params: {
-        //             size:[4,3,3],
-        //         },
-        //     }
-        // }
+        if(id===6){
+            return {
+                index: id,
+                type: "FBX",
+                raw: "module/house.fbx",
+                params: {
+                    size:[4,3,3],
+                },
+            }
+        }
         return {
             index: id,
             type: ["3DS", "DAE", "FBX", "MMD"][Toolbox.rand(0, 3)],
@@ -649,6 +653,40 @@ const mock = {
             params: {
 
             },
+        }
+    },
+    //get on-chain resource by ID
+    resource: (id) =>{
+        if(id===999){
+            return {
+                game:"running",
+                baseurl:"http://lcoalhost:9900",
+                homepage:"",
+                version:"1.0.1",
+                methods:[
+                    {
+                        name:"start",
+                        params:[],
+                        response:[
+                            {type:"string",length:12},
+                        ],
+                    },
+                    {
+                        name:"view",
+                        params:[
+                            {type:"number",limit:[0,255]},
+                            {type:"string",limit:[0,30]},
+                        ],
+                        response:[
+                            {key:"data",format:"string"},
+                        ],
+                    },
+                ],
+            }
+        }
+
+        return {
+            game:"running",
         }
     },
 }

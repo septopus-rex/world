@@ -34,7 +34,6 @@ const config={
             west:0x10b981,      //green
         }
     },
-    //default:[0.2,1,[]],         //default block data
     basic:0.1,                  //block default thickness
 };
 
@@ -73,20 +72,24 @@ const funs={
     },
 };
 
+let definition=null;       //cache block definition here.
 const self={
     hooks:{
         reg:()=>{
             return reg;
         },
-        animate:(mesh)=>{
-            console.log(mesh);
+        // animate:(mesh)=>{
+        //     console.log(mesh);
+        // },
+        def:(data)=>{
+            definition=data;
         },
-        setting:()=>{
-            return {
-                default:config,
-                definition:def,
-            }
-        },
+        // setting:()=>{
+        //     return {
+        //         default:config,
+        //         definition:def,
+        //     }
+        // },
     },
     menu:{
         pop:(std)=>{
@@ -138,7 +141,9 @@ const self={
     transform:{
         //convert raw data to standard septopus world object format
         raw_std:(obj,cvt,side)=>{
-            const [va,adjs,status]=obj;
+            const def=definition;
+            const va=obj[def.BLOCK_INDEX_ELEVACATION];
+            const status=obj[def.BLOCK_INDEX_STATUS];
             const s=side[0],hs=0.5*s;
             const bh=config.basic*cvt;
             const data={
@@ -152,7 +157,12 @@ const self={
                     color:config.color,
                     repeat:config.repeat,
                 },
-}
+            };
+
+            if(obj[def.BLOCK_INDEX_GAME_SETTING]!==undefined){
+                data.game=obj[def.BLOCK_INDEX_GAME_SETTING];
+            };
+            
             return [data];
         },
 

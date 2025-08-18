@@ -18,7 +18,7 @@
 
 * 游戏模式是为了提升玩家的体验，有两方面的功能需要实现，一是预加载，二是启动触发器支持
 
-* Game Mode的请求如下。配置文件写在`Block`里
+* Game Mode的请求如下。在检测到block位置有Game的Setting时候，可以进入到Game模式。后期考虑Game的Adjunct来进行触发。
 
 ```Javascript
     const target = { x: x, y: y, world: world, container: dom_id }  //游戏开始的block
@@ -66,12 +66,21 @@
 * 游戏模式下，切断了所有的系统请求，不会对状态进行更新。只和设定的`游戏API`进行互动，
 
 * 游戏模式下，增加对预定义的外部API的支持，以明文的方式保存在链上。使用和`trigger`一致的定义来调用系统资源。
+    1. `end`方法必须存在，用于处理游戏正常结束，`游戏服务器`接受数据。
+    2. `start`方法必须存在，用于游戏开始，`游戏服务器`初始化运行环境。
 
 ```Javascript
     const game_setting={
         game:"fly",
         baseurl:"https://game_API.fun",
         methods:[
+            {
+                name:"end",                       
+                params:[],
+                response:[
+                    {type:"string",length:12},
+                ],
+            },
             {
                 name:"start",
                 params:[],
