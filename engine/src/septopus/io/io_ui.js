@@ -46,6 +46,11 @@ const doms={
             close:null,
         },
     },
+    mode:{
+        events:{
+            click:null,
+        },
+    },
     compass:{       //compass for player
         events:{
             click:null,
@@ -404,12 +409,14 @@ const router={
         const id=`${config.prefix}menu`;
         const name="menu";
         const dom=self.domMenu(arr,name);
-
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "menu"`);
 
         el.appendChild(dom);
         self.bindActions(arr,name);
+    },
+    mode:(arr,cfg)=>{
+
     },
     pop:(arr,cfg)=>{
         const id=`${config.prefix}pop`;

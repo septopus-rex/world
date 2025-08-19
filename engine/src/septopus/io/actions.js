@@ -92,9 +92,7 @@ const buttons = {
         label: "Game", icon: "", action: async () => {
             const def=VBW.cache.get(["def","common"]);
             const current=VBW.cache.get(["active","current"]);
-            
             const cfg={blocks:[[2024,340],[2024,340,2,3],[]],style:{}};
-
             VBW.mode(def.MODE_GAME,{container:current},()=>{
 
             },cfg);

@@ -594,10 +594,6 @@ const mock = {
         };
     },
 
-    //unique resource mock data
-    resource:(id)=>{
-        
-    },
     content: (id) => {
         const txts=[
             "跌落死亡，请稍后再试",
@@ -625,14 +621,18 @@ const mock = {
         if(id===666){
             return {
                 index: id,
-                image: arr[4],
+                type:"texture",
+                format:"jpg",
+                raw: arr[4],
                 repeat: [1, 1]
             }
         }
 
         return {
             index: id,
-            image: arr[Toolbox.rand(0, arr.length - 2)],
+            type:"texture",
+            format:"jpg",
+            raw: arr[Toolbox.rand(0, arr.length - 2)],
             repeat: [1, 1]
         }
     },
@@ -640,7 +640,8 @@ const mock = {
         if(id===6){
             return {
                 index: id,
-                type: "FBX",
+                type:"module",
+                format:"FBX",
                 raw: "module/house.fbx",
                 params: {
                     size:[4,3,3],
@@ -649,7 +650,8 @@ const mock = {
         }
         return {
             index: id,
-            type: ["3DS", "DAE", "FBX", "MMD"][Toolbox.rand(0, 3)],
+            type:"module",
+            format: ["3DS", "DAE", "FBX", "MMD"][Toolbox.rand(0, 3)],
             raw: "RAW_DATA_OF_3D_MODULE",
             params: {
 
@@ -660,34 +662,44 @@ const mock = {
     resource: (id) =>{
         if(id===999){
             return {
-                game:"running",
-                baseurl:"http://lcoalhost:9900",
-                homepage:"",
-                version:"1.0.1",
-                methods:[
-                    {
-                        name:"start",
-                        params:[],
-                        response:[
-                            {type:"string",length:12},
-                        ],
-                    },
-                    {
-                        name:"view",
-                        params:[
-                            {type:"number",limit:[0,255]},
-                            {type:"string",limit:[0,30]},
-                        ],
-                        response:[
-                            {key:"data",format:"string"},
-                        ],
-                    },
-                ],
+                index: id,
+                type:"game",
+                format:"json",
+                raw:{
+                    game:"running",
+                    baseurl:"http://lcoalhost:9900",
+                    homepage:"",
+                    version:"1.0.1",
+                    methods:[
+                        {
+                            name:"start",
+                            params:[],
+                            response:[
+                                {type:"string",length:12},
+                            ],
+                        },
+                        {
+                            name:"view",
+                            params:[
+                                {type:"number",limit:[0,255]},
+                                {type:"string",limit:[0,30]},
+                            ],
+                            response:[
+                                {key:"data",format:"string"},
+                            ],
+                        },
+                    ],
+                },
             }
         }
 
         return {
-            game:"running",
+            index: id,
+            type:"game",
+            format:"json",
+            raw:{
+                
+            }
         }
     },
 }

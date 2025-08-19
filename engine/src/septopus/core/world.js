@@ -50,7 +50,6 @@ import basic_trigger from "../adjunct/basic_trigger";
 import plug_link from "../plugin/plug_link";
 import Toolbox from "../lib/toolbox";
 import TriggerBuilder from "../lib/builder";
-//import ThreeObject from "../three/entry";
 
 const regs = {
     core: [vbw_detect,vbw_sky,vbw_time,vbw_weather,vbw_block,vbw_player,vbw_movement,vbw_event,vbw_bag,API],
@@ -59,24 +58,6 @@ const regs = {
     adjunct: [ basic_stop,basic_trigger,basic_light,basic_box,basic_module,adj_wall,adj_water],
     plugin: [plug_link],
 };
-
-const def = {
-    event: {
-        ticktock: {
-            desc: "Interval to calc time for VBW, blockchain height normally.",
-            params: [],
-        },
-        update: {
-            desc: "Block data updated, link to contract event normally",
-            params: [],
-        },
-    },
-    agent: {
-        onWeatherChange: {
-
-        },
-    }
-}
 
 const config = {
     render: "rd_three",
@@ -392,7 +373,6 @@ const self = {
             buttons.clean,
         ];
         const cfg = {}
-
         UI.show("menu", menus, cfg);
     },
 
@@ -723,11 +703,24 @@ const self = {
         queue.push({name: "trigger_runtime", fun: self.runTrigger });
     },
 
+    /**
+     * binding game mode event, in block to trigger
+     * @functions
+     * @param {string}  dom_id  - container DOM ID
+     * @param {integer} x       - block X
+     * @param {integer} y       - block Y
+     * @param {integer} ext     - block extend amount
+     * @param {integer} world   - world index
+     * @return void
+     */
     checkGame:(dom_id, x, y, ext, world)=>{
-        //console.log(`Checking game mode block and add event`);
-        const target={x:2026,y:619,world:world,adjunct:"block",index:0}
+        const target={x:2026,y:619,world:world,adjunct:"block",index:0};
+        
         VBW.event.on("block","in",(ev)=>{
             console.log(`Showing game menu`, ev);
+
+            const chain = ["resource", "game", `${world}_${999}`];
+            VBW.cache.set(chain,{hello:"world"});
         },target);
     },
 
@@ -739,7 +732,7 @@ const self = {
      * @param {string}  dom_id  - container DOM ID
      * @param {integer} x       - block X
      * @param {integer} y       - block Y
-     * @param {integer} ext     - block Y
+     * @param {integer} ext     - block extend amount
      * @param {integer} world   - world index
      * @param {integer} limit   - world range limit, [4096,4096]   
      * @param {function}    ck      - callback function

@@ -76,7 +76,7 @@ const self = {
             }
 
             //2.cache for use
-            const dt = ThreeObject.get("texture", "basic", { image: tx.image, repeat: tx.repeat });
+            const dt = ThreeObject.get("texture", "basic", { image: tx.raw, repeat: tx.repeat });
             if (dt.error) {
                 failed.push(index);
                 set(chain, { error: "Failed to create 3D object." });
@@ -114,7 +114,7 @@ const self = {
                 if(row.type && row.three === undefined){
                     //!important, set null to avoid multi decoding
                     row.three = null;    
-                    const type = row.type.toLocaleLowerCase();
+                    const type = row.format.toLocaleLowerCase();
                     const cfg={
                         type:type,
                         target:row.raw,
