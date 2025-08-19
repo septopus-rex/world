@@ -115,7 +115,7 @@ const self={
 
     getNameByObj:(obj)=>{
         if(typeof obj === 'string' || obj instanceof String) return obj;
-        if(!obj.x || !obj.y || !obj.adjunct || obj.index===undefined) return {erro:"Invalid event object."}
+        if(!obj.x || !obj.y || !obj.adjunct || obj.index === undefined) return {error:"Invalid event object."}
         return `${obj.x}_${obj.y}_${!obj.world?0:obj.world}_${obj.adjunct}_${obj.index}`;
     },
     randomName:(n)=>{

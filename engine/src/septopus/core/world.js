@@ -723,6 +723,14 @@ const self = {
         queue.push({name: "trigger_runtime", fun: self.runTrigger });
     },
 
+    checkGame:(dom_id, x, y, ext, world)=>{
+        //console.log(`Checking game mode block and add event`);
+        const target={x:2026,y:619,world:world,adjunct:"block",index:0}
+        VBW.event.on("block","in",(ev)=>{
+            console.log(`Showing game menu`, ev);
+        },target);
+    },
+
     /**
      * launch blocks, showing holder when loading
      * @functions
@@ -742,13 +750,13 @@ const self = {
         VBW.datasource.view(x, y, ext, world, (map) => {
             if (map.loaded !== undefined) {
                 if (!map.loaded) {
-                    //2.1. add loading queue
+                    //1. add loading queue
                     delete map.loaded;
-                    self.loadingBlockQueue(map, dom_id);
-                    //UI.show("toast", `Loading data, show block holder.`);
+                    self.loadingBlockQueue(map, dom_id);    //showing block holder
+
                     const failed = self.save(dom_id, world, map);
                     if (failed) return UI.show("toast", `Failed to set cache, internal error, abort.`, { type: "error" });
-                    //2.2. struct holder
+                    //2. struct holder
                     const range = { x: x, y: y, ext: ext, world: world, container: dom_id };
                     
                     VBW.load(range, cfg, (pre) => {
@@ -757,6 +765,9 @@ const self = {
                             UI.show("toast", `Fetch texture and module successful.`);
                             return ck && ck(true);
                         });
+
+                        //3. filter out game mode support
+                        self.checkGame(dom_id, x, y, ext, world);
                     });
                 } else {
                     delete map.loaded;

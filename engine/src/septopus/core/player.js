@@ -162,8 +162,8 @@ const self = {
         if (bx !== x || by !== y) {
 
             //!important, `block.in` event trigger 
-            VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},{x:x,y:y});
-            VBW.event.trigger("block","out",{stamp:Toolbox.stamp()},{x:bx,y:by});
+            VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},{x:x,y:y,world:world,adjunct:"block",index:0});
+            VBW.event.trigger("block","out",{stamp:Toolbox.stamp()},{x:bx,y:by,world:world,adjunct:"block",index:0});
 
             const change = self.cross(player.location.block, [x, y], player.location.extend);
             const tasks = VBW.cache.get(["task", dom_id, world]);

@@ -372,6 +372,7 @@ const mock = {
                 world: world,
                 data: [
                     0.3,
+                    1,  //block status
                     [
                         [0x00b8,    //trigger
                             [
@@ -397,7 +398,6 @@ const mock = {
                             ]
                         ],
                     ],
-                    1,  //block status
                 ],
                 owner: "UNIQUE_ADDRESS",
             }
@@ -410,13 +410,13 @@ const mock = {
                 world: world,
                 data: [
                     1.9,
+                    1,  //block status
                     [
                        [0x00a2,    //wall
                             [
                                 [[6,4,0.25], [12, 14, 0.125], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],    //single
                             ]], 
-                    ],  
-                    1,  //block status
+                    ],
                 ],
                 owner: "UNIQUE_ADDRESS",
             }
@@ -429,6 +429,7 @@ const mock = {
                 world: world,
                 data: [
                     0.2,
+                    1,  //block status
                     [
                         [0x00a1,    //wall
                             [
@@ -524,7 +525,7 @@ const mock = {
                                 [[3,3,3],[8,8,12], [0, 0, 0], 666, [1, 1], 2,1], //ad
                             ]],
                     ],
-                    1,  //block status
+                    
                 ],
                 owner: "UNIQUE_ADDRESS",
             }
@@ -537,6 +538,7 @@ const mock = {
                 world: world,
                 data: [
                     0.2,
+                    1,  //block status
                     [
                         [0x00a2,    //wall
                             [
@@ -556,7 +558,6 @@ const mock = {
                                 [[4, 2, 3], [9, 1, 1.5], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],       //9 single
                             ]],
                     ],
-                    1,  //block status
                 ],
                 owner: "UNIQUE_ADDRESS",
             }
@@ -568,6 +569,7 @@ const mock = {
             world: world,
             data: [
                 0.2,        //block elevation
+                1,          //block status
                 [           //adjuncts list
                     [0x00a1,    //wall
                         [[[1.5, 0.5, rand(2, 5)], [2, 6, 0], [0, 0, 0], rand(60, 90), [1, 1], 1, 1, [], 2025]]],
@@ -587,7 +589,6 @@ const mock = {
                     //         []      //action todo after abord
                     //     ], 3, 0]]],
                 ],
-                1,  //block status
             ],
             owner: "SOLANA_ADDRESS",
         };

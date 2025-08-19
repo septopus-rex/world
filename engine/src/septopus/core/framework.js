@@ -31,6 +31,11 @@ const config = {
         "def",          //world and adjunct definition
         "setting",      //system setting
     ],
+    common:{
+        "INDEX_OF_ELEVATION":0,
+        "INDEX_OF_ADJUNCT":2,
+        "INDEX_OF_GAME_SETTING":3,
+    },
 }
 
 const self = {
@@ -87,10 +92,8 @@ const self = {
     },
     initActive: () => {
         cache.active = {
-            //world: 0,           // default world
             containers: {},     // dom_id -->  raw data and structed data here
             current: "",        // current active render
-            //mode:cache.def.MODE_NORMAL,   // [1.normal; 2.edit; 3.game; ]
         }
         return true;
     },
@@ -355,6 +358,8 @@ const self = {
         const raw_chain = ["block", dom_id, world, key, "raw"];
         const bk = self.cache.get(raw_chain);
 
+        //console.log(bk);
+
         const std = {};
 
         //1.construct block data;
@@ -362,20 +367,27 @@ const self = {
         std.block = Framework.block.transform.raw_std(bk.data, cvt, side);
 
         //1.1.set block elevation;
-         const INDEX_OF_ELEVATION=0;
-        const va = std.block[INDEX_OF_ELEVATION].elevation;
+        const ELEVATION_INDEX = cache.def.block.BLOCK_INDEX_ELEVACATION===undefined?config.common.INDEX_OF_ELEVATION:cache.def.block.BLOCK_INDEX_ELEVACATION;
+        const va = std.block[ELEVATION_INDEX].elevation;
         const va_chain = ["block", dom_id, world, key, "elevation"];
         self.cache.set(va_chain, va);
 
         //2.construct all adjuncts;
-        const INDEX_OF_ADJUNCT=1;
-        const adjs = bk.data[INDEX_OF_ADJUNCT];
+        const ADJUNCT_INDEX = cache.def.block.BLOCK_INDEX_ADJUNCTS===undefined?config.common.INDEX_OF_ADJUNCT:cache.def.block.BLOCK_INDEX_ADJUNCTS;
+        const adjs = bk.data[ADJUNCT_INDEX];
         for (let i = 0; i < adjs.length; i++) {
             const [short, list] = adjs[i];
             const name = self.getNameByShort(short);
             std[name] = Framework[name].transform.raw_std(list, cvt);
         }
         self.cache.set(std_chain, std);
+
+        //3.cache game setting
+        // const GAME_INDEX = cache.def.block.BLOCK_INDEX_GAME_SETTING===undefined?config.common.INDEX_OF_GAME_SETTING:cache.def.block.BLOCK_INDEX_GAME_SETTING;
+        // if(bk.data[GAME_INDEX]!==undefined){
+        //     console.log(bk);
+        // }
+
         return true;
     },
 
@@ -386,7 +398,7 @@ const self = {
      * 2. filter out module and texture for preloading.
      * @param {integer}     x       - center block X
      * @param {integer}     y       - center block Y
-     * @param {integer}     ext     - block extend from center
+     * @param {integer}     ext     - block extend amount from center
      * @param {integer}     world   - world index
      * @param {string}      dom_id  - container DOM ID
      * @param {function}    ck      - callback function
@@ -398,8 +410,8 @@ const self = {
         //FIXME, get the limit by world not setting.
         const limit = self.cache.get(["setting", "limit"]);
         const fun_single = self.structSingle;
-        for (let i = -ext; i < ext + 1; i++) {
-            for (let j = -ext; j < ext + 1; j++) {
+        for (let i = - ext; i < ext + 1; i++) {
+            for (let j = - ext; j < ext + 1; j++) {
                 const cx = x + i, cy = y + j
                 if (cx < 1 || cy < 1) continue;
                 if (cx > limit[0] || cy > limit[1]) continue;
@@ -671,7 +683,7 @@ const Framework = {
      * @return void
      */
     load: (range,cfg,ck) => {
-        const {x, y, ext,world, container} = range;
+        const {x, y, ext, world, container} = range;
         self.structEntire(x, y, ext,world, container,ck,cfg);
     },
 
