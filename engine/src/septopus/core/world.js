@@ -644,7 +644,7 @@ const self = {
             const arr = todo.key.split("_");
             const x = parseInt(arr[0]), y = parseInt(arr[1]);
             const range = { x: x, y: y, world: world, container: dom_id };
-            VBW.prepair(range, (pre) => {
+            VBW.load(range, (pre) => {
 
                 //4.after loaded, update system
 
@@ -690,7 +690,7 @@ const self = {
         if (self.checkLoaded(preload.texture, preload.module)) {
             //rebuild 3D data then render
             const range = { x: x, y: y, world: world, container: container };
-            VBW.prepair(range, (pre) => {
+            VBW.load(range, (pre) => {
                 VBW[config.render].show(container, [x, y, world]);
             }, {});
 
@@ -789,7 +789,7 @@ const self = {
                     //2. struct holder
                     const range = { x: x, y: y, ext: ext, world: world, container: dom_id };
                     
-                    VBW.load(range, cfg, (pre) => {
+                    VBW.load(range, (pre) => {
                         //UI.show("toast", `Struct all components, ready to show.`);
                         self.prefetch(pre.texture, pre.module, (failed) => {
                             UI.show("toast", `Fetch texture and module successful.`);
@@ -799,7 +799,7 @@ const self = {
                         //3. filter out game mode support
                         //console.log(pre);
                         //self.checkGame(dom_id, x, y, ext, world);
-                    });
+                    },cfg);
                 } else {
                     delete map.loaded;
                     //UI.show("toast", `Load block data successful.`);
@@ -1082,7 +1082,7 @@ const World = {
         VBW.update(dom_id, world);
 
         const target = { x: x, y: y, world: world, container: dom_id }
-        VBW.prepair(target, (pre) => {
+        VBW.load(target, (pre) => {
             console.log(pre);
             VBW[config.render].show(dom_id, [x, y, world]);
             return ck && ck(true);

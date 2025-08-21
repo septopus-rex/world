@@ -349,7 +349,7 @@ const self = {
      * @return void
      */
     structSingle: (x, y, world, dom_id) => {
-
+        console.log(x, y, world, dom_id);
         //1.check whether constructed block;
         const key = `${x}_${y}`;
         const cvt = self.getConvert();
@@ -362,6 +362,8 @@ const self = {
 
         //1.construct block data;
         const side = self.getSide();
+        //console.log(raw_chain);
+        //console.log(bk, cvt, side);
         std.block = Framework.block.transform.raw_std(bk.data, cvt, side);
 
         //1.1.set block elevation;
@@ -677,19 +679,6 @@ const Framework = {
     },
 
     /** 
-     * struct data entry
-     * @param {string}   mode   - rebuild mode, ["edit","init","active"]
-     * @param {object}   range  - {x:2051,y:1247,ext:2,world:0,container:"DOM_ID"}
-     * @param {object}   cfg    - more setting for rebuild
-     * @param {function} ck     - callback function
-     * @return void
-     */
-    load: (range,cfg,ck) => {
-        const {x, y, ext, world, container} = range;
-        self.structEntire(x, y, ext,world, container,ck,cfg);
-    },
-
-    /** 
      * set range mode
      * @param {string}   mode   - block mode, ["edit","normal","game"]
      * @param {object}   target - {x:2051,y:1247,world:0,container:"DOM_ID"}
@@ -746,33 +735,17 @@ const Framework = {
         }
     },
 
-    /**
-     * force to fresh block data from RAW
-     * @param {object}   target     - {x:100,y:200,world:0,container:DOM_ID}, spectial block to prepair
-     * @param {function} ck         - callback function
-     * @param {object}   [cfg]      - setting for fresh
+    /** 
+     * struct data entry
+     * @param {object}   range  - {x:2051,y:1247,ext:2,world:0,container:"DOM_ID"}
+     * @param {object}   cfg    - more setting for rebuild
+     * @param {function} ck     - callback function
      * @return void
      */
-    prepair:(target,ck,cfg)=>{
-        //console.log(`Prepair?`);
-        const prefetch = { module: [], texture: [],game:[] };
-
-        //1.struct data from RAW to STD
-        const {x, y,world, container} = target;
-        const limit = self.cache.get(["setting", "limit"]);
-        const game = self.structSingle(x,y,world,container);
-        //console.log(game);
-        if(game!==null) prefetch.game.push(game);
-
-        //2.struct render data, filter out resource IDs
-        
-        const sub = self.structRenderData(x, y, world, container);
-        if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
-        if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
-
-        prefetch.module = Toolbox.unique(prefetch.module);
-        prefetch.texture = Toolbox.unique(prefetch.texture);
-        return ck && ck(prefetch);
+    load: (range,ck,cfg) => {
+        const {x, y, world, container} = range;
+        const ext=!range.ext?0:range.ext;
+        self.structEntire(x, y, ext,world, container,ck,cfg);
     },
 
     /** 
