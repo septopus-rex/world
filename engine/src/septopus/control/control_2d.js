@@ -29,6 +29,7 @@ const config = {
     zoom:{
         bar:"zoom_bar",
         info:"zoom_debug",
+        step:0.1,
     },
     debug:true,
     select:{
@@ -42,10 +43,11 @@ const env = {
     player:null,                //player status
     render: null,               //render actions
     pre:null,                   //previous mouse position
-    middle:null,                //
-    pan: false,                 // pan canvas
+    center:[0,0],               //2D 
+    pan: false,                 //pan canvas
     height:0,                   //canvas height
     position:{left:0,top:0},    //canvas position
+    zoom:1,                     //default scale multi rate
 }   
 
 const self = {
@@ -71,22 +73,37 @@ const self = {
     getMousePoint:(ev)=>{
         return [ev.clientX,ev.clientY]
     },
+    // updateScale: (val) => {
+    //     const pointer = document.querySelector(`#${config.scale.now} span`);
+    // },
+    setScalor:(rate)=>{
+        const el=document.getElementById(config.zoom.bar);
+        const height=el.clientHeight;
 
-    updateScale: (val) => {
-        const pointer = document.querySelector(`#${config.scale.now} span`);
+        //console.log(el.clientHeight);
+        const pointer=document.getElementById(config.scale.now);
+        const size=pointer.clientHeight;
+        //console.log(pointer,height);
+        pointer.style.top=`${height*rate*0.01-size*0.5}px`;
+    },
+    setCenter:(el)=>{
+        console.log([0.5*el.clientWidth,0.5*el.clientHeight]);
+        env.center=[0.5*el.clientWidth,0.5*el.clientHeight];
     },
     bindScaleUp: () => {
         const id = config.scale.up;
         const el = document.getElementById(id);
         el.addEventListener("click", (ev) => {
-            console.log(`scale up`);
+            console.log(`scale up`,env.center);
+            self.cvsScale(env.center,1+config.zoom.step);
         });
     },
     bindScaleDown: () => {
         const id = config.scale.down;
         const el = document.getElementById(id);
         el.addEventListener("click", (ev) => {
-            console.log(`scale down`);
+            console.log(`scale down`,env.center);
+            self.cvsScale(env.center, 1-config.zoom.step);
         });
     },
     cvsPan:(from,to)=>{
@@ -95,8 +112,8 @@ const self = {
         return env.render.move(cx,cy);
     },
     cvsScale:(point,scale)=>{
-        const cx=point[0]-env.middle[0];
-        const cy=point[1]-env.middle[1];
+        const cx=point[0]-env.center[0];
+        const cy=point[1]-env.center[1];
         return env.render.scale(cx,cy,scale);
     },
     screen:(dom_id)=>{
@@ -119,18 +136,18 @@ const self = {
         });
 
         Touch.on(id,"gestureStart",(mid)=>{
-            env.middle=point;
+            env.center=point;
         });
 
         Touch.on(id,"gestureMove",(mid,scale)=>{
             self.info(scale);
 
-            self.cvsScale(mid,scale);
-            env.middle=point;
+            env.zoom = self.cvsScale(mid,scale);
+            env.center = point;
         });
 
         Touch.on(id,"gestureEnd",()=>{
-            env.middle=null;
+            env.center=null;
         });
     },
     pan:(dom_id)=>{
@@ -143,17 +160,17 @@ const self = {
     },
     mouse: (dom_id) => {
         const cvs = document.querySelector(`#${dom_id} canvas`);
-        // cvs.addEventListener("mousewheel", (ev) => {
-        //     const point=self.getMousePoint(ev);
-        //     const delta=1;
-        //     self.cvsScale(point,delta);
-        // });
+        cvs.addEventListener("mousewheel", (ev) => {
+            // const point=self.getMousePoint(ev);
+            // const delta=1;
+            // self.cvsScale(point,delta);
+        });
 
         cvs.addEventListener("mousemove", (ev) => {
             if (!env.pan) return false;
             if(env.pre===null) return env.pre=self.getMousePoint(ev);
             const now=self.getMousePoint(ev);
-            self.cvsMove(env.pre,now);
+            self.cvsPan(env.pre,now);
             env.pre=now;
         });
     },
@@ -174,6 +191,7 @@ const self = {
 
         self.info(ctx);
     },
+    
     construct: (dom_id) => {
         const device=VBW.cache.get(["env","device"]);
 
@@ -183,8 +201,8 @@ const self = {
         const ctx = `<div>
             <div class="zoom" id="${config.zoom.bar}">
                 <div class="zoom_top" id="${config.scale.up}">+</div>
-                <div id="${config.scale.now}">
-                    <span class="zoom_button"></span>
+                <div >
+                    <span class="zoom_button" id="${config.scale.now}"></span>
                 </div>
                 <div class="zoom_bottom" id="${config.scale.down}">-</div>
             </div>
@@ -198,6 +216,8 @@ const self = {
         if(!device.mobile){
             const zoom = document.getElementById(config.zoom.bar);
             zoom.style.display="block";
+            self.setCenter(cvs);
+            self.setScalor(50);         //set tag to center
             self.bindScaleUp();
             self.bindScaleDown();
             self.pan(dom_id);
@@ -218,6 +238,7 @@ const controller = {
     hooks: self.hooks,
     start: (dom_id) => {
         self.construct(dom_id);
+
         if (env.render === null) env.render = VBW[config.render].control;
 
         //console.log(`Binding actions to 2D map of ${dom_id}`,env);

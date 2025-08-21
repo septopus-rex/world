@@ -202,6 +202,7 @@ const self = {
         env.offset[0] -= dx;
         env.offset[1] += dy;
         env.scale += ds;
+        return env.scale;
     },
 };
 
@@ -238,8 +239,9 @@ const renderer = {
             const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
             const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
             const cs = (rate - 1) * env.scale;
-            self.cvsScale(dx, dy, cs);
+            const n= self.cvsScale(dx, dy, cs);
             self.render();
+            return n;
         },
         move: (cx, cy) => {
             const pCtoB = TwoObject.calculate.distance.c2b;
