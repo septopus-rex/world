@@ -29,7 +29,7 @@ const config = {
     zoom:{
         bar:"zoom_bar",
         info:"zoom_debug",
-        step:0.1,
+        step:0.03,
     },
     debug:true,
     select:{
@@ -58,11 +58,6 @@ const self = {
         const parser = new DOMParser();
         return parser.parseFromString(data, 'text/html');
     },
-    isGestures:(ev)=>{
-        if(!ev || !ev.touches) return false;
-        if(ev.touches.length === 2) return true;
-        return false;
-    },
     getTouchPoint: (ev,anti) => {
         if(!ev || !ev.touches) return [0,0];
         const evt=ev.touches[0];
@@ -73,9 +68,11 @@ const self = {
     getMousePoint:(ev)=>{
         return [ev.clientX,ev.clientY]
     },
-    // updateScale: (val) => {
-    //     const pointer = document.querySelector(`#${config.scale.now} span`);
-    // },
+    getLocationPoint:(x,y,anti)=>{
+        const pos = env.position;
+        if(anti) return [x - pos.left,env.height-(y - pos.top)];
+        return [x - pos.left,y - pos.top];
+    },
     setScalor:(rate)=>{
         const el=document.getElementById(config.zoom.bar);
         const height=el.clientHeight;
@@ -87,25 +84,28 @@ const self = {
         pointer.style.top=`${height*rate*0.01-size*0.5}px`;
     },
     setCenter:(el)=>{
-        console.log([0.5*el.clientWidth,0.5*el.clientHeight]);
-        env.center=[0.5*el.clientWidth,0.5*el.clientHeight];
+        //console.log([0.5*el.clientWidth,0.5*el.clientHeight]);
+        env.center = [0.5*el.clientWidth,0.5*el.clientHeight];
     },
-    bindScaleUp: () => {
+    scaleUp: () => {
         const id = config.scale.up;
         const el = document.getElementById(id);
         el.addEventListener("click", (ev) => {
-            //console.log(`scale up`,env.center);
-            env.zoom = self.cvsScale(env.center,1+config.zoom.step);
-            console.log(env.zoom);
+            const pos = env.position;
+            const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
+            env.zoom = self.cvsScale(p, 1 + config.zoom.step);
+            //console.log(env.zoom);
         });
     },
-    bindScaleDown: () => {
+    scaleDown: () => {
         const id = config.scale.down;
         const el = document.getElementById(id);
         el.addEventListener("click", (ev) => {
             //console.log(`scale down`,env.center);
-            env.zoom = self.cvsScale(env.center, 1-config.zoom.step);
-            console.log(env.zoom);
+            const pos = env.position;
+            const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
+            env.zoom = self.cvsScale(p, 1 - config.zoom.step);
+            //console.log(env.zoom);
         });
     },
     cvsPan:(from,to)=>{
@@ -219,12 +219,12 @@ const self = {
             zoom.style.display="block";
             self.setCenter(cvs);
             self.setScalor(50);         //set tag to center
-            self.bindScaleUp();
-            self.bindScaleDown();
+            self.scaleUp();
+            self.scaleDown();
             self.pan(dom_id);
             self.mouse(dom_id);
         }else{
-            self.screen(dom_id);    
+            self.screen(dom_id);   
         }
 
         //3. set postion of canvas
@@ -233,16 +233,30 @@ const self = {
         env.position.top=rect.top;
         env.height=rect.height;
     },
+    action:()=>{
+        //console.log(`here`);
+        env.render.update();
+    },
 }
 
 const controller = {
     hooks: self.hooks,
-    start: (dom_id) => {
-        self.construct(dom_id);
+    start: (container) => {
+        //0. construct dom for renderer
+        self.construct(container);
 
+        //1. set cache
         if (env.render === null) env.render = VBW[config.render].control;
-
         if(env.player===null) env.player=VBW.cache.get(["env","player"]);
+
+        //2.set frame-loop function
+        const world = env.player.location.world;
+        const dom_id= VBW.cache.get(["active","current"]);
+        const chain = ["block", dom_id, world, "loop"];
+        if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
+        const queue = VBW.cache.get(chain);
+        //console.log(chain,queue);
+        queue.push({ name: "two", fun: self.action });
 
         self.status();
     },

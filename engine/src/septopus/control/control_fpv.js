@@ -600,6 +600,7 @@ const self = {
 
     touch:(dom_id) =>{ 
         const id=`#${dom_id} canvas`;
+        
         //1. double tap to go forward
         Touch.on(id,"doubleTap",(point)=>{
             if (!env.moving) {

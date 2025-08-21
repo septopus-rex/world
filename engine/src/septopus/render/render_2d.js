@@ -162,16 +162,14 @@ const self = {
         self.block(px, py, { width: 1, color: '#99CCBB', anticlock: true });
         //self.block(px+2,py+2,{width:1,color:'#00CCDD',anticlock:true})
     },
-    detail: () => {
 
-    },
     avatar: () => {
         const player = env.player.location;
         const [x, y] = player.block;
         const pos = player.position;
         const ro = player.rotation;
         const s = env.side[0];
-        const hf = Math.PI * config.fov / 360, rz = ro[1], r = s, zj = Math.PI / 2
+        const hf = Math.PI * config.fov / 360, rz = ro[2], r = s, zj = Math.PI / 2
 
         const cen = [(x - 1) * s + pos[0], (y - 1) * s + pos[1]];
         const p = { center: cen, start: -rz - hf - zj, end: -rz + hf - zj, radius: r }
@@ -228,12 +226,12 @@ const renderer = {
     clean: (dom_id) => {
         const el = document.getElementById(dom_id);
         el.innerHTML = "";
-
         env.pen = null;
     },
     control: {
+        update:self.render,
         scale: (cx, cy, rate) => {
-            //console.log(`Scale on ${JSON.stringify(point)} by delta ${delta}`);
+            console.log(`Scale on ${JSON.stringify([cx,cy])} by delta rate ${rate}`);
             const pCtoB = TwoObject.calculate.distance.c2b;
             const rotation = 0;
             const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
@@ -243,6 +241,7 @@ const renderer = {
             self.render();
             return n;
         },
+        
         move: (cx, cy) => {
             const pCtoB = TwoObject.calculate.distance.c2b;
             const rotation = 0;

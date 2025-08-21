@@ -349,7 +349,7 @@ const self = {
      * @return void
      */
     structSingle: (x, y, world, dom_id) => {
-        console.log(x, y, world, dom_id);
+        
         //1.check whether constructed block;
         const key = `${x}_${y}`;
         const cvt = self.getConvert();
