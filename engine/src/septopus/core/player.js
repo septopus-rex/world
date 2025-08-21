@@ -118,6 +118,7 @@ const self = {
             events: {
                 close: () => {
                     console.log(`Map closed, clean the objects to access.`);
+                    VBW.con_two.clean(dom_id);
                     VBW.rd_two.clean(dom_id);
                 },
             },

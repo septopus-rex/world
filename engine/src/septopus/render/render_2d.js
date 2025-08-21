@@ -169,7 +169,7 @@ const self = {
         const pos = player.position;
         const ro = player.rotation;
         const s = env.side[0];
-        const hf = Math.PI * config.fov / 360, rz = ro[2], r = s, zj = Math.PI / 2
+        const hf = Math.PI * config.fov / 360, rz = - ro[2], r = s, zj = Math.PI / 2
 
         const cen = [(x - 1) * s + pos[0], (y - 1) * s + pos[1]];
         const p = { center: cen, start: -rz - hf - zj, end: -rz + hf - zj, radius: r }
@@ -179,10 +179,6 @@ const self = {
         ];
         const cfg = { width: 1, color: "#FF99CC", anticlock: true, grad: grad, alpha: 0.3 };
         TwoObject.drawing.sector(env, p, cfg);
-
-        // const pp={center:cen,start:0,end:Math.PI+Math.PI,radius:1};
-        // const pcfg={width:1,color:"#FF9999",anticlock:true};
-        // TwoObject.drawing.arc(env,pp,pcfg);
     },
     render: (force) => {
         if (force) self.start();
@@ -224,6 +220,7 @@ const renderer = {
         self.render();
     },
     clean: (dom_id) => {
+        //1.remove DOMs
         const el = document.getElementById(dom_id);
         el.innerHTML = "";
         env.pen = null;

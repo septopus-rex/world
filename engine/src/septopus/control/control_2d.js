@@ -241,6 +241,22 @@ const self = {
 
 const controller = {
     hooks: self.hooks,
+    clean:(container)=>{
+        const world = env.player.location.world;
+        const dom_id= VBW.cache.get(["active","current"]);
+        const chain = ["block", dom_id, world, "loop"];
+        const queue = VBW.cache.get(chain);
+
+        let index=-1;
+        for(let i=0;i<queue.length;i++){
+            const row=queue[i];
+            if(row.name==="two") index=i;
+        }
+
+        if(index>=0){
+            queue.splice(index, 1);
+        }
+    },
     start: (container) => {
         //0. construct dom for renderer
         self.construct(container);
