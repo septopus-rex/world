@@ -94,16 +94,18 @@ const self = {
         const id = config.scale.up;
         const el = document.getElementById(id);
         el.addEventListener("click", (ev) => {
-            console.log(`scale up`,env.center);
-            self.cvsScale(env.center,1+config.zoom.step);
+            //console.log(`scale up`,env.center);
+            env.zoom = self.cvsScale(env.center,1+config.zoom.step);
+            console.log(env.zoom);
         });
     },
     bindScaleDown: () => {
         const id = config.scale.down;
         const el = document.getElementById(id);
         el.addEventListener("click", (ev) => {
-            console.log(`scale down`,env.center);
-            self.cvsScale(env.center, 1-config.zoom.step);
+            //console.log(`scale down`,env.center);
+            env.zoom = self.cvsScale(env.center, 1-config.zoom.step);
+            console.log(env.zoom);
         });
     },
     cvsPan:(from,to)=>{
@@ -185,7 +187,6 @@ const self = {
         }
     },
     status:()=>{
-        //console.log(env.player);
         const player=env.player;
         const ctx=`Block ${JSON.stringify(player.location.block)}`;
 
@@ -241,7 +242,6 @@ const controller = {
 
         if (env.render === null) env.render = VBW[config.render].control;
 
-        //console.log(`Binding actions to 2D map of ${dom_id}`,env);
         if(env.player===null) env.player=VBW.cache.get(["env","player"]);
 
         self.status();

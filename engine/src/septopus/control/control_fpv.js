@@ -585,7 +585,7 @@ const self = {
                             VBW.update(runtime.container, world);
                             const range = { x: x, y: y, world: world, container: runtime.container }
                             VBW.prepair(range, (pre) => {
-                                console.log(pre);
+                                //console.log(pre);
                                 VBW[config.render].show(runtime.container, [x, y, world]);
                             });
                         },

@@ -349,6 +349,7 @@ const self = {
      * @return void
      */
     structSingle: (x, y, world, dom_id) => {
+
         //1.check whether constructed block;
         const key = `${x}_${y}`;
         const cvt = self.getConvert();
@@ -357,9 +358,6 @@ const self = {
 
         const raw_chain = ["block", dom_id, world, key, "raw"];
         const bk = self.cache.get(raw_chain);
-
-        //console.log(bk);
-
         const std = {};
 
         //1.construct block data;
@@ -383,12 +381,13 @@ const self = {
         self.cache.set(std_chain, std);
 
         //3.cache game setting
-        // const GAME_INDEX = cache.def.block.BLOCK_INDEX_GAME_SETTING===undefined?config.common.INDEX_OF_GAME_SETTING:cache.def.block.BLOCK_INDEX_GAME_SETTING;
-        // if(bk.data[GAME_INDEX]!==undefined){
-        //     console.log(bk);
-        // }
+        const GAME_INDEX = cache.def.block.BLOCK_INDEX_GAME_SETTING===undefined?config.common.INDEX_OF_GAME_SETTING:cache.def.block.BLOCK_INDEX_GAME_SETTING;
+        if(bk.data[GAME_INDEX]!==undefined){
+            //console.log(bk);
+            return {x:bk.x,y:bk.y,world:world,setting:bk.data[GAME_INDEX]};
+        }
 
-        return true;
+        return null;
     },
 
     /**
@@ -406,6 +405,9 @@ const self = {
      * @return void
      */
     structEntire: (x, y, ext, world, dom_id, ck, cfg) => {
+
+        const prefetch = { module: [], texture: [],game:[] };
+
         //1.construct all blocks data
         //FIXME, get the limit by world not setting.
         const limit = self.cache.get(["setting", "limit"]);
@@ -415,13 +417,13 @@ const self = {
                 const cx = x + i, cy = y + j
                 if (cx < 1 || cy < 1) continue;
                 if (cx > limit[0] || cy > limit[1]) continue;
-                fun_single(cx, cy, world, dom_id);
+                const res = fun_single(cx, cy, world, dom_id);
+                if(res!== null) prefetch.game.push(res);
             }
         }
 
         //2.construct render data, && 
         const fun_render = self.structRenderData;
-        const prefetch = { module: [], texture: [] };
         for (let i = -ext; i < ext + 1; i++) {
             for (let j = -ext; j < ext + 1; j++) {
                 const cx = x + i, cy = y + j
@@ -752,13 +754,18 @@ const Framework = {
      * @return void
      */
     prepair:(target,ck,cfg)=>{
+        //console.log(`Prepair?`);
+        const prefetch = { module: [], texture: [],game:[] };
+
         //1.struct data from RAW to STD
         const {x, y,world, container} = target;
         const limit = self.cache.get(["setting", "limit"]);
-        self.structSingle(x,y,world,container);
+        const game = self.structSingle(x,y,world,container);
+        //console.log(game);
+        if(game!==null) prefetch.game.push(game);
 
         //2.struct render data, filter out resource IDs
-        const prefetch = { module: [], texture: [] };
+        
         const sub = self.structRenderData(x, y, world, container);
         if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
         if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);

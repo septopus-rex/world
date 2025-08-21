@@ -37,6 +37,13 @@
   border-bottom-right-radius: 3rem; */
 }
 
+.mode{
+  position: absolute;
+  top: 40rem;
+  left: 50%;          /* 向左 50% */
+  transform: translateX(-50%); /* 水平居中 */
+}
+
 .countdown{
   position: absolute;
   width: 28%;

@@ -415,9 +415,7 @@ const router={
         el.appendChild(dom);
         self.bindActions(arr,name);
     },
-    mode:(arr,cfg)=>{
-
-    },
+    
     pop:(arr,cfg)=>{
         const id=`${config.prefix}pop`;
         const name="pop";
@@ -433,6 +431,20 @@ const router={
         el.style.display="block";
         self.bindActions(arr,name);
     },
+    mode:(arr,cfg)=>{
+        const id=`${config.prefix}mode`;
+        const name="mode";
+        const dom=self.domMenu(arr,name);
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "mode" buttons`);
+
+        el.innerHTML="";
+        el.appendChild(dom);
+        //console.log(dom);
+
+        self.bindActions(arr,name);
+    },
+    
     compass:(val,cfg)=>{
         const id=`${config.prefix}compass`;
         const el=document.getElementById(id);

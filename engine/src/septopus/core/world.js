@@ -364,10 +364,9 @@ const self = {
         const menus = [
             buttons.buy,
             buttons.edit,
-            buttons.normal,
+            //buttons.normal,
             buttons.mint,
             buttons.world,
-            buttons.game,
             buttons.stop,
             buttons.start,
             buttons.clean,
@@ -619,6 +618,7 @@ const self = {
             }
         }
     },
+
     /**
      * Frame-loop function to check blocks loaded status.
      * @functions
@@ -645,18 +645,27 @@ const self = {
             const x = parseInt(arr[0]), y = parseInt(arr[1]);
             const range = { x: x, y: y, world: world, container: dom_id };
             VBW.prepair(range, (pre) => {
+
+                //4.after loaded, update system
+
+                //4.1. trigger `block.loaded` event
                 //!important, `block.loaded` event trigger 
                 const target={
                     x:x,y:y,world:world,index:0,adjunct:"block",
                     stamp:Toolbox.stamp(),
                 };
-                const evt={
-                    x:x,y:y,world:world,
-                }
+                const evt={x:x,y:y,world:world}
                 VBW.event.trigger("block","loaded",evt,target);
 
+                //4.2. loading resource needed.
                 self.loadingResourceQueue(pre, x, y, world, dom_id);
 
+                //4.3. set game mode buttons.
+                if(pre.game && pre.game.length!==0){
+                    self.updateGame(pre.game);
+                }   
+
+                //5. fresh render.
                 VBW[config.render].show(dom_id, [x, y, world]);
             }, {});
 
@@ -713,15 +722,30 @@ const self = {
      * @param {integer} world   - world index
      * @return void
      */
-    checkGame:(dom_id, x, y, ext, world)=>{
-        const target={x:2026,y:619,world:world,adjunct:"block",index:0};
-        
-        VBW.event.on("block","in",(ev)=>{
-            console.log(`Showing game menu`, ev);
+    updateGame:(games)=>{
+        for(let i=0;i<games.length;i++){
+            const {x,y,world,setting}=games[i];
+            const target={x:x,y:y,world:world,adjunct:"block",index:0};
 
-            const chain = ["resource", "game", `${world}_${999}`];
-            VBW.cache.set(chain,{hello:"world"});
-        },target);
+            //1. binding block-in event to trigger mode button  
+            VBW.event.on("block","in",(ev)=>{
+                const buttons=actions.buttons;
+                const menus = [
+                    buttons.detail,
+                    buttons.game,
+                ];
+                UI.show("mode", menus, {});
+            },target);
+
+            VBW.event.on("block","out",(ev)=>{
+                UI.show("mode", [], {});
+            },target);
+
+            //2. trigger directly to check game
+            VBW.event.trigger("block","in",
+                {stamp:Toolbox.stamp()},
+                {x:x,y:y,world:world,adjunct:"block",index:0});
+        }
     },
 
     /**
@@ -760,7 +784,8 @@ const self = {
                         });
 
                         //3. filter out game mode support
-                        self.checkGame(dom_id, x, y, ext, world);
+                        //console.log(pre);
+                        //self.checkGame(dom_id, x, y, ext, world);
                     });
                 } else {
                     delete map.loaded;

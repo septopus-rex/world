@@ -66,6 +66,7 @@ const buttons = {
     },
     detail: {
         label: "Detail", icon: "", action: () => {
+            console.log(`Here?`);
             const ctx = {
                 title: "Hello",
                 content: "This a dailog to show more details.",
@@ -140,7 +141,8 @@ const buttons = {
             }
             UI.show("form", inputs, cfg);
         }
-    }
+    },
+    
 };
 
 const actions={
