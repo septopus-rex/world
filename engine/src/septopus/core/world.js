@@ -726,6 +726,7 @@ const self = {
         for(let i=0;i<games.length;i++){
             const {x,y,world,setting}=games[i];
             const target={x:x,y:y,world:world,adjunct:"block",index:0};
+            console.log(JSON.stringify(target));
             //1. get game mode data from chain.
             ((id,world)=>{
                 VBW.datasource.game(id,(data)=>{
@@ -738,9 +739,6 @@ const self = {
 
             //2. binding block-in event to trigger mode button  
             VBW.event.on("block","in",(ev)=>{
-                //a. set cache to active block.
-                
-
                 //b. show buttons.
                 const buttons=actions.buttons;
                 const menus = [
@@ -753,12 +751,14 @@ const self = {
             VBW.event.on("block","out",(ev)=>{
                 UI.show("mode", [], {});
             },target);
-
-            //3. trigger directly to check game
-            VBW.event.trigger("block","in",
-                {stamp:Toolbox.stamp()},
-                {x:x,y:y,world:world,adjunct:"block",index:0});
         }
+
+        //3. trigger directly to check game
+        const player=VBW.cache.get(["env","player"]);
+        const [x,y]=player.location.block;
+        const world=player.location.world;
+        const current={x:x,y:y,world:world,adjunct:"block",index:0}
+        VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},current);
     },
 
     /**

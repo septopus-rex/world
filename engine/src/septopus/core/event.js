@@ -132,6 +132,10 @@ const self={
 const vbw_event = {
     hooks: self.hooks,
 
+    dump:()=>{
+        console.log(events);
+    },
+
     //print support events list.
     list:()=>{
         const result={};
@@ -185,6 +189,7 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
+        //console.log(JSON.stringify(obj));
         if(obj===undefined){
             //1. normal event, not 
             for(let name in events[cat][event]){

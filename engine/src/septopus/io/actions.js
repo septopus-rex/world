@@ -110,12 +110,22 @@ const buttons = {
 
     game: {
         label: "Game", icon: "", action: async () => {
-            const def=VBW.cache.get(["def","common"]);
-            const current=VBW.cache.get(["active","current"]);
-            const cfg={blocks:[[2024,340],[2024,340,2,3],[]],style:{}};
-            VBW.mode(def.MODE_GAME,{container:current},()=>{
 
-            },cfg);
+            const dom_id=VBW.cache.get(["active","current"]);
+            const player=VBW.cache.get(["env","player"]);
+            const world=player.location.world;
+            const [x,y]=player.location.block;
+            const chain=["block",dom_id,world,`${x}_${y}`,'std','block',0];
+            const bk=VBW.cache.get(chain);
+            console.log(`${x}_${y}`,bk);
+            const game=VBW.cache.get(["resource","game",`${world}_${bk.game}`]);
+            const def=VBW.cache.get(["def","common"]);
+            console.log(game);
+            //const current=VBW.cache.get(["active","current"]);
+            const cfg={blocks:[[2024,340],[2024,340,2,3],[]],style:{}};
+            // VBW.mode(def.MODE_GAME,{container:dom_id},()=>{
+
+            // },cfg);
         }
     },
     world: {
