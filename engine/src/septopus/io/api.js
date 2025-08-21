@@ -205,8 +205,8 @@ const API = {
     /** 
      * get modules data by IDs
      * !important, here to implement the frontend cache for module, can get data from indexedDB
-     * @param   {number[]}    IDs   //module ids.
-     * @param   {function}    ck    //callback function
+     * @param   {number[]}    IDs   - module ids.
+     * @param   {function}    ck    -  callback function
      * @returns 
      * @return {object} key(`${id}`) --> MODULE_DATA
      */
@@ -241,8 +241,8 @@ const API = {
      * get texture data by IDs
      * !important, here to implement the frontend cache for texture, can get data from indexedDB
      * @public
-     * @param {number[]}    ids     //module ids.
-     * @param {function}    ck      //callback function
+     * @param {number[]}    ids     - module ids.
+     * @param {function}    ck      - callback function
      * @returns
      * @return {object}  key(`${id}`) --> TEXTURE_DATA
      */
@@ -273,6 +273,12 @@ const API = {
             }
         }
     },
+
+    game:(id,ck)=>{
+        const dt = mock.resource(id);
+        return ck && ck(dt);
+    },
+
     /**
      * Set listener of events.
      * 

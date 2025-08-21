@@ -66,10 +66,29 @@ const buttons = {
     },
     detail: {
         label: "Detail", icon: "", action: () => {
-            console.log(`Here?`);
             const ctx = {
-                title: "Hello",
+                title: `Game detail.`,
                 content: "This a dailog to show more details.",
+            }
+
+            const dom_id=VBW.cache.get(["active","current"]);
+            const player=VBW.cache.get(["env","player"]);
+            const world=player.location.world;
+            const [x,y]=player.location.block;
+            const chain=["block",dom_id,world,`${x}_${y}`,'std','block',0];
+            const bk=VBW.cache.get(chain);
+            if(bk.error || !bk.game){
+                ctx.title="Error";
+                ctx.content=bk.error;
+            }else{
+                const data=VBW.cache.get(["resource","game",`${world}_${bk.game}`]);
+                if(data.error){
+                    ctx.title="Error: resource is not loaded.";
+                    ctx.content=data.error;
+                }else{
+                    ctx.title=`Game: ${data.raw.game}`;
+                    ctx.content="Enjoy!";
+                }
             }
             UI.show("dialog", ctx, { position: "center" });
         }
