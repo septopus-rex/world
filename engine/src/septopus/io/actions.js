@@ -13,6 +13,13 @@ import VBW from "../core/framework";
 import World from "../core/world";
 import UI from "./io_ui";
 
+const config={
+    map:{
+        container:"map_2d",
+        title:"map_title",
+    }
+}
+
 const buttons = {
     stop: {
         label: "Stop", icon: "", action: async () => {
@@ -171,11 +178,37 @@ const buttons = {
             UI.show("form", inputs, cfg);
         }
     },
-    
 };
 
-const actions={
-    buttons:buttons,
+const common = {
+    map:()=>{
+        const container_id = config.map.container;
+        const title_id=config.map.title;
+        const ctx = {
+            title: `<div id="${title_id}">2D map</div>`,
+            content: `<div class="map" id="${container_id}"></div>`,
+        }
+        const cfg_map = {
+            events: {
+                close: () => {
+                    console.log(`Map closed, clean the objects to access.`);
+                    VBW.con_two.clean(container_id);
+                    VBW.rd_two.clean(container_id);
+                },
+            },
+            auto: () => {  //run after the DOM is loaded
+                //1. run 2D map
+                VBW.rd_two.show(container_id);
+                VBW.con_two.start(container_id,title_id);
+            },
+        };
+        UI.show("dialog", ctx, cfg_map);
+    },
 }
 
-export default actions;
+const Actions={
+    buttons:buttons,
+    common:common,
+}
+
+export default Actions;

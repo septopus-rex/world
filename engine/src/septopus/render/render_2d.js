@@ -35,7 +35,7 @@ const config = {
 const env = {
     pen: null,
     scale: 15,          //scale, more big more details
-    offset: [0, 0],     //
+    offset: [0, 0],     //offset of whole world
     size: [0, 0],       //canvas size as meter
     side: [0, 0],       //block side
     limit: null,        //block number limit
@@ -46,6 +46,9 @@ const env = {
     convert: 1,         //system convert 
     player: null,       //link to player
     selected: [0, 0],   //selected block
+    special:{           //special drawing area
+
+    },
 };
 
 const test = {
@@ -61,6 +64,7 @@ const test = {
         pen.stroke();
     },
 };
+
 const self = {
     hooks: {
         reg: () => { return reg },

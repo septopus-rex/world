@@ -14,6 +14,7 @@ import Toolbox from "../lib/toolbox";
 import VBW from "./framework";
 import UI from "../io/io_ui";
 import Effects from "../effects/entry";
+import Actions from "../io/actions";
 
 const reg = {
     name: "player",
@@ -25,9 +26,9 @@ const config = {
         interval: 60,        //frames for player status autosaving
         key: "vbw_player",
     },
-    map: {
-        id: "map_2d",
-    },
+    // map: {
+    //     id: "map_2d",
+    // },
     defaultWorld: 0,
     hold:3000,              //holding check time
 }
@@ -102,38 +103,14 @@ const self = {
                     ev.preventDefault();
                     ev.stopPropagation();
                     console.log(`Status clicked.`);
-                    self.showMap(ev);
+                    //self.showMap(ev);
+                    Actions.common.map();
                 },
             },
         }
         UI.show("status", JSON.stringify(env.player.location.block), cfg_status);
     },
-    showMap: (ev) => {
-        const dom_id = config.map.id;
-        const ctx = {
-            title: "2D Map",
-            content: `<div class="map" id="${config.map.id}"></div>`,
-        }
-        const cfg_map = {
-            events: {
-                close: () => {
-                    console.log(`Map closed, clean the objects to access.`);
-                    VBW.con_two.clean(dom_id);
-                    VBW.rd_two.clean(dom_id);
-                },
-            },
-            auto: () => {  //run after the DOM is loaded
 
-                //1. run 2D map
-                VBW.rd_two.show(dom_id);
-                VBW.con_two.start(dom_id);
-
-                //2. binding more functions
-
-            },
-        };
-        UI.show("dialog", ctx, cfg_map);
-    },
     getHeight: (section) => {
         let h = 0;
         for (let i = 0; i < section.length; i++) {

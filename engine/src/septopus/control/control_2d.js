@@ -56,6 +56,9 @@ const env = {
         footer:50,
         pre:null,               //pre click point, to check direction
     },
+    dialog:{
+        title:"",
+    }
 }   
 
 const self = {
@@ -274,7 +277,12 @@ const self = {
                 </div>
                 <div class="zoom_bottom" id="${config.scale.down}">-</div>
             </div>
-            <div id="${config.zoom.info}"></div>
+            <div class="row">
+                <div class="left" id="${config.zoom.info}"></div>
+                <div class="right">
+                    <button>reset</button>
+                </div>
+            </div>
         </div>`;
         const doc = self.getDom(ctx);
         const el = document.getElementById(dom_id);
@@ -287,8 +295,8 @@ const self = {
             self.setCenter(cvs);
             self.setFloat(50)
             self.scaleFloat();
-            self.scaleUp();
-            self.scaleDown();
+            //self.scaleUp();
+            //self.scaleDown();
             self.pan(dom_id);
             self.mouse(dom_id);
         }else{
@@ -325,9 +333,11 @@ const controller = {
             queue.splice(index, 1);
         }
     },
-    start: (container) => {
+    start: (container,title_id) => {
         //0. construct dom for renderer
         self.construct(container);
+
+        env.dialog.title=title_id;
 
         //1. set cache
         if (env.render === null) env.render = VBW[config.render].control;
