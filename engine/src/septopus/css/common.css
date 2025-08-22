@@ -138,7 +138,8 @@
 
 .zoom_button:hover{
   background-color: #628fcd;
-  scale: 1.4;
+  scale: 2.2;
+  box-shadow: #1f2937;
 }
 
 .form{

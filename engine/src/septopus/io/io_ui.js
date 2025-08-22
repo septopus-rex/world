@@ -359,7 +359,9 @@ const router={
         //1. create dom
         const id=`${config.prefix}dialog`;
         const el=document.getElementById(id);
+        if(el.style.display==="block") return false;        //ignore duplicate request, only single dialog
         el.innerHTML="";
+
         const data=`<div class="title">${ctx.title}</div>
             <svg class="close" id="${config.dialog.close}" viewBox="0 0 24 24" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                 <line x1="5" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" />

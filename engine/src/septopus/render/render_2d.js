@@ -64,9 +64,6 @@ const test = {
 const self = {
     hooks: {
         reg: () => { return reg },
-        // init:()=>{
-
-        // },
     },
     getDom: (data) => {
         const parser = new DOMParser();
@@ -228,7 +225,7 @@ const renderer = {
     control: {
         update:self.render,
         scale: (cx, cy, rate) => {
-            console.log(`Scale on ${JSON.stringify([cx,cy])} by delta rate ${rate}`);
+            //console.log(`Scale on ${JSON.stringify([cx,cy])} by delta rate ${rate}`);
             const pCtoB = TwoObject.calculate.distance.c2b;
             const rotation = 0;
             const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
@@ -237,6 +234,20 @@ const renderer = {
             const n= self.cvsScale(dx, dy, cs);
             self.render();
             return n;
+        },
+
+        rate:(rate)=>{
+            const cs = (rate - 1) * env.scale;
+            const pCtoB = TwoObject.calculate.distance.c2b;
+            const rotation = 0;
+
+            const cx=env.size[0]*0.5;
+            const cy=env.size[1]*0.5;
+            const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
+            const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
+
+            self.cvsScale(dx, dy, cs);
+            self.render();
         },
         
         move: (cx, cy) => {

@@ -218,8 +218,9 @@ const self = {
             return acc;
         }, {});
     },
-    setCompass: (ak) => {
-        const angle=-180 * ak / Math.PI;
+    syncCompass: () => {
+        const ak = runtime.player.location.rotation[2];
+        const angle = 180 * ak / Math.PI;
         const cfg_compass = {
             events: {
                 click: (ev) => {
@@ -694,8 +695,7 @@ const controller = {
         if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
 
         //5. init compass;
-        const ak=runtime.player.location.rotation[2];
-        self.setCompass(ak);
+        self.syncCompass();
         UI.show("toast", `FPV controller is loaded.`);
     },
 }

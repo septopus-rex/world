@@ -52,8 +52,8 @@ const env = {
     bar:{                       //scale rate bar
         height:0,
         now:0,
-        header:30,
-        footer:40,
+        header:40,
+        footer:50,
         pre:null,               //pre click point, to check direction
     },
 }   
@@ -115,10 +115,10 @@ const self = {
             env.bar.pre = null;
         });
 
-        // el.addEventListener("blur", (ev) => {
-        //     env.float = false;
-        //     env.bar.pre = null;
-        // });
+        el.addEventListener("mouseout", (ev) => {
+            env.float = false;
+            env.bar.pre = null;
+        });
 
         el.addEventListener("mousemove", (ev) => {
             if(!env.float || env.bar.pre===null) return false;
@@ -127,19 +127,13 @@ const self = {
             //1.set button position
             const pointer=document.getElementById(config.scale.now);
             const now= env.bar.now + ev.movementY;
-
             if(now <= env.bar.header) return false;
             if(now >= env.bar.height-env.bar.footer) return false;
 
             env.bar.now = now;
             pointer.style.top=`${now}px`;
 
-            // const up= (env.bar.pre[1] - ev.clientY > 0);
-            // console.log(up,ev.movementY,env.bar.now);
-            
-            // env.bar.pre = [ev.clientX,ev.clientY];
-            // env.bar.now =  (up?env.bar.now - ev.movementY:env.bar.now + ev.movementY);
-            // pointer.style.top=`${env.bar.now}px`;
+            env.render.rate(1+(ev.movementY>0?-0.1:0.1));
         });
     },
     scaleUp: () => {

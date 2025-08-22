@@ -122,9 +122,14 @@ const self = {
                     VBW.rd_two.clean(dom_id);
                 },
             },
-            auto: () => {
+            auto: () => {  //run after the DOM is loaded
+
+                //1. run 2D map
                 VBW.rd_two.show(dom_id);
                 VBW.con_two.start(dom_id);
+
+                //2. binding more functions
+
             },
         };
         UI.show("dialog", ctx, cfg_map);
@@ -223,7 +228,7 @@ const self = {
         return { load: glist, destroy: dlist };
     },
     setCompass: (ak) => {
-        const angle = -180 * ak / Math.PI;
+        const angle = 180 * ak / Math.PI;
         const cfg_compass = {
             events: {
                 click: (ev) => {
