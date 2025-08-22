@@ -553,6 +553,11 @@ const UI={
         return router[type](ctx,cfg);
     },
 
+    //UI update entry.
+    update:(type,ctx,cfg)=>{
+
+    },
+
     hide:(type)=>{
         if(Array.isArray(type)){
             for(let i=0;i<type.length;i++){

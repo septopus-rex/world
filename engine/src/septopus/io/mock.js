@@ -670,6 +670,10 @@ const mock = {
                     baseurl:"http://lcoalhost:9900",
                     homepage:"",
                     version:"1.0.1",
+                    blocks:[                //Game load area. System will add extend 2 automatically
+                        [2026,619,2,4],
+                        [2027,624],
+                    ],
                     methods:[
                         {
                             name:"start",

@@ -48,6 +48,14 @@ const env = {
     height:0,                   //canvas height
     position:{left:0,top:0},    //canvas position
     zoom:1,                     //default scale multi rate
+    float:false,                //wether float scale
+    bar:{                       //scale rate bar
+        height:0,
+        now:0,
+        header:30,
+        footer:40,
+        pre:null,               //pre click point, to check direction
+    },
 }   
 
 const self = {
@@ -73,23 +81,72 @@ const self = {
         if(anti) return [x - pos.left,env.height-(y - pos.top)];
         return [x - pos.left,y - pos.top];
     },
-    setScalor:(rate)=>{
+    setFloat:(rate)=>{
+        
         const el=document.getElementById(config.zoom.bar);
         const height=el.clientHeight;
 
-        //console.log(el.clientHeight);
+        if(env.bar.height===0) env.bar.height = height;
+
         const pointer=document.getElementById(config.scale.now);
         const size=pointer.clientHeight;
-        //console.log(pointer,height);
-        pointer.style.top=`${height*rate*0.01-size*0.5}px`;
+        const margin=height*rate*0.01-size*0.5;
+        env.bar.now = margin;
+        
+        pointer.style.top=`${margin}px`;
     },
     setCenter:(el)=>{
         //console.log([0.5*el.clientWidth,0.5*el.clientHeight]);
         env.center = [0.5*el.clientWidth,0.5*el.clientHeight];
     },
+    scaleFloat:()=>{
+        
+        const id = config.scale.now;
+        const el = document.getElementById(id);
+        if(el===null) return false;
+
+        el.addEventListener("mousedown", (ev) => {
+            env.float = true;
+            env.bar.pre = [ev.clientX,ev.clientY];
+        });
+
+        el.addEventListener("mouseup", (ev) => {
+            env.float = false;
+            env.bar.pre = null;
+        });
+
+        // el.addEventListener("blur", (ev) => {
+        //     env.float = false;
+        //     env.bar.pre = null;
+        // });
+
+        el.addEventListener("mousemove", (ev) => {
+            if(!env.float || env.bar.pre===null) return false;
+            if(!ev.movementY) return false;
+
+            //1.set button position
+            const pointer=document.getElementById(config.scale.now);
+            const now= env.bar.now + ev.movementY;
+
+            if(now <= env.bar.header) return false;
+            if(now >= env.bar.height-env.bar.footer) return false;
+
+            env.bar.now = now;
+            pointer.style.top=`${now}px`;
+
+            // const up= (env.bar.pre[1] - ev.clientY > 0);
+            // console.log(up,ev.movementY,env.bar.now);
+            
+            // env.bar.pre = [ev.clientX,ev.clientY];
+            // env.bar.now =  (up?env.bar.now - ev.movementY:env.bar.now + ev.movementY);
+            // pointer.style.top=`${env.bar.now}px`;
+        });
+    },
     scaleUp: () => {
         const id = config.scale.up;
         const el = document.getElementById(id);
+        if(el===null) return false;
+
         el.addEventListener("click", (ev) => {
             const pos = env.position;
             const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
@@ -100,6 +157,8 @@ const self = {
     scaleDown: () => {
         const id = config.scale.down;
         const el = document.getElementById(id);
+        if(el===null) return false;
+
         el.addEventListener("click", (ev) => {
             //console.log(`scale down`,env.center);
             const pos = env.position;
@@ -154,10 +213,20 @@ const self = {
     },
     pan:(dom_id)=>{
         const cvs = document.querySelector(`#${dom_id} canvas`);
-        cvs.addEventListener("click", (ev) => {
-            //console.log(`clicked.`);
-            env.pan = !env.pan;
-            if(!env.pan) env.pre=null;
+        // cvs.addEventListener("click", (ev) => {
+           
+        // });
+
+        cvs.addEventListener("mousedown", (ev) => {
+            //console.log(`Start...`);
+            env.pan = true;
+            env.pre=null;
+        });
+
+        cvs.addEventListener("mouseup", (ev) => {
+            //console.log(`Start...`);
+            env.pan = false;
+            env.pre=null;
         });
     },
     mouse: (dom_id) => {
@@ -218,7 +287,8 @@ const self = {
             const zoom = document.getElementById(config.zoom.bar);
             zoom.style.display="block";
             self.setCenter(cvs);
-            self.setScalor(50);         //set tag to center
+            self.setFloat(50)
+            self.scaleFloat();
             self.scaleUp();
             self.scaleDown();
             self.pan(dom_id);
