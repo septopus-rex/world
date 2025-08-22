@@ -133,7 +133,7 @@ const self = {
             env.bar.now = now;
             pointer.style.top=`${now}px`;
 
-            env.render.rate(1+(ev.movementY>0?-0.1:0.1));
+            env.render.rate(1+(ev.movementY>0?-config.zoom.step:config.zoom.step));
         });
     },
     scaleUp: () => {
@@ -142,10 +142,12 @@ const self = {
         if(el===null) return false;
 
         el.addEventListener("click", (ev) => {
-            const pos = env.position;
-            const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
-            env.zoom = self.cvsScale(p, 1 + config.zoom.step);
+            // const pos = env.position;
+            // const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
+            // env.zoom = self.cvsScale(p, 1 + config.zoom.step);
             //console.log(env.zoom);
+
+            env.render.rate(1 + config.zoom.step);
         });
     },
     scaleDown: () => {
@@ -155,10 +157,12 @@ const self = {
 
         el.addEventListener("click", (ev) => {
             //console.log(`scale down`,env.center);
-            const pos = env.position;
-            const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
-            env.zoom = self.cvsScale(p, 1 - config.zoom.step);
+            // const pos = env.position;
+            // const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
+            // env.zoom = self.cvsScale(p, 1 - config.zoom.step);
             //console.log(env.zoom);
+
+            env.render.rate(1 - config.zoom.step);
         });
     },
     cvsPan:(from,to)=>{

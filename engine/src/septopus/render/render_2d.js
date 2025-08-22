@@ -26,7 +26,7 @@ const config = {
         id: "canvas_2d",
     },
     limit: {
-        max: 30,     //max scale
+        max: 100,     //max scale
         min: 1,      //min scale
     },
     fov: 50,        //3D fov setting
@@ -34,18 +34,18 @@ const config = {
 
 const env = {
     pen: null,
-    scale: 20,            //scale, more big more details
-    offset: [0, 0],       //
-    size: [0, 0],         //canvas size as meter
-    side: [0, 0],         //block side
-    limit: null,   //block number limit
-    height: 100,         //canvas height
-    width: 100,          //canvas width
-    density: 0.21,       // px/meter,
-    ratio: 1,            // for apple device, screen ratio
-    convert: 1,          //system convert 
-    player: null,        //link to player
-    selected: [0, 0],      //selected block
+    scale: 15,          //scale, more big more details
+    offset: [0, 0],     //
+    size: [0, 0],       //canvas size as meter
+    side: [0, 0],       //block side
+    limit: null,        //block number limit
+    height: 100,        //canvas height
+    width: 100,         //canvas width
+    density: 0.21,      // px/meter,
+    ratio: 1,           // for apple device, screen ratio
+    convert: 1,         //system convert 
+    player: null,       //link to player
+    selected: [0, 0],   //selected block
 };
 
 const test = {
@@ -179,6 +179,7 @@ const self = {
     },
     render: (force) => {
         if (force) self.start();
+        //console.log(JSON.stringify(env));
         self.clean();               //clean canvas;
         self.grid();                //drawing block grid;
         self.active();              //fill active block;
@@ -190,9 +191,19 @@ const self = {
         env.offset[1] += dy;
     },
     cvsScale: (dx, dy, ds) => {
+        //console.log(`Scale value: ${ds}`);
+
         env.offset[0] -= dx;
         env.offset[1] += dy;
-        env.scale += ds;
+        env.scale += parseFloat(ds);
+
+        //2. reset size of drawing area
+        const disCtoB = TwoObject.calculate.distance.c2b;
+        const rotation = 0;
+        const bx = disCtoB(env.width, rotation, env.scale, env.ratio, env.density);
+        const by = disCtoB(env.height, rotation, env.scale, env.ratio, env.density);
+        env.size=[bx,by];
+
         return env.scale;
     },
 };
@@ -237,16 +248,13 @@ const renderer = {
         },
 
         rate:(rate)=>{
+            //console.log(`Scale rate: ${rate}`);
             const cs = (rate - 1) * env.scale;
-            const pCtoB = TwoObject.calculate.distance.c2b;
-            const rotation = 0;
 
-            const cx=env.size[0]*0.5;
-            const cy=env.size[1]*0.5;
-            const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
-            const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
+            const dx= - env.size[0]*(rate-1)*0.5;
+            const dy=env.size[1]*(rate-1)*0.5;
 
-            self.cvsScale(dx, dy, cs);
+            self.cvsScale(dx,dy,cs);
             self.render();
         },
         
