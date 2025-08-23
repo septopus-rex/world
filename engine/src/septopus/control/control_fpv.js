@@ -404,13 +404,17 @@ const self = {
             if (!todo[act]) continue;
             const diff = todo[act](dis, ak);
 
-            //2.check moving 
+            //2.if no position change, just synchronous player rotation.
+            if(!diff.position){
+                VBW.player.synchronous(diff);
+                continue;
+            } 
+
+            //3.check moving 
             if (diff.position) {
                 const check = self.checkStop(diff.position);
-                //console.log(`Stop check result: ${JSON.stringify(check)}`)
-
-                //2.1. stopped, stop moving.
-                if (!check.move) {
+                //3.1. stopped, stop moving.
+                if(!check.move) {
                     if(!check.block){
                         //!important, `stop.beside` event trigger 
                         VBW.event.trigger("stop","beside",{stamp:Toolbox.stamp()},check.orgin);
@@ -421,12 +425,18 @@ const self = {
                     continue;
                 }
 
-                //2.2. whether cross block
-                // if(check.cross){
-                //     self.justifyCamera(check.edelta);
-                // }
+                //3.2. if there is delta of Z,adjust the `diff.position` value.
+                if(check.delta) {
+                    if(check.cross){
+                        diff.position[2] += check.delta-check.edelta;
+                    }else{
+                        diff.position[2] += check.delta;
+                    }
+                    if(check.orgin) VBW.player.stand(check.orgin);
+                }
+                VBW.player.synchronous(diff);
 
-                //a. if moving and stand on stop now
+                //3.3. if moving and stand on stop now
                 if(local.stop.on){
                     if(check.cross){
                         self.justifyCamera(check.edelta);
@@ -436,38 +446,27 @@ const self = {
                         VBW.player.leave(check);
                     }else{
                         if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
-                                
+
                         }else{
                             //!important, `stop.on` event trigger 
                             VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},check.block);
                         }
                     }
                 }else{
-                    if(check.cross && check.edelta!==0){
-
-                        const fall=runtime.player.location.position[2];
-                        const act_fall=check.cross?(fall-check.edelta/runtime.convert):fall;
-                        VBW.player.cross(parseFloat(act_fall));
-                        //self.justifyCamera(check.edelta);
-                    }else{
-                        if(check.cross){
+                    if(check.cross){
+                        if(check.edelta!==0){
+                            const fall=runtime.player.location.position[2];
+                            const act_fall=check.cross?(fall-check.edelta/runtime.convert):fall;
+                            console.log("Cross diff data: ",JSON.stringify(diff));
+                            VBW.player.cross(parseFloat(act_fall));
+                        }else{
                             self.justifyCamera(check.edelta);
                         }
                     }
                 }
-
-                //b. if there is delta of Z, deal with it.
-                if(check.delta) {
-                    if(check.cross){
-                        diff.position[2] += check.delta-check.edelta;
-                    }else{
-                        diff.position[2] += check.delta;
-                    }
-                    if(check.orgin) VBW.player.stand(check.orgin);
-                }
             }
-            VBW.player.synchronous(diff);
         }
+
         self.checkTrigger();
     },
 

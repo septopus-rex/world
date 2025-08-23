@@ -34,7 +34,7 @@ const config = {
 }
 
 const capacity = {
-    move: 0.03,             //move speed, meter/second
+    move: 0.02,             //move speed, meter/second
     rotate: 0.05,           //rotate speed of head
     span: 0.31,             //max height of walking
     squat: 0.1,             //height of squat
@@ -147,6 +147,7 @@ const self = {
             //!important, `block.in` event trigger 
             VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},{x:x,y:y,world:world,adjunct:"block",index:0});
             VBW.event.trigger("block","out",{stamp:Toolbox.stamp()},{x:bx,y:by,world:world,adjunct:"block",index:0});
+            console.log(`Trigger block out.`);
 
             const change = self.cross(player.location.block, [x, y], player.location.extend);
             const tasks = VBW.cache.get(["task", dom_id, world]);
@@ -325,8 +326,8 @@ const vbw_player = {
 
         //4. player event
         VBW.event.on("player","fall",(ev)=>{
+            if(env.lock) return false;
             env.lock=true;      //set to lock movement;
-
             const cfg={height:ev.fall,convert:self.getConvert()};
             Effects.get("camera","fall",cfg,()=>{
                 env.lock=false;
@@ -483,7 +484,7 @@ const vbw_player = {
             VBW.event.trigger("player","fall",evt);
         }else{
             const skip=true;
-            self.syncCameraPosition([0,0,-fall*cvt],skip);
+            //self.syncCameraPosition([0,0,-fall*cvt],skip);
         }
         return true;
     },
