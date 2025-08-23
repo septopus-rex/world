@@ -205,19 +205,6 @@ const self = {
         }
         return { load: glist, destroy: dlist };
     },
-    setCompass: (ak) => {
-        const angle = 180 * ak / Math.PI;
-        const cfg_compass = {
-            events: {
-                click: (ev) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    console.log(`Compass clicked`);
-                },
-            },
-        }
-        UI.show("compass", angle, cfg_compass);
-    },
 
     syncCameraPosition: (pos,skip) => {
         if(env.lock) return false;
@@ -251,7 +238,7 @@ const self = {
             env.player.location.rotation[2] += ro[2];
         }
         const ak = env.player.location.rotation[2];
-        self.setCompass(ak);
+        Actions.common.compass(ak);
     },
     saveLocation:()=>{
         const data=Toolbox.clone(env.player.location);

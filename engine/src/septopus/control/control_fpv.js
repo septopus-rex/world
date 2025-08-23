@@ -19,6 +19,7 @@ import Calc from "../lib/calc";
 import ThreeObject from "../three/entry";
 import Touch from "../lib/touch";
 import Toolbox from "../lib/toolbox";
+import Actions from "../io/actions";
 
 const reg = {
     name: "con_first",
@@ -218,21 +219,6 @@ const self = {
             return acc;
         }, {});
     },
-    syncCompass: () => {
-        const ak = runtime.player.location.rotation[2];
-        const angle = 180 * ak / Math.PI;
-        const cfg_compass = {
-            events: {
-                click: (ev) => {
-                    ev.preventDefault();
-                    ev.stopPropagation();
-                    console.log(`Compass clicked`);
-                },
-            },
-        }
-        UI.show("compass", angle, cfg_compass);
-    },
-
     //fliter out stops related by block coordination.
     getStops: (bks, side) => {
         //console.log(bks);
@@ -757,7 +743,8 @@ const controller = {
         if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
 
         //5. init compass;
-        self.syncCompass();
+        const ak = runtime.player.location.rotation[2];
+        Actions.common.compass(ak);
         UI.show("toast", `FPV controller is loaded.`);
     },
 }

@@ -13,12 +13,20 @@ import VBW from "../core/framework";
 import World from "../core/world";
 import UI from "./io_ui";
 
-const config={
-    map:{
-        container:"map_2d",
-        title:"map_title",
+const config = {
+    map: {
+        container: "map_2d",
+        title: "map_title",
+    },
+    card: {
+        container: "card_body",
+        title: "card_title",
     }
 }
+
+const self={
+
+};
 
 const buttons = {
     stop: {
@@ -26,8 +34,8 @@ const buttons = {
             console.log(`Stop rendering button clicked.`);
             //const res = await VBW.datasource.contract.call("buy", [2000, 1290, 0]);
             //console.log(res);
-            const active=VBW.cache.get(["active"]);
-            const dom_id=active.current;
+            const active = VBW.cache.get(["active"]);
+            const dom_id = active.current;
             World.stop(dom_id);
         }
     },
@@ -36,8 +44,8 @@ const buttons = {
             console.log(`Restart rendering button clicked.`);
             //const res = await VBW.datasource.contract.call("buy", [2000, 1290, 0]);
             //console.log(res);
-            const active=VBW.cache.get(["active"]);
-            const dom_id=active.current;
+            const active = VBW.cache.get(["active"]);
+            const dom_id = active.current;
             World.start(dom_id);
         }
     },
@@ -50,22 +58,22 @@ const buttons = {
     },
     edit: {
         label: "Edit", icon: "", action: () => {
-            const player=VBW.cache.get(["env", "player"]);
+            const player = VBW.cache.get(["env", "player"]);
             if (player.error) return UI.show("toast", player.error, { type: "error" });
-            
-            const {world,block}=player.location;
-            const active=VBW.cache.get(["active"]);
-            const dom_id=active.current;
+
+            const { world, block } = player.location;
+            const active = VBW.cache.get(["active"]);
+            const dom_id = active.current;
             World.edit(dom_id, world, block[0], block[1]);
         }
     },
     normal: {
         label: "Normal", icon: "", action: () => {
-            const player=VBW.cache.get(["env", "player"]);
+            const player = VBW.cache.get(["env", "player"]);
             if (player.error) return UI.show("toast", player.error, { type: "error" });
-            const {world}=player.location;
-            const active=VBW.cache.get(["active"]);
-            const dom_id=active.current;
+            const { world } = player.location;
+            const active = VBW.cache.get(["active"]);
+            const dom_id = active.current;
             World.normal(dom_id, world, (done) => {
                 console.log(done);
             });
@@ -78,23 +86,23 @@ const buttons = {
                 content: "This a dailog to show more details.",
             }
 
-            const dom_id=VBW.cache.get(["active","current"]);
-            const player=VBW.cache.get(["env","player"]);
-            const world=player.location.world;
-            const [x,y]=player.location.block;
-            const chain=["block",dom_id,world,`${x}_${y}`,'std','block',0];
-            const bk=VBW.cache.get(chain);
-            if(bk.error || !bk.game){
-                ctx.title="Error";
-                ctx.content=bk.error;
-            }else{
-                const data=VBW.cache.get(["resource","game",`${world}_${bk.game}`]);
-                if(data.error){
-                    ctx.title="Error: resource is not loaded.";
-                    ctx.content=data.error;
-                }else{
-                    ctx.title=`Game: ${data.raw.game}`;
-                    ctx.content="Enjoy!";
+            const dom_id = VBW.cache.get(["active", "current"]);
+            const player = VBW.cache.get(["env", "player"]);
+            const world = player.location.world;
+            const [x, y] = player.location.block;
+            const chain = ["block", dom_id, world, `${x}_${y}`, 'std', 'block', 0];
+            const bk = VBW.cache.get(chain);
+            if (bk.error || !bk.game) {
+                ctx.title = "Error";
+                ctx.content = bk.error;
+            } else {
+                const data = VBW.cache.get(["resource", "game", `${world}_${bk.game}`]);
+                if (data.error) {
+                    ctx.title = "Error: resource is not loaded.";
+                    ctx.content = data.error;
+                } else {
+                    ctx.title = `Game: ${data.raw.game}`;
+                    ctx.content = "Enjoy!";
                 }
             }
             UI.show("dialog", ctx, { position: "center" });
@@ -118,18 +126,18 @@ const buttons = {
     game: {
         label: "Game", icon: "", action: async () => {
 
-            const dom_id=VBW.cache.get(["active","current"]);
-            const player=VBW.cache.get(["env","player"]);
-            const world=player.location.world;
-            const [x,y]=player.location.block;
-            const chain=["block",dom_id,world,`${x}_${y}`,'std','block',0];
-            const bk=VBW.cache.get(chain);
-            console.log(`${x}_${y}`,bk);
-            const game=VBW.cache.get(["resource","game",`${world}_${bk.game}`]);
-            const def=VBW.cache.get(["def","common"]);
+            const dom_id = VBW.cache.get(["active", "current"]);
+            const player = VBW.cache.get(["env", "player"]);
+            const world = player.location.world;
+            const [x, y] = player.location.block;
+            const chain = ["block", dom_id, world, `${x}_${y}`, 'std', 'block', 0];
+            const bk = VBW.cache.get(chain);
+            console.log(`${x}_${y}`, bk);
+            const game = VBW.cache.get(["resource", "game", `${world}_${bk.game}`]);
+            const def = VBW.cache.get(["def", "common"]);
             console.log(game);
             //const current=VBW.cache.get(["active","current"]);
-            const cfg={blocks:[[2024,340],[2024,340,2,3],[]],style:{}};
+            const cfg = { blocks: [[2024, 340], [2024, 340, 2, 3], []], style: {} };
             // VBW.mode(def.MODE_GAME,{container:dom_id},()=>{
 
             // },cfg);
@@ -181,14 +189,14 @@ const buttons = {
 };
 
 const common = {
-    map:()=>{
+    map: () => {
         const container_id = config.map.container;
-        const title_id=config.map.title;
+        const title_id = config.map.title;
         const ctx = {
             title: `<div id="${title_id}">2D map</div>`,
             content: `<div class="map" id="${container_id}"></div>`,
         }
-        const cfg_map = {
+        const cfg = {
             events: {
                 close: () => {
                     console.log(`Map closed, clean the objects to access.`);
@@ -199,16 +207,50 @@ const common = {
             auto: () => {  //run after the DOM is loaded
                 //1. run 2D map
                 VBW.rd_two.show(container_id);
-                VBW.con_two.start(container_id,title_id);
+                VBW.con_two.start(container_id, title_id);
             },
         };
-        UI.show("dialog", ctx, cfg_map);
+        UI.show("dialog", ctx, cfg);
+    },
+    card: () => {
+        const container_id = config.card.container;
+        const title_id = config.card.title;
+        const ctx = {
+            title: `<div id="${title_id}">User Details</div>`,
+            content: `<div class="map" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`User card closed.`);
+                },
+            },
+            auto: () => {
+                const player=VBW.cache.get(["env","player"]);
+                console.log(player);
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    },
+    compass: (ak) => {
+        const angle = 180 * ak / Math.PI;
+        const cfg_compass = {
+            events: {
+                click: (ev) => {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    //console.log(`Compass clicked`);
+                    common.card();
+                },
+            },
+        }
+        UI.show("compass", angle, cfg_compass);
     },
 }
 
-const Actions={
-    buttons:buttons,
-    common:common,
+const Actions = {
+    buttons: buttons,
+    common: common,
 }
 
 export default Actions;
