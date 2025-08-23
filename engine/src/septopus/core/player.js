@@ -15,6 +15,7 @@ import VBW from "./framework";
 import UI from "../io/io_ui";
 import Effects from "../effects/entry";
 import Actions from "../io/actions";
+import Pages from "../io/pages";
 
 const reg = {
     name: "player",
@@ -103,8 +104,7 @@ const self = {
                     ev.preventDefault();
                     ev.stopPropagation();
                     console.log(`Status clicked.`);
-                    //self.showMap(ev);
-                    Actions.common.map();
+                    Pages.map();
                 },
             },
         }

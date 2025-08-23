@@ -12,6 +12,7 @@
 import VBW from "../core/framework";
 import World from "../core/world";
 import UI from "./io_ui";
+import Pages from "./pages";
 
 const config = {
     map: {
@@ -189,49 +190,6 @@ const buttons = {
 };
 
 const common = {
-    map: () => {
-        const container_id = config.map.container;
-        const title_id = config.map.title;
-        const ctx = {
-            title: `<div id="${title_id}">2D map</div>`,
-            content: `<div class="map" id="${container_id}"></div>`,
-        }
-        const cfg = {
-            events: {
-                close: () => {
-                    console.log(`Map closed, clean the objects to access.`);
-                    VBW.con_two.clean(container_id);
-                    VBW.rd_two.clean(container_id);
-                },
-            },
-            auto: () => {  //run after the DOM is loaded
-                //1. run 2D map
-                VBW.rd_two.show(container_id);
-                VBW.con_two.start(container_id, title_id);
-            },
-        };
-        UI.show("dialog", ctx, cfg);
-    },
-    card: () => {
-        const container_id = config.card.container;
-        const title_id = config.card.title;
-        const ctx = {
-            title: `<div id="${title_id}">User Details</div>`,
-            content: `<div class="map" id="${container_id}"></div>`,
-        }
-        const cfg = {
-            events: {
-                close: () => {
-                    console.log(`User card closed.`);
-                },
-            },
-            auto: () => {
-                const player=VBW.cache.get(["env","player"]);
-                console.log(player);
-            },
-        };
-        UI.show("dialog", ctx, cfg);
-    },
     compass: (ak) => {
         const angle = 180 * ak / Math.PI;
         const cfg_compass = {
@@ -240,12 +198,15 @@ const common = {
                     ev.preventDefault();
                     ev.stopPropagation();
                     //console.log(`Compass clicked`);
-                    common.card();
+                    Pages.card();
                 },
             },
         }
         UI.show("compass", angle, cfg_compass);
     },
+    mode:()=>{
+        
+    }
 }
 
 const Actions = {

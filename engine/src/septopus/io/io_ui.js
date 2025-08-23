@@ -442,7 +442,6 @@ const router={
 
         el.innerHTML="";
         el.appendChild(dom);
-        //console.log(dom);
 
         self.bindActions(arr,name);
     },
