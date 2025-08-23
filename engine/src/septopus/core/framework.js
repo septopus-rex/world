@@ -59,10 +59,6 @@ const self = {
         const queue_chain = ["block", dom_id, world, "loop"];
         return self.cache.get(queue_chain);
     },
-    getNameByShort: (short) => {
-        if (cache.map[short] === undefined) return false;
-        return cache.map[short];
-    },
     getConvert: () => {
         return self.cache.get(["env", "world", "accuracy"]);
     },
@@ -81,7 +77,10 @@ const self = {
         }
         return {error:"No adjunct raw data."};
     },
-
+    getNameByShort: (short) => {
+        if (cache.map[short] === undefined) return false;
+        return cache.map[short];
+    },
     structCache: () => {
         const keys = config.keys;
         for (let k in keys) {

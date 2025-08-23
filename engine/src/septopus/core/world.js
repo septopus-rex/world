@@ -489,6 +489,8 @@ const self = {
             const row = wd.adjunct[adj];
             def[adj] = row.definition;
             if (adj === `common`) continue;
+            if(row.short===undefined) continue;
+            
             map[adj] = row.short;
             map[row.short] = adj;
         }
