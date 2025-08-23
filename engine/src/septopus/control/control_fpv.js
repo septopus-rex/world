@@ -38,8 +38,8 @@ const runtime = {
     raycaster: null,         //raycast checker
     selected: null,            //edit selection
     convert: null,           //system convert
-    active:null,
-    def:null,
+    active: null,
+    def: null,
 }
 
 const config = {
@@ -68,27 +68,27 @@ const config = {
         delay: 300,
         distance: 5,
     },
-    swipe:{
+    swipe: {
         distance: 15,
     },
-    hold:3000,          //3s as holding  
+    hold: 3000,          //3s as holding  
 }
 
 const env = {
     //position: [0, 0],       //[left,top],DOM offset      
-    mobile:false,
+    mobile: false,
     limit: null,            //limit of movement
     moving: false,          //whether moving, for mobile  
-    screen:{
-        touch:null,
-        distance:0,
-        width:0,
+    screen: {
+        touch: null,
+        distance: 0,
+        width: 0,
     },
-    trigger:null,      
+    trigger: null,
 };
 
 let todo = null;
-let trigger = null;   
+let trigger = null;
 const self = {
     hooks: {
         reg: () => { return reg },
@@ -100,25 +100,25 @@ const self = {
         if (!dom_id) document.addEventListener(evt, fun);
     },
     getEditActive: () => {
-        const world=runtime.player.location.world;
+        const world = runtime.player.location.world;
         return VBW.cache.get(["block", runtime.container, world, "edit"]);
     },
     getSTD: (x, y, adjunct, index) => {
-        const world=runtime.player.location.world;
+        const world = runtime.player.location.world;
         const chain = ["block", runtime.container, world, `${x}_${y}`, 'std', adjunct, index === undefined ? 0 : index];
         return VBW.cache.get(chain);
     },
-    getAngle:(ak)=>{
-        if(env.mobile){
-            const rate=env.screen.distance/env.screen.width
+    getAngle: (ak) => {
+        if (env.mobile) {
+            const rate = env.screen.distance / env.screen.width
             return Math.PI * 0.5 * rate;
-        }else{
+        } else {
             return ak;
         }
     },
     getElevation: (x, y) => {
         //const active = VBW.cache.get(["active"]);
-        const world=runtime.player.location.world;
+        const world = runtime.player.location.world;
         const chain = ["block", runtime.container, world, `${x}_${y}`, "elevation"];
         return VBW.cache.get(chain);
     },
@@ -136,14 +136,14 @@ const self = {
         const target = objs[selected];
         return target.object.userData;
     },
-    setWidth:(dom_id)=>{
-        const el=document.querySelector(`#${dom_id} canvas`);
+    setWidth: (dom_id) => {
+        const el = document.querySelector(`#${dom_id} canvas`);
         if (!el) return false;
-        env.screen.width=el.width;
+        env.screen.width = el.width;
     },
-    initTodo:()=>{
-        const body=VBW.movement.body;
-        const head=VBW.movement.head;
+    initTodo: () => {
+        const body = VBW.movement.body;
+        const head = VBW.movement.head;
         todo = {
             FORWARD: body.forward,
             BACKWARD: body.backward,
@@ -156,7 +156,7 @@ const self = {
             HEAD_LEFT: head.left,
             HEAD_RIGHT: head.right,
             HEAD_RISE: head.up,
-            HEAD_DOWN:head.down,
+            HEAD_DOWN: head.down,
         }
     },
     keyboard: () => {
@@ -207,7 +207,7 @@ const self = {
         }
 
         if (runtime.active === null) {
-            const chain = ["active", "containers",dom_id];
+            const chain = ["active", "containers", dom_id];
             runtime.active = VBW.cache.get(chain);
         }
     },
@@ -238,7 +238,7 @@ const self = {
         //console.log(bks);
         const stops = [];
         const fun = VBW.cache.get;
-        const world=runtime.player.location.world;
+        const world = runtime.player.location.world;
         for (let i = 0; i < bks.length; i++) {
             const [x, y] = bks[i];
             if (!x || !y) continue;
@@ -260,31 +260,31 @@ const self = {
     // good player position
     //{"block":[2025,618],"position":[8.2,15.696,0],"rotation":[0,0,-6.408849],"world":0,"extend":3,"stop":{"on":false,"adjunct":"","index":0}}
     checkStop: (delta) => {
-        const cvt = runtime.convert,side = runtime.side;
+        const cvt = runtime.convert, side = runtime.side;
         const player = runtime.player;
         const { body, capacity } = player;
         const [x, y] = player.location.block;
 
         //!important, need to add the movement to check whether stop
-        const nx=player.location.position[0] * cvt + delta[0];
-        const ny=player.location.position[1] * cvt + delta[1];
-        const nz=player.location.position[2] * cvt + delta[2];
-        const bx=x + Math.floor(nx/side[0]);
-        const by=y + Math.floor(ny/side[1]);
+        const nx = player.location.position[0] * cvt + delta[0];
+        const ny = player.location.position[1] * cvt + delta[1];
+        const nz = player.location.position[2] * cvt + delta[2];
+        const bx = x + Math.floor(nx / side[0]);
+        const by = y + Math.floor(ny / side[1]);
 
-        const va=self.getElevation(x, y);
-        const stand=va + player.location.position[2]*cvt;
-        let cross=false;
+        const va = self.getElevation(x, y);
+        const stand = va + player.location.position[2] * cvt;
+        let cross = false;
 
         //1. block cross status checking
-        
-        if(bx!==x || by!==y){
-            cross=true;
-            const vb=self.getElevation(bx,by);
+
+        if (bx !== x || by !== y) {
+            cross = true;
+            const vb = self.getElevation(bx, by);
             //1.1.check whether stopped by block, only check block elevation here
             //const stand=va + player.location.position[2]*cvt;
-            if(vb-stand > capacity.span*cvt){
-                return { move: false, block:[bx,by]}
+            if (vb - stand > capacity.span * cvt) {
+                return { move: false, block: [bx, by] }
             }
 
             //1.2.check elevation delta
@@ -296,91 +296,92 @@ const self = {
 
         //2.check whether stopped by stops
         //also check the nearby block stops if not stopped by block
-        const pos = cross?[nx%side[0],ny%side[1],nz]:[nx,ny,nz];
-        const stops = self.getStops([[bx,by]], side);
-        
+        const pos = cross ? [nx % side[0], ny % side[1], nz] : [nx, ny, nz];
+        const stops = self.getStops([[bx, by]], side);
+
         const cfg = {
             cap: capacity.span * cvt,               //cross limit
             height: body.height * cvt,              //player body height
             elevation: va,                          //block elevation
-            cross:cross,                            //whether block cross
+            cross: cross,                            //whether block cross
         };
-        if(cross) cfg.next=self.getElevation(bx,by);    //if cross, prepare the next block elevation
+        if (cross) cfg.next = self.getElevation(bx, by);    //if cross, prepare the next block elevation
 
         //{"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
         //Stop check result: {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
 
         return Calc.check(pos, stops, cfg);
     },
-    getTriggers:()=>{
-        const [x,y]=runtime.player.location.block;
-        const world=runtime.player.location.world;
-        const trigger_chain=["block",runtime.container, world,`${x}_${y}`,"trigger"];
+    getTriggers: () => {
+        const [x, y] = runtime.player.location.block;
+        const world = runtime.player.location.world;
+        const trigger_chain = ["block", runtime.container, world, `${x}_${y}`, "trigger"];
         return VBW.cache.get(trigger_chain);
     },
-    checkTrigger:()=>{
+    checkTrigger: () => {
         //console.log(runtime.active.mode,runtime.def);
-        if(runtime.active.mode!==runtime.def.MODE_GAME) return false;
+        if (runtime.active.mode !== runtime.def.MODE_GAME) return false;
 
         //1. get trigger list
-        const arr=self.getTriggers();
-        if(arr.error || arr.length===0) return false;
+        const arr = self.getTriggers();
+        if (arr.error || arr.length === 0) return false;
 
         //2. prepare parameters to check trigger
         const cvt = runtime.convert;
         const player = runtime.player;
-        const nx=player.location.position[0] * cvt;
-        const ny=player.location.position[1] * cvt;
-        const nz=player.location.position[2] * cvt;
-        const pos = [nx,ny,nz];
+        const nx = player.location.position[0] * cvt;
+        const ny = player.location.position[1] * cvt;
+        const nz = player.location.position[2] * cvt;
+        const pos = [nx, ny, nz];
 
-        const orgin = Calc.inside(pos,arr, player.body.height * cvt);
+        const orgin = Calc.inside(pos, arr, player.body.height * cvt);
         const [x, y] = player.location.block;
-        const world= player.location.world;
-        if(env.trigger===null){
-            if(orgin!==false){
-                const target={
-                    x:x,y:y,world:world,
-                    index:orgin.index,
-                    adjunct:orgin.adjunct,
-                    start:Toolbox.stamp(),
-                    hold:false,
-                    container:runtime.container,
+        const world = player.location.world;
+        if (env.trigger === null) {
+            if (orgin !== false) {
+                const target = {
+                    x: x, y: y, world: world,
+                    index: orgin.index,
+                    adjunct: orgin.adjunct,
+                    start: Toolbox.stamp(),
+                    hold: false,
+                    container: runtime.container,
                 };
-                
-                //!important, `trigger.in` event trigger 
-                env.trigger=target;
-                const evt=Toolbox.clone(target);
-                evt.stamp=Toolbox.stamp();
 
-                VBW.event.trigger("trigger","in",evt,Toolbox.clone(target));
+                //!important, `trigger.in` event trigger 
+                env.trigger = target;
+                const evt = Toolbox.clone(target);
+                evt.stamp = Toolbox.stamp();
+
+                VBW.event.trigger("trigger", "in", evt, Toolbox.clone(target));
             }
-        }else{
+        } else {
             //2. check hold event
-            if(env.trigger.hold===false){
-                const delta=Toolbox.stamp()-env.trigger.start;
-                if(delta > config.hold){
+            if (env.trigger.hold === false) {
+                const delta = Toolbox.stamp() - env.trigger.start;
+                if (delta > config.hold) {
                     //!important, `trigger.hold` event trigger 
-                    const evt=Toolbox.clone(env.trigger);
-                    evt.stamp=Toolbox.stamp();
-                    VBW.event.trigger("trigger","hold",evt,Toolbox.clone(env.trigger));
-                    env.trigger.hold=true;
+                    const evt = Toolbox.clone(env.trigger);
+                    evt.stamp = Toolbox.stamp();
+                    VBW.event.trigger("trigger", "hold", evt, Toolbox.clone(env.trigger));
+                    env.trigger.hold = true;
                 }
             }
 
             //3. check leaving event
-            if(orgin===false){
+            if (orgin === false) {
                 //!important, `trigger.in` event trigger 
-                const evt=Toolbox.clone(env.trigger);
-                evt.stamp=Toolbox.stamp();
-                VBW.event.trigger("trigger","out",evt,Toolbox.clone(env.trigger));
-                env.trigger=null;
+                const evt = Toolbox.clone(env.trigger);
+                evt.stamp = Toolbox.stamp();
+                VBW.event.trigger("trigger", "out", evt, Toolbox.clone(env.trigger));
+                env.trigger = null;
             }
         }
     },
 
-    justifyCamera:(delta)=>{
-        const current=runtime.camera.position;
+    justifyCamera: (delta) => {
+        //console.log(`Here to justify camera`,delta);
+        const current = runtime.camera.position;
         runtime.camera.position.set(                    //!important, transform from Septopus to three.js
             current.x,
             current.y + delta,
@@ -388,15 +389,113 @@ const self = {
         );
     },
 
+    checkMoving_bak: (check, stop) => {
+        if (stop.on) {
+            if (check.cross) {
+                self.justifyCamera(check.edelta);
+            }
+
+            if (!check.orgin) {
+                VBW.player.leave(check);
+            } else {
+                if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
+
+                } else {
+                    //!important, `stop.on` event trigger 
+                    VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+                }
+            }
+        } else {
+            if (check.cross) {
+                if (check.edelta !== 0) {
+                    const fall = runtime.player.location.position[2];
+                    const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
+                    VBW.player.cross(parseFloat(act_fall));
+                } else {
+                    self.justifyCamera(check.edelta);
+                }
+            }
+        }
+    },
+
+    checkMoving: (check, stop, diff) => {
+        if (check.delta) {
+            if (check.cross) {
+                diff.position[2] += check.delta - check.edelta;
+            } else {
+                diff.position[2] += check.delta;
+            }
+            if (check.orgin) VBW.player.stand(check.orgin);
+        }
+        VBW.player.synchronous(diff);
+        //return self.checkMoving_bak(check, stop);
+
+        if(stop.on){
+            if(check.cross){
+                if(check.edelta) self.justifyCamera(check.edelta);
+                if(check.orgin){
+                    //1.from `stand stop` cross to `stop`
+                    //!important, `stop.on` event trigger 
+                    VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+                }else{
+                    //2.from `stand stop` cross to `block`
+                    VBW.player.leave(check);
+                }
+            }else{
+                if(check.orgin){
+                    //3.from `stand stop` to `stop`
+                    if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
+                        //do nothing if stand on the same stop
+                    } else {
+                        //!important, `stop.on` event trigger 
+                        VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+                    }
+                }else{
+                    //4.from `stand stop` to `block`
+                    VBW.player.leave(check);
+                }
+            }
+        }else{
+            if(check.cross){
+                if(check.orgin){
+                    //5.from `block` cross to `stop`
+                    console.log(`Here to solve?`,JSON.stringify(check));
+                    VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+                }else{
+                    //6.from `block` cross to `block`
+                    if (check.edelta !== 0) {
+                    const fall = runtime.player.location.position[2];
+                    const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
+                    VBW.player.cross(parseFloat(act_fall));
+                }
+                }
+            }else{
+                if(check.edelta) self.justifyCamera(check.edelta);
+                if(check.orgin){
+                    //7.from `block` to `stop`
+                    if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
+
+                    } else {
+                        //!important, `stop.on` event trigger 
+                        VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+                    }
+                }else{
+                    //8.from `block` to `block`
+                    //do nothing here.
+                }
+            }
+        }
+    },
+
     //Frame Synchronization, movement here to imply
     action: () => {
         const dis = [config.move.distance, self.getAngle(config.move.angle)];
-        
+
         //!important, need to confirm the `AK` definition, it is camera coordination
         //FIXME, change to calculate on the player rotation.
 
         const ak = runtime.camera.rotation.y;
-        const local=runtime.player.location;
+        const local = runtime.player.location;
 
         //1.deal with keyboard inputs.
         for (let i = 0; i < runtime.actions.length; i++) {
@@ -405,65 +504,29 @@ const self = {
             const diff = todo[act](dis, ak);
 
             //2.if no position change, just synchronous player rotation.
-            if(!diff.position){
+            if (!diff.position) {
                 VBW.player.synchronous(diff);
                 continue;
-            } 
+            }
 
             //3.check moving 
             if (diff.position) {
                 const check = self.checkStop(diff.position);
+
                 //3.1. stopped, stop moving.
-                if(!check.move) {
-                    if(!check.block){
+                if (!check.move) {
+                    if (!check.block) {
                         //!important, `stop.beside` event trigger 
-                        VBW.event.trigger("stop","beside",{stamp:Toolbox.stamp()},check.orgin);
-                    }else{
+                        VBW.event.trigger("stop", "beside", { stamp: Toolbox.stamp() }, check.orgin);
+                    } else {
                         //!important, `block.stop` event trigger 
-                        VBW.event.trigger("block","stop",{stamp:Toolbox.stamp()},check.block);
+                        VBW.event.trigger("block", "stop", { stamp: Toolbox.stamp() }, check.block);
                     }
                     continue;
                 }
 
-                //3.2. if there is delta of Z,adjust the `diff.position` value.
-                if(check.delta) {
-                    if(check.cross){
-                        diff.position[2] += check.delta-check.edelta;
-                    }else{
-                        diff.position[2] += check.delta;
-                    }
-                    if(check.orgin) VBW.player.stand(check.orgin);
-                }
-                VBW.player.synchronous(diff);
-
-                //3.3. if moving and stand on stop now
-                if(local.stop.on){
-                    if(check.cross){
-                        self.justifyCamera(check.edelta);
-                    }
-                    
-                    if(!check.orgin){
-                        VBW.player.leave(check);
-                    }else{
-                        if(check.orgin.adjunct===local.stop.adjunct && check.orgin.index===local.stop.index){
-
-                        }else{
-                            //!important, `stop.on` event trigger 
-                            VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},check.block);
-                        }
-                    }
-                }else{
-                    if(check.cross){
-                        if(check.edelta!==0){
-                            const fall=runtime.player.location.position[2];
-                            const act_fall=check.cross?(fall-check.edelta/runtime.convert):fall;
-                            console.log("Cross diff data: ",JSON.stringify(diff));
-                            VBW.player.cross(parseFloat(act_fall));
-                        }else{
-                            self.justifyCamera(check.edelta);
-                        }
-                    }
-                }
+                //3.2. moving action.
+                self.checkMoving(check, local.stop, diff);
             }
         }
 
@@ -548,7 +611,7 @@ const self = {
             if (mode === 2) {
                 //1. raycast check the selected object
                 const target = self.select(ev);
-                const world=runtime.player.location.world;
+                const world = runtime.player.location.world;
 
                 //2. set active
                 const editing = self.getEditActive();
@@ -598,11 +661,11 @@ const self = {
         });
     },
 
-    touch:(dom_id) =>{ 
-        const id=`#${dom_id} canvas`;
-        
+    touch: (dom_id) => {
+        const id = `#${dom_id} canvas`;
+
         //1. double tap to go forward
-        Touch.on(id,"doubleTap",(point)=>{
+        Touch.on(id, "doubleTap", (point) => {
             if (!env.moving) {
                 VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
                 env.moving = true;
@@ -613,27 +676,27 @@ const self = {
             }
         });
 
-        Touch.on(id,"touchStart",(point)=>{
+        Touch.on(id, "touchStart", (point) => {
             env.screen.touch = point;
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_LEFT]);
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
         });
 
         //2.touchmove for head rotation
-        Touch.on(id,"touchMove",(point,distance)=>{
+        Touch.on(id, "touchMove", (point, distance) => {
             const dx = point[0] - env.screen.touch[0];
-            env.screen.distance=distance;
-            if(dx > 0){   //swipe right
+            env.screen.distance = distance;
+            if (dx > 0) {   //swipe right
                 VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_LEFT]);
-            }else{      //swipe left
+            } else {      //swipe left
                 VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
             }
             env.screen.touch = point;
         });
 
-        Touch.on(id,"touchEnd",()=>{
-            env.screen.touch=null;
-            env.screen.distance=0;
+        Touch.on(id, "touchEnd", () => {
+            env.screen.touch = null;
+            env.screen.distance = 0;
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_LEFT]);
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
         });
@@ -671,7 +734,7 @@ const controller = {
 
         //1.add keyboard listener and screen control
         const device = VBW.cache.get(["env", "device"]);
-        env.mobile=device.mobile;       
+        env.mobile = device.mobile;
         VBW.queue.init(config.queue);
         if (device.mobile) {
             self.touch(dom_id);
@@ -684,7 +747,7 @@ const controller = {
         self.autocache(dom_id);
 
         //3.set frame sync function
-        const world=runtime.player.location.world;
+        const world = runtime.player.location.world;
         const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
