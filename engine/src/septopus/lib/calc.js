@@ -2,7 +2,6 @@ const self = {
     // whether in stop projection surface
     projection: (px, py, stops) => {
         const list = {};
-
         for (let i in stops) {
             const row = stops[i];
             const { size, position, side, block, orgin } = row;
@@ -31,7 +30,6 @@ const self = {
                 default:
                     break;
             }
-
         }
         return list;
     },
@@ -165,7 +163,7 @@ const Calc = {
         const result = {         //stop result
             interact: false,     //whether on a stop
             move: true,          //whether allow to move
-            index: -1,          //index of stops
+            //index: -1,          //index of stops
         }
         if(cfg.cross){
             result.cross=true;
@@ -194,8 +192,8 @@ const Calc = {
         //3.filter out the target stop for movement;
         const fs = self.filter(arr);
         result.move = !fs.stop;
-        result.index = fs.index;
-        if (fs.delta != undefined) result.delta = fs.delta;
+        //result.index = fs.index;
+        if (fs.delta !== undefined) result.delta = fs.delta;
         if (fs.orgin) result.orgin = fs.orgin;
         
         return result;  

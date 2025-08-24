@@ -375,47 +375,20 @@ const self = {
         );
     },
 
-    checkMoving_bak: (check, stop) => {
-        if (stop.on) {
-            if (check.cross) {
-                self.justifyCamera(check.edelta);
-            }
-
-            if (!check.orgin) {
-                VBW.player.leave(check);
-            } else {
-                if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
-
-                } else {
-                    //!important, `stop.on` event trigger 
-                    VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
-                }
-            }
-        } else {
-            if (check.cross) {
-                if (check.edelta !== 0) {
-                    const fall = runtime.player.location.position[2];
-                    const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
-                    VBW.player.cross(parseFloat(act_fall));
-                } else {
-                    self.justifyCamera(check.edelta);
-                }
-            }
-        }
-    },
-
     checkMoving: (check, stop, diff) => {
-        if (check.delta) {
+        //1. check delta to comfirm standing changing. Set player status correctly.
+        if (check.delta!==undefined) {
             if (check.cross) {
                 diff.position[2] += check.delta - check.edelta;
             } else {
                 diff.position[2] += check.delta;
             }
-            if (check.orgin) VBW.player.stand(check.orgin);
+            if (check.orgin) VBW.player.stand(check.orgin);     //set player stand on stop
         }
-        VBW.player.synchronous(diff);
-        //return self.checkMoving_bak(check, stop);
+        
+        VBW.player.synchronous(diff);       //set player stay in block
 
+        //2. more actions for UX
         if(stop.on){
             if(check.cross){
                 if(check.edelta) self.justifyCamera(check.edelta);
@@ -445,15 +418,15 @@ const self = {
             if(check.cross){
                 if(check.orgin){
                     //5.from `block` cross to `stop`
-                    console.log(`Here to solve?`,JSON.stringify(check));
+                    //console.log(`Here to solve?`,JSON.stringify(check));
                     VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
                 }else{
                     //6.from `block` cross to `block`
                     if (check.edelta !== 0) {
-                    const fall = runtime.player.location.position[2];
-                    const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
-                    VBW.player.cross(parseFloat(act_fall));
-                }
+                        const fall = runtime.player.location.position[2];
+                        const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
+                        VBW.player.cross(parseFloat(act_fall));
+                    }
                 }
             }else{
                 if(check.edelta) self.justifyCamera(check.edelta);

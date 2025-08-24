@@ -490,7 +490,7 @@ const self = {
             def[adj] = row.definition;
             if (adj === `common`) continue;
             if(row.short===undefined) continue;
-            
+
             map[adj] = row.short;
             map[row.short] = adj;
         }
@@ -621,6 +621,15 @@ const self = {
         }
     },
 
+    outofRange:(x,y)=>{
+        const player=VBW.cache.get(["env","player"]);
+        const [px,py]=player.location.block;
+        const ext=player.location.extend;
+        if(px > x+ext || px< x-ext) return true;
+        if(py > y+ext || py< y-ext) return true;
+        return false;
+    },
+
     /**
      * Frame-loop function to check blocks loaded status.
      * @functions
@@ -667,8 +676,10 @@ const self = {
                     self.updateGame(pre.game);
                 }   
 
-                //5. fresh render.
-                VBW[config.render].show(dom_id, [x, y, world]);
+                //5. fresh render, need to check wether out of range
+                if(!self.outofRange(x,y)){
+                    VBW[config.render].show(dom_id, [x, y, world]);
+                }
             }, {});
 
             queue.shift();      //remove frame-loop task

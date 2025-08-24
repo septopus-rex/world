@@ -123,7 +123,6 @@ const self={
             World.load(dom_id,world,x,y);
         },
         unload:(x,y,param,world, dom_id)=>{
-            //console.log(`block unload:`,x,y,param,world,dom_id);
             World.unload(dom_id,world,x,y);
         },
         set:(x,y,param, world, dom_id)=>{

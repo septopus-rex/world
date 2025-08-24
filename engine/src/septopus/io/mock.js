@@ -550,11 +550,15 @@ const mock = {
                                 [[2, 4.8, 0.25],[2, 6, 0.375], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],      //5
                                 [[2, 5.6, 0.25],[2, 6.4, 0.125], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],    //6
 
+                                //Cross status: {"interact":true,"move":true,"index":7,"cross":true,"edelta":-1700,"delta":0,"orgin":{"adjunct":"box","index":7,"type":"box"}}
+                                //Stand status: {"on":false,"adjunct":"","index":0}
                                 [[4, 4, 1.7], [2.5, 2, 0.85], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],    //7 single
+
+                                //Cross status: {"interact":true,"move":true,"index":7,"cross":true,"edelta":-1700,"delta":-100,"orgin":{"adjunct":"box","index":7,"type":"box"}}
+                                //[[4, 4, 1.6], [2.5, 2, 0.8], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],
 
                                 [[1, 4, 1.4], [14, 2, 0.85], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],    //8 single
                                 [[1, 4, 2.2], [12, 2, 1.1], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],    //8 single
-
                                 [[4, 2, 3], [9, 1, 1.5], [0, 0, 0], rand(60, 90), [1, 1], 0, 1],       //9 single
                             ]],
                     ],
