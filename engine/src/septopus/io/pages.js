@@ -20,6 +20,10 @@ const config = {
     card: {
         container: "card_body",
         title: "card_title",
+    },
+    news: {
+        container: "news_container",
+        title: "news_title",
     }
 }
 
@@ -68,6 +72,30 @@ const Pages = {
             auto: () => {
                 const player=VBW.cache.get(["env","player"]);
                 console.log(player);
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    },
+    news:()=>{
+        const container_id = config.news.container;
+        const title_id = config.news.title;
+        const ctx = {
+            title: `<div id="${title_id}">News</div>`,
+            content: `<div class="map" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`News page closed.`);
+                },
+                show:()=>{
+                    console.log(`Ready to get news via API.`);
+                },
+            },
+            auto: () => {
+                //const player=VBW.cache.get(["env","player"]);
+                //console.log(player);
+
             },
         };
         UI.show("dialog", ctx, cfg);

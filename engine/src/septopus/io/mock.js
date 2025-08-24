@@ -350,6 +350,33 @@ const mock = {
                     scale: [2, 2, 2],        //虚拟形象身体尺寸的最大放大比例, [高,宽,深]
                 },
             },
+            extend:{
+                news:{
+                    server:"https://news_api.septopus.xyz",
+                    methods:[
+                        {
+                            path:"list",
+                            params:{
+                                page:"number",
+                                step:"number",
+                            }
+                        },
+                        {
+                            path:"view",
+                            params:{
+                                hash:"string[12]",
+                            }
+                        },
+                        {
+                            path:"comment",
+                            params:{
+                                hash:"string[12]",
+                                words:"string[500]",
+                            }
+                        },
+                    ]
+                },
+            },
         }
     },
     block: (x, y, world) => {

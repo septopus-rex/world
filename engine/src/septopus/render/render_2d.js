@@ -151,13 +151,14 @@ const self = {
         //const wd=me.core.world,s=wd.sideLength,env=run[target];
         const s = env.side[0];
         const ps = [[(x - 1) * s, (y - 1) * s], [(x - 1) * s, y * s], [x * s, y * s], [x * s, (y - 1) * s]];
+        //console.log(JSON.stringify(ps));
+        //console.log(cfg,env.selected)
         TwoObject.drawing.fill(env, ps, cfg);
     },
     active: () => {
         const [x, y] = env.selected;
         if (x > 0 && y > 0) {
             self.block(x, y, { width: 1, color: '#00CCBB', anticlock: true });
-
         }
         const [px, py] = env.player.location.block;
         self.block(px, py, { width: 1, color: '#99CCBB', anticlock: true });
@@ -271,16 +272,15 @@ const renderer = {
             self.render();
         },
         select: (pos, cfg) => {
-            //console.log(pos,cfg);
-            //const cp=root.calc.pCtoB(pos, env.scale, env.offset, env.multi, env.pxperm);
             const pCtoB = TwoObject.calculate.point.c2b;
             const point = pCtoB(pos, env.scale, env.offset, env.density, env.ratio);
             const x = Math.ceil(point[0] / env.side[0]);
             const y = Math.ceil(point[1] / env.side[1]);
 
-            //console.log(x,y);
             self.render();
             self.block(x, y, cfg);
+            env.selected=[x,y];
+
             return [x, y];
         },
     }

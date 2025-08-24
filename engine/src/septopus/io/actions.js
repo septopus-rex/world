@@ -199,6 +199,7 @@ const common = {
                     ev.stopPropagation();
                     //console.log(`Compass clicked`);
                     Pages.card();
+                    //Pages.news();
                 },
             },
         }

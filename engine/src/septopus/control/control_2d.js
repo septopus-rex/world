@@ -76,8 +76,10 @@ const self = {
         if(anti) return [evt.clientX - pos.left,env.height-(evt.clientY - pos.top)];
         return [evt.clientX - pos.left,evt.clientY - pos.top];
     },
-    getMousePoint:(ev)=>{
-        return [ev.clientX,ev.clientY]
+    getMousePoint:(ev,anti)=>{
+        const pos = env.position;
+        if(anti) return [ev.clientX - pos.left,env.height-(ev.clientY - pos.top)];
+        return [ev.clientX - pos.left,ev.clientY - pos.top];
     },
     getLocationPoint:(x,y,anti)=>{
         const pos = env.position;
@@ -212,6 +214,38 @@ const self = {
             env.center=null;
         });
     },
+    mouse: (dom_id) => {
+        const cvs = document.querySelector(`#${dom_id} canvas`);
+
+        cvs.addEventListener("click", (ev) => {
+            const point=self.getMousePoint(ev,true);
+            //console.log(`single click`,point);
+            // const delta=1;
+            // self.cvsScale(point,delta);
+            env.pre=point;
+            //const cp=[point[0],env.height-point[1]];
+            const bk = env.render.select(point,config.select);
+            self.info(`${JSON.stringify(bk)} is selected`);
+        });
+
+        cvs.addEventListener("dblclick", (ev) => {
+            console.log(`double click`);
+        });
+
+        cvs.addEventListener("mousewheel", (ev) => {
+            // const point=self.getMousePoint(ev);
+            // const delta=1;
+            // self.cvsScale(point,delta);
+        });
+
+        cvs.addEventListener("mousemove", (ev) => {
+            if (!env.pan) return false;
+            if(env.pre===null) return env.pre=self.getMousePoint(ev);
+            const now=self.getMousePoint(ev);
+            self.cvsPan(env.pre,now);
+            env.pre=now;
+        });
+    },
     pan:(dom_id)=>{
         const cvs = document.querySelector(`#${dom_id} canvas`);
         // cvs.addEventListener("click", (ev) => {
@@ -230,22 +264,7 @@ const self = {
             env.pre=null;
         });
     },
-    mouse: (dom_id) => {
-        const cvs = document.querySelector(`#${dom_id} canvas`);
-        cvs.addEventListener("mousewheel", (ev) => {
-            // const point=self.getMousePoint(ev);
-            // const delta=1;
-            // self.cvsScale(point,delta);
-        });
-
-        cvs.addEventListener("mousemove", (ev) => {
-            if (!env.pan) return false;
-            if(env.pre===null) return env.pre=self.getMousePoint(ev);
-            const now=self.getMousePoint(ev);
-            self.cvsPan(env.pre,now);
-            env.pre=now;
-        });
-    },
+    
     info:(ctx,at)=>{
         if(!config.debug) return false;
         const el=document.getElementById(config.zoom.info);
