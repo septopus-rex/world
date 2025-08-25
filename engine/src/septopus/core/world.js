@@ -755,7 +755,7 @@ const self = {
             const {x,y,world,setting}=games[i];
             const target={x:x,y:y,world:world,adjunct:"block",index:0};
             //console.log(JSON.stringify(target));
-            
+
             //1. get game mode data from chain.
             ((id,world)=>{
                 VBW.datasource.game(id,(data)=>{
@@ -895,17 +895,20 @@ const World = {
      * Load block[x,y], for block adjunct request
     */
     load: (dom_id, world, x, y) => {
+        
         const chain = ["block", dom_id, world, `${x}_${y}`];
         if (VBW.cache.exsist(chain)) {
+            //1.if loaded before, show single block
             VBW[config.render].show(dom_id, [x, y, world]);
-            return true;
-        }
 
-        const ext = 0;
-        const limit=VBW.cache.get(["env","world","common","world","range"]);
-        self.launch(dom_id, x, y, ext, world, limit, (done) => {
-            VBW[config.render].show(dom_id);
-        });
+        }else{
+            //1.if not loaded, load first
+            const ext = 0;
+            const limit=VBW.cache.get(["env","world","common","world","range"]);
+            self.launch(dom_id, x, y, ext, world, limit, (done) => {
+                VBW[config.render].show(dom_id);
+            });
+        }
     },
 
     /**
@@ -1116,7 +1119,9 @@ const World = {
             task.y = y;
             queue.push(task);
         }
-        VBW.update(dom_id, world);
+        VBW.update(dom_id, world, (done)=>{
+            VBW.event.trigger("system","update",{stamp:Toolbox.stamp(),container:dom_id,world:world});
+        });
 
         const target = { x: x, y: y, world: world, container: dom_id }
         VBW.load(target, (pre) => {

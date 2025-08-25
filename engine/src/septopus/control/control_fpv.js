@@ -604,7 +604,10 @@ const self = {
                             const queue = VBW.cache.get(["task", runtime.container, world]);
                             queue.push(task);
 
-                            VBW.update(runtime.container, world);
+                            VBW.update(runtime.container, world, (done)=>{
+                                const ev={stamp:Toolbox.stamp(),container:runtime.container,world:world};
+                                VBW.event.trigger("system","update",ev);
+                            });
                             const range = { x: x, y: y, world: world, container: runtime.container }
                             VBW.prepair(range, (pre) => {
                                 //console.log(pre);

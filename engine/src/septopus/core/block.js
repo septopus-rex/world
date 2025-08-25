@@ -61,15 +61,6 @@ const funs={
         VBW.cache.set(chain,backup);
         return true;
     },
-    load:(x,y,world)=>{
-        const ext=0;    //no extend, single block
-        VBW.api.view(x,y,ext,world,(list)=>{
-
-        });
-    },
-    unload:(x,y,world,dom_id)=>{
-
-    },
 };
 
 let definition=null;       //cache block definition here.

@@ -751,18 +751,19 @@ const Framework = {
      * main entry for update, any change then call this function
      * @param {string}  dom_id  - container DOM id
      * @param {number}  world   - world index
+     * @param {function} ck     - callback function
      * @returns
      * @callback - whether update successful
      * @param {boolean} - update result
      */
-    update: (dom_id, world) => {
+    update: (dom_id, world, ck) => {
 
         //1.check modify task
         const tasks = self.cache.get(["task", dom_id, world]);
         if (!tasks.error && tasks.length !== 0) {
             //console.log(`Todo list:`, JSON.stringify(tasks));
             self.excute(tasks, dom_id, world, (done) => {
-
+                return ck && ck(done);
             });
         }
     },

@@ -134,6 +134,19 @@ const self = {
                         })(index),
                     }
                     ThreeObject.get("basic","loader",cfg);
+                }else{
+                    if(row.three!==null){
+                        console.log(`Module ${row.index} is already parsed.`);
+
+                        //FIXME, here to wait 300ms to wait the holder of module is ready.
+                        setTimeout(()=>{
+                            const ev={id:row.index,stamp:Toolbox.stamp()}
+                            VBW.event.trigger("module","parsed",ev);
+                        },300)
+                        
+                    }else{
+                        UI.show("toast", `Parsing failed module, id: ${row.index}`, { type: "error" });
+                    }
                 }
             }
         }
@@ -287,10 +300,11 @@ const self = {
      * @return void
      * */
     replaceFun:(target)=>{
-        //console.log(target);
         return ((adj)=>{
             return (ev)=>{
+                
                 if(adj.module!==ev.id) return false;
+                console.log(target,ev);
                 //1. get module mesh
                 const active=VBW.cache.get(["active"]);
                 const dom_id=active.current;
@@ -300,6 +314,7 @@ const self = {
 
                 //2. get parsed module
                 const chain=["resource","module",ev.id,"three"];
+                console.log(chain,JSON.stringify(adj));
                 const obj=VBW.cache.get(chain);
                 if(obj.error) return false;
 
@@ -340,6 +355,7 @@ const self = {
      * @return {object[]}   - 3D object array
      * */
     getThree: (single, world, dom_id, side) => {
+        //console.log(JSON.stringify(single));
         const arr = [];
 
         //1. get module to show

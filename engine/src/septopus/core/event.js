@@ -9,6 +9,7 @@
  * @date 2025-06-18
  */
 
+import Toolbox from "../lib/toolbox";
 import VBW  from "./framework";
 
 const reg={
@@ -37,6 +38,7 @@ const events={
         launch:{},
         off:{},
         restart:{},
+        update:{},
     },
     player:{
         fall:{},
@@ -155,6 +157,7 @@ const vbw_event = {
      * 
      * */
     on:(cat,event,fun,obj)=>{
+        //console.log(cat,event,fun,obj);
         if(!events[cat]) return {error:"Invalid event type"};
         if(!events[cat][event]) return {error:"Invalid special event"};
         
@@ -189,9 +192,11 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
-        //console.log(JSON.stringify(obj));
+        if(cat==="module" && event==="parsed"){
+            console.log(param, Toolbox.stamp());
+        }
+
         if(obj===undefined){
-            //1. normal event, not 
             for(let name in events[cat][event]){
                 events[cat][event][name](param)
             }

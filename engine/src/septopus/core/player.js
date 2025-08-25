@@ -166,7 +166,9 @@ const self = {
             }
         }
         
-        VBW.update(dom_id, world);
+        VBW.update(dom_id, world,(done)=>{
+            VBW.event.trigger("system","update",{stamp:Toolbox.stamp(),container:dom_id,world:world});
+        });
         player.location.block = [x, y];
 
         //update player position
