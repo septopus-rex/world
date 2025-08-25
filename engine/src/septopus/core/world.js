@@ -76,6 +76,14 @@ const config = {
     menu: {},
 };
 
+const runtime={
+    start:true,         //system start
+    counter:{
+        block:0,
+        texture:0,          //texture counter
+        module:0,           //module counter
+    },
+}
 
 const self = {
     /**
@@ -683,6 +691,13 @@ const self = {
             }, {});
 
             queue.shift();      //remove frame-loop task
+
+            //6. check counter 
+            runtime.counter.block--;
+            if(runtime.counter.block===0){
+                //!important, `system.done` event trigger 
+                VBW.event.trigger("system","launch",{stamp:Toolbox.stamp()});
+            }
         }
     },
 
@@ -739,7 +754,8 @@ const self = {
         for(let i=0;i<games.length;i++){
             const {x,y,world,setting}=games[i];
             const target={x:x,y:y,world:world,adjunct:"block",index:0};
-            console.log(JSON.stringify(target));
+            //console.log(JSON.stringify(target));
+            
             //1. get game mode data from chain.
             ((id,world)=>{
                 VBW.datasource.game(id,(data)=>{
@@ -790,6 +806,12 @@ const self = {
      * @return void
      */
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
+        //set launch counter
+        if(runtime.start){
+            const n = ext+ext+1;
+            runtime.counter.block=n*n;
+        }
+
         VBW.datasource.view(x, y, ext, world, (map) => {
             if (map.loaded !== undefined) {
                 if (!map.loaded) {
@@ -806,8 +828,15 @@ const self = {
                         //UI.show("toast", `Struct all components, ready to show.`);
                         self.prefetch(pre.texture, pre.module, (failed) => {
                             UI.show("toast", `Fetch texture and module successful.`);
+                            runtime.start=false;
                             return ck && ck(true);
                         });
+
+                        //set resource load counter
+                        // if(runtime.start){
+                        //     runtime.counter.texture=pre.texture.length;
+                        //     runtime.counter.module=pre.module.length;
+                        // }
 
                         //3. filter out game mode support
                         //console.log(pre);
@@ -926,7 +955,6 @@ const World = {
         UI.show("toast", `Start to struct world. Framework:`, VBW);
 
         self.runOnce(dom_id, cfg);
-
         self.initEnv(dom_id, (world, limit) => {
             UI.show("toast", `World data load from network successful.`);
             const pos=VBW.cache.get(["env","player","location"]);
@@ -936,9 +964,6 @@ const World = {
             self.autoMode(dom_id);
             
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
-
-                //!important, `system.done` event trigger 
-                VBW.event.trigger("system","launch",{stamp:Toolbox.stamp()});
 
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
@@ -952,7 +977,6 @@ const World = {
                 //     console.log(`Stop beside event triggered`,ev);
                 // },{x:2025,y:619,world:0,index:0,adjunct:"wall"});
 
-                //UI.show("countdown",10);
             }, cfg);
         });
     },

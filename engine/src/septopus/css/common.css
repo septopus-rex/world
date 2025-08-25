@@ -207,6 +207,7 @@
   top: 1rem;
   color: gray;
 }
+
 .close:hover{
   color: white;
   cursor: pointer;
@@ -334,8 +335,37 @@
   background-color: #1d4ed8;      /* 点击效果 */
 }
 
+.sm_button{
+  padding: 0.25rem 0.5rem;   /* 控制按钮的高度和宽度 */
+  font-size: 1rem;        /* 小字号 */
+  border: 1px solid #383838;    /* 边框 */
+  border-radius: 0.25rem;    /* 圆角 */
+  background-color: #007bff; /* 背景色 */
+  color: white;              /* 字体颜色 */
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.sm_button:hover{
+  background-color: #0056b3;
+}
+
 .pr-1{
   padding-right: 1rem;
+}
+
+.row{
+  display: block;
+  width: 100%;
+  padding: 0.1rem 0rem 0.1rem 0rem;
+  margin: 0 auto;
+  min-height: 2rem;
+}
+.left{
+  float: left;
+}
+.right{
+  float: right;
 }
 
 @media (max-width: 768px) {

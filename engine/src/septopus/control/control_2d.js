@@ -36,6 +36,10 @@ const config = {
         width:1,
         color:'#00CCDD',
         anticlock:true
+    },
+    buttons:{
+        reset:"map_reset",
+        jump:"map_jump",
     }
 }
 
@@ -299,7 +303,8 @@ const self = {
             <div class="row">
                 <div class="left" id="${config.zoom.info}"></div>
                 <div class="right">
-                    <button>reset</button>
+                    <button class="sm_button" id="${config.buttons.reset}">Reset</button>
+                    <button class="sm_button" id="${config.buttons.jump}">Jump</button>
                 </div>
             </div>
         </div>`;
@@ -313,6 +318,7 @@ const self = {
             zoom.style.display="block";
             self.setCenter(cvs);
             self.setFloat(50)
+            self.buttons();
             self.scaleFloat();
             //self.scaleUp();
             //self.scaleDown();
@@ -327,6 +333,17 @@ const self = {
         env.position.left=rect.left;
         env.position.top=rect.top;
         env.height=rect.height;
+    },
+    buttons:()=>{
+        const el_reset =document.getElementById(config.buttons.reset);
+        el_reset.addEventListener("click", (ev) => {
+            console.log(`"Reset" is clicked.`);
+        });
+
+        const el_jump =document.getElementById(config.buttons.jump);
+        el_jump.addEventListener("click", (ev) => {
+            console.log(`"Jump" is clicked.`);
+        });
     },
     action:()=>{
         //console.log(`here`);

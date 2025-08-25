@@ -237,6 +237,9 @@ const renderer = {
         const el = document.getElementById(dom_id);
         el.innerHTML = "";
         env.pen = null;
+
+        //2.clean selected
+        env.selected=[];
     },
     control: {
         update:self.render,
