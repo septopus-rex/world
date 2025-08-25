@@ -16,6 +16,7 @@ import Render from "./basic/renderer";
 import Mesh from "./basic/mesh";
 import Group from "./basic/group";
 import Sky from "./basic/sky";
+import Status from "./basic/status";
 import Raycast from "./basic/raycast";
 import Helper from "./basic/helper";
 import Loader from "./basic/loader";
@@ -49,7 +50,8 @@ const router={
         sky:Sky, 
         raycast:Raycast, 
         helper:Helper, 
-        loader:Loader,       
+        loader:Loader, 
+        status:Status,      
     },
     light:{
         spot:light_spot,

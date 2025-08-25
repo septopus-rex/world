@@ -155,6 +155,10 @@ const self = {
         //2.2.add new DOM needed
         target.appendChild(dom_render);
         target.appendChild(dom_controller);
+        
+        //2.3.add state DOM
+        const status=VBW.cache.get(["active","containers",container,"status"]);
+        target.appendChild(status.dom);
 
         return true;
     },

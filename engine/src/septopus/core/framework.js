@@ -812,8 +812,9 @@ const Framework = {
         }
 
         //4.fresh scene
-        //FIXME, need to fresh all active renders.
+        //FIXME, need to isolate to frame-loop function to render
         active.render.render(active.scene, active.camera);
+        active.status.update();
     },
 }
 

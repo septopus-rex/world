@@ -304,7 +304,8 @@ const self = {
             return (ev)=>{
                 
                 if(adj.module!==ev.id) return false;
-                console.log(target,ev);
+                //console.log(target,ev);
+
                 //1. get module mesh
                 const active=VBW.cache.get(["active"]);
                 const dom_id=active.current;
@@ -314,7 +315,7 @@ const self = {
 
                 //2. get parsed module
                 const chain=["resource","module",ev.id,"three"];
-                console.log(chain,JSON.stringify(adj));
+                //console.log(chain,JSON.stringify(adj));
                 const obj=VBW.cache.get(chain);
                 if(obj.error) return false;
 
@@ -827,12 +828,16 @@ const renderer={
             const camera = ThreeObject.get("basic", "camera", cfg_camera);
             camera.rotation.order="ZYX";
 
-            VBW.cache.set(chain, { render: render, camera: camera, scene: scene });
+            const cfg_status={}
+            const status = ThreeObject.get("basic", "status", cfg_status);
+
+            VBW.cache.set(chain, { render: render, camera: camera, scene: scene,status:status });
         }
 
         //2. set env
         if(env.player===null) env.player= VBW.cache.get(["env", "player"]);
         const dt = VBW.cache.get(chain);
+
         return dt.render.domElement;
     },
 

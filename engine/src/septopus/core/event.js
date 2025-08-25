@@ -44,6 +44,8 @@ const events={
         fall:{},
         death:{},
         start:{},
+        hold:{},       //player stop moving
+        rotate:{},     //player head rotate
     },
     block:{
         in:{},
