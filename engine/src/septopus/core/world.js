@@ -52,10 +52,10 @@ import Toolbox from "../lib/toolbox";
 import TriggerBuilder from "../lib/builder";
 
 const regs = {
-    core: [vbw_detect,vbw_sky,vbw_time,vbw_weather,vbw_block,vbw_player,vbw_movement,vbw_event,vbw_bag,API],
-    render: [render_3d,render_2d,render_observe],
-    controller: [control_fpv,control_2d,control_observe],
-    adjunct: [ basic_stop,basic_trigger,basic_light,basic_box,basic_module,adj_wall,adj_water],
+    core: [vbw_detect, vbw_sky, vbw_time, vbw_weather, vbw_block, vbw_player, vbw_movement, vbw_event, vbw_bag, API],
+    render: [render_3d, render_2d, render_observe],
+    controller: [control_fpv, control_2d, control_observe],
+    adjunct: [basic_stop, basic_trigger, basic_light, basic_box, basic_module, adj_wall, adj_water],
     plugin: [plug_link],
 };
 
@@ -66,22 +66,22 @@ const config = {
     queue: {
         block: "block_loading",
         resource: "resource_loading",
-        trigger:"trigger_runtime",
+        trigger: "trigger_runtime",
     },
     hook: {
         register: "reg",
         initialize: "init",
-        definition:"def",
+        definition: "def",
     },
     menu: {},
 };
 
-const runtime={
-    start:true,         //system start
-    counter:{
-        block:0,
-        texture:0,          //texture counter
-        module:0,           //module counter
+const runtime = {
+    start: true,         //system start
+    counter: {
+        block: 0,
+        texture: 0,          //texture counter
+        module: 0,           //module counter
     },
 }
 
@@ -132,7 +132,7 @@ const self = {
      * @param {object}  cfg         - {shadow:true}
      * @return {boolean}
      */
-    struct: (container,cfg) => {
+    struct: (container, cfg) => {
         if (VBW.block === undefined) return UI.show("toast", `No more component.`, { type: "error" });
 
         //0.device detect
@@ -141,7 +141,7 @@ const self = {
         VBW.cache.set(dev_chain, dt);
 
         //1.1.struct dom for render
-        const dom_render = VBW[config.render].construct(dt.width, dt.height, container,cfg);
+        const dom_render = VBW[config.render].construct(dt.width, dt.height, container, cfg);
 
         //1.2.struct dom for controller
         const dom_controller = VBW[config.controller].construct();
@@ -155,9 +155,9 @@ const self = {
         //2.2.add new DOM needed
         target.appendChild(dom_render);
         target.appendChild(dom_controller);
-        
+
         //2.3.add state DOM
-        const status=VBW.cache.get(["active","containers",container,"status"]);
+        const status = VBW.cache.get(["active", "containers", container, "status"]);
         target.appendChild(status.dom);
 
         return true;
@@ -231,7 +231,7 @@ const self = {
         ];
         return wd;
     },
-        
+
     /**
      * fetch module data from network
      * @param {integer[]}   arr     - module IDs
@@ -247,9 +247,9 @@ const self = {
         //1.get data from IPFS
         VBW.datasource.module(arr, (map) => {
             for (let id in map) {
-                const row=map[id];
+                const row = map[id];
                 const chain = ["resource", "module", id];
-                if(VBW.cache.exsist(chain)) continue;
+                if (VBW.cache.exsist(chain)) continue;
                 VBW.cache.set(chain, row);
             }
             return ck && ck(failed);
@@ -318,7 +318,7 @@ const self = {
 
         return true;
     },
-    
+
     /**
      * resource queue of on loading
      * @param {object}      pre     - {texture:[],module:[]}, resource IDs for frefetch
@@ -372,19 +372,42 @@ const self = {
      * @return void
      */
     layout: () => {
-        const buttons=actions.buttons;
-        const menus = [
-            buttons.buy,
-            buttons.edit,
-            //buttons.normal,
-            buttons.mint,
-            buttons.world,
-            buttons.stop,
-            buttons.start,
-            buttons.clean,
-        ];
-        const cfg = {}
-        UI.show("menu", menus, cfg);
+        const ctx = ["...", "..."];
+        const close = (ev) => {
+            UI.show("menu", [], {});
+            const el = document.getElementById(cfg.id);
+            el.removeEventListener("click",close);
+            el.addEventListener("click",expand);
+        }
+        const expand = (ev) => {
+            const buttons = actions.buttons;
+            const menus = [
+                buttons.news,
+                buttons.manual,
+                buttons.buy,
+                buttons.edit,
+                //buttons.normal,
+                buttons.mint,
+                buttons.world,
+                buttons.stop,
+                buttons.start,
+                buttons.clean,
+            ];
+            const btn_cfg = {}
+            UI.show("menu", menus, btn_cfg);
+
+            const el = document.getElementById(cfg.id);
+            el.removeEventListener("click",expand);
+            el.addEventListener("click",close);
+        }
+        const cfg = {
+            id: "menu_folder",
+            auto: () => {
+                const el = document.getElementById(cfg.id);
+                el.addEventListener("click",expand);
+            },
+        }
+        UI.show("fold", ctx, cfg);
     },
 
     /**
@@ -402,18 +425,18 @@ const self = {
             VBW.weather.calc(data);
         });
     },
-    
+
     /**
      * get trigger functions from adjuncts
      * @return {object}  - {adjunct:{}}, return the functions of adjunct for trigger
-     */ 
-    getAdjunctTriggerFuns:()=>{
-        const map=VBW.component.map();
-        const funs={};
-        for(let name in map){
-            if(!isNaN(parseInt(name))) continue;
-            if(!VBW[name] || !VBW[name].task) continue;
-            funs[name]=VBW[name].task;
+     */
+    getAdjunctTriggerFuns: () => {
+        const map = VBW.component.map();
+        const funs = {};
+        for (let name in map) {
+            if (!isNaN(parseInt(name))) continue;
+            if (!VBW[name] || !VBW[name].task) continue;
+            funs[name] = VBW[name].task;
         }
         return funs;
     },
@@ -426,20 +449,20 @@ const self = {
      * 3. create trigger runtime queue.
      * @param {object}      def      - trigger definition from network
      * @return void
-     */ 
-    setupTrigger:(def)=>{
+     */
+    setupTrigger: (def) => {
         //console.log(def);
         //1. set trigger definition
         TriggerBuilder.definition(def);
-        const adjs=self.getAdjunctTriggerFuns();
+        const adjs = self.getAdjunctTriggerFuns();
 
         //2. set functions
         //2.1. component task functions
-        const funs=[    
+        const funs = [
             {
-                ui:UI.task(),
-                weather:VBW.weather.task(),
-                router:["ui","weather"],
+                ui: UI.task(),
+                weather: VBW.weather.task(),
+                router: ["ui", "weather"],
             },
             adjs,
             VBW.player.task(),
@@ -447,12 +470,12 @@ const self = {
         ];
 
         //2.2. VBW system function
-        const system={
-            get:VBW.cache,
-            push:self.pushRuntime,
+        const system = {
+            get: VBW.cache,
+            push: self.pushRuntime,
         };
         //2.3. set to builder
-        TriggerBuilder.set(funs,system);
+        TriggerBuilder.set(funs, system);
 
         //2. create trigger runtime queue
         VBW.queue.init(config.queue.trigger);
@@ -467,7 +490,7 @@ const self = {
      * @param {string}      dom_id   - container DOM ID
      * @param {object}      cfg      - {contract:{}}
      * @return void
-     */ 
+     */
     runOnce: (dom_id, cfg) => {
         //0.set current active dom_id
         const current_chain = ["active", "current"];
@@ -492,7 +515,7 @@ const self = {
      * 3. set trigger runtime env
      * @param {object}      wd   - basic world setting
      * @return void
-     */ 
+     */
     setup: (wd) => {
         //1.create adjunct map;
         if (!wd.adjunct) UI.show("toast", `Adjunct definition missing.`, { type: "error" });
@@ -501,7 +524,7 @@ const self = {
             const row = wd.adjunct[adj];
             def[adj] = row.definition;
             if (adj === `common`) continue;
-            if(row.short===undefined) continue;
+            if (row.short === undefined) continue;
 
             map[adj] = row.short;
             map[row.short] = adj;
@@ -513,8 +536,8 @@ const self = {
         self.saveWorld(wd);
 
         //3.set definition to adjunct
-        const key=config.hook.definition;
-        for(let adj in def){
+        const key = config.hook.definition;
+        for (let adj in def) {
             if (adj === `common`) continue;
             //console.log(adj,VBW[adj],);
             if (!VBW[adj] || !VBW[adj].hooks || !VBW[adj].hooks[key]) continue;
@@ -537,7 +560,7 @@ const self = {
      * @callback 
      * @param {object}      world  - basic world setting
      * @param {integer[]}   limit  - world size limit
-     */ 
+     */
     initEnv: (dom_id, ck) => {
         //{"block":[2025,502],"world":0,"position":[7.326341784000396,12.310100473087282,0],"rotation":[0,0.3875731999042833,0],"stop":-1,"extend":2}
         //1. get player location
@@ -553,7 +576,7 @@ const self = {
 
                 //2.2. format player data and calc capacity
                 const local = VBW.player.format(start, wd.data.player);
-                VBW.player.initial(local,dom_id);
+                VBW.player.initial(local, dom_id);
 
                 //2.3. add listener
                 VBW.event.start(world, dom_id);
@@ -569,7 +592,7 @@ const self = {
      * save world setting
      * @param {object}    info    - basic world information
      * @return void
-     */ 
+     */
     saveWorld: (info) => {
         //1.save the world data;
         if (info !== undefined) {
@@ -588,26 +611,26 @@ const self = {
      * @param {boolean}     onetime     - wether just run onetime.
      * @param {string}      key         - key of trigger function
      * @return void
-     */    
-    pushRuntime:(fun,n,onetime,key)=>{
+     */
+    pushRuntime: (fun, n, onetime, key) => {
         console.log(key);
-        const run={
-            auto:fun,
-            left:n,
-            onetime:onetime,
-            key:key,
+        const run = {
+            auto: fun,
+            left: n,
+            onetime: onetime,
+            key: key,
         }
 
-        if(onetime){
-            const qu=VBW.queue.get(config.queue.trigger);
-            console.log(`Here to check unique call`,qu);
-            for(let i=0;i<qu.length;i++){
-                const row=qu[i];
-                if(row.key===run.key) return false;
+        if (onetime) {
+            const qu = VBW.queue.get(config.queue.trigger);
+            console.log(`Here to check unique call`, qu);
+            for (let i = 0; i < qu.length; i++) {
+                const row = qu[i];
+                if (row.key === run.key) return false;
             }
         }
 
-        VBW.queue.push(config.queue.trigger,run);  
+        VBW.queue.push(config.queue.trigger, run);
     },
 
     /**
@@ -617,28 +640,28 @@ const self = {
      * 2.run all functions in trigger queue and remove function from queue.
      * @return void
      */
-    runTrigger:()=>{
-        const queue=VBW.queue.get(config.queue.trigger);
-        if(!queue || queue.length===0) return false;
-        
-        for(let i=0;i<queue.length;i++){
-            const row=queue[i];
-            if(row.left<1){
-                VBW.queue.drop(config.queue.trigger,i);
+    runTrigger: () => {
+        const queue = VBW.queue.get(config.queue.trigger);
+        if (!queue || queue.length === 0) return false;
+
+        for (let i = 0; i < queue.length; i++) {
+            const row = queue[i];
+            if (row.left < 1) {
+                VBW.queue.drop(config.queue.trigger, i);
                 i--;
-            }else{
+            } else {
                 row.left--;
                 row.auto(row.left);
             }
         }
     },
 
-    outofRange:(x,y)=>{
-        const player=VBW.cache.get(["env","player"]);
-        const [px,py]=player.location.block;
-        const ext=player.location.extend;
-        if(px > x+ext || px< x-ext) return true;
-        if(py > y+ext || py< y-ext) return true;
+    outofRange: (x, y) => {
+        const player = VBW.cache.get(["env", "player"]);
+        const [px, py] = player.location.block;
+        const ext = player.location.extend;
+        if (px > x + ext || px < x - ext) return true;
+        if (py > y + ext || py < y - ext) return true;
         return false;
     },
 
@@ -657,7 +680,7 @@ const self = {
 
         //2. check the first whether loaded
         const todo = queue[0];
-        const world = todo.world,dom_id = todo.container;
+        const world = todo.world, dom_id = todo.container;
         const dt = VBW.cache.get(["block", dom_id, world, todo.key, "raw"]);
         if (dt.error) return false;
 
@@ -673,23 +696,23 @@ const self = {
 
                 //4.1. trigger `block.loaded` event
                 //!important, `block.loaded` event trigger 
-                const target={
-                    x:x,y:y,world:world,index:0,adjunct:"block",
-                    stamp:Toolbox.stamp(),
+                const target = {
+                    x: x, y: y, world: world, index: 0, adjunct: "block",
+                    stamp: Toolbox.stamp(),
                 };
-                const evt={x:x,y:y,world:world}
-                VBW.event.trigger("block","loaded",evt,target);
+                const evt = { x: x, y: y, world: world }
+                VBW.event.trigger("block", "loaded", evt, target);
 
                 //4.2. loading resource needed.
                 self.loadingResourceQueue(pre, x, y, world, dom_id);
 
                 //4.3. set game mode buttons.
-                if(pre.game && pre.game.length!==0){
+                if (pre.game && pre.game.length !== 0) {
                     self.updateGame(pre.game);
-                }   
+                }
 
                 //5. fresh render, need to check wether out of range
-                if(!self.outofRange(x,y)){
+                if (!self.outofRange(x, y)) {
                     VBW[config.render].show(dom_id, [x, y, world]);
                 }
             }, {});
@@ -698,9 +721,9 @@ const self = {
 
             //6. check counter 
             runtime.counter.block--;
-            if(runtime.counter.block===0){
+            if (runtime.counter.block === 0) {
                 //!important, `system.done` event trigger 
-                VBW.event.trigger("system","launch",{stamp:Toolbox.stamp()});
+                VBW.event.trigger("system", "launch", { stamp: Toolbox.stamp() });
             }
         }
     },
@@ -739,9 +762,9 @@ const self = {
     setChecker: (dom_id, world) => {
         const chain = ["block", dom_id, world, "loop"];
         const queue = VBW.cache.get(chain);
-        queue.push({name: "block_checker", fun: self.checkBlock });
-        queue.push({name: "resource_checker", fun: self.checkResource });
-        queue.push({name: "trigger_runtime", fun: self.runTrigger });
+        queue.push({ name: "block_checker", fun: self.checkBlock });
+        queue.push({ name: "resource_checker", fun: self.checkResource });
+        queue.push({ name: "trigger_runtime", fun: self.runTrigger });
     },
 
     /**
@@ -754,44 +777,44 @@ const self = {
      * @param {integer} world   - world index
      * @return void
      */
-    updateGame:(games)=>{
-        for(let i=0;i<games.length;i++){
-            const {x,y,world,setting}=games[i];
-            const target={x:x,y:y,world:world,adjunct:"block",index:0};
+    updateGame: (games) => {
+        for (let i = 0; i < games.length; i++) {
+            const { x, y, world, setting } = games[i];
+            const target = { x: x, y: y, world: world, adjunct: "block", index: 0 };
             //console.log(JSON.stringify(target));
 
             //1. get game mode data from chain.
-            ((id,world)=>{
-                VBW.datasource.game(id,(data)=>{
+            ((id, world) => {
+                VBW.datasource.game(id, (data) => {
                     //console.log(data);
                     const chain = ["resource", "game", `${world}_${id}`];
-                    VBW.cache.set(chain,data);
+                    VBW.cache.set(chain, data);
                 });
-            })(setting,world);
-            
+            })(setting, world);
+
 
             //2. binding block-in event to trigger mode button  
-            VBW.event.on("block","in",(ev)=>{
+            VBW.event.on("block", "in", (ev) => {
                 //b. show buttons.
-                const buttons=actions.buttons;
+                const buttons = actions.buttons;
                 const menus = [
                     buttons.detail,
                     buttons.game,
                 ];
                 UI.show("mode", menus, {});
-            },target);
+            }, target);
 
-            VBW.event.on("block","out",(ev)=>{
+            VBW.event.on("block", "out", (ev) => {
                 UI.show("mode", [], {});
-            },target);
+            }, target);
         }
 
         //3. trigger directly to check game
-        const player=VBW.cache.get(["env","player"]);
-        const [x,y]=player.location.block;
-        const world=player.location.world;
-        const current={x:x,y:y,world:world,adjunct:"block",index:0}
-        VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},current);
+        const player = VBW.cache.get(["env", "player"]);
+        const [x, y] = player.location.block;
+        const world = player.location.world;
+        const current = { x: x, y: y, world: world, adjunct: "block", index: 0 }
+        VBW.event.trigger("block", "in", { stamp: Toolbox.stamp() }, current);
     },
 
     /**
@@ -811,9 +834,9 @@ const self = {
      */
     launch: (dom_id, x, y, ext, world, limit, ck, cfg) => {
         //set launch counter
-        if(runtime.start){
-            const n = ext+ext+1;
-            runtime.counter.block=n*n;
+        if (runtime.start) {
+            const n = ext + ext + 1;
+            runtime.counter.block = n * n;
         }
 
         VBW.datasource.view(x, y, ext, world, (map) => {
@@ -827,12 +850,12 @@ const self = {
                     if (failed) return UI.show("toast", `Failed to set cache, internal error, abort.`, { type: "error" });
                     //2. struct holder
                     const range = { x: x, y: y, ext: ext, world: world, container: dom_id };
-                    
+
                     VBW.load(range, (pre) => {
                         //UI.show("toast", `Struct all components, ready to show.`);
                         self.prefetch(pre.texture, pre.module, (failed) => {
                             UI.show("toast", `Fetch texture and module successful.`);
-                            runtime.start=false;
+                            runtime.start = false;
                             return ck && ck(true);
                         });
 
@@ -845,7 +868,7 @@ const self = {
                         //3. filter out game mode support
                         //console.log(pre);
                         //self.checkGame(dom_id, x, y, ext, world);
-                    },cfg);
+                    }, cfg);
                 } else {
                     delete map.loaded;
                     //UI.show("toast", `Load block data successful.`);
@@ -861,17 +884,17 @@ const self = {
      * @param {string}  dom_id  - container dom ID
      * @return void
      */
-    autoMode:(dom_id)=>{
-        const player=VBW.cache.get(["env","player"]);
-        const def=VBW.cache.get(["def","common"]);
-        if(!player.address){
+    autoMode: (dom_id) => {
+        const player = VBW.cache.get(["env", "player"]);
+        const def = VBW.cache.get(["def", "common"]);
+        if (!player.address) {
             //no player address, set to GHOST mode
-            VBW.mode(def.MODE_GHOST,{container:dom_id},()=>{
+            VBW.mode(def.MODE_GHOST, { container: dom_id }, () => {
 
             });
-        }else{
+        } else {
             //got player address, set to NORMAL mode
-            VBW.mode(def.MODE_NORMAL,{container:dom_id},()=>{
+            VBW.mode(def.MODE_NORMAL, { container: dom_id }, () => {
 
             });
         }
@@ -888,8 +911,8 @@ const World = {
         self.register();
 
         //!important, `system.init` event trigger 
-        VBW.event.trigger("system","init",{stamp:Toolbox.stamp()});
-        
+        VBW.event.trigger("system", "init", { stamp: Toolbox.stamp() });
+
         UI.show("toast", `Septopus World running env done.`, {});
         //if (config.debug) VBW.cache.dump();   //dump when debug
         return true;
@@ -899,16 +922,16 @@ const World = {
      * Load block[x,y], for block adjunct request
     */
     load: (dom_id, world, x, y) => {
-        
+
         const chain = ["block", dom_id, world, `${x}_${y}`];
         if (VBW.cache.exsist(chain)) {
             //1.if loaded before, show single block
             VBW[config.render].show(dom_id, [x, y, world]);
 
-        }else{
+        } else {
             //1.if not loaded, load first
             const ext = 0;
-            const limit=VBW.cache.get(["env","world","common","world","range"]);
+            const limit = VBW.cache.get(["env", "world", "common", "world", "range"]);
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
                 VBW[config.render].show(dom_id);
             });
@@ -930,9 +953,9 @@ const World = {
     stop: (dom_id) => {
         const { render } = VBW.cache.get(["active", "containers", dom_id]);
         render.setAnimationLoop(null);
-        
+
         //!important, `system.stop` event trigger 
-        VBW.event.trigger("system","stop",{stamp:Toolbox.stamp()});
+        VBW.event.trigger("system", "stop", { stamp: Toolbox.stamp() });
     },
 
     /**
@@ -945,7 +968,7 @@ const World = {
         render.setAnimationLoop(VBW.loop);
 
         //!important, `system.stop` event trigger 
-        VBW.event.trigger("system","restart",{stamp:Toolbox.stamp()});
+        VBW.event.trigger("system", "restart", { stamp: Toolbox.stamp() });
     },
 
     /**
@@ -959,18 +982,18 @@ const World = {
      * @callback - when jump to target block
      * @param {boolean} result
      * */
-    teleport:(dom_id, world, x, y,ck, pos)=>{
-        console.log(`Now, jump to `,dom_id, world, x, y, pos);
-        const player=VBW.cache.get(["env","player"]);
+    teleport: (dom_id, world, x, y, ck, pos) => {
+        console.log(`Now, jump to `, dom_id, world, x, y, pos);
+        const player = VBW.cache.get(["env", "player"]);
 
         //1.launch area
-        const limit=[4096,4096];
-        const ext=player.location.extend;
+        const limit = [4096, 4096];
+        const ext = player.location.extend;
         World.stop(dom_id);
         self.launch(dom_id, x, y, ext, world, limit, (done) => {
             //2. set player position
 
-            VBW.player.teleport(x,y,world,dom_id,pos);
+            VBW.player.teleport(x, y, world, dom_id, pos);
 
             //VBW.player.teleport({position:{},rotation:{}});
             World.start(dom_id);
@@ -985,19 +1008,19 @@ const World = {
      * @return  {boolean}   - whether load successful
      * */
     first: (dom_id, ck, cfg) => {
-        if (!self.struct(dom_id,cfg)) return UI.show("toast", `Failed to struct html dom for running.`, { type: "error" });
+        if (!self.struct(dom_id, cfg)) return UI.show("toast", `Failed to struct html dom for running.`, { type: "error" });
         if (!VBW.datasource) return UI.show("toast", `No datasource for the next step.`, { type: "error" });
         UI.show("toast", `Start to struct world. Framework:`, VBW);
 
         self.runOnce(dom_id, cfg);
         self.initEnv(dom_id, (world, limit) => {
             UI.show("toast", `World data load from network successful.`);
-            const pos=VBW.cache.get(["env","player","location"]);
+            const pos = VBW.cache.get(["env", "player", "location"]);
             const [x, y] = pos.block;
             const ext = !pos.extend ? 1 : pos.extend;
 
             self.autoMode(dom_id);
-            
+
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
 
                 VBW[config.controller].start(dom_id);
@@ -1055,7 +1078,7 @@ const World = {
 
         //2.create three objects
         const target = { x: x, y: y, world: world, container: dom_id };
-        const def=VBW.cache.get(["def","common"]);
+        const def = VBW.cache.get(["def", "common"]);
         const mode = def.MODE_EDIT;
         VBW.mode(mode, target, (pre) => {
             if (pre.error) {
@@ -1087,9 +1110,9 @@ const World = {
         const x = cur.x, y = cur.y;
         const target = { x: x, y: y, world: world, container: dom_id }
 
-        const def=VBW.cache.get(["def","common"]);
+        const def = VBW.cache.get(["def", "common"]);
         const mode = def.MODE_NORMAL;
-    
+
         VBW.mode(mode, target, () => {
             VBW[config.render].show(dom_id, [x, y, world]);
         });
@@ -1152,8 +1175,8 @@ const World = {
             task.y = y;
             queue.push(task);
         }
-        VBW.update(dom_id, world, (done)=>{
-            VBW.event.trigger("system","update",{stamp:Toolbox.stamp(),container:dom_id,world:world});
+        VBW.update(dom_id, world, (done) => {
+            VBW.event.trigger("system", "update", { stamp: Toolbox.stamp(), container: dom_id, world: world });
         });
 
         const target = { x: x, y: y, world: world, container: dom_id }

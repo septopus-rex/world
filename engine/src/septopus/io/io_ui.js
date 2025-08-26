@@ -51,6 +51,11 @@ const doms={
             click:null,
         },
     },
+    fold:{
+        events:{
+            click:null,
+        },
+    },
     compass:{       //compass for player
         events:{
             click:null,
@@ -407,13 +412,28 @@ const router={
         // el.textContent = ctx;
         // el.hidden = false;
     },
+    fold:(ctx,cfg)=>{
+        const id=`${config.prefix}fold`;
+        const name="fold";
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "menu"`);
+        const pointer=`<div id="${cfg.id}">${ctx[0]}</div>`;
+        const doc = self.getDom(pointer);
+        const dom = doc.body.firstChild;
+        dom.expand=false;               //default to close
+
+        //console.log(dom);
+        el.appendChild(dom);
+        if(cfg && cfg.auto) cfg.auto();
+    },
     menu:(arr,cfg)=>{
         const id=`${config.prefix}menu`;
         const name="menu";
-        const dom=self.domMenu(arr,name);
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "menu"`);
-
+        
+        el.innerHTML="";
+        const dom=self.domMenu(arr,name);
         el.appendChild(dom);
         self.bindActions(arr,name);
     },
@@ -421,11 +441,10 @@ const router={
     pop:(arr,cfg)=>{
         const id=`${config.prefix}pop`;
         const name="pop";
-        const dom=self.domMenu(arr,name);
-
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "pop"`);
 
+        const dom=self.domMenu(arr,name);
         el.innerHTML="";
         el.appendChild(dom);
         el.style.top=`${cfg.offset[0]}px`;
@@ -436,10 +455,10 @@ const router={
     mode:(arr,cfg)=>{
         const id=`${config.prefix}mode`;
         const name="mode";
-        const dom=self.domMenu(arr,name);
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "mode" buttons`);
 
+        const dom=self.domMenu(arr,name);
         el.innerHTML="";
         el.appendChild(dom);
 

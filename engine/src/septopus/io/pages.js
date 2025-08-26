@@ -24,6 +24,10 @@ const config = {
     news: {
         container: "news_container",
         title: "news_title",
+    },
+    manual:{
+        container: "man_container",
+        title: "man_title",
     }
 }
 
@@ -121,6 +125,28 @@ const Pages = {
             auto: () => {
                 //const player=VBW.cache.get(["env","player"]);
                 //console.log(player);
+
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    },
+    manual:()=>{
+        const container_id = config.manual.container;
+        const title_id = config.manual.title;
+        const ctx = {
+            title: `<div id="${title_id}">Manual</div>`,
+            content: `<div class="map" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`News page closed.`);
+                },
+                show:()=>{
+                    console.log(`Ready to get news via API.`);
+                },
+            },
+            auto: () => {
 
             },
         };

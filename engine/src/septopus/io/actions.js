@@ -124,6 +124,18 @@ const buttons = {
         }
     },
 
+    news: {
+        label: "News", icon: "", action: async () => {
+            Pages.news();
+        }
+    },
+
+    manual: {
+        label: "Manual", icon: "", action: async () => {
+            Pages.manual();
+        }
+    },
+
     game: {
         label: "Game", icon: "", action: async () => {
             const dom_id = VBW.cache.get(["active", "current"]);

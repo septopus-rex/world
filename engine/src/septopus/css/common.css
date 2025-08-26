@@ -288,10 +288,24 @@
   font-size:12px;
   background-color: #333333;
   position: absolute;
+  top:175px;
+  left:20px;
+  text-align: center;
+  color: #ffffff;
+}
+
+.fold{
+  width: 90px;
+  line-height: 24px;
+  font-size:12px;
+  background-color: #333333;
+  position: absolute;
   top:150px;
   left:20px;
   text-align: center;
   color: #ffffff;
+  cursor: pointer;
+  user-select: none;
 }
 
 .pop{
