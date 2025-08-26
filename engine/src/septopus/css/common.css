@@ -282,6 +282,10 @@
   cursor: pointer;
 }
 
+.status:hover{
+  background-color: #444444;
+}
+
 .menu{
   width: 90px;
   line-height: 24px;
@@ -308,6 +312,10 @@
   user-select: none;
 }
 
+.fold:hover{
+  background-color: #444444;
+}
+
 .pop{
   width: 90px;
   line-height: 24px;
@@ -330,7 +338,7 @@
 }
 
 .buttons li{
-  background-color: #2563eb;
+  background-color: #404f6d;
   color: white;
   border: none;
   cursor: pointer;
@@ -342,11 +350,11 @@
 }
 
 .buttons li:hover{
-  background-color: #1e40af;      /* hover 效果 */
+  background-color: #495877;      /* hover 效果 */
 }
 
 .buttons li:active {
-  background-color: #1d4ed8;      /* 点击效果 */
+  background-color: #495877;      /* 点击效果 */
 }
 
 .sm_button{

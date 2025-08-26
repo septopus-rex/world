@@ -828,7 +828,10 @@ const renderer={
             const camera = ThreeObject.get("basic", "camera", cfg_camera);
             camera.rotation.order="ZYX";
 
-            const cfg_status={}
+            const cfg_status={
+                left:"25px",
+                top:"600px",
+            }
             const status = ThreeObject.get("basic", "status", cfg_status);
 
             VBW.cache.set(chain, { render: render, camera: camera, scene: scene,status:status });

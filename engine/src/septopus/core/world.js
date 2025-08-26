@@ -367,44 +367,71 @@ const self = {
         return true;
     },
 
-    /**
-     * setup the UI of system
-     * @return void
-     */
-    layout: () => {
-        const ctx = ["...", "..."];
-        const close = (ev) => {
-            UI.show("menu", [], {});
-            const el = document.getElementById(cfg.id);
-            el.removeEventListener("click",close);
-            el.addEventListener("click",expand);
-        }
-        const expand = (ev) => {
-            const buttons = actions.buttons;
-            const menus = [
+    menu:()=>{
+        //1.here to add block_out event
+        // const player=VBW.cache.get(["env","player"]);
+        // const [x,y]=player.location.block;
+        // const world=player.location.world;
+        // const target = { x: x, y: y, world: world, adjunct: "block", index: 0 };
+        // VBW.event.on("block","out",(ev)=>{
+
+        //     VBW.event.on("block","out",(ev)=>{
+
+        //     },target);
+
+        // },target);
+
+        const buttons = actions.buttons;
+        const arr = [
                 buttons.news,
                 buttons.manual,
                 buttons.buy,
                 buttons.edit,
-                //buttons.normal,
+                buttons.normal,
                 buttons.mint,
                 buttons.world,
                 buttons.stop,
                 buttons.start,
                 buttons.clean,
             ];
-            const btn_cfg = {}
-            UI.show("menu", menus, btn_cfg);
+        return arr;
+    },
+
+    /**
+     * setup the UI of system
+     * @return void
+     */
+    layout: () => {
+        //1. expand & close function
+        const close = (ev) => {
+            UI.show("menu", [], {});
+            //expanding=true;
 
             const el = document.getElementById(cfg.id);
+            el.innerHTML=ctx[0];
+            el.removeEventListener("click",close);
+            el.addEventListener("click",expand);
+        }
+        const expand = (ev) => {
+            const buttons = self.menu();
+            const btn_cfg = {}
+            UI.show("menu", buttons, btn_cfg);
+            //expanding=true;
+
+            const el = document.getElementById(cfg.id);
+            el.innerHTML=ctx[1];
             el.removeEventListener("click",expand);
             el.addEventListener("click",close);
         }
+
+        //2. show folder
+        const ctx = ["Menu ⬇️", "Menu ⬆️"];
         const cfg = {
             id: "menu_folder",
             auto: () => {
                 const el = document.getElementById(cfg.id);
                 el.addEventListener("click",expand);
+                //setInterval(,3000);
             },
         }
         UI.show("fold", ctx, cfg);
@@ -1020,22 +1047,10 @@ const World = {
             const ext = !pos.extend ? 1 : pos.extend;
 
             self.autoMode(dom_id);
-
             self.launch(dom_id, x, y, ext, world, limit, (done) => {
-
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
                 return ck && ck();
-
-                // const target={x:x,y:y,world:0,index:0,adjunct:"block"}
-                // const binded=VBW.event.on("block","loaded",(ev)=>{
-                //     VBW.player.elevation(ev.x,ev.y,ev.world,dom_id);
-                // },target);
-
-                // const res = VBW.event.on("stop","beside",(ev)=>{
-                //     console.log(`Stop beside event triggered`,ev);
-                // },{x:2025,y:619,world:0,index:0,adjunct:"wall"});
-
             }, cfg);
         });
     },

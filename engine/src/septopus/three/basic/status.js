@@ -14,9 +14,9 @@ import Stats from 'stats.js';
 const Status={
     create:(cfg)=>{
         const stats = new Stats();
-        stats.dom.style.position = 'fixed';
-        stats.dom.style.left = '450px';
-        stats.dom.style.top = '20px';
+        if(cfg.left||cfg.top) stats.dom.style.position = 'fixed';
+        if(cfg.left) stats.dom.style.left = cfg.left;
+        if(cfg.top) stats.dom.style.top = cfg.top;
         return stats;
     }
 }

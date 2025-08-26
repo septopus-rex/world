@@ -175,9 +175,11 @@ const vbw_event = {
         }
     },
 
-    off:(cat,event,name)=>{
+    off:(cat,event,obj)=>{
         if(!events[cat]) return {error:"Invalid event type"};
         if(!events[cat][event]) return {error:"Invalid special event"};
+
+        const name=self.getNameByObj(obj);
         delete events[cat][event][name];
     },
 

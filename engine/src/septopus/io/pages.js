@@ -152,6 +152,10 @@ const Pages = {
         };
         UI.show("dialog", ctx, cfg);
     },
+
+    world:()=>{
+
+    },
 }
 
 export default Pages;
