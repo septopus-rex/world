@@ -44,6 +44,7 @@ const doms={
         events:{
             show:null,
             close:null,
+            click:null,
         },
     },
     mode:{
@@ -138,6 +139,12 @@ const self={
         container.hidden = true;
         container.style.display="none";
     },
+    show:(type)=>{
+        const id=`${config.prefix}${type}`;
+        const container=document.getElementById(id);
+        container.hidden = true;
+        container.style.display="block";
+    },
     domMenu:(arr,name)=>{
         let ctx=`<ul class="buttons">`;
         for(let i=0;i<arr.length;i++){
@@ -155,7 +162,17 @@ const self={
             el.addEventListener("click",(ev)=>{
                 ev.stopPropagation();
                 if(row.action) row.action(ev);
+                
+                //set from to trigger event
+                if(row.from){
+                    //console.log(row.from,doms[row.from]);
+                    if(doms[row.from] && doms[row.from].events && doms[row.from].events.click){
+                        doms[row.from].events.click();
+                    }
+                }
+
                 self.hide("pop");
+                self.hide("menu");
             });
         }
     },
@@ -355,7 +372,7 @@ const router={
         //3.attatch events;
         if(cfg.events){
             for(let evt in cfg.events){
-                if(!doms.dialog.events[evt]) continue;
+                if(doms.dialog.events[evt]===undefined) continue;
                 doms.dialog.events[evt]=cfg.events;
             }
         } 
@@ -385,7 +402,6 @@ const router={
         //3.attatch events;
         if(cfg && cfg.events){
             for(let evt in cfg.events){
-                console.log(evt,doms.dialog.events);
                 if(doms.dialog.events[evt]===undefined) continue;
                 doms.dialog.events[evt]=cfg.events[evt];
             }
@@ -435,6 +451,21 @@ const router={
         el.innerHTML="";
         const dom=self.domMenu(arr,name);
         el.appendChild(dom);
+        el.style.display="block";
+
+        //3.attatch events;
+        if(cfg.events){
+            console.log(cfg.events);
+            for(let evt in cfg.events){
+                //console.log(doms.menu.events,evt)
+                if(doms.menu.events[evt]===undefined) continue;
+                //console.log(evt);
+                doms.menu.events[evt]=cfg.events[evt];
+            }
+        }
+
+        for(let i=0;i<arr.length;i++) arr[i].from="menu";
+
         self.bindActions(arr,name);
     },
     

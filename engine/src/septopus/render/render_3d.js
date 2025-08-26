@@ -829,8 +829,9 @@ const renderer={
             camera.rotation.order="ZYX";
 
             const cfg_status={
-                left:"25px",
-                top:"600px",
+                left:"130px",
+                top:"20px",
+                zindex:44,
             }
             const status = ThreeObject.get("basic", "status", cfg_status);
 

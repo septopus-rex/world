@@ -414,9 +414,15 @@ const self = {
         }
         const expand = (ev) => {
             const buttons = self.menu();
-            const btn_cfg = {}
+            const btn_cfg = {
+                events:{
+                    click:()=>{
+                        console.log(`Here to close menu`)
+                        close();
+                    },
+                }
+            }
             UI.show("menu", buttons, btn_cfg);
-            //expanding=true;
 
             const el = document.getElementById(cfg.id);
             el.innerHTML=ctx[1];

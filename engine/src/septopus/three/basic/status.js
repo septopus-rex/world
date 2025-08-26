@@ -17,6 +17,7 @@ const Status={
         if(cfg.left||cfg.top) stats.dom.style.position = 'fixed';
         if(cfg.left) stats.dom.style.left = cfg.left;
         if(cfg.top) stats.dom.style.top = cfg.top;
+        if(cfg.zindex) stats.dom.style["z-index"] = cfg.zindex;
         return stats;
     }
 }
