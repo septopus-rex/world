@@ -28,7 +28,30 @@ const config = {
 }
 
 const self={
+    getDom:(data)=>{
+        const parser = new DOMParser();
+        return  parser.parseFromString(data, 'text/html');
+    },
 
+    formatPlayer:(player)=>{
+        console.log(player);
+        let table=`<table><thead></thead><tbody>`;
+        table+=`<tr><td>Account</td><td>${player.address} </td><tr>`;
+        table+=`<tr><td>Block</td><td>${JSON.stringify(player.location.block)}</td><tr>`;
+        table+=`<tr><td>Position</td><td>${JSON.stringify(player.location.position)}</td><tr>`;
+        table+=`<tr><td>Rotation</td><td>${JSON.stringify(player.location.rotation)}</td><tr>`;
+        table+=`<tr><td>Stand</td><td>${JSON.stringify(player.location.stop)}</td><tr>`;
+        table+=`<tr><td>Capacity</td><td><tr>`;
+        table+=`<tr><td>Move Speed</td><td>${player.capacity.move}</td><tr>`;
+        table+=`<tr><td>Rotate Speed</td><td>${player.capacity.rotate}</td><tr>`;
+        table+=`<tr><td>Span Height</td><td>${player.capacity.span}</td><tr>`;
+        table+=`<tr><td>Squat Height</td><td>${player.capacity.squat}</td><tr>`;
+        table+=`<tr><td>Jump Height</td><td>${player.capacity.jump}</td><tr>`;
+        table+=`<tr><td>Death Height</td><td>${player.capacity.death}</td><tr>`;
+        table+=`<tr><td>Strength Rate</td><td>${player.capacity.strength}</td><tr>`;
+        table+=`</tbody><table>`;
+        return self.getDom(table);
+    },
 };
 
 
@@ -71,7 +94,10 @@ const Pages = {
             },
             auto: () => {
                 const player=VBW.cache.get(["env","player"]);
-                console.log(player);
+                //console.log(player);
+                const el=document.getElementById(container_id);
+                const dom=self.formatPlayer(player);
+                el.appendChild(dom.firstChild);
             },
         };
         UI.show("dialog", ctx, cfg);

@@ -9,6 +9,7 @@
  */
 
 import VBW from "../core/framework";
+import Toolbox from "../lib/toolbox";
 import TwoObject from "../lib/two";
 
 const reg = {
@@ -243,6 +244,12 @@ const renderer = {
     },
     control: {
         update:self.render,
+        status:()=>{
+            return {
+                selected:Toolbox.clone(env.selected),
+                scale:env.scale,
+            }
+        },
         scale: (cx, cy, rate) => {
             //console.log(`Scale on ${JSON.stringify([cx,cy])} by delta rate ${rate}`);
             const pCtoB = TwoObject.calculate.distance.c2b;

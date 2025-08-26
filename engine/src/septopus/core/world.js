@@ -948,6 +948,34 @@ const World = {
         VBW.event.trigger("system","restart",{stamp:Toolbox.stamp()});
     },
 
+    /**
+     * Jump to target block
+     * @param   {string}    dom_id  - container DOM id
+     * @param   {number}    world   - world index
+     * @param   {number}    x       - coordination X
+     * @param   {number}    y       - coordination y
+     * @param   {function}  ck      - callback function
+     * @param   {number[]}  [pos]   - [x,y,z], block position
+     * @callback - when jump to target block
+     * @param {boolean} result
+     * */
+    teleport:(dom_id, world, x, y,ck, pos)=>{
+        console.log(`Now, jump to `,dom_id, world, x, y, pos);
+        const player=VBW.cache.get(["env","player"]);
+
+        //1.launch area
+        const limit=[4096,4096];
+        const ext=player.location.extend;
+        World.stop(dom_id);
+        self.launch(dom_id, x, y, ext, world, limit, (done) => {
+            //2. set player position
+
+            VBW.player.teleport(x,y,world,dom_id,pos);
+
+            //VBW.player.teleport({position:{},rotation:{}});
+            World.start(dom_id);
+        });
+    },
 
     /**
      * Septopus World entry, start from 0 to start the 3D world
@@ -974,6 +1002,7 @@ const World = {
 
                 VBW[config.controller].start(dom_id);
                 VBW[config.render].show(dom_id);
+                return ck && ck();
 
                 // const target={x:x,y:y,world:0,index:0,adjunct:"block"}
                 // const binded=VBW.event.on("block","loaded",(ev)=>{

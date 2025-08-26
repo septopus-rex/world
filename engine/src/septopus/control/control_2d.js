@@ -10,6 +10,7 @@
  */
 
 import VBW from "../core/framework";
+import World from "../core/world";
 import Touch from "../lib/touch";
 
 const reg = {
@@ -342,7 +343,19 @@ const self = {
 
         const el_jump =document.getElementById(config.buttons.jump);
         el_jump.addEventListener("click", (ev) => {
-            console.log(`"Jump" is clicked.`);
+            const dom_id=VBW.cache.get(["active","current"]);
+            const world=env.player.location.world;
+            const status=env.render.status();
+            if(status.selected[0]<1 || status.selected[1]<1){
+                return self.info(`Invalid block ${JSON.stringify(status.selected)} to jump.`);
+            }
+
+            const [x,y]=status.selected;
+            const pos=[12,12,0];      //can set to fall from sky
+            World.teleport(dom_id,world,x,y,(done)=>{
+                console.log(done);
+                
+            },pos);
         });
     },
     action:()=>{

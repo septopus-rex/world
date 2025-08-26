@@ -400,12 +400,38 @@ const vbw_player = {
     * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0],order:"XYZ"}
     */
     synchronous: (diff) => {
-        //console.log(`Changing: `,JSON.stringify(diff))
         if (Array.isArray(diff)) {
 
         } else {
             if (diff.position) self.syncCameraPosition(diff.position);
             if (diff.rotation) self.syncCameraRotation(diff.rotation);
+        }
+    },
+
+    teleport:(x,y,world,dom_id,pos)=>{
+
+        env.player.location.world=world;
+        env.player.location.block=[x,y];
+        env.player.location.position=pos;
+
+        const side = self.getSide();
+        const cvt = self.getConvert();
+
+        //console.log(x,y,world,dom_id,pos,side);
+        //!important, transform from Septopus to three.js
+        const npos=[
+            (x-1)*side[0] + pos[0]*cvt,
+            pos[2],
+            -((y-1)*side[1] + pos[1]*cvt),
+        ]
+        for (let dom_id in env.camera) {
+            //1. change camera position
+            const cam = env.camera[dom_id];
+            cam.position.set(
+                npos[0],
+                npos[1],
+                npos[2],
+            );
         }
     },
 

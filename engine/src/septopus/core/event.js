@@ -194,9 +194,9 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
-        if(cat==="module" && event==="parsed"){
-            console.log(param, Toolbox.stamp());
-        }
+        // if(cat==="module" && event==="parsed"){
+        //     console.log(param, Toolbox.stamp());
+        // }
 
         if(obj===undefined){
             for(let name in events[cat][event]){

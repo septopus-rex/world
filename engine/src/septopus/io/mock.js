@@ -385,7 +385,7 @@ const mock = {
             return { x: x, y: y, world: world, data: [0.2, 1, []], owner: "LOCATION_ADDRESS" }
         }
 
-        if (x === 2026 && y === 619 ) {
+        if (x === 2024 && y === 614 ) {
             return { x: x, y: y, world: world, data: [0.2, 1, [], 999], owner: "LOCATION_ADDRESS" }
         }
 

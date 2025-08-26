@@ -28,34 +28,15 @@
             [1982,619],         //单一的预加载block
             [1983,619,5,5],     //预加载区域，[block_start_x,block_start_y,extend_x,extend_y]
         ],
-        // service:[       //额外服务器的请求地址
-        //     {
-        //         baseurl:"https://public_API.fun"
-        //         methods:[
-        //             {
-        //                 url:"overview",
-        //                 parameters:[],
-        //             },
-        //             {
-        //                 url:"mine",
-        //                 parameters:[
-        //                     {name:"address",type:"string",limit:[0,58]},
-        //                     {name:"page",type:"integer",limit:[0,256]},
-        //                     {name:"step",type:"integer",limit:[0,256]},
-        //                 ],
-        //             }
-        //         ],
-        //         version:"1.0.0",
-        //     }
-        // ],
-        init:{
-            sky:{},
-            weather:{},
-            start:{
-                block:[1983,620],
+        init:{          //初始化设置，根据游戏需要来设定
+            sky:{},                 //可选，设置游戏时候的天空，用于控制氛围
+            weather:{},             //可选，设置游戏时候的天气，用于控制氛围
+            start:{                 //可选，定义游戏启动的位置，必须在blocks里
+                block:[1983,620],       
                 position:[],
                 rotation:[],
             },
+            server:{},              //可选，用于游戏的网络通讯。
         },      
     }
     VBW.mode(mode, target, (done) => {
