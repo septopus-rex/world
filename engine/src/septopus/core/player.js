@@ -127,6 +127,8 @@ const self = {
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
     },
+
+    //parameter skip: wether adding pos z(pos[2]) to player z position  
     checkLocation: (camera,pos,dom_id,skip) => {
         //console.log(`Check location:`,JSON.stringify(pos));
         const px = camera.position.x;
@@ -207,8 +209,7 @@ const self = {
         }
         return { load: glist, destroy: dlist };
     },
-
-    syncCameraPosition: (pos,skip) => {
+    syncCameraPosition: (pos,skip, cam_only) => {
         if(env.lock) return false;
 
         for (let dom_id in env.camera) {
@@ -221,7 +222,9 @@ const self = {
             );
 
             //2. inc player action
-            self.checkLocation(cam,pos,dom_id,skip);  
+            if(!cam_only){
+                self.checkLocation(cam,pos,dom_id,skip);
+            }
         }
     },
     syncCameraRotation: (ro) => {
@@ -399,11 +402,17 @@ const vbw_player = {
     * synchronous player movement to camera
     * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0],order:"XYZ"}
     */
-    synchronous: (diff) => {
+    synchronous: (diff,cam_only) => {
         if (Array.isArray(diff)) {
 
         } else {
-            if (diff.position) self.syncCameraPosition(diff.position);
+            if (diff.position){
+                if(cam_only){
+                    self.syncCameraPosition(diff.position,false,true);
+                }else{
+                    self.syncCameraPosition(diff.position);
+                }
+            }
             if (diff.rotation) self.syncCameraRotation(diff.rotation);
         }
     },
@@ -498,8 +507,7 @@ const vbw_player = {
             //!important, `player.fall` event trigger
             VBW.event.trigger("player","fall",evt);
         }else{
-            const skip=true;
-            //self.syncCameraPosition([0,0,-fall*cvt],skip);
+            
         }
         return true;
     },

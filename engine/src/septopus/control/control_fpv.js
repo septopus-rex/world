@@ -365,16 +365,6 @@ const self = {
         }
     },
 
-    justifyCamera: (delta) => {
-        //console.log(`Here to justify camera`,delta);
-        const current = runtime.camera.position;
-        runtime.camera.position.set(                    //!important, transform from Septopus to three.js
-            current.x,
-            current.y + delta,
-            current.z,
-        );
-    },
-
     checkMoving: (check, stop, diff) => {
         //1. check delta to comfirm standing changing. Set player status correctly.
         if (check.delta!==undefined) {
@@ -391,7 +381,11 @@ const self = {
         //2. more actions for UX
         if(stop.on){
             if(check.cross){
-                if(check.edelta) self.justifyCamera(check.edelta);
+                //if(check.edelta) self.justifyCamera(check.edelta);
+
+                if(check.edelta!==undefined){
+                    VBW.player.synchronous({position:[0,0,check.edelta]},true);
+                } 
                 if(check.orgin){
                     //1.from `stand stop` cross to `stop`
                     //!important, `stop.on` event trigger 
@@ -429,7 +423,8 @@ const self = {
                     }
                 }
             }else{
-                if(check.edelta) self.justifyCamera(check.edelta);
+                //if(check.edelta) self.justifyCamera(check.edelta);
+                if(check.edelta!==undefined) VBW.player.synchronous({position:[0,0,check.edelta]},true);
                 if(check.orgin){
                     //7.from `block` to `stop`
                     if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {

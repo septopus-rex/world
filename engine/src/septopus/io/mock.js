@@ -312,10 +312,10 @@ const mock = {
             },
             player: {
                 start: {
-                    block: [2025, 619],   //玩家的默认启动位置
-                    position: [12, 12, 0],   //默认开始的位置[x,y,z],z为站立高度
-                    rotation: [0, 0, 0],   //默认的旋转位置
-                    world:0,              //
+                    block: [2025, 619],         //玩家的默认启动位置
+                    position: [12, 12, 0],      //默认开始的位置[x,y,z],z为站立高度(相对于block的高度)
+                    rotation: [0, 0, 0],        //默认的旋转位置
+                    world:0,
                     extend:2,              
                     stop:{
                         on:false,               //whether on stop ( including adjunct type )
