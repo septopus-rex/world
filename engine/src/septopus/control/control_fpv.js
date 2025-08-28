@@ -142,7 +142,7 @@ const self = {
         if (!el) return false;
         env.screen.width = el.width;
     },
-    initTodo: () => {
+    initCode: () => {
         const body = VBW.movement.body;
         const head = VBW.movement.head;
         todo = {
@@ -174,7 +174,7 @@ const self = {
             if (config.keyboard[code]) VBW.queue.remove(config.queue, config.keyboard[code]);
         });
     },
-    autocache: (dom_id) => {
+    setRuntime: (dom_id) => {
         runtime.container = dom_id;
 
         if (runtime.actions === null) {
@@ -687,7 +687,7 @@ const controller = {
 
         //0.get canvas width
         self.setWidth(dom_id);
-        self.initTodo();
+        self.initCode();            //set keyborad code --> player action
 
         //1.add keyboard listener and screen control
         const device = VBW.cache.get(["env", "device"]);
@@ -701,9 +701,9 @@ const controller = {
         }
 
         //2.set the related link
-        self.autocache(dom_id);
+        self.setRuntime(dom_id);
 
-        //3.set frame sync function
+        //3.set frame-loop function
         const world = runtime.player.location.world;
         const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);

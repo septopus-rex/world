@@ -196,8 +196,8 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
-        // if(cat==="module" && event==="parsed"){
-        //     console.log(param, Toolbox.stamp());
+        // if(cat==="block" && event==="loaded"){
+        //     console.log(param, obj,Toolbox.stamp());
         // }
 
         if(obj===undefined){
@@ -207,6 +207,10 @@ const vbw_event = {
         }else{
             for(let name in events[cat][event]){
                 const target=self.getNameByObj(obj);
+                // if(cat==="block" && event==="loaded"){
+                //     console.log(target);
+                // }
+
                 if(name===target){
                     const fun=events[cat][event][name]
                     fun(param);

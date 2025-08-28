@@ -312,7 +312,7 @@ const vbw_player = {
         if (env.camera[dom_id] === undefined) {
             const camera=VBW.cache.get(["active", "containers", dom_id, "camera"]);
             const scene=VBW.cache.get(["active", "containers", dom_id, "scene"]);
-            env.camera[dom_id] = camera
+            env.camera[dom_id] = camera;
             Effects.set(camera,scene);
         }
 
@@ -328,8 +328,6 @@ const vbw_player = {
 
         VBW.event.on("player","death",(ev)=>{
             env.lock=true;      //set to lock movement;
-            //console.log(`death`,ev)
-
             const cfg={height:ev.fall,convert:self.getConvert(),skip:true};
             Effects.get("camera","fall",cfg,()=>{
                 UI.show("countdown", 10, {callback:()=>{
@@ -338,10 +336,18 @@ const vbw_player = {
             });
         });
 
-        // const target={x:2024,y:619,world:0,index:0,adjunct:"trigger"}
-        // VBW.event.on("trigger","in",(ev)=>{
-        //     console.log(`Trigger in, `, ev);
-        // },target);
+        //update player stand height after block loaded.
+        const [x,y]=data.block;
+        const target={x:x,y:y,world:world,index:0,adjunct:"block",}
+        VBW.event.on("block","loaded",(ev)=>{
+            //console.log(`Start block loaded`,ev)
+            const va = VBW.cache.get(["block",dom_id,ev.world,`${ev.x}_${ev.y}`,"raw","data",0]);
+            const cvt = self.getConvert();
+            self.syncCameraPosition([0,0,va*cvt],false,true);
+            VBW.event.off("block","loaded",target);
+        },target);
+
+        VBW.event.dump();
 
         return ck && ck(data);
     },
@@ -377,13 +383,18 @@ const vbw_player = {
         env.camera[dom_id].position.set(now.x,now.y + va,now.z);
     },
 
+    /**
+    * synchronous player movement to camera
+    * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0],order:"XYZ"}
+    */
     initial: (local, dom_id) => {
         const side = self.getSide();
         const cvt = self.getConvert();
+        const [x,y]=local.block;
 
         const pos = [
-            env.camera[dom_id].position.x + (local.block[0] - 1) * side[0] + local.position[0] * cvt,
-            env.camera[dom_id].position.y + (local.block[1] - 1) * side[1] + local.position[1] * cvt,
+            env.camera[dom_id].position.x + (x - 1) * side[0] + local.position[0] * cvt,
+            env.camera[dom_id].position.y + (y - 1) * side[1] + local.position[1] * cvt,
             local.position[2] * cvt + env.player.body.height * cvt
         ]
         env.camera[dom_id].position.set(

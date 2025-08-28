@@ -211,11 +211,6 @@ const self = {
                 }
             }
         }
-
-        // const list=[];
-        // for(let k in map)list.push(k);
-        // UI.show("toast", `Cache data successful, list: ${JSON.stringify(list)}`);
-
         return failed;
     },
 
@@ -734,7 +729,7 @@ const self = {
                     stamp: Toolbox.stamp(),
                 };
                 const evt = { x: x, y: y, world: world }
-                VBW.event.trigger("block", "loaded", evt, target);
+                VBW.event.trigger("block","loaded", evt, target);
 
                 //4.2. loading resource needed.
                 self.loadingResourceQueue(pre, x, y, world, dom_id);
