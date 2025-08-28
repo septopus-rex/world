@@ -2,8 +2,8 @@
  * 2D controller for 2D map
  *
  * @fileoverview
- *  1. screen interaction support
- *  2. 
+ *  1. screen interaction support.
+ *  2. PC client interaction support.
  *
  * @author Fuu
  * @date 2025-04-25
@@ -237,9 +237,7 @@ const self = {
         });
 
         cvs.addEventListener("mousewheel", (ev) => {
-            // const point=self.getMousePoint(ev);
-            // const delta=1;
-            // self.cvsScale(point,delta);
+
         });
 
         cvs.addEventListener("mousemove", (ev) => {
@@ -279,10 +277,12 @@ const self = {
             },at);
         }
     },
-    status:()=>{
+
+    status:(title_id)=>{
+        env.dialog.title=title_id;
+
         const player=env.player;
         const ctx=`Block ${JSON.stringify(player.location.block)}`;
-
         self.info(ctx);
     },
     
@@ -357,6 +357,9 @@ const self = {
             },pos);
         });
     },
+    /** 
+     * frame-loop function
+     * */
     action:()=>{
         if(env.last===null){
             env.last=Toolbox.clone(env.player.location);
@@ -370,8 +373,16 @@ const self = {
 }
 
 const controller = {
+    //component hook.
     hooks: self.hooks,
+    
+    /** clean 2D canvas from container
+     * @functions
+     * 1. remove frame-loop function
+     * @param   {string}    container    - container DOM id
+     * */
     clean:(container)=>{
+        //1. remove frame-loop function
         const world = env.player.location.world;
         const dom_id= VBW.cache.get(["active","current"]);
         const chain = ["block", dom_id, world, "loop"];
@@ -386,14 +397,25 @@ const controller = {
         if(index>=0){
             queue.splice(index, 1);
         }
+
+        //2. remove inner DOM
+
     },
+
+    /** 2D controller entry
+     * @functions
+     * 1. construct DOM.
+     * 2. set runtime.
+     * 3. add frame-loop function.
+     * 4. 
+     * @param   {string}    container    - container DOM id
+     * @param   {string}    title_id     - set dailog title for 
+     * */
     start: (container,title_id) => {
         //0. construct dom for renderer
         self.construct(container);
-
-        env.dialog.title=title_id;
-
-        //1. set cache
+        
+        //1. set runtime
         if (env.render === null) env.render = VBW[config.render].control;
         if(env.player===null) env.player=VBW.cache.get(["env","player"]);
 
@@ -403,10 +425,10 @@ const controller = {
         const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
-        //console.log(chain,queue);
         queue.push({ name: "two", fun: self.action });
 
-        self.status();
+        //3.set select status, for dialog mode only.
+        self.status(title_id);
     },
 }
 

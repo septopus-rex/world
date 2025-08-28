@@ -87,7 +87,7 @@ const Pages = {
         const container_id = config.card.container;
         const title_id = config.card.title;
         const ctx = {
-            title: `<div id="${title_id}">User Details</div>`,
+            title: `<div id="${title_id}">User Details & Setting</div>`,
             content: `<div class="map" id="${container_id}"></div>`,
         }
         const cfg = {

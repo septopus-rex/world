@@ -154,7 +154,16 @@ const Calc = {
         const fs = d > s ? s * 0.5 : d * .5 + o > s ? s - 0.5 * d : o < 0.5 * d ? 0.5 * d : o, sz = d > s ? s : d;
         return { offset: fs, size: sz }
     },
+    //{"interact":true,"move":true,"index":0,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
 
+    /**
+    * player leave from special object to block
+    * @functions
+    * 1. reset player position.
+    * @param {number[]}   pos  - [x,y,z],player position right now
+    * 
+    * @return
+    */
     check: (pos, objs, cfg) => {
         //console.log(JSON.stringify(cfg),JSON.stringify(pos));
         //console.log(`Amount of stop: ${objs.length}`);
@@ -175,7 +184,6 @@ const Calc = {
         //1.check whether interact with stop from top view ( in projection ).
         const [dx, dy, pz] = pos;       //player position
         const list = self.projection(dx, dy, objs);
-        //{"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
 
         if (self.empty(list)) return result;
         result.interact = true;

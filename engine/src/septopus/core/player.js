@@ -477,7 +477,11 @@ const vbw_player = {
     },
 
     /**
-    * player go cross block and fall or death
+    * player go cross to `block` from `stop`
+    * @functions
+    * 1. set player position
+    * 2. trigger event `player.fall` or `player.death`.
+    * @param    {number}    fall    - fall height
     */
     cross:(fall)=>{
         console.log(`Cross fall height:`,fall);
@@ -489,8 +493,6 @@ const vbw_player = {
             x:player.location.block[0],
             y:player.location.block[1],
         }
-
-        //player.location.position[2]=0;
 
         if(fall>=capacity.death){
             //2.1. player fall to death
@@ -518,16 +520,23 @@ const vbw_player = {
     },
 
     /**
-    * player leave special object to block
+    * player leave from special object to block
+    * @functions
+    * 1. reset player position.
+    * 2. trigger event `stop.on` trigger.
+    * 3. trigger event `player.fall` or `player.death`.
+    * @param {object}   check  - {"interact":false,"move":true,"cross":true,"edelta":-100}
+    * @return
     */
     leave:(check)=>{
         console.log("Player leave:", JSON.stringify(check));
 
-        //1. location update
         const cvt=self.getConvert();
         const player=env.player;
+
+        //1. location update
         const fall=player.location.position[2];
-        player.location.position[2]=0;  //reset player stand height
+        player.location.position[2]=0;      //reset player stand height
 
         const stop=Toolbox.clone(player.location.stop);
         player.location.stop.on=false;
@@ -575,8 +584,13 @@ const vbw_player = {
         }
         return true;
     },
+
     /**
     * Trigger task here.
+    * @functions
+    * 1. body control.
+    * 2. movement capacity control.
+    * 3. more actions.
     */
     task:()=>{
         return {

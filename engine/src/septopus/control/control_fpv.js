@@ -661,15 +661,18 @@ const self = {
 }
 
 const controller = {
+    //component hook.
     hooks: self.hooks,
-
+    
+    /** 
+     * construct FPV controller DOM
+     * */
     construct: () => {
         const check = document.getElementById(config.id);
         if (check === null) {
-            const str = `<div id=${config.id}></div>`;
             const parser = new DOMParser();
-            const doc = parser.parseFromString(str, 'text/html');
-            return doc.body.firstChild
+            const doc = parser.parseFromString(`<div id=${config.id}></div>`, 'text/html');
+            return doc.body.firstChild;
         }
     },
 
