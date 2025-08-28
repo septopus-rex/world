@@ -11,6 +11,7 @@
 
 import VBW from "../core/framework";
 import World from "../core/world";
+import Toolbox from "../lib/toolbox";
 import Touch from "../lib/touch";
 
 const reg = {
@@ -45,9 +46,9 @@ const config = {
 }
 
 const env = {
-    player:null,                //player status
+    player: null,                //player status
     render: null,               //render actions
-    pre:null,                   //previous mouse position
+    pre: null,                   //previous mouse position
     center:[0,0],               //2D 
     pan: false,                 //pan canvas
     height:0,                   //canvas height
@@ -63,7 +64,8 @@ const env = {
     },
     dialog:{
         title:"",
-    }
+    },
+    last:null,               //last player position to check wether update 2D map
 }   
 
 const self = {
@@ -224,13 +226,10 @@ const self = {
 
         cvs.addEventListener("click", (ev) => {
             const point=self.getMousePoint(ev,true);
-            //console.log(`single click`,point);
-            // const delta=1;
-            // self.cvsScale(point,delta);
             env.pre=point;
-            //const cp=[point[0],env.height-point[1]];
             const bk = env.render.select(point,config.select);
             self.info(`${JSON.stringify(bk)} is selected`);
+            env.render.update();
         });
 
         cvs.addEventListener("dblclick", (ev) => {
@@ -359,8 +358,14 @@ const self = {
         });
     },
     action:()=>{
-        //console.log(`here`);
-        env.render.update();
+        if(env.last===null){
+            env.last=Toolbox.clone(env.player.location);
+        }else{
+            if(JSON.stringify(env.last)!==JSON.stringify(env.player.location)){
+                env.last=Toolbox.clone(env.player.location);
+                env.render.update();
+            }
+        }
     },
 }
 

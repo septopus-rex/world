@@ -129,7 +129,7 @@ const self = {
     },
 
     //parameter skip: wether adding pos z(pos[2]) to player z position  
-    checkLocation: (camera,pos,dom_id,skip) => {
+    checkLocation: (camera,pos,dom_id,cam_only) => {
         //console.log(`Check location:`,JSON.stringify(pos));
         const px = camera.position.x;
         const py = -camera.position.z;
@@ -176,7 +176,7 @@ const self = {
         //update player position
         player.location.position[0] = px % side[0] / cvt;
         player.location.position[1] = py % side[1] / cvt;
-        if(!skip) player.location.position[2] = player.location.position[2] + pos[2] / cvt;
+        if(!cam_only) player.location.position[2] = player.location.position[2] + pos[2] / cvt;
     },
     cross: (from, to, ext) => {
         
@@ -209,7 +209,7 @@ const self = {
         }
         return { load: glist, destroy: dlist };
     },
-    syncCameraPosition: (pos,skip, cam_only) => {
+    syncCameraPosition: (pos, cam_only) => {
         if(env.lock) return false;
 
         for (let dom_id in env.camera) {
@@ -221,9 +221,9 @@ const self = {
                 cam.position.z - pos[1],
             );
 
-            //2. inc player action
-            if(!cam_only){
-                self.checkLocation(cam,pos,dom_id,skip);
+            //2. inc player position to set block
+            if(pos[0]!==0 || pos[1]!==0){
+                self.checkLocation(cam,pos,dom_id,cam_only);
             }
         }
     },
@@ -336,19 +336,6 @@ const vbw_player = {
             });
         });
 
-        //update player stand height after block loaded.
-        const [x,y]=data.block;
-        const target={x:x,y:y,world:world,index:0,adjunct:"block",}
-        VBW.event.on("block","loaded",(ev)=>{
-            //console.log(`Start block loaded`,ev)
-            const va = VBW.cache.get(["block",dom_id,ev.world,`${ev.x}_${ev.y}`,"raw","data",0]);
-            const cvt = self.getConvert();
-            self.syncCameraPosition([0,0,va*cvt],false,true);
-            VBW.event.off("block","loaded",target);
-        },target);
-
-        VBW.event.dump();
-
         return ck && ck(data);
     },
 
@@ -407,6 +394,14 @@ const vbw_player = {
             -local.rotation[2],
             local.rotation[1]
         );
+
+        //sync player stand height to block elevation
+        const target={x:x,y:y,world:local.world,index:0,adjunct:"block",}
+        VBW.event.on("block","loaded",(ev)=>{
+            const va = VBW.cache.get(["block",dom_id,ev.world,`${ev.x}_${ev.y}`,"raw","data",0]);
+            self.syncCameraPosition([0,0,va*cvt],true);
+            VBW.event.off("block","loaded",target);
+        },target);
     },
 
     /**
@@ -419,7 +414,7 @@ const vbw_player = {
         } else {
             if (diff.position){
                 if(cam_only){
-                    self.syncCameraPosition(diff.position,false,true);
+                    self.syncCameraPosition(diff.position,true);
                 }else{
                     self.syncCameraPosition(diff.position);
                 }
@@ -507,8 +502,6 @@ const vbw_player = {
             //!important, `player.death` event trigger
             VBW.event.trigger("player","death",evt);
         }else if(fall>=capacity.span){
-            //from [2025,618] to [2024,618]
-            //from [2025,618] to [2025,619]
             //2.2 player fall normally
             const evt={
                 from:target,
@@ -518,8 +511,9 @@ const vbw_player = {
             //!important, `player.fall` event trigger
             VBW.event.trigger("player","fall",evt);
         }else{
-            
-        }
+            //2.3 block elevation sync
+           self.syncCameraPosition([0,0,fall*cvt],true);
+        }   
         return true;
     },
 
