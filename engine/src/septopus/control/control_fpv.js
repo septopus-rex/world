@@ -43,6 +43,20 @@ const runtime = {
     def: null,
 }
 
+const env = {
+    //position: [0, 0],       //[left,top],DOM offset      
+    mobile: false,
+    limit: null,            //limit of movement
+    moving: false,          //whether moving, for mobile  
+    screen: {
+        touch: null,
+        distance: 0,
+        width: 0,
+    },
+    trigger: null,
+    todo :null,
+};
+
 const config = {
     id: "fpv_control",
     code: {          //Definition of keyboard
@@ -75,21 +89,6 @@ const config = {
     hold: 3000,          //3s as holding  
 }
 
-const env = {
-    //position: [0, 0],       //[left,top],DOM offset      
-    mobile: false,
-    limit: null,            //limit of movement
-    moving: false,          //whether moving, for mobile  
-    screen: {
-        touch: null,
-        distance: 0,
-        width: 0,
-    },
-    trigger: null,
-};
-
-let todo = null;
-let trigger = null;
 const self = {
     hooks: {
         reg: () => { return reg },
@@ -100,79 +99,17 @@ const self = {
     bind: (evt, fun, dom_id) => {
         if (!dom_id) document.addEventListener(evt, fun);
     },
-    getEditActive: () => {
-        const world = runtime.player.location.world;
-        return VBW.cache.get(["block", runtime.container, world, "edit"]);
+    flip: (obj) => {
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+            acc[value] = key;
+            return acc;
+        }, {});
     },
-    getSTD: (x, y, adjunct, index) => {
-        const world = runtime.player.location.world;
-        const chain = ["block", runtime.container, world, `${x}_${y}`, 'std', adjunct, index === undefined ? 0 : index];
-        return VBW.cache.get(chain);
-    },
-    getAngle: (ak) => {
-        if (env.mobile) {
-            const rate = env.screen.distance / env.screen.width
-            return Math.PI * 0.5 * rate;
-        } else {
-            return ak;
-        }
-    },
-    getElevation: (x, y) => {
-        //const active = VBW.cache.get(["active"]);
-        const world = runtime.player.location.world;
-        const chain = ["block", runtime.container, world, `${x}_${y}`, "elevation"];
-        return VBW.cache.get(chain);
-    },
-    getClickPosition: (ev) => {
-        return [ev.clientY, ev.clientX];
-    },
-    getSingle: (objs) => {
-        let dis = 0;
-        let selected = 0;
-        for (let i = 0; i < objs.length; i++) {
-            const row = objs[i];
-            if (dis === 0) dis = row.distance;
-            if (row.distance < dis) selected = i;
-        }
-        const target = objs[selected];
-        return target.object.userData;
-    },
+
     setWidth: (dom_id) => {
         const el = document.querySelector(`#${dom_id} canvas`);
         if (!el) return false;
         env.screen.width = el.width;
-    },
-    initCode: () => {
-        const body = VBW.movement.body;
-        const head = VBW.movement.head;
-        todo = {
-            FORWARD: body.forward,
-            BACKWARD: body.backward,
-            LEFT: body.leftward,
-            RIGHT: body.rightward,
-            BODY_RISE: body.rise,
-            BODY_FALL: body.fall,
-            JUMP: body.jump,
-            SQUAT: body.squat,
-            HEAD_LEFT: head.left,
-            HEAD_RIGHT: head.right,
-            HEAD_RISE: head.up,
-            HEAD_DOWN: head.down,
-        }
-    },
-    keyboard: () => {
-        self.bind('keydown', (ev) => {
-            const code = ev.which;
-            if (config.keyboard[code]) {
-                UI.hide(["pop", "sidebar"]); //hide popup menu when moving 
-                VBW.queue.insert(config.queue, config.keyboard[code]);
-            }
-        });
-
-        self.bind('keyup', (ev) => {
-            const code = ev.which;
-            if (config.keyboard[code]) VBW.queue.remove(config.queue, config.keyboard[code]);
-        });
     },
     setRuntime: (dom_id) => {
         runtime.container = dom_id;
@@ -213,15 +150,31 @@ const self = {
         }
     },
 
-    flip: (obj) => {
-        return Object.entries(obj).reduce((acc, [key, value]) => {
-            acc[value] = key;
-            return acc;
-        }, {});
+    getEditActive: () => {
+        const world = runtime.player.location.world;
+        return VBW.cache.get(["block", runtime.container, world, "edit"]);
+    },
+    getSTD: (x, y, adjunct, index) => {
+        const world = runtime.player.location.world;
+        const chain = ["block", runtime.container, world, `${x}_${y}`, 'std', adjunct, index === undefined ? 0 : index];
+        return VBW.cache.get(chain);
+    },
+    getAngle: (ak) => {
+        if (env.mobile) {
+            const rate = env.screen.distance / env.screen.width
+            return Math.PI * 0.5 * rate;
+        } else {
+            return ak;
+        }
+    },
+    getTriggers: () => {
+        const [x, y] = runtime.player.location.block;
+        const world = runtime.player.location.world;
+        const trigger_chain = ["block", runtime.container, world, `${x}_${y}`, "trigger"];
+        return VBW.cache.get(trigger_chain);
     },
     //fliter out stops related by block coordination.
     getStops: (bks, side) => {
-        //console.log(bks);
         const stops = [];
         const fun = VBW.cache.get;
         const world = runtime.player.location.world;
@@ -243,8 +196,101 @@ const self = {
         }
         return stops;
     },
-    // good player position
-    //{"block":[2025,618],"position":[8.2,15.696,0],"rotation":[0,0,-6.408849],"world":0,"extend":3,"stop":{"on":false,"adjunct":"","index":0}}
+    
+    getElevation: (x, y) => {
+        //const active = VBW.cache.get(["active"]);
+        const world = runtime.player.location.world;
+        const chain = ["block", runtime.container, world, `${x}_${y}`, "elevation"];
+        return VBW.cache.get(chain);
+    },
+    getClickPosition: (ev) => {
+        return [ev.clientY, ev.clientX];
+    },
+    getSingle: (objs) => {
+        let dis = 0;
+        let selected = 0;
+        for (let i = 0; i < objs.length; i++) {
+            const row = objs[i];
+            if (dis === 0) dis = row.distance;
+            if (row.distance < dis) selected = i;
+        }
+        const target = objs[selected];
+        return target.object.userData;
+    },
+    
+    /**
+     * filter out the selected objects
+     * @functions
+     * 1. check wether selected by three.js raycaster
+     * 2. filter out the nearest one.
+     * @param   {object[]}  objs    - selected objects in three.js scene
+     * @param   {number}    x       - block.x
+     * @param   {number}    y       - block.y
+     * @param   {object}    side    - [x,y], side of block
+     * @return void
+     * set the selected object in VBW.cache
+     */ 
+    getSelection: (objs, x, y, side) => {
+        const selected = {
+            adjunct: "",
+            index: 0,
+        }
+        const arr = [];
+        for (let i = 0; i < objs.length; i++) {
+            const row = objs[i];
+            if (row.distance > side[0]) continue;          //ignore objects on other blocks
+            if (!row.object ||
+                !row.object.userData ||
+                !row.object.userData.x ||
+                !row.object.userData.y ||
+                !row.object.userData.name ||
+                row.object.userData.x !== x ||
+                row.object.userData.y !== y) continue;   //ignore system objects
+
+            const tmp = row.object.userData.name.split("_");
+            if (tmp.length > 1) continue;                  //ignore helper objects
+            arr.push(row);
+        }
+
+        if (arr.length === 0) return selected;
+        const single = self.getSingle(arr);
+        selected.adjunct = single.name;
+        selected.index = single.index;
+        return selected;
+    }, 
+
+    /**
+     * creata map of key --> action
+     * @return void
+     */
+    initCode: () => {
+        const body = VBW.movement.body;
+        const head = VBW.movement.head;
+        env.todo = {
+            FORWARD: body.forward,
+            BACKWARD: body.backward,
+            LEFT: body.leftward,
+            RIGHT: body.rightward,
+            BODY_RISE: body.rise,
+            BODY_FALL: body.fall,
+            JUMP: body.jump,
+            SQUAT: body.squat,
+            HEAD_LEFT: head.left,
+            HEAD_RIGHT: head.right,
+            HEAD_RISE: head.up,
+            HEAD_DOWN: head.down,
+        }
+    },
+
+    
+    /**
+     * check wether stopped by object
+     * @functions
+     * 1. wether cross block, if so, need to get the stops by the new block
+     * 2. wether stopped by objects;
+     * @param {number[]}    delta   - [x,y,z], value of postion changing
+     * @return {object}  - {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
+     */
     checkStop: (delta) => {
         const cvt = runtime.convert, side = runtime.side;
         const player = runtime.player;
@@ -263,7 +309,6 @@ const self = {
         let cross = false;
 
         //1. block cross status checking
-
         if (bx !== x || by !== y) {
             cross = true;
             const vb = self.getElevation(bx, by);
@@ -272,12 +317,6 @@ const self = {
             if (vb - stand > capacity.span * cvt) {
                 return { move: false, block: [bx, by] }
             }
-
-            //1.2.check elevation delta
-            // console.log(`Stand on ${stand}, cross block elevation ${vb}`);
-            // const delta=stand-vb;
-            // console.log(`Cross delta: ${delta}`);
-            //return { move: true, delta:delta, cross:cross};
         }
 
         //2.check whether stopped by stops
@@ -298,12 +337,15 @@ const self = {
 
         return Calc.check(pos, stops, cfg);
     },
-    getTriggers: () => {
-        const [x, y] = runtime.player.location.block;
-        const world = runtime.player.location.world;
-        const trigger_chain = ["block", runtime.container, world, `${x}_${y}`, "trigger"];
-        return VBW.cache.get(trigger_chain);
-    },
+
+    /**
+     * entry of trigger checking, only in GAME mode.
+     * @functions
+     * 1. `trigger.in` event
+     * 2. `trigger.hold` event
+     * 3. `trigger.out` event
+     * @return void
+     */    
     checkTrigger: () => {
         //console.log(runtime.active.mode,runtime.def);
         if (runtime.active.mode !== runtime.def.MODE_GAME) return false;
@@ -365,6 +407,16 @@ const self = {
         }
     },
 
+    /**
+     * movement checker
+     * @functions
+     * 1. 8 cases to set player location
+     * 2. `stop.on` event trigger
+     * @param   {object}  check - {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}, check result if movement is done
+     * @param   {object}  stop  - {}, stop status if movement is done.
+     * @param   {object}  diff  - {position:[x,y,z],rotation:[x,y,z]}, movement detail
+     * @return void
+     */
     checkMoving: (check, stop, diff) => {
         //1. check delta to comfirm standing changing. Set player status correctly.
         if (check.delta!==undefined) {
@@ -381,11 +433,10 @@ const self = {
         //2. more actions for UX
         if(stop.on){
             if(check.cross){
-                //if(check.edelta) self.justifyCamera(check.edelta);
-
                 if(check.edelta!==undefined){
                     VBW.player.synchronous({position:[0,0,check.edelta]},true);
-                } 
+                }
+
                 if(check.orgin){
                     //1.from `stand stop` cross to `stop`
                     //!important, `stop.on` event trigger 
@@ -423,8 +474,10 @@ const self = {
                     }
                 }
             }else{
-                //if(check.edelta) self.justifyCamera(check.edelta);
-                if(check.edelta!==undefined) VBW.player.synchronous({position:[0,0,check.edelta]},true);
+                if(check.edelta!==undefined){
+                    VBW.player.synchronous({position:[0,0,check.edelta]},true);
+                }
+
                 if(check.orgin){
                     //7.from `block` to `stop`
                     if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
@@ -441,21 +494,26 @@ const self = {
         }
     },
 
-    //Frame Synchronization, movement here to imply
+    /**
+     * Frame Synchronization ( frame-loop for short ), movement here to imply
+     * @functions
+     * 1. check movement queue, if moved, check location and set to camera and player
+     * 2. check trigger events by call `checkTrigger`.
+     * @return void
+     */
     action: () => {
         const dis = [config.move.distance, self.getAngle(config.move.angle)];
 
         //!important, need to confirm the `AK` definition, it is camera coordination
         //FIXME, change to calculate on the player rotation.
-
         const ak = runtime.camera.rotation.y;
         const local = runtime.player.location;
 
         //1.deal with keyboard inputs.
         for (let i = 0; i < runtime.actions.length; i++) {
             const act = runtime.actions[i];
-            if (!todo[act]) continue;
-            const diff = todo[act](dis, ak);
+            if (!env.todo[act]) continue;
+            const diff = env.todo[act](dis, ak);
 
             //2.if no position change, just synchronous player rotation.
             if (!diff.position) {
@@ -487,6 +545,11 @@ const self = {
         self.checkTrigger();
     },
 
+    /**
+     * group and format the form elements for UI to show
+     * @param   {object[]}  groups    - form elements for sidebar
+     * @return void
+     */
     formatGroups: (groups) => {
         const ss = [];
         for (let title in groups) {
@@ -501,34 +564,16 @@ const self = {
         }
         return ss;
     },
-    getSelection: (objs, x, y, side) => {
-        const selected = {
-            adjunct: "",
-            index: 0,
-        }
-        const arr = [];
-        for (let i = 0; i < objs.length; i++) {
-            const row = objs[i];
-            if (row.distance > side[0]) continue;          //ignore objects on other blocks
-            if (!row.object ||
-                !row.object.userData ||
-                !row.object.userData.x ||
-                !row.object.userData.y ||
-                !row.object.userData.name ||
-                row.object.userData.x !== x ||
-                row.object.userData.y !== y) continue;   //ignore system objects
 
-            const tmp = row.object.userData.name.split("_");
-            if (tmp.length > 1) continue;                  //ignore helper objects
-            arr.push(row);
-        }
-
-        if (arr.length === 0) return selected;
-        const single = self.getSingle(arr);
-        selected.adjunct = single.name;
-        selected.index = single.index;
-        return selected;
-    },
+    /**
+     * check selecting, wether object is selected
+     * @functions
+     * 1. check wether selected by three.js raycaster
+     * 2. set selected object in VBW cache
+     * @param {object}  ev  - event object from `click` event
+     * @return void
+     * set the selected object in VBW.cache
+     */        
     select: (ev) => {
         if (runtime.scene === null) return false;
 
@@ -554,15 +599,27 @@ const self = {
             return target;
         }
     },
+
+    /**
+     * binding interaction when in `edit` mode
+     * @functions
+     * 1. set raycast check
+     * 2. set active object
+     * 3. show pop menu and sidebar menu
+     * @param {string}  dom_id  - container DOM ID
+     * @return void
+     */
     editControl: (dom_id) => {
         const el = document.getElementById(dom_id);
         if (!el) return false;
+
         el.addEventListener('click', (ev) => {
             //1. check selection
             const mouse = self.getClickPosition(ev);
             const mode = VBW.cache.get(["active", "mode"]);
+            const def=VBW.cache.get(["def","common"]);
 
-            if (mode === 2) {
+            if (mode === def.MODE_EDIT) {
                 //1. raycast check the selected object
                 const target = self.select(ev);
                 const world = runtime.player.location.world;
@@ -580,7 +637,6 @@ const self = {
 
                 //3. show pop menu
                 const std = self.getSTD(x, y, target.adjunct, target.index);
-                //console.log(std,target);
                 const pop = VBW[target.adjunct].menu.pop(std);
                 UI.show("pop", pop, { offset: mouse });
 
@@ -618,6 +674,42 @@ const self = {
         });
     },
 
+    /**
+     * binding keyboard interaction 
+     * @functions
+     * 1. `keydown`, insert action
+     * 2. `keyup`, remove action
+     * @return void
+     */
+    keyboard: () => {
+        self.bind('keydown', (ev) => {
+            const code = ev.which;
+
+            
+            if (config.keyboard[code]) {
+                //hide popup menu when moving 
+                UI.hide(["pop", "sidebar"]);
+                
+                //insert action 
+                VBW.queue.insert(config.queue, config.keyboard[code]);
+            }
+        });
+
+        self.bind('keyup', (ev) => {
+            const code = ev.which;
+            if (config.keyboard[code]) VBW.queue.remove(config.queue, config.keyboard[code]);
+        });
+    },
+    
+    /**
+     * binding screen interaction 
+     * @functions
+     * 1. need `touch.js` support, which is the screen lib of Septopus World
+     * 2. `doubleTap`, move forward
+     * 3. `touchMove`, head roataion control
+     * @param {string}  dom_id  - container DOM ID
+     * @return void
+     */
     touch: (dom_id) => {
         const id = `#${dom_id} canvas`;
 
@@ -643,9 +735,9 @@ const self = {
         Touch.on(id, "touchMove", (point, distance) => {
             const dx = point[0] - env.screen.touch[0];
             env.screen.distance = distance;
-            if (dx > 0) {   //swipe right
+            if (dx > 0) {       //swipe right
                 VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_LEFT]);
-            } else {      //swipe left
+            } else {            //swipe left
                 VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
             }
             env.screen.touch = point;

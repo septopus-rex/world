@@ -297,7 +297,7 @@ const self = {
 const vbw_player = {
     //component hooks
     hooks: self.hooks,
-    
+
     /**
     * Trigger task here.
     * @functions
@@ -373,8 +373,6 @@ const vbw_player = {
             });
         });
 
-        console.log(JSON.stringify(data));
-
         return ck && ck(data);
     },
 
@@ -406,8 +404,6 @@ const vbw_player = {
     * @return void
     */
     format: (local, basic) => {
-        console.log(JSON.stringify(local));
-        console.log(JSON.stringify(basic));
         //1. set basic location
         if (local.block === undefined) {
             env.player.location = basic.start;
