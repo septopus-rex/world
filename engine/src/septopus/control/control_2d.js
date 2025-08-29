@@ -72,6 +72,24 @@ const self = {
     hooks: {
         reg: () => { return reg },
     },
+    setFloat:(rate)=>{
+        
+        const el=document.getElementById(config.zoom.bar);
+        const height=el.clientHeight;
+
+        if(env.bar.height===0) env.bar.height = height;
+
+        const pointer=document.getElementById(config.scale.now);
+        const size=pointer.clientHeight;
+        const margin=height*rate*0.01-size*0.5;
+        env.bar.now = margin;
+        
+        pointer.style.top=`${margin}px`;
+    },
+    setCenter:(el)=>{
+        //console.log([0.5*el.clientWidth,0.5*el.clientHeight]);
+        env.center = [0.5*el.clientWidth,0.5*el.clientHeight];
+    },
     getDom: (data) => {
         const parser = new DOMParser();
         return parser.parseFromString(data, 'text/html');
@@ -93,27 +111,52 @@ const self = {
         if(anti) return [x - pos.left,env.height-(y - pos.top)];
         return [x - pos.left,y - pos.top];
     },
-    setFloat:(rate)=>{
-        
-        const el=document.getElementById(config.zoom.bar);
-        const height=el.clientHeight;
 
-        if(env.bar.height===0) env.bar.height = height;
+    cvsPan:(from,to)=>{
+        const cx=to[0]-from[0];
+        const cy=to[1]-from[1];
+        return env.render.move(cx,cy);
+    },
 
-        const pointer=document.getElementById(config.scale.now);
-        const size=pointer.clientHeight;
-        const margin=height*rate*0.01-size*0.5;
-        env.bar.now = margin;
-        
-        pointer.style.top=`${margin}px`;
+    cvsScale:(point,scale)=>{
+        const cx=point[0]-env.center[0];
+        const cy=point[1]-env.center[1];
+        return env.render.scale(cx,cy,scale);
     },
-    setCenter:(el)=>{
-        //console.log([0.5*el.clientWidth,0.5*el.clientHeight]);
-        env.center = [0.5*el.clientWidth,0.5*el.clientHeight];
+    
+    scaleUp: () => {
+        const id = config.scale.up;
+        const el = document.getElementById(id);
+        if(el===null) return false;
+
+        el.addEventListener("click", (ev) => {
+            // const pos = env.position;
+            // const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
+            // env.zoom = self.cvsScale(p, 1 + config.zoom.step);
+            //console.log(env.zoom);
+
+            env.render.rate(1 + config.zoom.step);
+        });
     },
-    scaleFloat:()=>{
-        
-        const id = config.scale.now;
+
+    scaleDown: () => {
+        const id = config.scale.down;
+        const el = document.getElementById(id);
+        if(el===null) return false;
+
+        el.addEventListener("click", (ev) => {
+            env.render.rate(1 - config.zoom.step);
+        });
+    },
+
+    /** 
+     * binding scale on float bar
+     * @functions
+     * 1. `mousemove`, cale the canvas
+     * @param {string}  id  - float bar DOM id.
+     * @return void
+     * */ 
+    scaleFloat:(id)=>{
         const el = document.getElementById(id);
         if(el===null) return false;
 
@@ -148,45 +191,15 @@ const self = {
             env.render.rate(1+(ev.movementY>0?-config.zoom.step:config.zoom.step));
         });
     },
-    scaleUp: () => {
-        const id = config.scale.up;
-        const el = document.getElementById(id);
-        if(el===null) return false;
 
-        el.addEventListener("click", (ev) => {
-            // const pos = env.position;
-            // const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
-            // env.zoom = self.cvsScale(p, 1 + config.zoom.step);
-            //console.log(env.zoom);
-
-            env.render.rate(1 + config.zoom.step);
-        });
-    },
-    scaleDown: () => {
-        const id = config.scale.down;
-        const el = document.getElementById(id);
-        if(el===null) return false;
-
-        el.addEventListener("click", (ev) => {
-            //console.log(`scale down`,env.center);
-            // const pos = env.position;
-            // const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
-            // env.zoom = self.cvsScale(p, 1 - config.zoom.step);
-            //console.log(env.zoom);
-
-            env.render.rate(1 - config.zoom.step);
-        });
-    },
-    cvsPan:(from,to)=>{
-        const cx=to[0]-from[0];
-        const cy=to[1]-from[1];
-        return env.render.move(cx,cy);
-    },
-    cvsScale:(point,scale)=>{
-        const cx=point[0]-env.center[0];
-        const cy=point[1]-env.center[1];
-        return env.render.scale(cx,cy,scale);
-    },
+    /** 
+     * binding screen action
+     * @functions
+     * 1. `touchMove`, pan the canvas
+     * 2. `gestureMove`, scale the canvas
+     * @param {string}  dom_id  - 2D canvas container DOM ID
+     * @return void
+     * */ 
     screen:(dom_id)=>{
         const id=`#${dom_id} canvas`;
         Touch.on(id,"doubleTap",(ev)=>{
@@ -221,6 +234,15 @@ const self = {
             env.center=null;
         });
     },
+        
+    /** 
+     * binding mouse action
+     * @functions
+     * 1. `click`, select block
+     * 2. `mousemove`, pan the canvas
+     * @param {string}  dom_id  - 2D canvas container DOM ID
+     * @return void
+     * */ 
     mouse: (dom_id) => {
         const cvs = document.querySelector(`#${dom_id} canvas`);
 
@@ -248,12 +270,14 @@ const self = {
             env.pre=now;
         });
     },
+    
+    /** 
+     * binding canvas pan action
+     * @param {string}  dom_id  - 2D canvas container DOM ID
+     * @return void
+     * */ 
     pan:(dom_id)=>{
         const cvs = document.querySelector(`#${dom_id} canvas`);
-        // cvs.addEventListener("click", (ev) => {
-           
-        // });
-
         cvs.addEventListener("mousedown", (ev) => {
             //console.log(`Start...`);
             env.pan = true;
@@ -266,7 +290,13 @@ const self = {
             env.pre=null;
         });
     },
-    
+
+    /** 
+     * show information on the left-bottom of dialog
+     * @param {string}  ctx  - content to show
+     * @param {number}  at   - time to clean the content
+     * @return void
+     * */    
     info:(ctx,at)=>{
         if(!config.debug) return false;
         const el=document.getElementById(config.zoom.info);
@@ -278,14 +308,23 @@ const self = {
         }
     },
 
+    /** 
+     * set title DOM id, showing the current block
+     * @param {string}  title_id  - title container DOM ID
+     * @return void
+     * */    
     status:(title_id)=>{
         env.dialog.title=title_id;
-
         const player=env.player;
         const ctx=`Block ${JSON.stringify(player.location.block)}`;
         self.info(ctx);
     },
-    
+
+    /** 
+     * construct 2D controller DOM
+     * @param {string}  dom_id  - container DOM ID
+     * @return void
+     * */  
     construct: (dom_id) => {
         const device=VBW.cache.get(["env","device"]);
 
@@ -319,7 +358,7 @@ const self = {
             self.setCenter(cvs);
             self.setFloat(50)
             self.buttons();
-            self.scaleFloat();
+            self.scaleFloat(config.scale.now);
             //self.scaleUp();
             //self.scaleDown();
             self.pan(dom_id);
@@ -334,6 +373,14 @@ const self = {
         env.position.top=rect.top;
         env.height=rect.height;
     },
+
+    /** 
+     * binding dialog buttons functions
+     * @funtions
+     * 1. `reset`, reset 2D map as start;
+     * 2. `jump`, jump to target block;
+     * @return void
+     * */
     buttons:()=>{
         const el_reset =document.getElementById(config.buttons.reset);
         el_reset.addEventListener("click", (ev) => {

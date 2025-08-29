@@ -257,7 +257,27 @@ const self = {
         selected.adjunct = single.name;
         selected.index = single.index;
         return selected;
-    }, 
+    },
+    
+    /**
+     * group and format the form elements for UI to show
+     * @param   {object[]}  groups    - form elements for sidebar
+     * @return void
+     */
+    formatGroups: (groups) => {
+        const ss = [];
+        for (let title in groups) {
+            const gp = groups[title];
+            const group = {
+                title: title.toUpperCase(),
+                col: 12,
+                row: 12,
+                inputs: gp,
+            }
+            ss.push(group);
+        }
+        return ss;
+    },
 
     /**
      * creata map of key --> action
@@ -495,77 +515,6 @@ const self = {
     },
 
     /**
-     * Frame Synchronization ( frame-loop for short ), movement here to imply
-     * @functions
-     * 1. check movement queue, if moved, check location and set to camera and player
-     * 2. check trigger events by call `checkTrigger`.
-     * @return void
-     */
-    action: () => {
-        const dis = [config.move.distance, self.getAngle(config.move.angle)];
-
-        //!important, need to confirm the `AK` definition, it is camera coordination
-        //FIXME, change to calculate on the player rotation.
-        const ak = runtime.camera.rotation.y;
-        const local = runtime.player.location;
-
-        //1.deal with keyboard inputs.
-        for (let i = 0; i < runtime.actions.length; i++) {
-            const act = runtime.actions[i];
-            if (!env.todo[act]) continue;
-            const diff = env.todo[act](dis, ak);
-
-            //2.if no position change, just synchronous player rotation.
-            if (!diff.position) {
-                VBW.player.synchronous(diff);
-                continue;
-            }
-
-            //3.check moving 
-            if (diff.position) {
-                const check = self.checkStop(diff.position);
-
-                //3.1. stopped, stop moving.
-                if (!check.move) {
-                    if (!check.block) {
-                        //!important, `stop.beside` event trigger 
-                        VBW.event.trigger("stop", "beside", { stamp: Toolbox.stamp() }, check.orgin);
-                    } else {
-                        //!important, `block.stop` event trigger 
-                        VBW.event.trigger("block", "stop", { stamp: Toolbox.stamp() }, check.block);
-                    }
-                    continue;
-                }
-
-                //3.2. moving action.
-                self.checkMoving(check, local.stop, diff);
-            }
-        }
-
-        self.checkTrigger();
-    },
-
-    /**
-     * group and format the form elements for UI to show
-     * @param   {object[]}  groups    - form elements for sidebar
-     * @return void
-     */
-    formatGroups: (groups) => {
-        const ss = [];
-        for (let title in groups) {
-            const gp = groups[title];
-            const group = {
-                title: title.toUpperCase(),
-                col: 12,
-                row: 12,
-                inputs: gp,
-            }
-            ss.push(group);
-        }
-        return ss;
-    },
-
-    /**
      * check selecting, wether object is selected
      * @functions
      * 1. check wether selected by three.js raycaster
@@ -609,7 +558,7 @@ const self = {
      * @param {string}  dom_id  - container DOM ID
      * @return void
      */
-    editControl: (dom_id) => {
+    edit: (dom_id) => {
         const el = document.getElementById(dom_id);
         if (!el) return false;
 
@@ -673,33 +622,6 @@ const self = {
 
         });
     },
-
-    /**
-     * binding keyboard interaction 
-     * @functions
-     * 1. `keydown`, insert action
-     * 2. `keyup`, remove action
-     * @return void
-     */
-    keyboard: () => {
-        self.bind('keydown', (ev) => {
-            const code = ev.which;
-
-            
-            if (config.keyboard[code]) {
-                //hide popup menu when moving 
-                UI.hide(["pop", "sidebar"]);
-                
-                //insert action 
-                VBW.queue.insert(config.queue, config.keyboard[code]);
-            }
-        });
-
-        self.bind('keyup', (ev) => {
-            const code = ev.which;
-            if (config.keyboard[code]) VBW.queue.remove(config.queue, config.keyboard[code]);
-        });
-    },
     
     /**
      * binding screen interaction 
@@ -750,6 +672,84 @@ const self = {
             VBW.queue.remove(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
         });
     },
+
+    /**
+     * binding keyboard interaction 
+     * @functions
+     * 1. `keydown`, insert action
+     * 2. `keyup`, remove action
+     * @return void
+     */
+    keyboard: () => {
+        self.bind('keydown', (ev) => {
+            const code = ev.which;
+
+            
+            if (config.keyboard[code]) {
+                //hide popup menu when moving 
+                UI.hide(["pop", "sidebar"]);
+                
+                //insert action 
+                VBW.queue.insert(config.queue, config.keyboard[code]);
+            }
+        });
+
+        self.bind('keyup', (ev) => {
+            const code = ev.which;
+            if (config.keyboard[code]) VBW.queue.remove(config.queue, config.keyboard[code]);
+        });
+    },
+
+    /**
+     * Frame Synchronization ( frame-loop for short ), movement here to imply
+     * @functions
+     * 1. check movement queue, if moved, check location and set to camera and player
+     * 2. check trigger events by call `checkTrigger`.
+     * @return void
+     */
+    action: () => {
+        const dis = [config.move.distance, self.getAngle(config.move.angle)];
+
+        //!important, need to confirm the `AK` definition, it is camera coordination
+        //FIXME, change to calculate on the player rotation.
+        const ak = runtime.camera.rotation.y;
+        const local = runtime.player.location;
+
+        //1.deal with keyboard inputs.
+        for (let i = 0; i < runtime.actions.length; i++) {
+            const act = runtime.actions[i];
+            if (!env.todo[act]) continue;
+            const diff = env.todo[act](dis, ak);
+
+            //2.if no position change, just synchronous player rotation.
+            if (!diff.position) {
+                VBW.player.synchronous(diff);
+                continue;
+            }
+
+            //3.check moving 
+            if (diff.position) {
+                const check = self.checkStop(diff.position);
+
+                //3.1. stopped, stop moving.
+                if (!check.move) {
+                    if (!check.block) {
+                        //!important, `stop.beside` event trigger 
+                        VBW.event.trigger("stop", "beside", { stamp: Toolbox.stamp() }, check.orgin);
+                    } else {
+                        //!important, `block.stop` event trigger 
+                        VBW.event.trigger("block", "stop", { stamp: Toolbox.stamp() }, check.block);
+                    }
+                    continue;
+                }
+
+                //3.2. moving action.
+                self.checkMoving(check, local.stop, diff);
+            }
+        }
+
+        self.checkTrigger();
+    },
 }
 
 const controller = {
@@ -792,7 +792,7 @@ const controller = {
             self.touch(dom_id);
         } else {
             self.keyboard();
-            self.editControl(dom_id);
+            self.edit(dom_id);
         }
 
         //2.set the related link
