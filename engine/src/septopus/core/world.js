@@ -1021,7 +1021,7 @@ const World = {
         self.launch(dom_id, x, y, ext, world, limit, (done) => {
             //2. set player position
 
-            VBW.player.teleport(x, y, world, dom_id, pos);
+            VBW.player.teleport(x, y, world, pos);
 
             //VBW.player.teleport({position:{},rotation:{}});
             World.start(dom_id);

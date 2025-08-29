@@ -178,8 +178,8 @@ const self = {
         player.location.position[1] = py % side[1] / cvt;
         if(!cam_only) player.location.position[2] = player.location.position[2] + pos[2] / cvt;
     },
+
     cross: (from, to, ext) => {
-        
         const delta = [to[0] - from[0], to[1] - from[1]];
         const dlist = [], glist = [], rg = ext + ext + 1;
         const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
@@ -209,6 +209,7 @@ const self = {
         }
         return { load: glist, destroy: dlist };
     },
+
     syncCameraPosition: (pos, cam_only) => {
         if(env.lock) return false;
 
@@ -227,6 +228,7 @@ const self = {
             }
         }
     },
+
     syncCameraRotation: (ro) => {
         for (let dom_id in env.camera) {
             //1. change camera position
@@ -245,6 +247,7 @@ const self = {
         const ak = env.player.location.rotation[2];
         Actions.common.compass(ak);
     },
+
     saveLocation:()=>{
         const data=Toolbox.clone(env.player.location);
         const fun=Toolbox.toF;
@@ -258,8 +261,8 @@ const self = {
 
         localStorage.setItem(config.autosave.key, JSON.stringify(data));
     },
-    auto: () => {
 
+    auto: () => {
         if ( env.clean ){
             return false;
         }
@@ -272,8 +275,10 @@ const self = {
             env.count++;
         }
     },
+    backup:(sub)=>{
+
+    },
     task:{
-        
         fly:()=>{
 
         },
@@ -287,16 +292,48 @@ const self = {
 
         },
     },
-    backup:(sub)=>{
-
-    },
-    
 }
 
 const vbw_player = {
+    //component hooks
     hooks: self.hooks,
+    
+    /**
+    * Trigger task here.
+    * @functions
+    * 1. body control.
+    * 2. movement capacity control.
+    * 3. more actions.
+    */
+    task:()=>{
+        return {
+            fly:self.task.fly,
+            capacity:self.task.capacity,
+            body:self.task.body,
+            dance:(ev)=>{
 
-    //get the player status.
+            },
+            router:["body","capacity","fly","dance"],
+        }
+    },
+
+    /**
+    * entry of start player component
+    * @functions
+    * 1. set player location to camera
+    * @param   {string}     dom_id  - container DOM id.
+    * @param   {function}   ck      - callback function
+    * @callback
+    * @param    {object}    data   - details of player
+        {
+            "block":[2025,619],
+            "position":[6.906,11.748,0],
+            "rotation":[-0.012567,0,47.218136],
+            "world":0,
+            "extend":2,
+            "stop":{"on":false,"adjunct":"","index":0}
+        }
+    */
     start: (dom_id, ck) => {
         const data = self.getPlayerLocation();
         if (env.player === null) env.player = VBW.cache.get(["env", "player"]);
@@ -336,9 +373,15 @@ const vbw_player = {
             });
         });
 
+        console.log(JSON.stringify(data));
+
         return ck && ck(data);
     },
 
+    /**
+    * clean player location of frontend
+    * @return void
+    */
     clean:()=>{
         env.clean=true;
         setTimeout(()=>{
@@ -346,8 +389,25 @@ const vbw_player = {
         },50);
     },
 
+    /**
+    * format player parameters
+    * @functions
+    * 1. set player location
+    * 2. calc player capacity by basic parameters
+    * @param   {object}    local    - {"block":[x,y],"position":[x,y,z],"rotation":[x,y,z],"world":0,"extend":2,"stop":{"on":false,"adjunct":"","index":0}}
+    * @param   {object}    basic    - player basic details
+        {
+            "start":{"block":[2025,619],"position":[12,12,0],"rotation":[0,0,0],"world":0,"extend":2,"stop":{"on":false,"adjunct":"","index":0}},
+            "body":{"shoulder":0.5,"chest":0.22,"section":[0.3,0.4,0.2,0.8],"head":[0.25,0.05],"hand":[0.2,0.2,0.1],"leg":[0.5,0.5,0.1]},
+            "capacity":{"rotate":0.05,"strength":1},
+            "bag":{"max":100},
+            "avatar":{"max":2097152,"scale":[2,2,2]}
+        }
+    * @return void
+    */
     format: (local, basic) => {
-        //console.log(local, basic);
+        console.log(JSON.stringify(local));
+        console.log(JSON.stringify(basic));
         //1. set basic location
         if (local.block === undefined) {
             env.player.location = basic.start;
@@ -363,22 +423,21 @@ const vbw_player = {
         return env.player.location;
     },
 
-    elevation:(x,y,world,dom_id)=>{
-        const chain = ["block", dom_id, world, `${x}_${y}`, "elevation"];
-        const va=VBW.cache.get(chain);
-        const now=env.camera[dom_id].position;
-        env.camera[dom_id].position.set(now.x,now.y + va,now.z);
-    },
-
     /**
-    * synchronous player movement to camera
-    * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0],order:"XYZ"}
+    * initial player location
+    * @functions
+    * 1. set player location to camera
+    * 2. binding `block.loaded` event to reset player stand height.
+    * @param   {object}    local    - {position:[],rotation:[],block:[x,y],world:0}
+    * @param   {string}    dom_id   - container DOM id.
     */
     initial: (local, dom_id) => {
         const side = self.getSide();
         const cvt = self.getConvert();
         const [x,y]=local.block;
 
+        //1. set player location
+        //!important, set the coordination as Septopus World in three.js system
         const pos = [
             env.camera[dom_id].position.x + (x - 1) * side[0] + local.position[0] * cvt,
             env.camera[dom_id].position.y + (y - 1) * side[1] + local.position[1] * cvt,
@@ -395,9 +454,11 @@ const vbw_player = {
             local.rotation[1]
         );
 
+        //2. reset player stand height.
         //sync player stand height to block elevation
         const target={x:x,y:y,world:local.world,index:0,adjunct:"block",}
         VBW.event.on("block","loaded",(ev)=>{
+            //!impotant, when loaded, only raw data, need to calc elevation of block
             const va = VBW.cache.get(["block",dom_id,ev.world,`${ev.x}_${ev.y}`,"raw","data",0]);
             self.syncCameraPosition([0,0,va*cvt],true);
             VBW.event.off("block","loaded",target);
@@ -405,8 +466,10 @@ const vbw_player = {
     },
 
     /**
-    * synchronous player movement to camera
-    * @param   {object|array}    diff   - {position:[0,0,0],rotation:[0,0,0],order:"XYZ"}
+    * synchronous location changing to camera and player.
+    * @param   {object|object[]}    diff     - {position:[0,0,0],rotation:[0,0,0]}
+    * @param   {boolean}   cam_only - wether only set camera, ignore the player location checking
+    * @return  void
     */
     synchronous: (diff,cam_only) => {
         if (Array.isArray(diff)) {
@@ -421,9 +484,21 @@ const vbw_player = {
             }
             if (diff.rotation) self.syncCameraRotation(diff.rotation);
         }
+        return true;
     },
 
-    teleport:(x,y,world,dom_id,pos)=>{
+    /**
+    * teleport player to target block
+    * @functions
+    * 1. set player location
+    * 2. sync camera to new location
+    * @param   {number}    x        - block.x
+    * @param   {number}    y        - block.y
+    * @param   {number}    world    - world to teleport
+    * @param   {number[]}  pos      - [x,y,z],position to teleport
+    * @return  void
+    */
+    teleport:(x,y,world,pos)=>{
 
         env.player.location.world=world;
         env.player.location.block=[x,y];
@@ -432,27 +507,31 @@ const vbw_player = {
         const side = self.getSide();
         const cvt = self.getConvert();
 
-        //console.log(x,y,world,dom_id,pos,side);
         //!important, transform from Septopus to three.js
         const npos=[
             (x-1)*side[0] + pos[0]*cvt,
             pos[2],
             -((y-1)*side[1] + pos[1]*cvt),
         ]
-        for (let dom_id in env.camera) {
-            //1. change camera position
-            const cam = env.camera[dom_id];
+        for (let kk in env.camera) {
+            const cam = env.camera[kk];
             cam.position.set(
                 npos[0],
                 npos[1],
                 npos[2],
             );
         }
+
+        return true;
     },
 
     /**
-    * player stand on special object
-    * @param   {object}    check   - {"interact":true,"move":true,"index":0,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
+    * player stand on stop which can be the `stop` of adjunct
+    * @functions
+    * 1. set player location
+    * 2. trigger `stop.on` event
+    * @param   {object}    orgin   - {adjunct:"wall",index:0}
+    * @return {boolean}
     */
     stand:(orgin)=>{
         //1. location update
@@ -583,25 +662,6 @@ const vbw_player = {
             self.syncCameraPosition([0,0,-fall*cvt],skip);
         }
         return true;
-    },
-
-    /**
-    * Trigger task here.
-    * @functions
-    * 1. body control.
-    * 2. movement capacity control.
-    * 3. more actions.
-    */
-    task:()=>{
-        return {
-            fly:self.task.fly,
-            capacity:self.task.capacity,
-            body:self.task.body,
-            dance:(ev)=>{
-
-            },
-            router:["body","capacity","fly","dance"],
-        }
     },
 }
 

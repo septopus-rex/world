@@ -45,7 +45,6 @@ const self = {
     relationZ: (stand, body, cap, list) => {
         //console.log(`Basic, player stand height: ${stand}, 
         //body height ${body}, able to cross ${cap}`);
-        
         const arr = [];
         const def = {
             "BODY_STOP": 1,  //stop the body
@@ -59,10 +58,7 @@ const self = {
             const zmin = position[2] - size[2] * 0.5 - row.elevation;
             const zmax = position[2] + size[2] * 0.5 - row.elevation;
 
-            //console.log(`Object[${id}], stop from ${zmin} to ${zmax}`,row);
-
             //TODO, here to check BALL type stop
-
             if (zmin >= stand + body) {
                 //a.stop upon header
                 arr.push({
@@ -101,6 +97,7 @@ const self = {
         }
         return arr;
     },
+
     filter: (arr) => {
         const result = { stop: false, index: -1 }
         let max = null;
@@ -126,12 +123,14 @@ const self = {
         }
         return result;
     },
+
     empty: (obj) => {
         if (JSON.stringify(obj) === "{}") return true;
         return false;
     },
+
+
     zCheck:(stand,height,objs)=>{
-        //console.log(`Stand on ${stand}, body height ${height}`,objs);
         const head=stand+height;
         for(let k in objs){
             const row=objs[k];
@@ -144,30 +143,48 @@ const self = {
 }
 
 const Calc = {
+    /**
+    * calc distance of two points
+    * @param {number[]}   pa  - [x,y]
+    * @param {number[]}   pb  - [x,y]
+    * @return {number}  - distance of two points
+    */
     distance: (pa, pb) => {
         const dx = pb[0] - pa[0];
         const dy = pb[1] - pa[1];
         return Math.sqrt(dx * dx + dy * dy);
     },
 
-    reviseSizeOffset: (o, d, s) => {
-        const fs = d > s ? s * 0.5 : d * .5 + o > s ? s - 0.5 * d : o < 0.5 * d ? 0.5 * d : o, sz = d > s ? s : d;
-        return { offset: fs, size: sz }
+    /**
+    * calc distance to revise offset
+    * @param    {number}   start   - the position before point
+    * @param    {number}   point   - the position right now
+    * @param    {number}   offset   - grid offset
+    * @return   {object}    - {offset:0.2, size:0.5}
+    */
+    reviseSizeOffset: (start, point, offset) => {
+        const fs = point > offset ? offset * 0.5 : (
+            ((point * .5 + start) > offset) ? (offset - 0.5 * point) : 
+                (start < 0.5 * point ? 0.5 * point : start)
+        );
+        const sz = point > offset ? offset : point;
+        return { offset: fs, size: sz };
     },
-    //{"interact":true,"move":true,"index":0,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
 
     /**
     * player leave from special object to block
     * @functions
     * 1. reset player position.
-    * @param {number[]}   pos  - [x,y,z],player position right now
+    * @param {number[]}     pos     - [x,y,z],player position right now
+    * @param {object[]}     objs    - stop array.
+    * @param {object}       cfg     - {"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
     * 
-    * @return
+    * @return   {object}
+    * {"interact":true,"move":true,"index":0,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
     */
     check: (pos, objs, cfg) => {
         //console.log(JSON.stringify(cfg),JSON.stringify(pos));
         //console.log(`Amount of stop: ${objs.length}`);
-        //{"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
 
         const result = {         //stop result
             interact: false,     //whether on a stop
@@ -180,7 +197,6 @@ const Calc = {
         }
         if (objs.length < 1) return result;
 
-        
         //1.check whether interact with stop from top view ( in projection ).
         const [dx, dy, pz] = pos;       //player position
         const list = self.projection(dx, dy, objs);
@@ -195,8 +211,6 @@ const Calc = {
         const stand=pz+(cfg.cross?(cfg.elevation-cfg.next):0);
         const arr = self.relationZ(stand, body, cap, list);
 
-        //console.log(JSON.stringify(arr))
-
         //3.filter out the target stop for movement;
         const fs = self.filter(arr);
         result.move = !fs.stop;
@@ -207,6 +221,13 @@ const Calc = {
         return result;  
     },
 
+    /**
+    * check wether inside objects
+    * @param    {number[]}      pos     - [x,y,stand],the position to check
+    * @param    {object[]}      objs    - 3D objects
+    * @param    {number}        height  - grid offset
+    * @return   {false|object}      - if inside, retuen {adjunct:"wall",index:3} 
+    */
     inside: (pos, objs, height) => {
         if (objs.length < 1) return false;
         const [dx, dy, stand] = pos;       //player position
