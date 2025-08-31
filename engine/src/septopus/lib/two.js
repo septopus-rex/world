@@ -263,12 +263,62 @@ const self = {
     }
 }
 
+//support type of 2D drawing
+const sample={
+    "rectangle":{
+        input:{
+            width:100,
+            height:200,
+            position:[600,900],     //rectangle center
+            style:{},
+        },
+    },
+    "ring":{
+        input:{
+            radius:[300,0],         //[outer,inner]
+            radian:[0,360],         //[start,end]
+            position:[600,900],     //rectangle center
+            style:{},
+        },
+    },
+    "polygons":{
+        input:{
+            points:[[300,0],[250,600],[900,300]],
+            close:true,
+            position:[600,900],     //rectangle center
+            style:{},
+        },
+    },
+    "curves":{
+
+    },
+    "text":{
+        input:{
+            content:"text sample",      //sample text
+            font:14,                    //screen pixel
+            position:[600,900],         //text center
+            style:{},
+        },
+    },
+    "image":{
+        input:{
+            content:"raw image",    //sample text
+            width:100,              //world size
+            height:300,             //world size
+            position:[600,900],     //text center
+            style:{},
+        },
+    }
+}
+
 const TwoObject = {
+    //type:"",["rectangle","circle",""]
     get: (type, cfg) => {
         return [
-            { type: "fill", points: [], param: { color: "#FF0000", width: 2, anticlock: false } },
-            { type: "stroke", points: [], param: { color: "#FF0000", width: 2, anticlock: false } },
-        ]
+            { type: "fill", points: [], style: { color: "#FF0000", width: 2, anticlock: false } },
+            { type: "stroke", points: [],style: { color: "#FF0000", width: 2, anticlock: false } },
+        ];
+
     },
     calculate: self.calculate,
     drawing: self.drawing,

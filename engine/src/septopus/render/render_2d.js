@@ -183,12 +183,26 @@ const self = {
         const cfg = { width: 1, color: "#FF99CC", anticlock: true, grad: grad, alpha: 0.3 };
         TwoObject.drawing.sector(env, p, cfg);
     },
+
+    //drawing special
+    //{type:"",points:[[x,y],[x,y]],fill:false,style:{width:2,fill:'#FF0000',stoke:"#FF0000"}}
+    special:()=>{
+        //console.log(`Here to drawing `);
+        for(let name in env.special){
+            const arr=env.special[name];
+            for(let i=0;i<arr.length;i++){
+                const row=arr[i]; 
+
+            }
+        }
+    },
     render: (force) => {
         if (force) self.start();
         //console.log(JSON.stringify(env));
         self.clean();               //clean canvas;
         self.grid();                //drawing block grid;
         self.active();              //fill active block;
+        self.special();
         self.avatar();              //drawing player;
     },
 
@@ -216,32 +230,26 @@ const self = {
 
 const renderer = {
     hooks: self.hooks,
-    show: (dom_id) => {
-        if (env.pen === null) {
-            env.player = VBW.cache.get(["env", "player"]);
-            const cvt = VBW.cache.get(["env", "world", "accuracy"]);
-            const side = VBW.cache.get(["env", "world", "side"]);
-            env.convert = cvt;
-            env.side = [side[0] / cvt, side[1] / cvt];
-
-            self.construct(dom_id);
-            self.start();
-        }
-
-        if(env.limit===null){
-            env.limit=VBW.cache.get(["env","world","common","world","range"]);
-        } 
-        self.render();
+        //function for more drawing
+    drawing:{
+        add:(name,arr)=>{
+            env.special[name]=arr;
+            env.special[name].show=true;
+        },
+        remove:(name)=>{
+            delete env.special[name];
+        },
+        hide:(name)=>{
+            if(!env.special[name]) return false;
+            env.special[name].show=false;
+        },
+        show:(name)=>{
+            if(!env.special[name]) return false;
+            env.special[name].show=true;
+        },
     },
-    clean: (dom_id) => {
-        //1.remove DOMs
-        const el = document.getElementById(dom_id);
-        el.innerHTML = "";
-        env.pen = null;
 
-        //2.clean selected
-        env.selected=[];
-    },
+    //function for 2D controller
     control: {
         update:self.render,
         status:()=>{
@@ -293,7 +301,48 @@ const renderer = {
 
             return [x, y];
         },
-    }
+    },
+
+    /** clean 2D DOMs and selected block
+     * @functions
+     * 1. remove DOM
+     * 2. clean selection of block
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
+    clean: (dom_id) => {
+        //1.remove DOMs
+        const el = document.getElementById(dom_id);
+        el.innerHTML = "";
+        env.pen = null;
+
+        //2.clean selected
+        env.selected=[];
+    },
+
+    /** 2D renderer entry to fresh scene
+     * @functions
+     * 1. set env of 2D drawing.
+     * 2. start to render.
+     * @param   {string}    dom_id      - container DOM id
+     * */
+    show: (dom_id) => {
+        if (env.pen === null) {
+            env.player = VBW.cache.get(["env", "player"]);
+            const cvt = VBW.cache.get(["env", "world", "accuracy"]);
+            const side = VBW.cache.get(["env", "world", "side"]);
+            env.convert = cvt;
+            env.side = [side[0] / cvt, side[1] / cvt];
+
+            self.construct(dom_id);
+            self.start();
+        }
+
+        if(env.limit===null){
+            env.limit=VBW.cache.get(["env","world","common","world","range"]);
+        } 
+        self.render();
+    },
 }
 
 export default renderer;
