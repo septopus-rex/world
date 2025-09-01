@@ -77,6 +77,13 @@ const self = {
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
     },
+    getBlock:(pos)=>{
+        const pCtoB = TwoObject.calculate.point.c2b;
+        const point = pCtoB(pos, env.scale, env.offset, env.density, env.ratio);
+        const x = Math.ceil(point[0] / env.side[0]);
+        const y = Math.ceil(point[1] / env.side[1]);
+        return [x,y];
+    },
     construct: (dom_id) => {
         let cvs = document.getElementById(config.canvas.id);
         if (cvs === null) {
@@ -183,16 +190,19 @@ const self = {
         const cfg = { width: 1, color: "#FF99CC", anticlock: true, grad: grad, alpha: 0.3 };
         TwoObject.drawing.sector(env, p, cfg);
     },
+    drawing:(arr,style)=>{
+
+    },
 
     //drawing special
     //{type:"",points:[[x,y],[x,y]],fill:false,style:{width:2,fill:'#FF0000',stoke:"#FF0000"}}
     special:()=>{
-        //console.log(`Here to drawing `);
+        const dwg=self.drawing;
         for(let name in env.special){
             const arr=env.special[name];
             for(let i=0;i<arr.length;i++){
                 const row=arr[i]; 
-
+                //dwg()
             }
         }
     },
@@ -252,12 +262,14 @@ const renderer = {
     //function for 2D controller
     control: {
         update:self.render,
+
         status:()=>{
             return {
                 selected:Toolbox.clone(env.selected),
                 scale:env.scale,
             }
         },
+
         scale: (cx, cy, rate) => {
             //console.log(`Scale on ${JSON.stringify([cx,cy])} by delta rate ${rate}`);
             const pCtoB = TwoObject.calculate.distance.c2b;
@@ -289,17 +301,14 @@ const renderer = {
             self.cvsMove(dx, dy);
             self.render();
         },
-        select: (pos, cfg) => {
-            const pCtoB = TwoObject.calculate.point.c2b;
-            const point = pCtoB(pos, env.scale, env.offset, env.density, env.ratio);
-            const x = Math.ceil(point[0] / env.side[0]);
-            const y = Math.ceil(point[1] / env.side[1]);
 
+        select: (pos, cfg) => {
+            const block=self.getBlock(pos);
+            const [x,y]=block;
             self.render();
             self.block(x, y, cfg);
             env.selected=[x,y];
-
-            return [x, y];
+            return block;
         },
     },
 

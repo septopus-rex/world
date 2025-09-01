@@ -227,3 +227,11 @@
 ```
 
 ### 触发器格式
+
+## 部署打包
+
+* 使用`esbuild`打包成单一文件。
+
+```
+    node esbuild.config.js --input-type=module
+```
