@@ -284,7 +284,6 @@ const self = {
             }
             return arr;
         },
-
         std_active: (std, va, cvt) => {
             const ds = { stop: [], helper: [] };
             const offset = config.stop.offset * cvt;
@@ -309,15 +308,13 @@ const self = {
             }
             return ds;
         },
-
         std_raw: (arr, cvt) => {
 
         },
-
         std_box: (obj) => {
 
         },
-        std_2d: (arr, face) => {
+        std_2d: (stds, face) => {
 
         },
         active_2d: () => {

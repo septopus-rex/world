@@ -20,8 +20,9 @@ const reg = {
 const config = {
     background: "#eeeeee",
     scale: {
-        range: 18,       //scale to show range
-        detail: 8,       //scale to show details
+        range: 18,      //scale to show range
+        detail: 50,     //scale to show details
+        detailKey:"detail", 
     },
     canvas: {
         id: "canvas_2d",
@@ -190,6 +191,7 @@ const self = {
         const cfg = { width: 1, color: "#FF99CC", anticlock: true, grad: grad, alpha: 0.3 };
         TwoObject.drawing.sector(env, p, cfg);
     },
+
     drawing:(arr,style)=>{
 
     },
@@ -234,16 +236,66 @@ const self = {
         const by = disCtoB(env.height, rotation, env.scale, env.ratio, env.density);
         env.size=[bx,by];
 
+        //3.check wether show details.
+        const key=config.scale.detailKey;
+        if(env.scale>=config.scale.detail){
+            //console.log(`Show details`,env.scale);
+            self.loadDetails(()=>{
+                self.showSpecial(key);
+            });
+        }else{
+            //console.log(`Hide details`,env.scale);
+            self.hideSpecial(key);
+        }
         return env.scale;
+    },
+    structTop:(x,y,world,dom_id)=>{
+        console.log(`Struct ${JSON.stringify([x,y])} 2D data`);
+        const key = `${x}_${y}`;
+        const std_chain = ["block", dom_id, world, key, "std"];
+        const bk=VBW.cache.get(std_chain);
+        for(let adj in bk){
+            const data=bk[adj];
+            if(!VBW[adj] || !VBW[adj].transform || !VBW[adj].transform.std_2d) continue;
+            //console.log(adj,data);
+            //const result=VBW[adj].transform.std_2d(data,"");
+        }
+    },
+    loadDetails:(ck)=>{
+        const dom_id=VBW.cache.get(["active","current"]);
+        console.log(dom_id);
+        const {player,limit} = env;
+        const {block,extend,world} = player.location;
+        const [x,y]=block;
+        const fun=self.structTop;
+        for (let i = - extend; i < extend + 1; i++) {
+            for (let j = - extend; j < extend + 1; j++) {
+                const cx = x + i, cy = y + j
+                if (cx < 1 || cy < 1) continue;
+                if (cx > limit[0] || cy > limit[1]) continue;
+                
+                fun(cx,cy,world,dom_id);
+            }
+        }
+        console.log("------------------------------");
+        return ck && ck();
+    },
+    showSpecial:(key)=>{
+        
+    },
+    hideSpecial:(key)=>{
+
     },
 };
 
 const renderer = {
     hooks: self.hooks,
-        //function for more drawing
+
+    //function for more drawing
     drawing:{
         add:(name,arr)=>{
-            env.special[name]=arr;
+            env.special[name]={}
+            env.special[name].data=arr;
             env.special[name].show=true;
         },
         remove:(name)=>{
@@ -271,7 +323,7 @@ const renderer = {
         },
 
         scale: (cx, cy, rate) => {
-            //console.log(`Scale on ${JSON.stringify([cx,cy])} by delta rate ${rate}`);
+            //1.do scale
             const pCtoB = TwoObject.calculate.distance.c2b;
             const rotation = 0;
             const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);

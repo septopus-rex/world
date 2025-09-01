@@ -29,6 +29,12 @@ const mock = {
                     "ROTATION_X": 0,
                     "ROTATION_Y": 1,
                     "ROTATION_Z": 2,
+                    "FACE_TOP":0,
+                    "FACE_BOTTOM":1,
+                    "FACE_FRONT":2,                 //from south to north
+                    "FACE_BACK":3,
+                    "FACE_LEFT":4,
+                    "FACE_RIGTH":5,
                     "MODE_NORMAL":1,                //login player
                     "MODE_EDIT":2,                  //edit mode on your own block
                     "MODE_GAME":3,                  //preload all block data

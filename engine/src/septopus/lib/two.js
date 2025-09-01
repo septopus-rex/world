@@ -32,7 +32,6 @@ const self = {
             if (env.pen === null) return { error: "Canvas is not init yet." }
             const { pen, scale, offset, height, density, ratio } = env;
         },
-
         arc: (env, center, radius, angle) => {
             if (env.pen === null) return { error: "Canvas is not init yet." }
             const { pen, scale, offset, height, density, ratio } = env;
