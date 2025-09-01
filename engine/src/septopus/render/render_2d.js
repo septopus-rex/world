@@ -250,16 +250,33 @@ const self = {
         return env.scale;
     },
     structTop:(x,y,world,dom_id)=>{
-        console.log(`Struct ${JSON.stringify([x,y])} 2D data`);
         const key = `${x}_${y}`;
+        const two_chain = ["block", dom_id, world, key, "two"];
+        if(VBW.cache.exsist(two_chain)) return true;
+
         const std_chain = ["block", dom_id, world, key, "std"];
         const bk=VBW.cache.get(std_chain);
+        const def=VBW.cache.get(["def","common"]);
+        const faces={
+            TOP:def.FACE_TOP,
+            BOTTOM:def.FACE_BOTTOM,
+            FRONT:def.FACE_FRONT,
+            BACK:def.FACE_BACK,
+            LEFT:def.FACE_LEFT,
+            RIGHT:def.FACE_RIGHT,
+        }
+        const result={}
+
+        //1. get the 2D STD data from adjunct
         for(let adj in bk){
             const data=bk[adj];
             if(!VBW[adj] || !VBW[adj].transform || !VBW[adj].transform.std_2d) continue;
-            //console.log(adj,data);
-            //const result=VBW[adj].transform.std_2d(data,"");
+            if(!result[adj]) result[adj]={};
+            result[adj][`face_${faces.TOP}`] = VBW[adj].transform.std_2d(data,faces.TOP,faces);
         }
+        VBW.cache.set(two_chain,result);
+
+        return true;
     },
     loadDetails:(ck)=>{
         const dom_id=VBW.cache.get(["active","current"]);
@@ -268,12 +285,16 @@ const self = {
         const {block,extend,world} = player.location;
         const [x,y]=block;
         const fun=self.structTop;
+
+        const key = `${x}_${y}`;
+        const two_chain = ["block", dom_id, world, key, "two"];
+        if(VBW.cache.exsist(two_chain)) return true;
+
         for (let i = - extend; i < extend + 1; i++) {
             for (let j = - extend; j < extend + 1; j++) {
                 const cx = x + i, cy = y + j
                 if (cx < 1 || cy < 1) continue;
                 if (cx > limit[0] || cy > limit[1]) continue;
-                
                 fun(cx,cy,world,dom_id);
             }
         }
@@ -281,7 +302,8 @@ const self = {
         return ck && ck();
     },
     showSpecial:(key)=>{
-        
+        //calc the world coordination by [x,y];
+
     },
     hideSpecial:(key)=>{
 

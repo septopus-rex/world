@@ -314,8 +314,36 @@ const self = {
         std_box: (obj) => {
 
         },
-        std_2d: (stds, face) => {
-
+        std_2d:(stds,face,faces)=>{
+            const objs=[];
+            for(let i=0;i<stds.length;i++){
+                const std=stds[i];
+                switch (face) {
+                    case faces.TOP:
+                        const row={
+                            type:"rectangle",
+                            index:i,
+                            params:{
+                                size:[std.x,std.y],
+                                position:[std.ox,std.oy],
+                                rotation:std.rz,
+                            },
+                            style:{
+                                fill:0,                 //if no zero, fill the color
+                                color:0xf3f5f6,         //stroke color
+                                opacity:0.6,            //opacity of object
+                                width:1,                //stroke width
+                            },
+                        }
+                        //console.log(`Struct "box" 2D data.`);
+                        objs.push(row);
+                        break;
+                
+                    default:
+                        break;
+                }
+            }
+            return objs;
         },
         active_2d: () => {
 

@@ -250,8 +250,11 @@ const self={
 
         },
 
-        std_2d:(arr,face)=>{
-
+        std_2d:(obj,face,faces)=>{
+            //console.log(obj);
+            const objs=[];
+            
+            return objs;
         },
 
         acitve_3d:()=>{
