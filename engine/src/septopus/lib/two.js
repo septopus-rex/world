@@ -337,13 +337,40 @@ const router={
     },
     rectangle:{
         format:(raw)=>{
+            const fmt={points:[]};
+            ///console.log(`After:`,JSON.stringify(raw));
+            const {size , position }=raw;
+            // fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
+            // fmt.points.push([position[0]+0.5*size[0],position[1]-0.5*size[1]]);
+            // fmt.points.push([position[0]+0.5*size[0],position[1]+0.5*size[1]]);
+            // fmt.points.push([position[0]-0.5*size[0],position[1]+0.5*size[1]]);
+            //fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
 
-            return {
-                points:[],
-            };
+            fmt.points.push([(position[0]-0.5*size[0])*0.001,(position[1]-0.5*size[1])*0.001]);
+            fmt.points.push([(position[0]+0.5*size[0])*0.001,(position[1]-0.5*size[1])*0.001]);
+            fmt.points.push([(position[0]+0.5*size[0])*0.001,(position[1]+0.5*size[1])*0.001]);
+            fmt.points.push([(position[0]-0.5*size[0])*0.001,(position[1]+0.5*size[1])*0.001]);
+            
+            return fmt;
         },
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
+            //const antiHeight = cfg.anticlock ? height * ratio : 0;
+            //const antiHeight = height * ratio;
+            const antiHeight = 0;
+            const pBtoC = self.calculate.point.b2c;
+
+            pen.beginPath();
+            const len=data.points.length;
+            for (let i = 0; i < len; i++) {
+                const point=data.points[i];
+                const p = pBtoC(point, scale, offset, density, antiHeight);
+                //console.log(`Rectangle drawing:`,point,p,JSON.stringify(env));
+                if (i == 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
+                if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
+            }
+            pen.closePath();
+            pen.stroke();
         },
         sample:{
             width:100,
@@ -427,8 +454,9 @@ const TwoObject = {
 
         return fmt;
     },
-    show:(pen,arr,ck)=>{
+    show:(pen,env,arr,ck)=>{
         const errors=[];
+        //console.log(env);
         for(let i=0;i<arr.length;i++){
             const row=arr[i];
             //0. check data;
@@ -439,8 +467,8 @@ const TwoObject = {
 
             //1.if style, set it;
             if(row.style) self.setStyle(pen,row.style);
+            router[row.type].drawing(row.params,pen,env,row.more);
 
-            //router[row.type].drawing(row.params,pen,env,row.more);
             //2. if style ,recover it;
             if(row.style) self.resetStyle(pen);
         }

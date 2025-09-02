@@ -21,7 +21,7 @@ const config = {
     background: "#eeeeee",
     scale: {
         range: 18,      //scale to show range
-        detail: 50,     //scale to show details
+        detail: 30,     //scale to show details
         detailKey:"detail", 
     },
     canvas: {
@@ -73,9 +73,17 @@ const self = {
     },
     drawing:{
         add:(name,arr)=>{
-            env.special[name]={}
-            env.special[name].data=arr;
+            if(env.special[name]===undefined) env.special[name]={};
+            if(env.special[name].data===undefined){
+                env.special[name].data=arr;
+            }else{
+                env.special[name].data= env.special[name].data.concat(arr);
+            }
             env.special[name].show=true;
+        },
+        exsist:(name)=>{
+            if(env.special[name]===undefined) return false;
+            return true;
         },
         remove:(name)=>{
             delete env.special[name];
@@ -213,13 +221,23 @@ const self = {
     //drawing special
     //{type:"",points:[[x,y],[x,y]],fill:false,style:{width:2,fill:'#FF0000',stoke:"#FF0000"}}
     special:()=>{
-        const dwg=self.drawing.fresh;
+        console.log(`Drawing special...`);
+        const dwg=TwoObject.show;
+        const state_2d={
+            scale:env.scale,
+            offset:env.offset, 
+            height:env.height, 
+            density:env.density, 
+            ratio:env.ratio,
+        }
         for(let name in env.special){
-            const arr=env.special[name];
-            for(let i=0;i<arr.length;i++){
-                const row=arr[i]; 
-                //dwg()
-            }
+            const sp=env.special[name];
+            if(!sp.show) continue;
+
+            
+            dwg(env.pen,state_2d,sp.data,(done)=>{
+
+            });
         }
     },
     render: (force) => {
@@ -253,7 +271,9 @@ const self = {
         //3.check wether show details.
         const key=config.scale.detailKey;
         if(env.scale>=config.scale.detail){
-            self.loadDetails(key,()=>{
+            self.loadDetails(key,(errors)=>{
+                console.log(`Load errors:`,errors);
+                //if(errors.length!==0) console.log(errors);
                 self.drawing.show(key);
                 self.render();
             });
@@ -287,21 +307,26 @@ const self = {
             if(!VBW[adj] || !VBW[adj].transform || !VBW[adj].transform.std_2d) continue;
             if(!result[adj]) result[adj]={};
             const two = VBW[adj].transform.std_2d(data,faces.TOP,faces);
-            // two.x = x;
-            // two.y = y;
             result[adj][`face_${faces.TOP}`] = two;
         }
         VBW.cache.set(two_chain,result);
-
         return true;
     },
-    loadDetails:(key,ck)=>{
-        
+    loadDetails:(key,ck,force)=>{
+        if(self.drawing.exsist(key)) return ck && ck();
+
+        self.drawing.remove(key);
+
+        const errors=[];
         const dom_id=VBW.cache.get(["active","current"]);
         const {player,limit} = env;
         const {block,extend,world} = player.location;
         const [x,y]=block;
+        const def=VBW.cache.get(["def","common"]);
+        const side=self.getSide();
+
         const fun=self.structTop;
+        const get=TwoObject.get;
 
         for (let i = - extend; i < extend + 1; i++) {
             for (let j = - extend; j < extend + 1; j++) {
@@ -313,10 +338,38 @@ const self = {
                 fun(cx,cy,world,dom_id);
 
                 //2. calculate the special objects
-                
+                //2.1. check wether data structed.
+                const d_chain=["block",dom_id,world,`${cx}_${cy}`,"two"];
+                const dt=VBW.cache.get(d_chain);
+                if(dt.error) continue;
+
+                const final=[];
+                for(let k in dt){
+                    const list=dt[k][`face_${def.FACE_TOP}`];
+                    for(let i=0;i<list.length;i++){
+                        const row=list[i];
+                        const cfg=row.more===undefined?{}:row.more;
+
+                        //console.log(`Before:`,JSON.stringify(row.params));
+                        if(row.params.position){
+                            row.params.position[0]=(cx-1)*side[0]+ row.params.position[0];
+                            row.params.position[1]=(cy-1)*side[1]+ row.params.position[1];
+                        }
+
+                        const fmt=get(row.type,row.params,row.style,cfg);
+                        //console.log(`Final:`,JSON.stringify(fmt));
+                        if(fmt.error){
+                            errors.push(fmt);
+                        }else{
+                            final.push(fmt);
+                        }
+                    }
+                }
+                console.log(final);
+                self.drawing.add(key,final);
             }
         }
-        return ck && ck();
+        return ck && ck(errors);
     },
 };
 
