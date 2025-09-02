@@ -228,7 +228,7 @@ const self = {
                 return Math.abs((point[0] * a + b * point[1] + c) / Math.sqrt(a * a + b * b));
             },
             midpoint: (pa, pb) => {
-
+                
             },
             intersect: (pa, pb) => {
                 const [a, b] = pa, [c, d] = pb;
@@ -269,6 +269,7 @@ const self = {
             }
         },
     },
+
     setStyle:(pen,style)=>{
         if(style.width) pen.lineWidth = style.width;
         if(style.color) pen.strokeStyle = style.color;
@@ -286,37 +287,63 @@ const self = {
 const router={
     line:{
         format:(raw)=>{
-
+            return {
+                start:[],               //point of line start
+                end:[],                 //point of line end
+                anchor:[0,0],           //anchor for line endpoint, not yet
+                segement:[[],[]],       //show segements, not yet
+            };
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
+            //const zj = Math.PI / 2;
+            const antiHeight = cfg.anticlock ? height * ratio : 0;
+            const pBtoC = self.calculate.point.b2c;
+            const disBtoC = self.calculate.distance.b2c;
         },
-        sample:{points:[[],[]]},
+        sample:{
+            from:[],
+            to:[],
+            segement:3,
+        },
     },
     arc:{
         format:(raw)=>{
 
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
         },
-        sample:{},
+        sample:{
+            radius:600,             // sector radius
+            radian:[0,360],         // [start,end]
+            position:[600,900],     // circle center
+        },
     },
     sector:{
         format:(raw)=>{
-
+            return {
+                points:[],
+            };
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
         },
-        sample:{},
+        sample:{
+            radius:600,             // sector radius
+            radian:[0,360],         // [start,end]
+            position:[600,900],     // circle center
+        },
     },
     rectangle:{
         format:(raw)=>{
 
+            return {
+                points:[],
+            };
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
         },
         sample:{
             width:100,
@@ -328,8 +355,8 @@ const router={
         format:(raw)=>{
 
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
         },
         sample:{
             radius:[300,0],         //[outer,inner]
@@ -341,8 +368,8 @@ const router={
         format:(raw)=>{
 
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
         },
         sample:{
             points:[[300,0],[250,600],[900,300]],
@@ -350,13 +377,22 @@ const router={
             close:true,
         },
     },
-    curves:{},
+    curves:{
+        format:(raw)=>{
+
+        },
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
+        },
+        sample:{
+        },
+    },
     text:{
         format:(raw)=>{
 
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
         },
         sample:{
             content:"text sample",      //sample text
@@ -368,8 +404,8 @@ const router={
         format:(raw)=>{
 
         },
-        drawing:(params,pen,env,cfg)=>{
-
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
         },
         sample:{
             content:"raw image",    //sample text

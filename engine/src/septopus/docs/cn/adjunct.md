@@ -8,6 +8,57 @@
 
 * `附属物`在`地块坐标(A坐标系)`上运行，即对`标准数据(std)`进行计算和处理。
 
+* 不同的`世界`可以通过配置来支持不同的`附属物`，从而形成`世界`的不同风格。
+
+* `附属物`的代码样例如下，保持清晰的结构，便于理解和开发。
+
+```Javascript
+    const self={
+        hooks:{
+            reg:()=>{},
+            def:(data)=>{},
+            animate:(meshes,cfg)=>{},
+            ...
+        },
+        transform:{
+            raw_std:(arr,cvt)=>{},
+            std_3d:(arr,elevation)=>{},
+            std_active:(arr,elevation,index)=>{},
+            std_2d:(stds,face,faces)=>{},
+            ...
+        },
+        attribute:{
+            add:(p, raw)=>{},
+            set:(p, raw, limit)=>{},
+            remove:(p, raw)=>{},
+            combine:(p, row)=>{},
+            revise:(p, row, limit)=>{},
+        },
+        menu:{
+            pop:()=>{},
+            sidebar:()=>{},
+            ...
+        },
+        task:{
+            router:["hide","show","dance"],
+            hide:(meshes,cfg)=>{},
+            show:(meshes,cfg)=>{},
+            dance:(meshes,cfg)=>{},
+            ...
+        },
+    };
+
+    const adjunct={
+        hooks:self.hooks,               //组件钩子
+        transform:self.transform,       //数据格式转换
+        attribute:self.attribute,       //属性设置，编辑数据
+        menu:self.menu,                 //输出菜单
+        task:self.task,                 //游戏模式下的task任务
+    }
+
+export default adjunct;
+```
+
 ## 基础附属物
 
 * 在实现Septopus功能时，有以下几个基础组件，构建了基础的运行环境。
@@ -63,15 +114,20 @@
 |  `ADJUNCT.transform.raw_std`  | 原始数据(raw)  | 标准数据(std)  | 链上数据格式化成运行时需要的数据，用于渲染等  |
 |  `ADJUNCT.transform.std_raw`  |  标准数据(std) | 原始数据(raw)  | 获取保存后的数据，上链或者拷贝  |
 |  `ADJUNCT.transform.std_3d`  |  标准数据(std) | 渲染数据(3d)  | 生成`地块坐标`的3D数据，主要用于进一步的显示  |
+|  `ADJUNCT.transform.std_2d`  |  标准数据(std) | 渲染数据(2d)  | 生成`地块坐标`的2D数据，用于绘制2D地图、显示不同视角  |
 |  `ADJUNCT.transform.std_active`  |  标准数据(std) | 渲染数据(3d)  | 生成`附属物`的选中效果数据，用于`编辑模式`  |
 
-* 2D的数据，根据`ADJUNCT.transform.std_3d`生成后的`渲染数据(3d)`来构建，只获取对应的值即可。
+* 2D的数据，根据`ADJUNCT.transform.std_3d`生成后的`渲染数据(3d)`来构建，支持从不同的角度观察的结果。
 
 ## 动画实现
 
 * 动画的入口在`hook.animate(meshes,cfg)`，然后，`附属物`根据自定义的`动画方式`来操作`meshes`，从而实现3D场景里的动画效果。
 
 * 在解析数据的过程中，框架会将动画需要的Mesh分拣处理进行缓存。`附属物`只需要处理自有的`Mesh`的动画效果实现。
+
+## 可控模式
+
+* 在`游戏模式下`，需要提供`task`给`trigger`来进行控制。
 
 ## 资源加载
 
