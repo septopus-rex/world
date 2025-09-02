@@ -36,9 +36,14 @@ const self={
         const parser = new DOMParser();
         return  parser.parseFromString(data, 'text/html');
     },
+    getCameraHeight:()=>{
+        const dom_id=VBW.cache.get(["active","current"]);
+        const camera=VBW.cache.get(["active","containers",dom_id,"camera"]);
+        console.log(camera);
+        return camera.position.y;
+    },
 
     formatPlayer:(player)=>{
-        console.log(player);
         let table=`<table><thead></thead><tbody>`;
         table+=`<tr><td>Account</td><td>${player.address} </td><tr>`;
         table+=`<tr><td>Block</td><td>${JSON.stringify(player.location.block)}</td><tr>`;
@@ -53,6 +58,8 @@ const self={
         table+=`<tr><td>Jump Height</td><td>${player.capacity.jump}</td><tr>`;
         table+=`<tr><td>Death Height</td><td>${player.capacity.death}</td><tr>`;
         table+=`<tr><td>Strength Rate</td><td>${player.capacity.strength}</td><tr>`;
+        table+=`<tr><td>Camera</td><td><tr>`;
+        table+=`<tr><td>Z height</td><td>${self.getCameraHeight()}</td><tr>`;
         table+=`</tbody><table>`;
         return self.getDom(table);
     },
