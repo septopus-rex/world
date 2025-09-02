@@ -9,6 +9,15 @@
  * @date 2025-04-29
  */
 
+const config={
+    style:{
+        lineWidth:1,
+        strokeStyle:"#000000",
+        fillStyle:"#FFFFFF",
+        globalAlpha:1,
+    },
+}
+
 const self = {
     drawing: {
         line: (env, ps, cfg) => {
@@ -259,65 +268,148 @@ const self = {
                 return dis;
             }
         },
-    }
+    },
+    setStyle:(pen,style)=>{
+        if(style.width) pen.lineWidth = style.width;
+        if(style.color) pen.strokeStyle = style.color;
+        if(style.fill) pen.fillStyle = style.fill;
+        if(style.opacity) pen.globalAlpha = style.opacity;
+    },
+    resetStyle:(pen)=>{
+        pen.lineWidth=config.style.lineWidth;
+        pen.strokeStyle=config.style.strokeStyle;
+        pen.fillStyle=config.style.fillStyle;
+        pen.globalAlpha=config.style.globalAlpha;
+    },
 }
 
-//support type of 2D drawing
-const sample={
-    "rectangle":{
-        input:{
+const router={
+    line:{
+        format:(raw)=>{
+
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{points:[[],[]]},
+    },
+    arc:{
+        format:(raw)=>{
+
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{},
+    },
+    sector:{
+        format:(raw)=>{
+
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{},
+    },
+    rectangle:{
+        format:(raw)=>{
+
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{
             width:100,
             height:200,
-            position:[600,900],     //rectangle center
-            style:{},
+            position:[600,900],     //[left,bottom]
         },
     },
-    "ring":{
-        input:{
+    ring:{
+        format:(raw)=>{
+
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{
             radius:[300,0],         //[outer,inner]
             radian:[0,360],         //[start,end]
             position:[600,900],     //rectangle center
-            style:{},
         },
     },
-    "polygons":{
-        input:{
-            points:[[300,0],[250,600],[900,300]],
-            close:true,
-            position:[600,900],     //rectangle center
-            style:{},
-        },
-    },
-    "curves":{
+    polygons:{
+        format:(raw)=>{
 
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{
+            points:[[300,0],[250,600],[900,300]],
+            position:[600,900],     //[left,bottom]
+            close:true,
+        },
     },
-    "text":{
-        input:{
+    curves:{},
+    text:{
+        format:(raw)=>{
+
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{
             content:"text sample",      //sample text
             font:14,                    //screen pixel
-            position:[600,900],         //text center
-            style:{},
+            position:[600,900],         //[left,bottom]
         },
     },
-    "image":{
-        input:{
+    image:{
+        format:(raw)=>{
+
+        },
+        drawing:(params,pen,env,cfg)=>{
+
+        },
+        sample:{
             content:"raw image",    //sample text
             width:100,              //world size
             height:300,             //world size
-            position:[600,900],     //text center
-            style:{},
+            position:[600,900],     //[left,bottom]
         },
-    }
-}
+    },
+}   
 
 const TwoObject = {
-    //type:"",["rectangle","circle",""]
-    get: (type, cfg) => {
-        return [
-            { type: "fill", points: [], style: { color: "#FF0000", width: 2, anticlock: false } },
-            { type: "stroke", points: [],style: { color: "#FF0000", width: 2, anticlock: false } },
-        ];
+    get: (type, raw ,style,cfg) => {
+        if(!router[type]) return {error:`Type "${type}" of 2D object is not support yet.`};
 
+        const fmt={type:type,params:{}};
+        if(style!==undefined) fmt.style = style;
+        if(cfg!==undefined) fmt.more=cfg;
+        fmt.params=router[type].format(raw);
+
+        return fmt;
+    },
+    show:(pen,arr,ck)=>{
+        const errors=[];
+        for(let i=0;i<arr.length;i++){
+            const row=arr[i];
+            //0. check data;
+            if(!row.type || !router[row.type]){
+                errors.push({error:`Failed to drawing row[${i}]: ${JSON.stringify(row)}`});
+                continue;
+            } 
+
+            //1.if style, set it;
+            if(row.style) self.setStyle(pen,row.style);
+
+            //router[row.type].drawing(row.params,pen,env,row.more);
+            //2. if style ,recover it;
+            if(row.style) self.resetStyle(pen);
+        }
+
+        return ck && ck(errors);
     },
     calculate: self.calculate,
     drawing: self.drawing,

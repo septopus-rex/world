@@ -71,6 +71,24 @@ const self = {
     hooks: {
         reg: () => { return reg },
     },
+    drawing:{
+        add:(name,arr)=>{
+            env.special[name]={}
+            env.special[name].data=arr;
+            env.special[name].show=true;
+        },
+        remove:(name)=>{
+            delete env.special[name];
+        },
+        hide:(name)=>{
+            if(!env.special[name]) return false;
+            env.special[name].show=false;
+        },
+        show:(name)=>{
+            if(!env.special[name]) return false;
+            env.special[name].show=true;
+        },
+    },
     getDom: (data) => {
         const parser = new DOMParser();
         return parser.parseFromString(data, 'text/html');
@@ -192,14 +210,10 @@ const self = {
         TwoObject.drawing.sector(env, p, cfg);
     },
 
-    drawing:(arr,style)=>{
-
-    },
-
     //drawing special
     //{type:"",points:[[x,y],[x,y]],fill:false,style:{width:2,fill:'#FF0000',stoke:"#FF0000"}}
     special:()=>{
-        const dwg=self.drawing;
+        const dwg=self.drawing.fresh;
         for(let name in env.special){
             const arr=env.special[name];
             for(let i=0;i<arr.length;i++){
@@ -214,7 +228,7 @@ const self = {
         self.clean();               //clean canvas;
         self.grid();                //drawing block grid;
         self.active();              //fill active block;
-        self.special();
+        self.special();             //drawing sepcial object;
         self.avatar();              //drawing player;
     },
 
@@ -239,13 +253,13 @@ const self = {
         //3.check wether show details.
         const key=config.scale.detailKey;
         if(env.scale>=config.scale.detail){
-            //console.log(`Show details`,env.scale);
-            self.loadDetails(()=>{
-                self.showSpecial(key);
+            self.loadDetails(key,()=>{
+                self.drawing.show(key);
+                self.render();
             });
         }else{
-            //console.log(`Hide details`,env.scale);
-            self.hideSpecial(key);
+            self.drawing.hide(key);
+            self.render();
         }
         return env.scale;
     },
@@ -272,41 +286,37 @@ const self = {
             const data=bk[adj];
             if(!VBW[adj] || !VBW[adj].transform || !VBW[adj].transform.std_2d) continue;
             if(!result[adj]) result[adj]={};
-            result[adj][`face_${faces.TOP}`] = VBW[adj].transform.std_2d(data,faces.TOP,faces);
+            const two = VBW[adj].transform.std_2d(data,faces.TOP,faces);
+            // two.x = x;
+            // two.y = y;
+            result[adj][`face_${faces.TOP}`] = two;
         }
         VBW.cache.set(two_chain,result);
 
         return true;
     },
-    loadDetails:(ck)=>{
+    loadDetails:(key,ck)=>{
+        
         const dom_id=VBW.cache.get(["active","current"]);
-        console.log(dom_id);
         const {player,limit} = env;
         const {block,extend,world} = player.location;
         const [x,y]=block;
         const fun=self.structTop;
-
-        const key = `${x}_${y}`;
-        const two_chain = ["block", dom_id, world, key, "two"];
-        if(VBW.cache.exsist(two_chain)) return true;
 
         for (let i = - extend; i < extend + 1; i++) {
             for (let j = - extend; j < extend + 1; j++) {
                 const cx = x + i, cy = y + j
                 if (cx < 1 || cy < 1) continue;
                 if (cx > limit[0] || cy > limit[1]) continue;
+
+                //1. construct 2D data and attach to "two" key
                 fun(cx,cy,world,dom_id);
+
+                //2. calculate the special objects
+                
             }
         }
-        console.log("------------------------------");
         return ck && ck();
-    },
-    showSpecial:(key)=>{
-        //calc the world coordination by [x,y];
-
-    },
-    hideSpecial:(key)=>{
-
     },
 };
 
@@ -314,24 +324,7 @@ const renderer = {
     hooks: self.hooks,
 
     //function for more drawing
-    drawing:{
-        add:(name,arr)=>{
-            env.special[name]={}
-            env.special[name].data=arr;
-            env.special[name].show=true;
-        },
-        remove:(name)=>{
-            delete env.special[name];
-        },
-        hide:(name)=>{
-            if(!env.special[name]) return false;
-            env.special[name].show=false;
-        },
-        show:(name)=>{
-            if(!env.special[name]) return false;
-            env.special[name].show=true;
-        },
-    },
+    drawing:self.drawing,
 
     //function for 2D controller
     control: {
@@ -352,19 +345,15 @@ const renderer = {
             const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
             const cs = (rate - 1) * env.scale;
             const n= self.cvsScale(dx, dy, cs);
-            self.render();
             return n;
         },
 
         rate:(rate)=>{
-            //console.log(`Scale rate: ${rate}`);
             const cs = (rate - 1) * env.scale;
-
             const dx= - env.size[0]*(rate-1)*0.5;
             const dy=env.size[1]*(rate-1)*0.5;
-
-            self.cvsScale(dx,dy,cs);
-            self.render();
+            const n= self.cvsScale(dx,dy,cs);
+            return n;
         },
         
         move: (cx, cy) => {

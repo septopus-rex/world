@@ -13,3 +13,13 @@
 | 显示坐标  | 以用户显示屏幕的坐标 |
 
 ## Canvas绘制
+
+### 绘制图形的支持
+
+* `line`,
+* `rectangle`,
+* `ring`,
+* `polygons`,
+* `curves`,
+* `text`,
+* `image`,
