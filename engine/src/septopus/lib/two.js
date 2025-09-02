@@ -344,7 +344,7 @@ const router={
             // fmt.points.push([position[0]+0.5*size[0],position[1]-0.5*size[1]]);
             // fmt.points.push([position[0]+0.5*size[0],position[1]+0.5*size[1]]);
             // fmt.points.push([position[0]-0.5*size[0],position[1]+0.5*size[1]]);
-            //fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
+            // fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
 
             fmt.points.push([(position[0]-0.5*size[0])*0.001,(position[1]-0.5*size[1])*0.001]);
             fmt.points.push([(position[0]+0.5*size[0])*0.001,(position[1]-0.5*size[1])*0.001]);
@@ -356,8 +356,7 @@ const router={
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
             //const antiHeight = cfg.anticlock ? height * ratio : 0;
-            //const antiHeight = height * ratio;
-            const antiHeight = 0;
+            const antiHeight = height * ratio;
             const pBtoC = self.calculate.point.b2c;
 
             pen.beginPath();
@@ -365,7 +364,6 @@ const router={
             for (let i = 0; i < len; i++) {
                 const point=data.points[i];
                 const p = pBtoC(point, scale, offset, density, antiHeight);
-                //console.log(`Rectangle drawing:`,point,p,JSON.stringify(env));
                 if (i == 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
                 if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
             }

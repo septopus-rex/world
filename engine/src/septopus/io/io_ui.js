@@ -455,7 +455,7 @@ const router={
 
         //3.attatch events;
         if(cfg.events){
-            console.log(cfg.events);
+            //console.log(cfg.events);
             for(let evt in cfg.events){
                 //console.log(doms.menu.events,evt)
                 if(doms.menu.events[evt]===undefined) continue;

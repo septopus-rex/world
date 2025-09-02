@@ -20,6 +20,7 @@ const reg = {
 const config = {
     background: "#eeeeee",
     scale: {
+        limit:[20,50],   //scale limit
         range: 18,      //scale to show range
         detail: 30,     //scale to show details
         detailKey:"detail", 
@@ -221,7 +222,7 @@ const self = {
     //drawing special
     //{type:"",points:[[x,y],[x,y]],fill:false,style:{width:2,fill:'#FF0000',stoke:"#FF0000"}}
     special:()=>{
-        console.log(`Drawing special...`);
+        //console.log(`Drawing special...`);
         const dwg=TwoObject.show;
         const state_2d={
             scale:env.scale,
@@ -272,7 +273,7 @@ const self = {
         const key=config.scale.detailKey;
         if(env.scale>=config.scale.detail){
             self.loadDetails(key,(errors)=>{
-                console.log(`Load errors:`,errors);
+                //console.log(`Load errors:`,errors);
                 //if(errors.length!==0) console.log(errors);
                 self.drawing.show(key);
                 self.render();
@@ -365,7 +366,6 @@ const self = {
                         }
                     }
                 }
-                console.log(final);
                 self.drawing.add(key,final);
             }
         }
@@ -389,7 +389,9 @@ const renderer = {
                 scale:env.scale,
             }
         },
-
+        limit:()=>{
+            return Toolbox.clone(config.scale.limit);
+        },
         scale: (cx, cy, rate) => {
             //1.do scale
             const pCtoB = TwoObject.calculate.distance.c2b;
@@ -401,10 +403,20 @@ const renderer = {
             return n;
         },
 
+        target:(scale)=>{
+            console.log(scale,env.scale);
+            const rate=scale/env.scale;
+            const dx= -env.size[0]*(rate-1)*0.5;
+            const dy= env.size[1]*(rate-1)*0.5;
+            const cs = (rate - 1) * env.scale;
+            const n= self.cvsScale(dx,dy,cs);
+            return n;
+        },
+
         rate:(rate)=>{
             const cs = (rate - 1) * env.scale;
-            const dx= - env.size[0]*(rate-1)*0.5;
-            const dy=env.size[1]*(rate-1)*0.5;
+            const dx= -env.size[0]*(rate-1)*0.5;
+            const dy= env.size[1]*(rate-1)*0.5;
             const n= self.cvsScale(dx,dy,cs);
             return n;
         },

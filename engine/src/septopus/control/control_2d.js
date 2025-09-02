@@ -61,6 +61,7 @@ const env = {
         header:40,
         footer:50,
         pre:null,               //pre click point, to check direction
+        limit:null,
     },
     dialog:{
         title:"",
@@ -111,6 +112,15 @@ const self = {
         if(anti) return [x - pos.left,env.height-(y - pos.top)];
         return [x - pos.left,y - pos.top];
     },
+    getScale:()=>{
+        if(env.bar.limit===null) env.bar.limit=VBW[config.render].control.limit();
+        const bar=env.bar;
+        //console.log(JSON.stringify(env.bar))
+        const full=bar.height-bar.header-bar.footer;
+        const val=bar.now-bar.header;
+        const n=(val/full)*(bar.limit[1]-bar.limit[0])+bar.limit[0];
+        return n;
+    },
 
     cvsPan:(from,to)=>{
         const cx=to[0]-from[0];
@@ -130,11 +140,6 @@ const self = {
         if(el===null) return false;
 
         el.addEventListener("click", (ev) => {
-            // const pos = env.position;
-            // const p=self.getLocationPoint(env.center[0]+pos.left,env.center[1]+pos.top,true);
-            // env.zoom = self.cvsScale(p, 1 + config.zoom.step);
-            //console.log(env.zoom);
-
             env.render.rate(1 + config.zoom.step);
         });
     },
@@ -188,7 +193,8 @@ const self = {
             env.bar.now = now;
             pointer.style.top=`${now}px`;
 
-            env.render.rate(1+(ev.movementY>0?-config.zoom.step:config.zoom.step));
+            const ss=self.getScale(now);
+            env.render.target(ss);
         });
     },
 
@@ -465,6 +471,9 @@ const controller = {
         //1. set runtime
         if (env.render === null) env.render = VBW[config.render].control;
         if(env.player===null) env.player=VBW.cache.get(["env","player"]);
+
+        const ss=self.getScale();
+        env.render.target(ss);
 
         //2.set frame-loop function
         const world = env.player.location.world;
