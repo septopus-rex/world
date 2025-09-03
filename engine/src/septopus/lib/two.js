@@ -337,25 +337,16 @@ const router={
     },
     rectangle:{
         format:(raw)=>{
-            const fmt={points:[]};
-            ///console.log(`After:`,JSON.stringify(raw));
+            const fmt={ points:[] };
             const {size , position }=raw;
-            // fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
-            // fmt.points.push([position[0]+0.5*size[0],position[1]-0.5*size[1]]);
-            // fmt.points.push([position[0]+0.5*size[0],position[1]+0.5*size[1]]);
-            // fmt.points.push([position[0]-0.5*size[0],position[1]+0.5*size[1]]);
-            // fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
-
-            fmt.points.push([(position[0]-0.5*size[0])*0.001,(position[1]-0.5*size[1])*0.001]);
-            fmt.points.push([(position[0]+0.5*size[0])*0.001,(position[1]-0.5*size[1])*0.001]);
-            fmt.points.push([(position[0]+0.5*size[0])*0.001,(position[1]+0.5*size[1])*0.001]);
-            fmt.points.push([(position[0]-0.5*size[0])*0.001,(position[1]+0.5*size[1])*0.001]);
-            
+            fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
+            fmt.points.push([position[0]+0.5*size[0],position[1]-0.5*size[1]]);
+            fmt.points.push([position[0]+0.5*size[0],position[1]+0.5*size[1]]);
+            fmt.points.push([position[0]-0.5*size[0],position[1]+0.5*size[1]]);
             return fmt;
         },
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
-            //const antiHeight = cfg.anticlock ? height * ratio : 0;
             const antiHeight = height * ratio;
             const pBtoC = self.calculate.point.b2c;
 
@@ -364,15 +355,14 @@ const router={
             for (let i = 0; i < len; i++) {
                 const point=data.points[i];
                 const p = pBtoC(point, scale, offset, density, antiHeight);
-                if (i == 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
+                if (i === 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
                 if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
             }
             pen.closePath();
             pen.stroke();
         },
-        sample:{
-            width:100,
-            height:200,
+        sample:{        //format input 
+            size:[100,200],
             position:[600,900],     //[left,bottom]
         },
     },

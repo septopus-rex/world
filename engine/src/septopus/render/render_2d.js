@@ -44,9 +44,7 @@ const env = {
     limit: null,        //block number limit
     height: 100,        //canvas height
     width: 100,         //canvas width
-    density: 0.2,      // px/meter,
-    //density: 0.00021,    // px/meter,
-    //density: 2.1,      // px/meter,
+    density: 0.00021,      // px/meter,
     ratio: 1,           // for apple device, screen ratio
     convert: 1,         //system convert 
     player: null,       //link to player
@@ -470,7 +468,8 @@ const renderer = {
             const side = VBW.cache.get(["env", "world", "side"]);
 
             env.convert = cvt;
-            env.side = [side[0]/cvt, side[1]/cvt];
+            //env.side = [side[0]/cvt, side[1]/cvt];
+            env.side = [side[0], side[1]];
 
             self.construct(dom_id);
             self.start();
