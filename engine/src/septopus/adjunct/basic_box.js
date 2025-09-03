@@ -319,7 +319,7 @@ const self={
                                 rotation:std.rz,
                             },
                             style:{
-                                fill:0,                 //if no zero, fill the color
+                                fill:0xfa3312,          //if no zero, fill the color
                                 color:0xfa0012,         //stroke color
                                 opacity:0.6,            //opacity of object
                                 width:1,                //stroke width

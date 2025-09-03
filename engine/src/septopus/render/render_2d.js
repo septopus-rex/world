@@ -183,6 +183,25 @@ const self = {
             xstep += s;
         }
     },
+    grid_new:()=>{
+        const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
+        const x = env.offset[0], y = env.offset[1], xw = env.size[0], yw = env.size[1];
+
+        const xs = x < 0 ? 0 : (x - x % s);
+        const ys = y < 0 ? 0 : (y - y % s);
+        const xe = x + xw > mx ? mx : x + xw;
+        const ye = y + yw > my ? my : y + yw;
+        const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);
+        const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);
+        const cfg = { width: 1, color: "#888888", anticlock: true };
+
+        // let ystep = ys
+        // for (let i = 0; i < yn; i++) {
+        //     const pa = [xs, ystep], pb = [xe, ystep];
+        //     line(env, [pa, pb], cfg);
+        //     ystep += s;
+        // }
+    },
     block: (x, y, cfg) => {
         //const wd=me.core.world,s=wd.sideLength,env=run[target];
         const s = env.side[0];
@@ -348,6 +367,8 @@ const self = {
                     for(let i=0;i<list.length;i++){
                         const row=list[i];
                         const cfg=row.more===undefined?{}:row.more;
+                        cfg.block=[cx,cy];
+                        cfg.world=world;
 
                         //console.log(`Before:`,JSON.stringify(row.params));
                         if(row.params.position){
@@ -363,6 +384,20 @@ const self = {
                             final.push(fmt);
                         }
                     }
+                }
+                if(cx===2024 && cy===620){
+                    const line_params={
+                        from:[(cx-1)*side[0],(cy-1)*side[0]],
+                        to:[cx*side[0],cy*side[0]],
+                    };
+                    const line_style={
+                        width:3,
+                        color:0x000000,
+                    };
+                    const line_cfg={}
+                    const line=get("line",line_params,line_style,line_cfg);
+                    console.log(line);
+                    final.push(line);
                 }
                 self.drawing.add(key,final);
             }

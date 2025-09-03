@@ -126,17 +126,7 @@ const self = {
             pen.fill();
             if (cfg.alpha) pen.globalAlpha = 1;
         },
-        image: () => {
-            if (env.pen === null) return { error: "Canvas is not init yet." }
-            const { pen, scale, offset, height, density, ratio } = env;
-        },
-        text: () => {
-            if (env.pen === null) return { error: "Canvas is not init yet." }
-            const { pen, scale, offset, height, density, ratio } = env;
-        },
-        grid: () => {
-
-        },
+        
         clean: (env, color) => {
             const { pen, width, height, ratio } = env;
             //console.log(pen,width,height,ratio);
@@ -287,24 +277,69 @@ const self = {
 const router={
     line:{
         format:(raw)=>{
-            return {
-                start:[],               //point of line start
-                end:[],                 //point of line end
-                anchor:[0,0],           //anchor for line endpoint, not yet
-                segement:[[],[]],       //show segements, not yet
-            };
+            const fmt={ points:[] };
+            fmt.points.push(raw.from);
+            fmt.points.push(raw.to);
+            if(raw.segement){
+                fmt.segement=[];
+            }
+            return fmt;
         },
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
-            //const zj = Math.PI / 2;
-            const antiHeight = cfg.anticlock ? height * ratio : 0;
+            const antiHeight = height * ratio;
             const pBtoC = self.calculate.point.b2c;
-            const disBtoC = self.calculate.distance.b2c;
+
+            //1. line drawing
+            const start = pBtoC(data.points[0], scale, offset, density, antiHeight);
+            const end = pBtoC(data.points[1], scale, offset, density, antiHeight);
+            pen.beginPath();
+            pen.moveTo(start[0] + 0.5, start[1] + 0.5);
+            pen.lineTo(end[0] + 0.5, end[1] + 0.5);
+            pen.stroke();
+    
+            //2. segements drawing
+            if(data.segement){
+
+            }
         },
-        sample:{
-            from:[],
-            to:[],
+        sample:{        //format input 
+            from:[0,100],
+            to:[300,600],
             segement:3,
+        },
+    },
+    rectangle:{
+        format:(raw)=>{
+            const fmt={ points:[] };
+            const {size , position }=raw;
+            fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
+            fmt.points.push([position[0]+0.5*size[0],position[1]-0.5*size[1]]);
+            fmt.points.push([position[0]+0.5*size[0],position[1]+0.5*size[1]]);
+            fmt.points.push([position[0]-0.5*size[0],position[1]+0.5*size[1]]);
+            return fmt;
+        },
+        drawing:(data,pen,env,cfg)=>{
+            //console.log(cfg);
+            const {scale, offset, height, density, ratio } = env;
+            const antiHeight = height * ratio;
+            const pBtoC = self.calculate.point.b2c;
+
+            pen.beginPath();
+            const len=data.points.length;
+            for (let i = 0; i < len; i++) {
+                const point=data.points[i];
+                const p = pBtoC(point, scale, offset, density, antiHeight);
+                if (i === 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
+                if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
+            }
+            pen.closePath();
+            pen.stroke();
+            if(cfg.fill) pen.fill();
+        },
+        sample:{        //format input 
+            size:[100,200],
+            position:[600,900],     //[left,bottom]
         },
     },
     arc:{
@@ -333,37 +368,6 @@ const router={
             radius:600,             // sector radius
             radian:[0,360],         // [start,end]
             position:[600,900],     // circle center
-        },
-    },
-    rectangle:{
-        format:(raw)=>{
-            const fmt={ points:[] };
-            const {size , position }=raw;
-            fmt.points.push([position[0]-0.5*size[0],position[1]-0.5*size[1]]);
-            fmt.points.push([position[0]+0.5*size[0],position[1]-0.5*size[1]]);
-            fmt.points.push([position[0]+0.5*size[0],position[1]+0.5*size[1]]);
-            fmt.points.push([position[0]-0.5*size[0],position[1]+0.5*size[1]]);
-            return fmt;
-        },
-        drawing:(data,pen,env,cfg)=>{
-            const {scale, offset, height, density, ratio } = env;
-            const antiHeight = height * ratio;
-            const pBtoC = self.calculate.point.b2c;
-
-            pen.beginPath();
-            const len=data.points.length;
-            for (let i = 0; i < len; i++) {
-                const point=data.points[i];
-                const p = pBtoC(point, scale, offset, density, antiHeight);
-                if (i === 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
-                if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
-            }
-            pen.closePath();
-            pen.stroke();
-        },
-        sample:{        //format input 
-            size:[100,200],
-            position:[600,900],     //[left,bottom]
         },
     },
     ring:{
@@ -447,6 +451,7 @@ const TwoObject = {
         //console.log(env);
         for(let i=0;i<arr.length;i++){
             const row=arr[i];
+            //console.log(row);
             //0. check data;
             if(!row.type || !router[row.type]){
                 errors.push({error:`Failed to drawing row[${i}]: ${JSON.stringify(row)}`});
@@ -457,6 +462,8 @@ const TwoObject = {
 
             //1.if style, set it;
             if(row.style) self.setStyle(pen,row.style);
+
+            if(row.style.fill) row.more.fill=true;
             router[row.type].drawing(row.params,pen,env,row.more);
 
             //2. if style ,recover it;
