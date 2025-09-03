@@ -44,7 +44,9 @@ const env = {
     limit: null,        //block number limit
     height: 100,        //canvas height
     width: 100,         //canvas width
-    density: 0.21,      // px/meter,
+    density: 0.2,      // px/meter,
+    //density: 0.00021,    // px/meter,
+    //density: 2.1,      // px/meter,
     ratio: 1,           // for apple device, screen ratio
     convert: 1,         //system convert 
     player: null,       //link to player
@@ -234,8 +236,6 @@ const self = {
         for(let name in env.special){
             const sp=env.special[name];
             if(!sp.show) continue;
-
-            
             dwg(env.pen,state_2d,sp.data,(done)=>{
 
             });
@@ -404,7 +404,7 @@ const renderer = {
         },
 
         target:(scale)=>{
-            console.log(scale,env.scale);
+            //console.log(scale,env.scale);
             const rate=scale/env.scale;
             const dx= -env.size[0]*(rate-1)*0.5;
             const dy= env.size[1]*(rate-1)*0.5;

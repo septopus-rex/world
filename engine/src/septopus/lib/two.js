@@ -13,7 +13,7 @@ const config={
     style:{
         lineWidth:1,
         strokeStyle:"#000000",
-        fillStyle:"#FFFFFF",
+        fillStyle:"#000000",
         globalAlpha:1,
     },
 }
@@ -272,8 +272,8 @@ const self = {
 
     setStyle:(pen,style)=>{
         if(style.width) pen.lineWidth = style.width;
-        if(style.color) pen.strokeStyle = style.color;
-        if(style.fill) pen.fillStyle = style.fill;
+        if(style.color) pen.strokeStyle =  `#${style.color.toString(16)}`;
+        if(style.fill) pen.fillStyle = `#${style.fill.toString(16)}`;
         if(style.opacity) pen.globalAlpha = style.opacity;
     },
     resetStyle:(pen)=>{
@@ -461,7 +461,9 @@ const TwoObject = {
             if(!row.type || !router[row.type]){
                 errors.push({error:`Failed to drawing row[${i}]: ${JSON.stringify(row)}`});
                 continue;
-            } 
+            }
+
+            //console.log(`Type:${row.type}`,row.style);
 
             //1.if style, set it;
             if(row.style) self.setStyle(pen,row.style);

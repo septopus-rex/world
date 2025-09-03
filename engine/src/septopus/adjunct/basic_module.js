@@ -283,7 +283,7 @@ const self={
                             },
                             style:{
                                 fill:0,                 //if no zero, fill the color
-                                color:0xf3f5f6,         //stroke color
+                                color:0x33ff77,         //stroke color
                                 opacity:0.6,            //opacity of object
                                 width:1,                //stroke width
                             },

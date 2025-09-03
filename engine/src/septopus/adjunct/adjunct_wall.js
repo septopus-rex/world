@@ -330,12 +330,12 @@ const self = {
                             },
                             style:{
                                 fill:0,                 //if no zero, fill the color
-                                color:0xf3f5f6,         //stroke color
+                                color:0x000000,         //stroke color
                                 opacity:0.6,            //opacity of object
                                 width:1,                //stroke width
                             },
                         }
-                        //console.log(`Struct "box" 2D data.`);
+                        
                         objs.push(row);
                         break;
                 

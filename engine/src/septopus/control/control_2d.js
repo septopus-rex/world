@@ -118,7 +118,7 @@ const self = {
         //console.log(JSON.stringify(env.bar))
         const full=bar.height-bar.header-bar.footer;
         const val=bar.now-bar.header;
-        const n=(val/full)*(bar.limit[1]-bar.limit[0])+bar.limit[0];
+        const n=((full-val)/full)*(bar.limit[1]-bar.limit[0])+bar.limit[0];
         return n;
     },
 
