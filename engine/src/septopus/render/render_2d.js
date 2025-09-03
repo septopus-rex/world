@@ -20,7 +20,7 @@ const reg = {
 const config = {
     background: "#eeeeee",
     scale: {
-        limit:[20,50],   //scale limit
+        limit:[10,50],   //scale limit
         range: 18,      //scale to show range
         detail: 30,     //scale to show details
         detailKey:"detail", 
@@ -150,7 +150,7 @@ const self = {
         const by = disCtoB(env.height, rotation, env.scale, env.ratio, env.density);
         const ax = (x - 0.5) * side;
         const ay = (y - 0.5) * side;
-
+        console.log(side);
         env.offset = self.offset(ax, ay, bx, by);
         env.size = [bx, by];
         return true;
@@ -468,8 +468,9 @@ const renderer = {
             env.player = VBW.cache.get(["env", "player"]);
             const cvt = VBW.cache.get(["env", "world", "accuracy"]);
             const side = VBW.cache.get(["env", "world", "side"]);
+
             env.convert = cvt;
-            env.side = [side[0] / cvt, side[1] / cvt];
+            env.side = [side[0]/cvt, side[1]/cvt];
 
             self.construct(dom_id);
             self.start();
