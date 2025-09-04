@@ -3,7 +3,8 @@
  *
  * @fileoverview
  *  1. 2D render from `STD` data
- *
+ *  2. actions for controller
+ * 
  * @author Fuu
  * @date 2025-04-23
  */
@@ -57,20 +58,6 @@ const env = {
     },
 };
 
-const test = {
-    rectangle: (pen) => {
-        pen.lineWidth = 2;
-        pen.strokeStyle = '#FF0000';
-        pen.beginPath();
-        pen.moveTo(100, 100);
-        pen.lineTo(100, 300);
-        pen.lineTo(250, 300);
-        pen.lineTo(250, 100);
-        pen.closePath();
-        pen.stroke();
-    },
-};
-
 const demo={
     line:(x,y,side)=>{
         const params={
@@ -115,12 +102,27 @@ const demo={
 
         const style={
             width:1,
-            color:0xff0ff0,
+            color:0x000000,
             opacity:0.4,
         };
         const cfg={anticlock:true};
         return TwoObject.get("arc",params,style,cfg);
     },
+    text:(x,y,side)=>{
+        const params={
+            text:JSON.stringify([x,y]),
+            size:3000,                        //mm
+            position:[(x-0.9)*side[0],(y-0.9)*side[0]],
+        };
+        const style={
+            width:1,
+            color:0xfad3f0,
+            opacity:0.5,
+        };
+        //const cfg={anticlock:true,font:14,direct:true};
+        const cfg={anticlock:true};
+        return TwoObject.get("text",params,style,cfg);
+    }
 }
 
 const self = {
@@ -410,7 +412,8 @@ const self = {
                 if(cx===2024 && cy===620){
                     final.push(demo.line(cx,cy,side));
                     final.push(demo.sector(cx,cy,side));
-                    final.push(demo.arc(cx,cy,side))
+                    final.push(demo.arc(cx,cy,side));
+                    final.push(demo.text(cx,cy,side));
                 }
                 self.drawing.add(key,final);
             }

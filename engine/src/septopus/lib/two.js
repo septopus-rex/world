@@ -331,9 +331,60 @@ const drawing={
             position:[600,900],     // circle center
         },
     },
-    ring:{
+    
+    text:{
+        format:(raw)=>{
+            return {
+                content:raw.text,
+                size:raw.size,
+                position:raw.position,
+            }
+        },
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
+            const pBtoC = self.calculate.point.b2c;
+            const disBtoC = self.calculate.distance.b2c;
+
+            // const left=10;
+            // const top=50;
+            const antiHeight = cfg.anticlock?height * ratio:0;
+            const pos= pBtoC(data.position, scale, offset, density, antiHeight);   
+            const [left,top]=pos;
+            const rotation=0;
+            const font=disBtoC(data.size, rotation, scale, ratio, density);
+            pen.font=`${font}px Arial`;
+
+            pen.fillText(data.content,left,top);
+        },
+        sample:{
+            text:"text sample",      //sample text
+            font:14,                    //screen pixel
+            position:[600,900],         //[left,bottom]
+        },
+    },
+    image:{
         format:(raw)=>{
 
+        },
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
+        },
+        sample:{
+            content:"raw image",    //sample text
+            width:100,              //world size
+            height:300,             //world size
+            position:[600,900],     //[left,bottom]
+        },
+    },
+    ring:{
+        format:(raw)=>{
+            return {
+                outer:raw.radius[0],
+                inner:raw.radius[1],
+                center:raw.position,
+                start:raw.radian[0],
+                end:raw.radian[1],
+            };
         },
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
@@ -367,33 +418,7 @@ const drawing={
         sample:{
         },
     },
-    text:{
-        format:(raw)=>{
 
-        },
-        drawing:(data,pen,env,cfg)=>{
-            const {scale, offset, height, density, ratio } = env;
-        },
-        sample:{
-            content:"text sample",      //sample text
-            font:14,                    //screen pixel
-            position:[600,900],         //[left,bottom]
-        },
-    },
-    image:{
-        format:(raw)=>{
-
-        },
-        drawing:(data,pen,env,cfg)=>{
-            const {scale, offset, height, density, ratio } = env;
-        },
-        sample:{
-            content:"raw image",    //sample text
-            width:100,              //world size
-            height:300,             //world size
-            position:[600,900],     //[left,bottom]
-        },
-    },
 }   
 
 const TwoObject = {
