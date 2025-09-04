@@ -19,121 +19,6 @@ const config={
 }
 
 const self = {
-    drawing: {
-        line: (env, ps, cfg) => {
-            if (env.pen === null) return { error: "Canvas is not init yet." }
-            const { pen, scale, offset, height, density, ratio } = env;
-            const pBtoC = self.calculate.point.b2c;
-            const antiHeight = cfg.anticlock ? height * ratio : 0;
-
-            pen.lineWidth = !cfg.width ? 1 : cfg.width;
-            pen.strokeStyle = !cfg.color ? "#000000" : cfg.color;
-            pen.beginPath();
-            for (let i = 0, len = ps.length; i < len; i++) {
-                const p = pBtoC(ps[i], scale, offset, density, antiHeight);
-                if (i == 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
-                if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
-            }
-            pen.closePath();
-            pen.stroke();
-        },
-        dash: () => {
-            if (env.pen === null) return { error: "Canvas is not init yet." }
-            const { pen, scale, offset, height, density, ratio } = env;
-        },
-        arc: (env, center, radius, angle) => {
-            if (env.pen === null) return { error: "Canvas is not init yet." }
-            const { pen, scale, offset, height, density, ratio } = env;
-            const antiHeight = cfg.anticlock ? height * ratio : 0;
-
-            const [start, end] = angle;
-            const rotation = 0;
-
-            const pBtoC = self.calculate.point.b2c;
-            const disBtoC = self.calculate.distance.b2c;
-            const anClear = self.calculate.angle.clean;
-            const c = pBtoC(center, scale, offset, density, antiHeight);
-            const r = disBtoC(radius, rotation, scale, ratio, density);
-            const startAngle = anClear(start), endAngle = anClear(end);
-
-            let grd;
-            if (cfg.grad) {
-                grd = pen.createRadialGradient(c[0], c[1], 1, c[0], c[1], r);
-                for (let i in cfg.grad) {
-                    const stop = cfg.grad[i];
-                    grd.addColorStop(stop[0], stop[1]);
-                }
-            }
-
-            pen.beginPath();
-            pen.fillStyle = cfg.grad ? grd : cfg.color;
-            pen.strokeStyle = cfg.color;
-            pen.moveTo(c[0], c[1]);
-            pen.arc(c[0], c[1], r, startAngle, endAngle);
-            pen.closePath();
-            pen.fill();
-        },
-        fill: (env, ps, cfg) => {
-            if (env.pen === null) return { error: "Canvas is not init yet." }
-            const { pen, scale, offset, height, density, ratio } = env;        // density=== px per meter
-            const b2c = self.calculate.point.b2c;
-
-            pen.fillStyle = cfg.color;
-            pen.beginPath();
-            for (let i = 0, len = ps.length; i < len; i++) {
-                const p = b2c(ps[i], scale, offset, density, cfg.anticlock ? height * ratio : 0);
-                if (i == 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
-                if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
-            }
-            pen.closePath();
-            pen.fill();
-        },
-        sector: (env, param, cfg) => {
-            if (env.pen === null) return { error: "Canvas is not init yet." }
-            const { pen, scale, offset, height, density, ratio } = env;
-            if (cfg.alpha) pen.globalAlpha = cfg.alpha;
-
-            const rotation = 0;
-            const zj = Math.PI / 2;
-            const antiHeight = cfg.anticlock ? height * ratio : 0;
-            const pBtoC = self.calculate.point.b2c;
-            const disBtoC = self.calculate.distance.b2c;
-            const anClear = self.calculate.angle.clean;
-
-            //const s=run.scale,o=run.offset,px=run.pxperm,ro=0,m=run.multi,zj=Math.PI/2
-            //const h=cfg.anticlock?run.height*run.multi:0;
-            //const calc=root.calc,pBtoC=calc.pBtoC,disBtoC=calc.disBtoC,anClear=calc.anClean
-            const c = pBtoC(param.center, scale, offset, density, antiHeight);
-            const r = disBtoC(param.radius, rotation, scale, ratio, density);
-            const ss = anClear(param.start), e = anClear(param.end);
-            //console.log(r)
-            let grd;
-            if (cfg.grad) {
-                //console.log(cfg.grad)
-                grd = pen.createRadialGradient(c[0], c[1], 1, c[0], c[1], r);
-                for (let i in cfg.grad) {
-                    const stop = cfg.grad[i];
-                    grd.addColorStop(stop[0], stop[1]);
-                }
-            }
-
-            pen.beginPath();
-            pen.fillStyle = cfg.grad ? grd : cfg.color;
-            pen.strokeStyle = cfg.color;
-            pen.moveTo(c[0], c[1]);
-            pen.arc(c[0], c[1], r, ss, e);
-            pen.closePath();
-            pen.fill();
-            if (cfg.alpha) pen.globalAlpha = 1;
-        },
-        
-        clean: (env, color) => {
-            const { pen, width, height, ratio } = env;
-            //console.log(pen,width,height,ratio);
-            pen.fillStyle = color;
-            pen.fillRect(0, 0, width * ratio, height * ratio);
-        },
-    },
     calculate: {
         point: {
             extend: (point, distance, angle) => {
@@ -259,6 +144,11 @@ const self = {
             }
         },
     },
+    clean: (env, color) => {
+        const { pen, width, height, ratio } = env;
+        pen.fillStyle = color;
+        pen.fillRect(0, 0, width * ratio, height * ratio);
+    },
 
     setStyle:(pen,style)=>{
         if(style.width) pen.lineWidth = style.width;
@@ -287,7 +177,7 @@ const router={
         },
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
-            const antiHeight = height * ratio;
+            const antiHeight = cfg.anticlock?height * ratio:0;
             const pBtoC = self.calculate.point.b2c;
 
             //1. line drawing
@@ -322,7 +212,7 @@ const router={
         drawing:(data,pen,env,cfg)=>{
             //console.log(cfg);
             const {scale, offset, height, density, ratio } = env;
-            const antiHeight = height * ratio;
+            const antiHeight =cfg.anticlock?height * ratio:0;
             const pBtoC = self.calculate.point.b2c;
 
             pen.beginPath();
@@ -342,12 +232,50 @@ const router={
             position:[600,900],     //[left,bottom]
         },
     },
-    arc:{
+    
+    sector:{
         format:(raw)=>{
-
+            return {
+                radius:raw.radius,
+                center:raw.position,
+                start:raw.radian[0],
+                end:raw.radian[1],
+            };
         },
         drawing:(data,pen,env,cfg)=>{
+            //console.log(data,cfg);
             const {scale, offset, height, density, ratio } = env;
+            const pBtoC = self.calculate.point.b2c;
+            const disBtoC = self.calculate.distance.b2c;
+            const anClear = self.calculate.angle.clean;
+
+            const rotation=0;
+            const antiHeight = cfg.anticlock?height * ratio:0;
+
+            const center= pBtoC(data.center, scale, offset, density, antiHeight);            
+            const radius=disBtoC(data.radius, rotation, scale, ratio, density);
+
+            const zj=Math.PI*0.5;
+            const start= cfg.anticlock?-Math.PI*data.start/180-zj:Math.PI*data.start/180;
+            const end = cfg.anticlock?-Math.PI*data.end/180-zj:Math.PI*data.end/180;
+
+            //1.Radial Gradient support
+            if (cfg.grad) {
+                let grd = null;
+                grd = pen.createRadialGradient(center[0], center[1], 1, center[0], center[1], radius);
+                for (let i in cfg.grad) {
+                    const stop = cfg.grad[i];
+                    grd.addColorStop(stop[0],`#${stop[1].toString(16)}`);
+                }
+                pen.fillStyle =grd;
+            }
+
+            //2. actual drawing of sector
+            pen.beginPath();
+            pen.moveTo(center[0], center[1]);
+            pen.arc(center[0], center[1], radius,anClear(start), anClear(end));
+            pen.closePath();
+            pen.fill();
         },
         sample:{
             radius:600,             // sector radius
@@ -355,11 +283,9 @@ const router={
             position:[600,900],     // circle center
         },
     },
-    sector:{
+    arc:{
         format:(raw)=>{
-            return {
-                points:[],
-            };
+
         },
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
@@ -436,6 +362,7 @@ const router={
 }   
 
 const TwoObject = {
+    calculate: self.calculate,
     get: (type, raw ,style,cfg) => {
         if(!router[type]) return {error:`Type "${type}" of 2D object is not support yet.`};
 
@@ -472,8 +399,7 @@ const TwoObject = {
 
         return ck && ck(errors);
     },
-    calculate: self.calculate,
-    drawing: self.drawing,
+    clean:self.clean,
 }
 
 export default TwoObject

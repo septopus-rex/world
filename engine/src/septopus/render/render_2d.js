@@ -68,6 +68,43 @@ const test = {
     },
 };
 
+const demo={
+    line:(x,y,side)=>{
+        const params={
+            from:[(x-1)*side[0],(y-1)*side[0]],
+            to:[x*side[0],y*side[0]],
+        };
+        const style={
+            width:3,
+            color:0xff0000,
+            opacity:0.3,
+        };
+        const cfg={anticlock:true};
+        const line=TwoObject.get("line",params,style,cfg);
+        return line;
+    },
+    sector:(x,y,side)=>{
+        const params={
+            radius:side[0]*0.8,
+            radian:[0,90],
+            position:[(x-0.4)*side[0],(y-0.4)*side[0]],
+        };
+        const style={
+            width:1,
+            color:0xff0ff0,
+            opacity:0.4,
+        };
+        const grad = [
+            [0.2, 0x666666],
+            [1, 0xffffff],
+        ];
+        const cfg={anticlock:true,grad:grad};
+
+        const line=TwoObject.get("sector",params,style,cfg);
+        return line;
+    },
+}
+
 const self = {
     hooks: {
         reg: () => { return reg },
@@ -141,61 +178,70 @@ const self = {
     },
     start: () => {
         const [x, y] = env.player.location.block;
-        const side = env.side[0];
         const disCtoB = TwoObject.calculate.distance.c2b;
         const rotation = 0;
         const bx = disCtoB(env.width, rotation, env.scale, env.ratio, env.density);
         const by = disCtoB(env.height, rotation, env.scale, env.ratio, env.density);
-        const ax = (x - 0.5) * side;
-        const ay = (y - 0.5) * side;
-        console.log(side);
+        const ax = (x - 0.5) * env.side[0];
+        const ay = (y - 0.5) * env.side[1];
         env.offset = self.offset(ax, ay, bx, by);
         env.size = [bx, by];
         return true;
     },
     clean: () => {
-        TwoObject.drawing.clean(env, config.background);
+        TwoObject.clean(env, config.background);
     },
-    block: (x, y, cfg) => {
-        //const wd=me.core.world,s=wd.sideLength,env=run[target];
-        const s = env.side[0];
-        const ps = [[(x - 1) * s, (y - 1) * s], [(x - 1) * s, y * s], [x * s, y * s], [x * s, (y - 1) * s]];
-        //console.log(JSON.stringify(ps));
-        //console.log(cfg,env.selected)
-        TwoObject.drawing.fill(env, ps, cfg);
-    },
+    // block: (x, y, cfg) => {
+    //     const s = env.side[0];
+    //     const ps = [[(x - 1) * s, (y - 1) * s], [(x - 1) * s, y * s], [x * s, y * s], [x * s, (y - 1) * s]];
+    //     TwoObject.drawing.fill(env, ps, cfg);
+    // },
     active: () => {
-        const [x, y] = env.selected;
-        if (x > 0 && y > 0) {
-            self.block(x, y, { width: 1, color: '#00CCBB', anticlock: true });
-        }
-        const [px, py] = env.player.location.block;
-        self.block(px, py, { width: 1, color: '#99CCBB', anticlock: true });
-        //self.block(px+2,py+2,{width:1,color:'#00CCDD',anticlock:true})
+        // const [x, y] = env.selected;
+        // if (x > 0 && y > 0) {
+        //     self.block(x, y, { width: 1, color: '#00CCBB', anticlock: true });
+        // }
+        // const [px, py] = env.player.location.block;
+        // self.block(px, py, { width: 1, color: '#99CCBB', anticlock: true });
     },
 
     avatar: () => {
+        const key="view";
+        self.drawing.remove(key);
+
         const player = env.player.location;
         const [x, y] = player.block;
         const pos = player.position;
         const ro = player.rotation;
-        const s = env.side[0];
-        const hf = Math.PI * config.fov / 360, rz = - ro[2], r = s, zj = Math.PI / 2
+        const hf = Math.PI * config.fov / 360, rz = - ro[2];
+        const center = [(x - 1) * env.side[0] + pos[0]*env.convert, (y - 1) * env.side[1] + pos[1]*env.convert];
+        const anClear = TwoObject.calculate.angle.clean;
+        const start = 180*(anClear(rz) - hf)/Math.PI;
+        const end  = 180*(anClear(rz) + hf)/Math.PI;
 
-        const cen = [(x - 1) * s + pos[0], (y - 1) * s + pos[1]];
-        const p = { center: cen, start: -rz - hf - zj, end: -rz + hf - zj, radius: r }
+        const radius=env.side[0];
+        const params={
+            radius:radius,
+            radian:[start,end],
+            position:center,
+        };
+
         const grad = [
-            [0.2, '#666666'],
-            [1, '#FFFFFF'],
+            [0.2, 0x666666],
+            [1, 0xffffff],
         ];
-        const cfg = { width: 1, color: "#FF99CC", anticlock: true, grad: grad, alpha: 0.3 };
-        TwoObject.drawing.sector(env, p, cfg);
+        const style={
+            width: 1, 
+            color: 0xff99cc,
+            opacity:0.5,
+        }
+        const cfg={anticlock:true,grad:grad};
+        const view = TwoObject.get("sector",params,style,cfg);
+
+        self.drawing.add(key,[view]);
     },
 
-    //drawing special
-    //{type:"",points:[[x,y],[x,y]],fill:false,style:{width:2,fill:'#FF0000',stoke:"#FF0000"}}
     special:()=>{
-        //console.log(`Drawing special...`);
         const dwg=TwoObject.show;
         const state_2d={
             scale:env.scale,
@@ -218,8 +264,8 @@ const self = {
         self.clean();               //clean canvas;
         self.grid();                //drawing block grid;
         self.active();              //fill active block;
-        self.special();             //drawing sepcial object;
         self.avatar();              //drawing player;
+        self.special();             //drawing sepcial object;
     },
 
     cvsMove: (dx, dy) => {
@@ -323,6 +369,7 @@ const self = {
                         const cfg=row.more===undefined?{}:row.more;
                         cfg.block=[cx,cy];
                         cfg.world=world;
+                        cfg.anticlock=true;
 
                         //console.log(`Before:`,JSON.stringify(row.params));
                         if(row.params.position){
@@ -339,20 +386,11 @@ const self = {
                         }
                     }
                 }
+
+                //line test demo
                 if(cx===2024 && cy===620){
-                    const line_params={
-                        from:[(cx-1)*side[0],(cy-1)*side[0]],
-                        to:[cx*side[0],cy*side[0]],
-                    };
-                    const line_style={
-                        width:3,
-                        color:0xff0000,
-                        opacity:0.3,
-                    };
-                    const line_cfg={}
-                    const line=get("line",line_params,line_style,line_cfg);
-                    console.log(line);
-                    final.push(line);
+                    final.push(demo.line(cx,cy,side));
+                    final.push(demo.sector(cx,cy,side));
                 }
                 self.drawing.add(key,final);
             }
@@ -362,19 +400,17 @@ const self = {
     grid:()=>{
         const key="grid";
         self.drawing.remove(key);
+        const get=TwoObject.get;
 
         const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
         const x = env.offset[0], y = env.offset[1], xw = env.size[0], yw = env.size[1];
-
         const xs = x < 0 ? 0 : (x - x % s);
         const ys = y < 0 ? 0 : (y - y % s);
         const xe = x + xw > mx ? mx : x + xw;
         const ye = y + yw > my ? my : y + yw;
         const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);
         const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);
-        //const cfg = { width: 1, color: "#888888", anticlock: true };
 
-        const get=TwoObject.get;
         const lines=[];
         const style={ width: 1, color: 0x888888};
         const cfg={anticlock:true};
@@ -463,7 +499,7 @@ const renderer = {
             const block=self.getBlock(pos);
             const [x,y]=block;
             self.render();
-            self.block(x, y, cfg);
+            //self.block(x, y, cfg);
             env.selected=[x,y];
             return block;
         },
