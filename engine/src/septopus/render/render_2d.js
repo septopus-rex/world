@@ -20,10 +20,13 @@ const reg = {
 const config = {
     background: "#eeeeee",
     scale: {
-        limit:[10,50],   //scale limit
+        limit:[10,80],   //scale limit
         range: 18,      //scale to show range
         detail: 30,     //scale to show details
         detailKey:"detail", 
+    },
+    keys:{
+        view:"avatar",
     },
     canvas: {
         id: "canvas_2d",
@@ -102,6 +105,21 @@ const demo={
 
         const line=TwoObject.get("sector",params,style,cfg);
         return line;
+    },
+    arc:(x,y,side)=>{
+        const params={
+            radius:side[0]*0.8,
+            radian:[45,135],
+            position:[(x-0.4)*side[0],(y-0.4)*side[0]],
+        };
+
+        const style={
+            width:1,
+            color:0xff0ff0,
+            opacity:0.4,
+        };
+        const cfg={anticlock:true};
+        return TwoObject.get("arc",params,style,cfg);
     },
 }
 
@@ -214,11 +232,12 @@ const self = {
         const pos = player.position;
         const ro = player.rotation;
         const hf = Math.PI * config.fov / 360, rz = - ro[2];
+        const zj=Math.PI*0.5;
         const center = [(x - 1) * env.side[0] + pos[0]*env.convert, (y - 1) * env.side[1] + pos[1]*env.convert];
         const anClear = TwoObject.calculate.angle.clean;
-        const start = 180*(anClear(rz) - hf)/Math.PI;
-        const end  = 180*(anClear(rz) + hf)/Math.PI;
-        console.log(`View:`,start,end);
+        const start = 180 * (anClear(rz) - hf + zj)/Math.PI;
+        const end  = 180 * (anClear(rz) + hf + zj)/Math.PI;
+        
         const radius=env.side[0];
         const params={
             radius:radius,
@@ -391,6 +410,7 @@ const self = {
                 if(cx===2024 && cy===620){
                     final.push(demo.line(cx,cy,side));
                     final.push(demo.sector(cx,cy,side));
+                    final.push(demo.arc(cx,cy,side))
                 }
                 self.drawing.add(key,final);
             }

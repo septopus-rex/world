@@ -23,7 +23,7 @@ const reg = {
 const config = {
     opacity: 1,
     texture: 1,          //ground texture ID
-    color: 0xf3999a,      //when no texture, ground color setting
+    color: 0xdddddd,      //when no texture, ground color setting
     repeat: [10, 10],     //texture repeat parameters
     active: {            //active ground cordon setting
         height: 0.5,    //cordon height

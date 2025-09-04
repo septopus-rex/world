@@ -256,8 +256,10 @@ const drawing={
             const radius=disBtoC(data.radius, rotation, scale, ratio, density);
 
             const zj=Math.PI*0.5;
-            const start= cfg.anticlock?-Math.PI*data.start/180-zj:Math.PI*data.start/180;
-            const end = cfg.anticlock?-Math.PI*data.end/180-zj:Math.PI*data.end/180;
+            //const start= cfg.anticlock?-Math.PI*data.start/180-zj:Math.PI*data.start/180;
+            //const end = cfg.anticlock?-Math.PI*data.end/180-zj:Math.PI*data.end/180;
+            const start= cfg.anticlock?-Math.PI*data.start/180:Math.PI*data.start/180;
+            const end = cfg.anticlock?-Math.PI*data.end/180:Math.PI*data.end/180;
 
             //1.Radial Gradient support
             if (cfg.grad) {
@@ -289,10 +291,39 @@ const drawing={
     },
     arc:{
         format:(raw)=>{
-
+            return {
+                radius:raw.radius,
+                center:raw.position,
+                start:raw.radian[0],
+                end:raw.radian[1],
+            };
         },
         drawing:(data,pen,env,cfg)=>{
             const {scale, offset, height, density, ratio } = env;
+            const pBtoC = self.calculate.point.b2c;
+            const disBtoC = self.calculate.distance.b2c;
+            const anClear = self.calculate.angle.clean;
+
+            const rotation=0;
+            const antiHeight = cfg.anticlock?height * ratio:0;
+
+            const center= pBtoC(data.center, scale, offset, density, antiHeight);            
+            const radius=disBtoC(data.radius, rotation, scale, ratio, density);
+
+            const zj=Math.PI*0.5;
+            const start= cfg.anticlock?-Math.PI*data.start/180:Math.PI*data.start/180;
+            const end = cfg.anticlock?-Math.PI*data.end/180:Math.PI*data.end/180;
+
+            //2. actual drawing of sector
+            pen.beginPath();
+            //pen.moveTo(center[0], center[1]);
+            if(cfg.anticlock){
+                pen.arc(center[0], center[1], radius,anClear(end), anClear(start));
+            }else{
+                pen.arc(center[0], center[1], radius,anClear(start), anClear(end));
+            }
+            //pen.closePath();
+            pen.stroke();
         },
         sample:{
             radius:600,             // sector radius
@@ -382,14 +413,12 @@ const TwoObject = {
         //console.log(env);
         for(let i=0;i<arr.length;i++){
             const row=arr[i];
-            //console.log(row);
+            
             //0. check data;
             if(!row.type || !drawing[row.type]){
                 errors.push({error:`Failed to drawing row[${i}]: ${JSON.stringify(row)}`});
                 continue;
             }
-
-            //console.log(`Type:${row.type}`,row.style);
 
             //1.if style, set it;
             if(row.style) self.setStyle(pen,row.style);
