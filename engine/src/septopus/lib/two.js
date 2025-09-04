@@ -164,7 +164,7 @@ const self = {
     },
 }
 
-const router={
+const drawing={
     line:{
         format:(raw)=>{
             const fmt={ points:[] };
@@ -243,7 +243,7 @@ const router={
             };
         },
         drawing:(data,pen,env,cfg)=>{
-            //console.log(data,cfg);
+            
             const {scale, offset, height, density, ratio } = env;
             const pBtoC = self.calculate.point.b2c;
             const disBtoC = self.calculate.distance.b2c;
@@ -273,7 +273,11 @@ const router={
             //2. actual drawing of sector
             pen.beginPath();
             pen.moveTo(center[0], center[1]);
-            pen.arc(center[0], center[1], radius,anClear(start), anClear(end));
+            if(cfg.anticlock){
+                pen.arc(center[0], center[1], radius,anClear(end), anClear(start));
+            }else{
+                pen.arc(center[0], center[1], radius,anClear(start), anClear(end));
+            }
             pen.closePath();
             pen.fill();
         },
@@ -364,12 +368,12 @@ const router={
 const TwoObject = {
     calculate: self.calculate,
     get: (type, raw ,style,cfg) => {
-        if(!router[type]) return {error:`Type "${type}" of 2D object is not support yet.`};
+        if(!drawing[type]) return {error:`Type "${type}" of 2D object is not support yet.`};
 
         const fmt={type:type,params:{}};
         if(style!==undefined) fmt.style = style;
         if(cfg!==undefined) fmt.more=cfg;
-        fmt.params=router[type].format(raw);
+        fmt.params=drawing[type].format(raw);
 
         return fmt;
     },
@@ -380,7 +384,7 @@ const TwoObject = {
             const row=arr[i];
             //console.log(row);
             //0. check data;
-            if(!row.type || !router[row.type]){
+            if(!row.type || !drawing[row.type]){
                 errors.push({error:`Failed to drawing row[${i}]: ${JSON.stringify(row)}`});
                 continue;
             }
@@ -391,7 +395,7 @@ const TwoObject = {
             if(row.style) self.setStyle(pen,row.style);
 
             if(row.style.fill) row.more.fill=true;
-            router[row.type].drawing(row.params,pen,env,row.more);
+            drawing[row.type].drawing(row.params,pen,env,row.more);
 
             //2. if style ,recover it;
             if(row.style) self.resetStyle(pen);

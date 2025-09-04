@@ -218,7 +218,7 @@ const self = {
         const anClear = TwoObject.calculate.angle.clean;
         const start = 180*(anClear(rz) - hf)/Math.PI;
         const end  = 180*(anClear(rz) + hf)/Math.PI;
-
+        console.log(`View:`,start,end);
         const radius=env.side[0];
         const params={
             radius:radius,
