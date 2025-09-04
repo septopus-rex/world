@@ -156,52 +156,6 @@ const self = {
     clean: () => {
         TwoObject.drawing.clean(env, config.background);
     },
-    grid: () => {
-        const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
-        const x = env.offset[0], y = env.offset[1], xw = env.size[0], yw = env.size[1];
-
-        const xs = x < 0 ? 0 : (x - x % s);
-        const ys = y < 0 ? 0 : (y - y % s);
-        const xe = x + xw > mx ? mx : x + xw;
-        const ye = y + yw > my ? my : y + yw;
-        const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);
-        const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);
-        const cfg = { width: 1, color: "#888888", anticlock: true }
-        const line = TwoObject.drawing.line;
-
-        let ystep = ys
-        for (let i = 0; i < yn; i++) {
-            const pa = [xs, ystep], pb = [xe, ystep];
-            line(env, [pa, pb], cfg);
-            ystep += s;
-        }
-
-        let xstep = xs
-        for (let i = 0; i < xn; i++) {//绘制竖线
-            const pa = [xstep, ys], pb = [xstep, ye];
-            line(env, [pa, pb], cfg);
-            xstep += s;
-        }
-    },
-    grid_new:()=>{
-        const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
-        const x = env.offset[0], y = env.offset[1], xw = env.size[0], yw = env.size[1];
-
-        const xs = x < 0 ? 0 : (x - x % s);
-        const ys = y < 0 ? 0 : (y - y % s);
-        const xe = x + xw > mx ? mx : x + xw;
-        const ye = y + yw > my ? my : y + yw;
-        const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);
-        const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);
-        const cfg = { width: 1, color: "#888888", anticlock: true };
-
-        // let ystep = ys
-        // for (let i = 0; i < yn; i++) {
-        //     const pa = [xs, ystep], pb = [xe, ystep];
-        //     line(env, [pa, pb], cfg);
-        //     ystep += s;
-        // }
-    },
     block: (x, y, cfg) => {
         //const wd=me.core.world,s=wd.sideLength,env=run[target];
         const s = env.side[0];
@@ -392,7 +346,8 @@ const self = {
                     };
                     const line_style={
                         width:3,
-                        color:0x000000,
+                        color:0xff0000,
+                        opacity:0.3,
                     };
                     const line_cfg={}
                     const line=get("line",line_params,line_style,line_cfg);
@@ -403,6 +358,47 @@ const self = {
             }
         }
         return ck && ck(errors);
+    },
+    grid:()=>{
+        const key="grid";
+        self.drawing.remove(key);
+
+        const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
+        const x = env.offset[0], y = env.offset[1], xw = env.size[0], yw = env.size[1];
+
+        const xs = x < 0 ? 0 : (x - x % s);
+        const ys = y < 0 ? 0 : (y - y % s);
+        const xe = x + xw > mx ? mx : x + xw;
+        const ye = y + yw > my ? my : y + yw;
+        const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);
+        const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);
+        //const cfg = { width: 1, color: "#888888", anticlock: true };
+
+        const get=TwoObject.get;
+        const lines=[];
+        const style={ width: 1, color: 0x888888};
+        const cfg={anticlock:true};
+
+        //1. get horizontal lines
+        let ystep = ys
+        for (let i = 0; i < yn; i++) {
+            const pa = [xs, ystep], pb = [xe, ystep];
+            const line = get("line",{from:pa,to:pb},style,cfg);
+            lines.push(line);
+            ystep += s;
+        }
+
+        //2. get vertical lines
+        let xstep = xs
+        for (let i = 0; i < xn; i++) {
+            const pa = [xstep, ys], pb = [xstep, ye];
+            const line = get("line",{from:pa,to:pb},style,cfg);
+            lines.push(line);
+            xstep += s;
+        }
+
+        //3. set to special
+        self.drawing.add(key,lines);
     },
 };
 
