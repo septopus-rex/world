@@ -41,7 +41,7 @@ const config = {
 
 const env = {
     pen: null,
-    scale: 15,          //scale, more big more details
+    scale: 45,          //scale, more big more details
     offset: [0, 0],     //offset of whole world
     size: [0, 0],       //canvas size as meter
     side: [0, 0],       //block side
@@ -198,14 +198,19 @@ const self = {
     },
     start: () => {
         const [x, y] = env.player.location.block;
+        //console.log(`player block:`,JSON.stringify([x, y]),env.scale,env.density);
+        
         const disCtoB = TwoObject.calculate.distance.c2b;
         const rotation = 0;
         const bx = disCtoB(env.width, rotation, env.scale, env.ratio, env.density);
         const by = disCtoB(env.height, rotation, env.scale, env.ratio, env.density);
         const ax = (x - 0.5) * env.side[0];
         const ay = (y - 0.5) * env.side[1];
+        //console.log(`container size:`,JSON.stringify([env.width, env.height]));
+        //console.log(`more:`,JSON.stringify([ax,ay]));
         env.offset = self.offset(ax, ay, bx, by);
         env.size = [bx, by];
+        //console.log(`start offset:`,JSON.stringify(env.offset));
         return true;
     },
     clean: () => {
@@ -597,7 +602,6 @@ const renderer = {
             const side = VBW.cache.get(["env", "world", "side"]);
 
             env.convert = cvt;
-            //env.side = [side[0]/cvt, side[1]/cvt];
             env.side = [side[0], side[1]];
 
             self.construct(dom_id);

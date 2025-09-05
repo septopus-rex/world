@@ -116,13 +116,13 @@ const self={
 
         value.second=diff;
     },
-}
+};
 
 const vbw_time={
     hooks:self.hooks,
     calc:(data)=>{
-        if(def===null) self.setDef(); 
-        //console.log(data,def);
+        if(def===null) self.setDef();
+
         if(data.network!==config.network) return false;
         if(!data.height) return false;
 

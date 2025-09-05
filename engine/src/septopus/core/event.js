@@ -46,6 +46,10 @@ const events={
         rain:{},
         snow:{},
     },
+    datasource:{
+        request:{},
+        update:{},
+    },
     sky:{
         change:{},
     },
