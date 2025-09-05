@@ -87,15 +87,16 @@
   right: 1.5rem;
   height:22rem;
   width: 1.7rem;
-  background-color: #8798b0;
+  background-color: #b2c2d8;
   text-align: center;
   border-radius: 0.5rem;
-  opacity: 0.6;
+  opacity: 0.3;
   display: none;
 }
 
 .zoom:hover{
-  background-color: #29313d;
+  background-color: #515f72;
+  opacity: 1;
 }
 
 .zoom_top{
@@ -142,6 +143,7 @@
   scale: 2.2;
   box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); 
+  opacity: 1;
 }
 
 .form{

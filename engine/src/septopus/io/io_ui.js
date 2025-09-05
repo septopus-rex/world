@@ -171,10 +171,13 @@ const self={
                     }
                 }
 
-                self.hide("pop");
-                self.hide("menu");
+                self.hideActive();
             });
         }
+    },
+    hideActive:()=>{
+        self.hide("pop");
+        self.hide("menu");
     },
     getForm:(arr)=>{
         let ctx='<div>';
@@ -415,6 +418,9 @@ const router={
             if(doms.dialog.events.close) doms.dialog.events.close(ev);
             for(let k in doms.dialog.events)doms.dialog.events[k]=null;  //binding recover
         });
+        
+        //5. hide active UI components.
+        self.hideActive();
     },
     toast:(ctx,cfg)=>{
         const msg=`[UI.toast]:`+ctx;

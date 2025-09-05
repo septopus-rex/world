@@ -136,6 +136,22 @@ const buttons = {
         }
     },
 
+    system: {
+        label: "System", icon: "", action: async () => {
+            Pages.system();
+        }
+    },
+    setting: {
+        label: "Setting", icon: "", action: async () => {
+            Pages.setting();
+        }
+    },
+    world: {
+        label: "World", icon: "", action: async () => {
+            Pages.world();
+        }
+    },
+
     game: {
         label: "Game", icon: "", action: async () => {
             const dom_id = VBW.cache.get(["active", "current"]);
@@ -156,7 +172,7 @@ const buttons = {
             },cfg);
         }
     },
-    world: {
+    demo: {
         label: "World", icon: "", action: () => {
             const inputs = [
                 {

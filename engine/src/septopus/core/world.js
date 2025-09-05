@@ -378,13 +378,15 @@ const self = {
 
         const buttons = actions.buttons;
         const arr = [
-                buttons.news,
-                buttons.manual,
-                buttons.buy,
-                buttons.edit,
-                buttons.normal,
-                buttons.mint,
+                // buttons.news,
+                // buttons.manual,
                 buttons.world,
+                buttons.system,
+                buttons.setting,
+                // buttons.buy,
+                // buttons.edit,
+                // buttons.normal,
+                // buttons.mint,
                 buttons.stop,
                 buttons.start,
                 buttons.clean,

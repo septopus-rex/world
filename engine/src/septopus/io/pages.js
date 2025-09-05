@@ -28,7 +28,19 @@ const config = {
     manual:{
         container: "man_container",
         title: "man_title",
-    }
+    },
+    system:{
+        container: "sys_container",
+        title: "sys_title",
+    },
+    world:{
+        container: "wd_container",
+        title: "wd_title",
+    },
+    setting:{
+        container: "setting_container",
+        title: "setting_title",
+    },
 }
 
 const self={
@@ -67,6 +79,7 @@ const self={
 
 
 const Pages = {
+    //2D map
     map: () => {
         const container_id = config.map.container;
         const title_id = config.map.title;
@@ -90,6 +103,7 @@ const Pages = {
         };
         UI.show("dialog", ctx, cfg);
     },
+    //User details
     card: () => {
         const container_id = config.card.container;
         const title_id = config.card.title;
@@ -113,6 +127,7 @@ const Pages = {
         };
         UI.show("dialog", ctx, cfg);
     },
+    //news page of Septopus World
     news:()=>{
         const container_id = config.news.container;
         const title_id = config.news.title;
@@ -137,6 +152,7 @@ const Pages = {
         };
         UI.show("dialog", ctx, cfg);
     },
+    //manual page to help player understand the conception of Septopus World
     manual:()=>{
         const container_id = config.manual.container;
         const title_id = config.manual.title;
@@ -159,9 +175,74 @@ const Pages = {
         };
         UI.show("dialog", ctx, cfg);
     },
+    //system information, such as time, weather ...
+    system:()=>{
+        const container_id = config.system.container;
+        const title_id = config.system.title;
+        const ctx = {
+            title: `<div id="${title_id}">System Details</div>`,
+            content: `<div class="map" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`System page closed.`);
+                },
+                show:()=>{
+                    console.log(`Get system details.`);
+                },
+            },
+            auto: () => {
 
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    },
+    //world details, about the size, limit, owner, adjunts ...
     world:()=>{
+        const container_id = config.world.container;
+        const title_id = config.world.title;
+        const ctx = {
+            title: `<div id="${title_id}">World Details</div>`,
+            content: `<div class="map" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`World page closed.`);
+                },
+                show:()=>{
+                    console.log(`Get world details.`);
+                },
+            },
+            auto: () => {
 
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    },
+    //setting page
+    setting:()=>{
+        const container_id = config.system.container;
+        const title_id = config.system.title;
+        const ctx = {
+            title: `<div id="${title_id}">System Setting</div>`,
+            content: `<div class="map" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`Setting page closed.`);
+                },
+                show:()=>{
+                    console.log(`Get setting details.`);
+                },
+            },
+            auto: () => {
+
+            },
+        };
+        UI.show("dialog", ctx, cfg);
     },
 }
 

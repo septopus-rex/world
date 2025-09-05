@@ -40,6 +40,26 @@ const events={
         restart:{},
         update:{},
     },
+    weather:{
+        change:{},
+        cloud:{},
+        rain:{},
+        snow:{},
+    },
+    sky:{
+        change:{},
+    },
+    bag:{
+        change:{},
+    },
+    time:{
+        change:{},
+        newyear:{},
+        newmonth:{},
+        newday:{},
+        newhour:{},
+        newminitue:{},
+    },
     player:{
         fall:{},
         death:{},

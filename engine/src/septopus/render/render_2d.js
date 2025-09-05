@@ -285,6 +285,7 @@ const self = {
         self.clean();               //clean canvas;
         self.grid();                //drawing block grid;
         self.active();              //fill active block;
+        self.ax();                  //XY ax;
         self.avatar();              //drawing player;
         self.special();             //drawing sepcial object;
     },
@@ -493,6 +494,9 @@ const self = {
         //3. set to special
         self.drawing.add(key, lines);
         self.drawing.add("tag", tags);
+    },
+    ax:()=>{
+
     },
 };
 
