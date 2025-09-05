@@ -152,8 +152,8 @@ const self = {
 
     setStyle:(pen,style)=>{
         if(style.width) pen.lineWidth = style.width;
-        if(style.color) pen.strokeStyle =  `#${style.color.toString(16)}`;
-        if(style.fill) pen.fillStyle = `#${style.fill.toString(16)}`;
+        if(style.color) pen.strokeStyle =  `#${style.color.toString(16).padStart(6,'0')}`;
+        if(style.fill) pen.fillStyle = `#${style.fill.toString(16).padStart(6,'0')}`;
         if(style.opacity) pen.globalAlpha = style.opacity;
     },
     resetStyle:(pen)=>{
@@ -267,7 +267,7 @@ const drawing={
                 grd = pen.createRadialGradient(center[0], center[1], 1, center[0], center[1], radius);
                 for (let i in cfg.grad) {
                     const stop = cfg.grad[i];
-                    grd.addColorStop(stop[0],`#${stop[1].toString(16)}`);
+                    grd.addColorStop(stop[0],`#${stop[1].toString(16).padStart(6,'0')}`);
                 }
                 pen.fillStyle =grd;
             }
@@ -345,8 +345,6 @@ const drawing={
             const pBtoC = self.calculate.point.b2c;
             const disBtoC = self.calculate.distance.b2c;
 
-            // const left=10;
-            // const top=50;
             const antiHeight = cfg.anticlock?height * ratio:0;
             const pos= pBtoC(data.position, scale, offset, density, antiHeight);   
             const [left,top]=pos;
