@@ -61,10 +61,7 @@ const self={
         const value=VBW.cache.get(config.mount);
         if(value.error) return false;
 
-        //console.log(JSON.stringify(value));
-
         value.height=height;
-
         let diff=(height-def.start)*interval*def.speed;
         if(diff >= def.year){
             value.year=Math.floor(diff/def.year);
@@ -78,7 +75,6 @@ const self={
             }
         }
         
-
         if(diff >= def.month){
             value.month=Math.floor(diff/def.month);
             diff=diff%def.month;
@@ -127,6 +123,14 @@ const vbw_time={
         if(!data.height) return false;
 
         self.convert(data.height,data.interval);
+
+        //test code
+        const evt={
+            from:"time",
+            stamp:Toolbox.stamp(),
+        }
+        //console.log(`Trigger weather`);
+        VBW.event.trigger("time","change",evt);
     },
 }
 

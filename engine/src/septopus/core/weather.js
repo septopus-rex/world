@@ -8,6 +8,7 @@
  * @date 2025-04-25
  */
 
+import Toolbox from "../lib/toolbox";
 import VBW from "./framework";
 
 const reg={
@@ -50,6 +51,8 @@ const self={
     },
 
     convert:(hash)=>{
+        console.log(`Weather`,hash);
+
         const cat=self.getValue(hash,def.data.category[0],def.data.category[1]);
         const grade=self.getValue(hash,def.data.grade[0],def.data.grade[1]);
         const cat_index=cat%def.category.length;
@@ -59,6 +62,7 @@ const self={
         value.hash=hash;
         value.category=cat_index;
         value.grade=grade%def.detail[cat_name].length;
+
     },
     setWeather:()=>{
 
@@ -68,7 +72,7 @@ const self={
 const vbw_weather={
     hooks:self.hooks,
     calc:(data)=>{
-
+        //console.log(data);
         if(data.network!==config.network) return false;
         if(!data.hash) return false;
         if(def===null){
@@ -82,6 +86,14 @@ const vbw_weather={
         }else{
             counter+=60;
         }
+
+        //test code
+        const evt={
+            from:"weather",
+            stamp:Toolbox.stamp(),
+        }
+        //console.log(`Trigger weather`);
+        VBW.event.trigger("weather","change",evt);
     },
 
     //task for trigger

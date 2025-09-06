@@ -193,7 +193,16 @@ const Pages = {
                 },
             },
             auto: () => {
+                console.log(`Get system details.`);
+                const fun_name=VBW.event.on("weather","change",(ev)=>{
+                    console.log(ev);
+                });
+                //console.log(fun_name);
 
+                const time_name=VBW.event.on("time","change",(ev)=>{
+                    console.log(ev);
+                });
+                //console.log(time_name);
             },
         };
         UI.show("dialog", ctx, cfg);

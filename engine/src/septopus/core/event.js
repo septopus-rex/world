@@ -150,7 +150,7 @@ const self={
         const len=!n?12:n;
         let hash = 'event_';
         const hexChars = '0123456789abcdef';
-        for (let i = 0; i < n; i++) {
+        for (let i = 0; i < len; i++) {
             hash += hexChars[Math.floor(Math.random() * 16)];
         }
         return hash;
@@ -190,7 +190,7 @@ const vbw_event = {
         if(obj===undefined){
             const name=self.randomName();
             events[cat][event][name]=fun;
-            return true;
+            return name;
         }else{
             const name=self.getNameByObj(obj);
             if(name.error) return name;
@@ -220,8 +220,8 @@ const vbw_event = {
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
 
-        // if(cat==="block" && event==="loaded"){
-        //     console.log(param, obj,Toolbox.stamp());
+        // if(cat==="weather" && event==="change"){
+        //     console.log(events);
         // }
 
         if(obj===undefined){
