@@ -20,6 +20,7 @@ import Pages from "../io/pages";
 const reg = {
     name: "player",
     category: 'system',
+    events:["fall","death","start","hold","rotate"],
 }
 
 const config = {

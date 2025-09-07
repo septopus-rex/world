@@ -14,6 +14,7 @@ import VBW from "./framework";
 const reg={
     name:"weather",
     category:'system',
+    events:["change"],
 }
 
 const config={

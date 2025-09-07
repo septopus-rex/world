@@ -468,7 +468,7 @@ const self = {
             const params = {
                 text: Math.floor(ystep / s),
                 size: tag_height,                        //mm
-                position: [xs + s + 1000, ystep - s * 0.3],
+                position: [xs + s + 1000, ystep - s * 0.5],
             };
             const tag = TwoObject.get("text", params, y_style, cfg);
             tags.push(tag);
@@ -488,7 +488,7 @@ const self = {
             const params = {
                 text: Math.floor(xstep / s),
                 size: tag_height,                        //mm
-                position: [xstep - 0.7*s,  ys + s +  tag_height * 0.25 ],
+                position: [xstep - 0.66*s,  ys + s +  tag_height * 0.25 ],
             };
             const tag = TwoObject.get("text", params, x_style, cfg);
             tags.push(tag);
