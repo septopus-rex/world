@@ -15,6 +15,7 @@
  */
 
 import Toolbox from "../lib/toolbox";
+import Event from "./event";
 
 const cache = {};       //global cache
 const config = {
@@ -106,9 +107,17 @@ const self = {
 
             cache.component[cfg.name] = cfg;
 
-            //2.attatch component functions to root
+            //1.attatch component functions to root
             if (Framework[cfg.name] !== undefined) return { error: `Invalid name "${cfg.name}" to add to framework.` };
             Framework[cfg.name] = component;
+
+            //2. register events;
+            if(cfg.events){
+                console.log(`Component ${cfg.name}`, cfg.events);
+                if(cfg.type!=="datasource"){
+                    Event.reg(cfg.name,cfg.events);
+                }
+            }
 
             //3.filter out datasource API
             if(cfg.type==="datasource"){

@@ -14,6 +14,7 @@ const reg={
     category:'basic',
     desc:"Load 3D module to locate on block",
     version:"1.0.0",
+    events:["parsed","failed"],
 }
 
 const config={

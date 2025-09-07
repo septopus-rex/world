@@ -40,67 +40,10 @@ const events={
         restart:{},
         update:{},
     },
-    weather:{
-        change:{},
-        cloud:{},
-        rain:{},
-        snow:{},
-    },
     datasource:{
         request:{},
         update:{},
     },
-    sky:{
-        change:{},
-    },
-    bag:{
-        change:{},
-    },
-    time:{
-        change:{},
-        newyear:{},
-        newmonth:{},
-        newday:{},
-        newhour:{},
-        newminitue:{},
-    },
-    player:{
-        fall:{},
-        death:{},
-        start:{},
-        hold:{},       //player stop moving
-        rotate:{},     //player head rotate
-    },
-    block:{
-        in:{},
-        out:{},
-        hold:{},
-        stop:{},
-        loaded:{},
-        cross:{},
-    },
-    adjunct:{
-        in:{},
-        out:{},
-        hold:{},
-        touch:{},
-    },
-    stop:{
-        on:{},
-        leave:{},
-        beside:{},
-        under:{},
-    },
-    trigger:{           //trigger events
-        in:{},
-        out:{},
-        hold:{},
-        touch:{},
-    },
-    module:{
-        parsed:{},
-        failed:{},
-    }
 }
 
 const runtime={
@@ -159,6 +102,14 @@ const self={
 
 const vbw_event = {
     hooks: self.hooks,
+
+    reg:(cat,list)=>{
+        if(!events[cat]) events[cat]={};
+        for(let i=0;i<list.length;i++){
+            const evt=list[i];
+            events[cat][evt]={};
+        }
+    },
 
     dump:()=>{
         console.log(events);

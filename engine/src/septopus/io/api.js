@@ -21,6 +21,8 @@ import mock from "./mock";
 const reg = {
     name: "api",
     type: 'datasource',     //set API as datasource entry
+    version:"1.0.0",
+    events:["request","update"],
 }
 
 const config={

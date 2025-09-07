@@ -16,7 +16,7 @@ const reg={
     name:"time",
     category:'system',
     version:"1.0.0",
-    events:["change"],
+    events:["change","newyear","newmonth","newday","newhour","newminitue"],
 }
 
 const config={

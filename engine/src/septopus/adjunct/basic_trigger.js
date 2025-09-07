@@ -28,6 +28,7 @@ const reg={
     category:"basic",
     desc:"Trigger of engine, for building games.",
     version:"1.0.0",
+    events:["in","out","hold","touch"],
 };
 
 const events={

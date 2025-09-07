@@ -9,14 +9,12 @@
  * @date 2025-04-23
  */
 
-import Toolbox from "../lib/toolbox";
-import Calc from "../lib/calc";
-
 const reg = {
     name: "stop",
     category: "basic",
     desc: "Special component to avoid move forward.",
     version: "1.0.0",
+    events:["on","leave","beside","under"],
 }
 
 const config = {

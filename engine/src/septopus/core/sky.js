@@ -9,6 +9,7 @@
  */
 
 import VBW from "../core/framework";
+import Toolbox from "../lib/toolbox";
 
 const reg={
     name:"sky",
