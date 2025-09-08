@@ -98,17 +98,20 @@ const self={
 
             const effect=cfg.effect-1;
             if(effect<0) return false;
+            
             if(config.animate[effect]===undefined) return false;
             const param=config.animate[effect];
             //console.log(definition);
             switch (effect) {
                 case 0:
+
                     for(let i=0;i<meshes.length;i++){
                         const mesh=meshes[i];
                         mesh.rotation.x+=0.1;
                         mesh.rotation.y+=0.1;
                         mesh.rotation.z+=0.1;
                     }
+
                     break;
                 
                 case 1:

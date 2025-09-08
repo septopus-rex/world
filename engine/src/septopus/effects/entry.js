@@ -49,11 +49,11 @@ const router={
     },
     mesh:{
         rotate:Rotate,
-        breath:Breath,
         drop:Drop,
         shake:Shake,
+        breath:Breath,
+        ticker:Ticker,
         texture:Texture,
-        ticker:Ticker
     },
 };
 

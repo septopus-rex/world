@@ -41,6 +41,11 @@ const mock = {
                     "MODE_GHOST":4,                 //anonymous player, no trig
                     "INDEX_OF_RAW_ON_CHAIN_DATA":1, //block raw data index on chain
                     "VERSION_DEFAULT":2025,         //default version
+                    "EFFECTS_MOVING":0,         //effects.moving
+                    "EFFECTS_ROTATE":1,         //effects.rotate
+                    "EFFECTS_SCALE":2,          //effects.scale
+                    "EFFECTS_TEXTURE":3,        //effects.texture
+                    "EFFECTS_CUSTOMIZE":4,        //effects.customize, by adjunct,
                 },
                 source: "SOLANA_PDA_ACCOUNT_OF_WORLD_COMMON",
                 owner: "",
