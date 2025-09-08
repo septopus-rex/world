@@ -12,7 +12,7 @@
         {
             type: definition.EFFECTS_MOVING,        //[EFFECTS_MOVING,]
             param:{
-                ax:"x"
+                ax:"x",
                 way:definition.MOVING_DELTA,        //
                 value:[10,20],                      //when array, random | function to calculate
             },
