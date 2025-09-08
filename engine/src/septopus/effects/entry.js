@@ -12,11 +12,9 @@ import Fall from "./camera/fall";
 import Linger from "./camera/linger";
 import Lightning from "./scene/lightning";
 import Rotate from "./mesh/rotate";
-import Breath from "./mesh/breath";
-import Drop from "./mesh/drop";
-import Shake from "./mesh/shake";
+import Moving from "./mesh/moving";
+import Scale from "./mesh/scale";
 import Texture from "./mesh/texture";
-import Ticker from "./mesh/ticker";
 
 const reg={
     name:"effects",
@@ -49,10 +47,8 @@ const router={
     },
     mesh:{
         rotate:Rotate,
-        drop:Drop,
-        shake:Shake,
-        breath:Breath,
-        ticker:Ticker,
+        moving:Moving,
+        scale:Scale,
         texture:Texture,
     },
 };

@@ -14,6 +14,7 @@ const reg={
     category:'basic',         
     desc:"",
     version:"1.0.0",
+    events:[],
 }
 
 const config={
