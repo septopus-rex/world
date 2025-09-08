@@ -11,13 +11,32 @@
 import Fall from "./camera/fall";
 import Linger from "./camera/linger";
 import Lightning from "./scene/lightning";
+import Rotate from "./mesh/rotate";
+import Breath from "./mesh/breath";
+import Drop from "./mesh/drop";
+import Shake from "./mesh/shake";
+import Texture from "./mesh/texture";
+import Ticker from "./mesh/ticker";
 
-// let camera=null;
-// let scene=null;
+const reg={
+    name:"effects",
+    category:'lib',         
+    desc:"",
+    version:"1.0.0",
+    events:["start"],
+}
 
 const active={
     camera:null,
     scene:null
+}
+
+const self={
+    hooks:{
+        reg:()=>{
+            return reg;
+        },
+    },
 }
 
 const router={
@@ -28,10 +47,19 @@ const router={
     scene:{
         lightning:Lightning,
     },
+    mesh:{
+        rotate:Rotate,
+        breath:Breath,
+        drop:Drop,
+        shake:Shake,
+        texture:Texture,
+        ticker:Ticker
+    },
 };
 
 
-const Effects = {
+const vbw_effects = {
+    hooks:self.hooks,
     /** 
      * set camera for effects
      * @functions
@@ -52,7 +80,7 @@ const Effects = {
      * @functions
      * 1.create 3D objects
      * 2.change the coordination system from three.js to Septopus world
-     * @param   {string}    cat      - category of effect, ["camera","scene"]
+     * @param   {string}    cat      - category of effect, ["camera","scene","mesh"]
      * @param   {string}    type     - type of effect
      * @param   {object}    params   - parameters for effect
      * @param   {function}  ck       - callback function when effect done
@@ -80,4 +108,4 @@ const Effects = {
     },
 }
 
-export default Effects;
+export default vbw_effects;

@@ -13,7 +13,7 @@
 import Toolbox from "../lib/toolbox";
 import VBW from "./framework";
 import UI from "../io/io_ui";
-import Effects from "../effects/entry";
+//import Effects from "../effects/entry";
 import Actions from "../io/actions";
 import Pages from "../io/pages";
 
@@ -351,7 +351,7 @@ const vbw_player = {
             const camera=VBW.cache.get(["active", "containers", dom_id, "camera"]);
             const scene=VBW.cache.get(["active", "containers", dom_id, "scene"]);
             env.camera[dom_id] = camera;
-            Effects.set(camera,scene);
+            VBW.effects.set(camera,scene);
         }
 
         //4. player event
@@ -359,7 +359,7 @@ const vbw_player = {
             if(env.lock) return false;
             env.lock=true;      //set to lock movement;
             const cfg={height:ev.fall,convert:self.getConvert()};
-            Effects.get("camera","fall",cfg,()=>{
+            VBW.effects.get("camera","fall",cfg,()=>{
                 env.lock=false;
             });
         });
@@ -367,7 +367,7 @@ const vbw_player = {
         VBW.event.on("player","death",(ev)=>{
             env.lock=true;      //set to lock movement;
             const cfg={height:ev.fall,convert:self.getConvert(),skip:true};
-            Effects.get("camera","fall",cfg,()=>{
+            VBW.effects.get("camera","fall",cfg,()=>{
                 UI.show("countdown", 10, {callback:()=>{
                     env.lock=false;
                 }});

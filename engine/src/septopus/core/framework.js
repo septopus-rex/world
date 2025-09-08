@@ -113,7 +113,7 @@ const self = {
 
             //2. register events;
             if(cfg.events){
-                console.log(`Component ${cfg.name}`, cfg.events);
+                //console.log(`Component ${cfg.name}`, cfg.events);
                 if(cfg.type!=="datasource"){
                     Event.reg(cfg.name,cfg.events);
                 }

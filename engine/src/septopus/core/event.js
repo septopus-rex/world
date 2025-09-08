@@ -33,16 +33,18 @@ const config={
 
 //saving all bind functions, run when trigger
 const events={
-    system:{            //system events
+    system:{            //system default events
         init:{},
         launch:{},
         off:{},
         restart:{},
         update:{},
     },
-    datasource:{
+    datasource:{        //datasource default events
         request:{},
         update:{},
+        blocked:{},     //block when in GAME mode
+        recover:{},     //recover when out of GAME mode
     },
 }
 

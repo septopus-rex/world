@@ -27,6 +27,11 @@ const config={
         {way:"rotate",param:{speed:0.2,ax:"x"}},
         {way:"rotateZ",param:{speed:0.2,ax:"x"}},
         {way:"rotateX",param:{speed:0.2,ax:"x"}},
+        {way:"breath",param:{}},
+        {way:"texture",param:{}},
+        {way:"shake",param:{}},
+        {way:"fall",param:{}},
+        {way:"ticker",param:{}},
     ],
 }
 
@@ -90,12 +95,12 @@ const self={
         },
         //`cfg` to support more complex animation
         animate:(meshes,cfg)=>{
-            //console.log(cfg);
+
             const effect=cfg.effect-1;
             if(effect<0) return false;
             if(config.animate[effect]===undefined) return false;
             const param=config.animate[effect];
-
+            //console.log(definition);
             switch (effect) {
                 case 0:
                     for(let i=0;i<meshes.length;i++){
