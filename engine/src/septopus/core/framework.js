@@ -809,7 +809,8 @@ const Framework = {
             const key = `${row.x}_${row.y}_${name}_${row.index}`;
             if (map[key] === undefined) continue;
 
-            Framework[name].hooks.animate(map[key],row);
+            const effects = Framework[name].hooks.animate(map[key],row);
+            if(i===0)console.log(JSON.stringify(row));
         }
 
         //4.frame synchronization queue
