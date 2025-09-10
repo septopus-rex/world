@@ -8,29 +8,6 @@
   
 ## 基础动画
 
-* `基础动画`由以下几种构成，供系统组件来实现复杂的效果。
-  
-|  动画名称   | 效果描述  | 实现方法  |
-|  ----  | ----  | ----  |
-|  位移(move)  |  3D物体在XYZ轴上移动位置 | 设置mesh的位置XYZ坐标 |
-|  旋转(rotate) | 3D物体在XYZ轴上旋转角度  | 设置mesh的XYZ旋转值 |
-|  缩放(scale)  | 3D物体在XYZ轴上按比例缩放  | 设置mesh的XYZ缩放值  |
-|  材质(texture)  | 3D物体材质切换  | 更新mesh材质对象，使用指定的texture |
-|  色彩(color)  | 3D物体色彩切换  | 更新mesh的材质对象 |
-
-* `基础动画`的值设置方式，由`mode`和`value`的值来进行处理，满足复杂的动画效果。当`value`为`function`时，使用计算返回的数据的类型来处理。
-  
-|  mode取值   | value类型  | 实现方法  |
-|  ----  | ----  | ----  |
-|  add  |  number | 将值加到对应的位置 |
-|  set | number  | 将值加到对应的位置 |
-|    | number[start,end]  | 数组长度为2的时候，为[start,end]形式，在动画时间内，随机设置其中的一个值 |
-|    | number[]  | 在动画时间内，顺序设置对应的值 |
-|  multi  | number  | 将值乘对应的位置  |
-|    | number[]  | 在动画时间内，将值乘对应的位置 |
-|  random  | number[start,end]  | 数组长度为2的时候，为[start,end]形式，随机选取其中的一个值 |
-|    | number[]  | 在动画时间内，随机设置 |
-
 * 动画的数据结构如下：
 
 ```Javascript
@@ -52,7 +29,7 @@
         "type": "rotate",         //基础动画方式，["move","rotate","scale","texture","color"]中的一种
         "axis": "Y",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
         "mode": "add",            //数值设置方式，["add","set","multi"]中的一种
-        "value": 0.2              //设置的值               
+        "value": 0.2              //设置的值             
       },
       {
         "time": 2000,             //动画开始的时间，格式为"start"或"[start,end]"
@@ -105,14 +82,57 @@
   }
 ```
 
-### 位移
+### 基础键值设置
 
-### 旋转
+|  键值   | 类型  | 作用  |
+|  ----  | ----  | ----  |
+|  name  |  string | 动画的名称 |
+|  target | object  | 动画的执行对象 |
+|  duration  | number  | 动画的时长  |
+|  loops  | number  | 全局控制整个动画的重复次数 |
+|  timeline  | object[] | 动画执行的动作列表 |
 
-### 缩放
+### `timeline`元素设置
 
-### 贴图
+* `time`的值处理，有两种类型
 
-### 色彩
+|  数据类型   | 执行结果  | 说明  |
+|  ----  | ----  | ----  |
+|  number  |  [start,animation.duration] | 动画开始的时间点 |
+|  [number,number]  |  [start,end] | 动画执行的时段 |
 
-### 自定义动画
+* `type`的值设置及作用
+  
+|  动画名称   | 效果描述  | 实现方法  |
+|  ----  | ----  | ----  |
+|  位移(move)  |  3D物体在XYZ轴上移动位置 | 设置mesh的位置XYZ坐标 |
+|  旋转(rotate) | 3D物体在XYZ轴上旋转角度  | 设置mesh的XYZ旋转值 |
+|  缩放(scale)  | 3D物体在XYZ轴上按比例缩放  | 设置mesh的XYZ缩放值  |
+|  材质(texture)  | 3D物体材质切换  | 更新mesh材质对象，使用指定的texture |
+|  色彩(color)  | 3D物体色彩切换  | 更新mesh的材质对象 |
+
+* `mode`和`value`的值处理，满足复杂的动画效果。当`value`为`function`时，使用计算返回的数据的类型来处理。
+  
+|  mode取值   | value类型  | 实现方法  |
+|  ----  | ----  | ----  |
+|  add  |  number | 将值加到对应的位置 |
+|  set | number  | 将值加到对应的位置 |
+|    | number[start,end]  | 数组长度为2的时候，为[start,end]形式，在动画时间内，随机设置其中的一个值 |
+|    | number[]  | 在动画时间内，顺序设置对应的值 |
+|  multi  | number  | 将值乘对应的位置  |
+|    | number[]  | 在动画时间内，将值乘对应的位置 |
+|  random  | number[start,end]  | 数组长度为2的时候，为[start,end]形式，随机选取其中的一个值 |
+|    | number[]  | 在动画时间内，随机设置 |
+
+* `repeat`的值处理。在时间段内，该动画切换的频率，即被执行的次数，为局部循环。
+
+|  值   | 执行结果  |
+|  ----  | ----  |
+|  不设置  |  每帧都执行值设置 |
+|  number  |  在`time`设置的时间段内，做插值频率计算，在时间点上进行值设置 |
+
+* `bias`的值处理。只在`rotate`和`scale`时候发挥作用，用于实现偏心旋转和偏心缩放。
+  
+## 自定义动画
+
+* 用户自定义的动画方法，也需要使用统一的逻辑来进行处理。
