@@ -13,7 +13,7 @@
 ```Javascript
   //返回的动画对象，可以使用function作为值返回
   {
-    "name": "TwinkleAndRotate",   //动画的名称，用来简单描述动画效果
+    "name": "AnimationName",      //动画的名称，用来简单描述动画效果
     "target":{                    //动画执行的目标
       "x": 2025,
       "y": 667,
@@ -26,14 +26,14 @@
     "timeline": [                 //动画的实现，在时间线上的分布
       {
         "time": 0,                //动画开始的时间，格式为"start"或"[start,end]"
-        "type": "rotate",         //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "type": "rotate",         //基础动画方式
         "axis": "Y",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
         "mode": "add",            //数值设置方式，["add","set","multi"]中的一种
         "value": 0.2              //设置的值             
       },
       {
         "time": 2000,             //动画开始的时间，格式为"start"或"[start,end]"
-        "type": "rotate",         //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "type": "rotate",         //基础动画方式
         "mode": "set",            //数值设置方式，["add","set","multi","random"]中的一种
         "axis": "X",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
         "value":(now,duration,axis)=>{    //可以返回数组，和mode配合使用
@@ -42,7 +42,7 @@
       },
       {
         "time": 500,              //动画开始的时间，格式为"start"或"[start,end]"
-        "type": "scale",          //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "type": "scale",          //基础动画方式
         "mode": "multi",          //数值设置方式，["add","set","multi","random"]中的一种
         "axis": "XYZ",            //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
         "repeat": 3,              //值切换的速度，默认为1，在动画期间，切换多少次的值
@@ -50,7 +50,7 @@
       },
       {
         "time": [1000,1200],      //动画开始的时间，格式为"start"或"[start,end]"
-        "type": "move",           //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "type": "move",           //基础动画方式
         "mode": "set",            //数值设置方式，["add","set","multi","random"]中的一种
         "axis": "Y",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
         "repeat": 6,              //值切换的速度，默认为1，在动画期间，切换多少次的值
@@ -58,7 +58,7 @@
       },
       {
         "time": [1200,1800],      //动画开始的时间，格式为"start"或"[start,end]"
-        "type": "move",           //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "type": "move",           //基础动画方式
         "mode": "random",         //数值设置方式，["add","set","multi","random"]中的一种
         "axis": "Y",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
         "repeat": 2,              //值切换的速度，默认为1，在动画期间，切换多少次的值
@@ -66,17 +66,23 @@
       },
       {
         "time": [500,1000],       //动画开始的时间，格式为"start"或"[start,end]"
-        "type": "texture",        //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "type": "texture",        //基础动画方式
         "mode": "random",         //数值设置方式，["add","set","multi","random"]中的一种    
         "repeat": 2,              //值切换的速度，默认为1，在动画期间，切换多少次的值
         "value": [12,22,33,44],   //值选取方式，为需要使用的texture的ID值列表
       },
       {
         "time": [1500,2000],      //动画开始的时间，格式为"start"或"[start,end]"
-        "type": "color",          //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "type": "color",          //基础动画方式
         "mode": "set",            //数值设置方式，["add","set","multi","random"]中的一种    
         "repeat": 1,              //值切换的速度，默认为1，在动画期间，切换多少次的值
         "value": [0x3fff2,0x67fa32,0x34ffa4],      //当mode为set时，顺序执行
+      },
+      {
+        "time": [1900,2000],      //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "opacity",        //基础动画方式
+        "mode": "add",            //数值设置方式，["add","set","multi","random"]中的一种 
+        "value": -0.01,           //当mode为set时，顺序执行
       },
     ]
   }
@@ -110,6 +116,9 @@
 |  缩放(scale)  | 3D物体在XYZ轴上按比例缩放  | 设置mesh的XYZ缩放值  |
 |  材质(texture)  | 3D物体材质切换  | 更新mesh材质对象，使用指定的texture |
 |  色彩(color)  | 3D物体色彩切换  | 更新mesh的材质对象 |
+|  透明(opacity)  | 3D物体的透明度 | 更新mesh的透明度 |
+|  路径(path)  | 3D物体按照路径移动 | 设置mesh的位置 |
+|  形变(morph)  | 3D物体切换 | 切换3D的mesh |
 
 * `mode`和`value`的值处理，满足复杂的动画效果。当`value`为`function`时，使用计算返回的数据的类型来处理。
   
