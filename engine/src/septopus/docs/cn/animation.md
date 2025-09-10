@@ -1,24 +1,109 @@
 # 动画效果
 
-* Septopus支持统一的`基础动画`，以便于`Adjunct`的开发，减少动画处理代码。
-* 所有的动画，由`基础动画`复合而成，`Adjunct`传递回复合动画的参数，供framework统一处理。
-
+* Septopus支持统一的`基础动画`，以便于`附属物`的开发，减少动画处理代码。
+* Septopus支持扩展的`自定义`动画，由`附属物`来实现效果，返回动画实现的方法。
+* 所有的动画，由`基础动画`复合而成，`附属物`传递回复合动画的参数。
+* 动画实现由`渲染器`来实现，用帧数来计算时间。
+* Septopus其他部分的动画效果，也是这么实现的，例如`触发器`引发的动画效果。
+  
 ## 基础动画
 
-* 基础动画的数据格式如下
+* `基础动画`由以下几种构成，供系统组件来实现复杂的效果。
   
-  ```Javascript
-    [
-        {
-            type: definition.EFFECTS_MOVING,        //[EFFECTS_MOVING,]
-            param:{
-                ax:"x",
-                way:definition.MOVING_DELTA,        //
-                value:[10,20],                      //when array, random | function to calculate
-            },
+|  动画名称   | 效果描述  | 实现方法  |
+|  ----  | ----  | ----  |
+|  位移(move)  |  3D物体在XYZ轴上移动位置 | 设置mesh的位置XYZ坐标 |
+|  旋转(rotate) | 3D物体在XYZ轴上旋转角度  | 设置mesh的XYZ旋转值 |
+|  缩放(scale)  | 3D物体在XYZ轴上按比例缩放  | 设置mesh的XYZ缩放值  |
+|  材质(texture)  | 3D物体材质切换  | 更新mesh材质对象，使用指定的texture |
+|  色彩(color)  | 3D物体色彩切换  | 更新mesh的材质对象 |
+
+* `基础动画`的值设置方式，由`mode`和`value`的值来进行处理，满足复杂的动画效果。当`value`为`function`时，使用计算返回的数据的类型来处理。
+  
+|  mode取值   | value类型  | 实现方法  |
+|  ----  | ----  | ----  |
+|  add  |  number | 将值加到对应的位置 |
+|  set | number  | 将值加到对应的位置 |
+|    | number[start,end]  | 数组长度为2的时候，为[start,end]形式，在动画时间内，随机设置其中的一个值 |
+|    | number[]  | 在动画时间内，顺序设置对应的值 |
+|  multi  | number  | 将值乘对应的位置  |
+|    | number[]  | 在动画时间内，将值乘对应的位置 |
+|  random  | number[start,end]  | 数组长度为2的时候，为[start,end]形式，随机选取其中的一个值 |
+|    | number[]  | 在动画时间内，随机设置 |
+
+* 动画的数据结构如下：
+
+```Javascript
+  //返回的动画对象，可以使用function作为值返回
+  {
+    "name": "TwinkleAndRotate",   //动画的名称，用来简单描述动画效果
+    "target":{                    //动画执行的目标
+      "x": 2025,
+      "y": 667,
+      "world":0,
+      "adjunct":"box",
+      "index":1,
+    },
+    "duration": 3000,             //动画的循环时间，以ms为单位。0:持续执行;
+    "loops": 0,                   //动画循环次数。0:endless; >0:run times
+    "timeline": [                 //动画的实现，在时间线上的分布
+      {
+        "time": 0,                //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "rotate",         //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "axis": "Y",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
+        "mode": "add",            //数值设置方式，["add","set","multi"]中的一种
+        "value": 0.2              //设置的值               
+      },
+      {
+        "time": 2000,             //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "rotate",         //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "mode": "set",            //数值设置方式，["add","set","multi","random"]中的一种
+        "axis": "X",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
+        "value":(now,duration,axis)=>{    //可以返回数组，和mode配合使用
+
         },
+      },
+      {
+        "time": 500,              //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "scale",          //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "mode": "multi",          //数值设置方式，["add","set","multi","random"]中的一种
+        "axis": "XYZ",            //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
+        "repeat": 3,              //值切换的速度，默认为1，在动画期间，切换多少次的值
+        "value": [0.8, 1.2 ],     //值选取方式，当为数组是，在[start,end]之间，随机选取
+      },
+      {
+        "time": [1000,1200],      //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "move",           //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "mode": "set",            //数值设置方式，["add","set","multi","random"]中的一种
+        "axis": "Y",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
+        "repeat": 6,              //值切换的速度，默认为1，在动画期间，切换多少次的值
+        "value": [0.8, 1.2 ],     //值选取方式，当为数组是，在[start,end]之间，随机选取
+      },
+      {
+        "time": [1200,1800],      //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "move",           //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "mode": "random",         //数值设置方式，["add","set","multi","random"]中的一种
+        "axis": "Y",              //动画执行的坐标轴，为支付串，为["X","Y","Z","XY","XZ","YZ","XYZ"]中的一种
+        "repeat": 2,              //值切换的速度，默认为1，在动画期间，切换多少次的值
+        "value": [0.83,0.89,1.12,1.28],     //值选取方式，当mode为random时，随机选取
+      },
+      {
+        "time": [500,1000],       //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "texture",        //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "mode": "random",         //数值设置方式，["add","set","multi","random"]中的一种    
+        "repeat": 2,              //值切换的速度，默认为1，在动画期间，切换多少次的值
+        "value": [12,22,33,44],   //值选取方式，为需要使用的texture的ID值列表
+      },
+      {
+        "time": [1500,2000],      //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "color",          //基础动画方式，["move","rotate","scale","texture","color"]中的一种
+        "mode": "set",            //数值设置方式，["add","set","multi","random"]中的一种    
+        "repeat": 1,              //值切换的速度，默认为1，在动画期间，切换多少次的值
+        "value": [0x3fff2,0x67fa32,0x34ffa4],      //当mode为set时，顺序执行
+      },
     ]
-  ```
+  }
+```
 
 ### 位移
 
@@ -28,148 +113,6 @@
 
 ### 贴图
 
-### 爆炸
+### 色彩
 
 ### 自定义动画
-
-* 自定义动画的数据格式如下
-  
-  ```Javascript
-    [
-        {
-            type: definition.EFFECTS_CUSTOMIZE,     //[EFFECTS_MOVING,]
-            param:[],                               //params for animation method
-            method:( ...this.params)=>{             //animation method of adjunct
-
-            },
-        },
-    ]
-  ```
-
-### 动画格式
-
-## 給AI的说明
-
-```Chat
-  设计一个JSON格式，支持3D的动画
-  1. 动画是["moving","rotate","scale","texture"]中的一种
-  2. 每种动画都有独立的参数可以调用
-  3. 参数的值，支持3种方式: a.固定值, b.范围里的随机值, c.用function来计算值
-  4. 参数有设置在XYZ轴中选择动画轴的参数
-  5. 动画参数的设置方式，有[设置，累加]两种方式
-  6. 对于自定义动画，使用独立的键值，指向一个动画function
-```
-
-```Chat
-  动画的执行逻辑如下
-  1. frame.js里的loop方法，获取动画的map，然后调用adjunct.hooks.animate(meshes,cfg), cfg的格式如下
-  {"x":2024,"y":620,"world":0,"index":0,"adjunct":"box","effect":1}
-  2. adjunct根据effect，返回"动画JSON"对象
-  3. frame.js将动画对象传递给render_3d来进行动画处理。
-  整理下上面设计的JSON，符合这个要求
-```
-
-## Gemini设计动画格式
-
-```Javascript
-  {
-    "name": "TwinkleAndRotate",
-    "duration": 2.0,
-    "loops": -1,
-    "timeline": [
-      {
-        "time": 0.0,
-        "type": "rotate",
-        "mode": "add",
-        "axis": "y",
-        "value": 0
-      },
-      {
-        "time": 2.0,
-        "type": "rotate",
-        "mode": "add",
-        "axis": "y",
-        "value": "fn:360"
-      },
-      {
-        "time": 0.5,
-        "type": "scale",
-        "mode": "set",
-        "axis": "xyz",
-        "value": [
-          0.8,        //min
-          1.2         //max
-        ]
-      },
-      //根据上面的设计，进行补充，动画里可以进行贴图的切换
-      {
-        "time": [1,1.2],      //[ start, end ]
-        "type": "moving",
-        "mode": "set",
-        "axis": "y",
-        "value": [
-          0.8,        //min
-          1.2         //max
-        ]
-      },
-      {
-        "time": 0.5,
-        "type": "texture",
-        "mode": "set",
-        "value": [12,22,33,44],     
-      },
-      {
-        "time": 0.5,
-        "type": "color",
-        "mode": "set",
-        "value": [0x3fff2,0x67fa32,0x34ffa4],     
-      },
-    ]
-  }
-```
-
-### ChatGTP设计的格式
-
-```Javascript
-  {
-    "animations": [
-      {
-        "type": "moving", 
-        "axes": ["x", "y"], 
-        "mode": "set", 
-        "params": {
-          "speed": { "value": 0.05 }, 
-          "distance": { "random": [1, 5] }
-        }
-      },
-      {
-        "type": "rotate", 
-        "axes": ["y", "z"], 
-        "mode": "add",
-        "params": {
-          "angle": { "fn": "time => Math.sin(time) * 30" }
-        }
-      },
-      {
-        "type": "scale", 
-        "axes": ["x", "y", "z"], 
-        "mode": "set",
-        "params": {
-          "factor": { "value": 1.2 }
-        }
-      },
-      {
-        "type": "texture", 
-        "axes": ["u", "v"], 
-        "mode": "set",
-        "params": {
-          "image": { "value": "textures/metal.png" }
-        }
-      }
-    ],
-    "customAnimations": {
-      "waveMotion": "function(time, obj) { obj.position.y = Math.sin(time) * 2; }",
-      "pulseScale": "function(time, obj) { obj.scale.setScalar(1 + 0.2 * Math.sin(time*5)); }"
-    }
-  }
-```
