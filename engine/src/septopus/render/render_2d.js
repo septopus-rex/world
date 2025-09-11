@@ -526,6 +526,7 @@ const self = {
         const ax=[];
         const cfg = { anticlock: true };
         const side = env.side;
+        const arrow=1000;
         //1. X ax
         //1.1. Xline
         const style_x={
@@ -542,18 +543,27 @@ const self = {
         ax.push(ax_x);
 
         //1.2. X arrow
+        const arrow_param_x = {
+            list:[
+                [env.offset[0]+side[0],env.offset[1]+side[1]*0.5],
+                [env.offset[0]+side[0]-arrow,env.offset[1]+side[1]*0.5+arrow],
+                [env.offset[0]+side[0]+arrow,env.offset[1]+side[1]*0.5],
+                [env.offset[0]+side[0]-arrow,env.offset[1]+side[1]*0.5-arrow],
+            ],
+        };
+        const arrow_x=TwoObject.get("polygons", arrow_param_x, style_x, cfg);
+        ax.push(arrow_x);
         
         //1.3. X tag
-        const params = {
+        const params_x = {
             text: "X",
             size: 4000,
-            position: [env.offset[0]+side[0]+1000,env.offset[1]+side[1]*0.5-1000],
+            position: [env.offset[0]+side[0]+2000,env.offset[1]+side[1]*0.5-1000],
         };
-        const tag_x = TwoObject.get("text", params, style_x, cfg);
+        const tag_x = TwoObject.get("text", params_x, style_x, cfg);
         ax.push(tag_x);
 
         //2. Y ax
-        
         //2.1. Y line
         const style_y={
             width: 2,
@@ -569,12 +579,22 @@ const self = {
         ax.push(ax_y);
 
         //1.2. Y arrow
-
+        const arrow_param_y = {
+            list:[
+                [env.offset[0]+side[0]*0.5,env.offset[1]+side[1]],
+                [env.offset[0]+side[0]*0.5-arrow,env.offset[1]+side[1]-arrow],
+                [env.offset[0]+side[0]*0.5,env.offset[1]+side[1]+arrow],
+                [env.offset[0]+side[0]*0.5+arrow,env.offset[1]+side[1]-arrow],
+            ],
+        };
+        const arrow_y=TwoObject.get("polygons", arrow_param_y, style_y, cfg);
+        ax.push(arrow_y);
+        
         //1.3. Y tag
         const params_y = {
             text: "Y",
             size: 4000,
-            position: [env.offset[0]+side[0]*0.5-800,env.offset[1]+side[1]+1000],
+            position: [env.offset[0]+side[0]*0.5-800,env.offset[1]+side[1]+2000],
         };
         const tag_y = TwoObject.get("text", params_y, style_y, cfg);
         ax.push(tag_y);
