@@ -61,7 +61,7 @@ const env = {
 const demo = {
     line: (x, y, side) => {
         const params = {
-            from: [(x - 1) * side[0], (y - 1) * side[0]],
+            from: [(x - 1) * side[0], (y - 1) * side[1]],
             to: [x * side[0], y * side[0]],
         };
         const style = {
@@ -77,7 +77,7 @@ const demo = {
         const params = {
             radius: side[0] * 0.8,
             radian: [0, 90],
-            position: [(x - 0.4) * side[0], (y - 0.4) * side[0]],
+            position: [(x - 0.4) * side[0], (y - 0.4) * side[1]],
         };
         const style = {
             width: 1,
@@ -97,7 +97,7 @@ const demo = {
         const params = {
             radius: side[0] * 0.8,
             radian: [45, 135],
-            position: [(x - 0.4) * side[0], (y - 0.4) * side[0]],
+            position: [(x - 0.4) * side[0], (y - 0.4) * side[1]],
         };
 
         const style = {
@@ -107,6 +107,24 @@ const demo = {
         };
         const cfg = { anticlock: true };
         return TwoObject.get("arc", params, style, cfg);
+    },
+    polygons:(x,y,side)=>{
+        const params = {
+            list:[
+                [(x - 0.9) * side[0], (y - 0.9) * side[1]],
+                [(x - 0.8) * side[0], (y - 0.9) * side[1]],
+                [(x - 0.7) * side[0], (y - 0.8) * side[1]],
+                [(x - 0.8) * side[0], (y - 0.7) * side[1]],
+            ],
+        };
+        const style = {
+            width: 1,
+            color: 0x0000ff,
+            fill:0xff00ff,
+            opacity: 1,
+        };
+        const cfg = { anticlock: true };
+        return TwoObject.get("polygons", params, style, cfg);
     },
     text: (x, y, side) => {
         const params = {
@@ -420,6 +438,7 @@ const self = {
                     final.push(demo.sector(cx, cy, side));
                     final.push(demo.arc(cx, cy, side));
                     final.push(demo.text(cx, cy, side));
+                    final.push(demo.polygons(cx, cy, side));
                 }
                 self.drawing.add(key, final);
             }

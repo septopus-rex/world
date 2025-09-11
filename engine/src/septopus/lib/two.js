@@ -310,7 +310,7 @@ const drawing={
             const center= pBtoC(data.center, scale, offset, density, antiHeight);            
             const radius=disBtoC(data.radius, rotation, scale, ratio, density);
 
-            const zj=Math.PI*0.5;
+            //const zj=Math.PI*0.5;
             const start= cfg.anticlock?-Math.PI*data.start/180:Math.PI*data.start/180;
             const end = cfg.anticlock?-Math.PI*data.end/180:Math.PI*data.end/180;
 
@@ -329,6 +329,35 @@ const drawing={
             radius:600,             // sector radius
             radian:[0,360],         // [start,end]
             position:[600,900],     // circle center
+        },
+    },
+    polygons:{
+        format:(raw)=>{
+            //console.log(raw);
+            return {
+                points:raw.list,
+            };
+        },
+        drawing:(data,pen,env,cfg)=>{
+            const {scale, offset, height, density, ratio } = env;
+            const antiHeight =cfg.anticlock?height * ratio:0;
+            const pBtoC = self.calculate.point.b2c;
+
+            pen.beginPath();
+            const len=data.points.length;
+            for (let i = 0; i < len; i++) {
+                const point=data.points[i];
+                const p = pBtoC(point, scale, offset, density, antiHeight);
+                if (i === 0) pen.moveTo(p[0] + 0.5, p[1] + 0.5);
+                if (i > 0 && i < len) pen.lineTo(p[0] + 0.5, p[1] + 0.5);
+            }
+            pen.closePath();
+            pen.stroke();
+            if(cfg.fill) pen.fill();
+        },
+        sample:{
+            points:[[300,0],[250,600],[900,300]],
+            close:true,
         },
     },
     
@@ -393,19 +422,7 @@ const drawing={
             position:[600,900],     //rectangle center
         },
     },
-    polygons:{
-        format:(raw)=>{
-
-        },
-        drawing:(data,pen,env,cfg)=>{
-            const {scale, offset, height, density, ratio } = env;
-        },
-        sample:{
-            points:[[300,0],[250,600],[900,300]],
-            position:[600,900],     //[left,bottom]
-            close:true,
-        },
-    },
+    
     curves:{
         format:(raw)=>{
 
