@@ -46,16 +46,16 @@ const self = {
         if (active.error !== undefined) return false;
         return active;
     },
-    getAnimateQueue: (world, dom_id) => {
-        const ani_chain = ["block", dom_id, world, "queue"];
-        const ans = self.cache.get(ani_chain);
-        return ans;
-    },
-    getAnimateMap: (world, dom_id) => {
-        const ani_chain = ["block", dom_id, world, "animate"];
-        const ans = self.cache.get(ani_chain);
-        return ans;
-    },
+    // getAnimateQueue: (world, dom_id) => {
+    //     const ani_chain = ["block", dom_id, world, "queue"];
+    //     const ans = self.cache.get(ani_chain);
+    //     return ans;
+    // },
+    // getAnimateMap: (world, dom_id) => {
+    //     const ani_chain = ["block", dom_id, world, "animate"];
+    //     const ans = self.cache.get(ani_chain);
+    //     return ans;
+    // },
     getLoopQueue: (world, dom_id) => {
         const queue_chain = ["block", dom_id, world, "loop"];
         return self.cache.get(queue_chain);
@@ -792,26 +792,26 @@ const Framework = {
 
         const dom_id = self.cache.get(current_chain);
         const active = self.getActive(dom_id);
+        const world = self.cache.get(["env","player","location","world"]);
 
         //2.group cache.block.id.world.animate
         //TODO, need to think about this carefully, how to get default world.
-        const world = self.cache.get(["env","player","location","world"]);
-        const ans = self.getAnimateQueue(world, dom_id);
-        const map = self.getAnimateMap(world, dom_id);         
+        
+                 
 
         //3.animate here. scene as parameters to functions
+        //const ans = self.getAnimateQueue(world, dom_id);
+        //const map = self.getAnimateMap(world, dom_id);
         // `x_y_adj_index` --> ThreeObject[]
-        for (let i = 0; i < ans.length; i++) {
-            const row = ans[i];
-            
-            const name = row.adjunct;
-            if (!Framework[name] || !Framework[name].hooks || !Framework[name].hooks.animate) continue;
-            const key = `${row.x}_${row.y}_${name}_${row.index}`;
-            if (map[key] === undefined) continue;
-
-            const effects = Framework[name].hooks.animate(map[key],row);
-            //if(i===0)console.log(JSON.stringify(row));
-        }
+        // for (let i = 0; i < ans.length; i++) {
+        //     const row = ans[i];
+        //     const name = row.adjunct;
+        //     if (!Framework[name] || !Framework[name].hooks || !Framework[name].hooks.animate) continue;
+        //     const key = `${row.x}_${row.y}_${name}_${row.index}`;
+        //     if (map[key] === undefined) continue;
+        //     const effects = Framework[name].hooks.animate(map[key],row);
+        // }
+        if(Framework.rd_three.animate) Framework.rd_three.animate(world,dom_id);
 
         //4.frame synchronization queue
         const list = self.getLoopQueue(world, dom_id);
@@ -821,8 +821,7 @@ const Framework = {
             }
         }
 
-        //4.fresh scene
-        //FIXME, need to isolate to frame-loop function to render
+        //5.fresh scene
         active.render.render(active.scene, active.camera);
         active.status.update();
     },

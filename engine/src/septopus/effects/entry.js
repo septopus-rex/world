@@ -102,6 +102,10 @@ const vbw_effects = {
     group:(list)=>{
 
     },
+
+    decode:()=>{
+
+    },
 }
 
 export default vbw_effects;

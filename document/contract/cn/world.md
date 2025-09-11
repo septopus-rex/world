@@ -14,13 +14,17 @@
 
 ### 初始化
 
+* 初始化的过程如下
+    1. 传入两个账号，一个是启动0号世界拍卖的初始化账号，一个是接受拍卖费用的账号
+    2. 检查是初始化的情况后，建立需要的账号来存储Septopus World的基础信息
+
 * 世界的通用配置如下，所有世界共用的参数。
   
     ```Javascript
         {
-            name: "Septopus Worlds",        //Septopus的名称
-            desc: "Septopus description.",  //Septopus世界的描述
-            initiator:"SOLANA_ADDRESS",       //启动世界的账号，用于启动0号世界的拍卖
+            name: "Septopus Worlds",            //Septopus的名称
+            desc: "Septopus description.",      //Septopus世界的描述
+            initiator:"SOLANA_ADDRESS",         //启动世界的账号，用于启动0号世界的拍卖
             //genesis:{
             //    block:2034343,
             //    signature:"SOLANA_TRANSACTION_SIGNATURE",
@@ -29,8 +33,9 @@
             world: {                        //Septopus setting
                 block: [4096, 4096],            //每个世界的尺寸 
                 side: [16, 16],                 //单个block的尺寸限制
-                max: 100,                       //最大世界发行数量
-                rate:70,                        //前一个世界销售比例之后，开启下一个世界
+                max: 10,                        //最大世界发行数量
+                rate:60,                        //前一个世界销售比例之后，开启下一个世界
+                price: [0.001,0.1],             //block的价格范围
             },
             auction:{                       //World拍卖的参数
                 type:"dutch",
@@ -142,6 +147,7 @@
                 fee:1,              //0～100,block的交易费率
                 elevation: 0,       //地块的初始海拔高度
                 texture:2,
+                price:0.01,         //初始化土地的价格
             },
             sky:{
                 color:[],           //天空的渐变颜色设置

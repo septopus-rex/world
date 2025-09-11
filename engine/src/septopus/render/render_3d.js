@@ -16,6 +16,7 @@ import VBW from "../core/framework";
 import ThreeObject from "../three/entry";
 import UI from "../io/io_ui";
 import Toolbox from "../lib/toolbox";
+import Effects from "../effects/entry";
 
 const reg = {
     name: "rd_three",
@@ -30,6 +31,47 @@ const config = {
 
 const env={
     player:null,
+    animate:{
+
+    },
+}
+
+const demo={
+    light:(scene,dom_id)=>{
+        const cvt=self.getConvert();
+        const bk=[2025,620],side=16000;
+
+        //1. PointLight demo
+        const cfg={convert:cvt,distance:cvt*100,intensity:200,color:0xff0000};
+        const pointLight=ThreeObject.get("light","point",cfg);
+        pointLight.position.set(
+            (bk[0]-1)*side+0.5*side,
+            side*0.1,
+            -bk[1]*side+0.5*side,
+        );
+        scene.add(pointLight);
+
+        const lightHelper = new THREE.PointLightHelper(pointLight, 200);
+        scene.add(lightHelper);
+
+        //2. SpotLight demo
+        const target=[
+            (bk[0]-1)*side+0.5*side,
+            side*0.5,
+            -bk[1]*side+0.5*side
+        ]
+        const s_cfg={convert:cvt,distance:cvt*8,intensity:200,color:0x00ff00,target:target,angle:Math.PI / 6};
+        const spotLight=ThreeObject.get("light","spot",s_cfg);
+        spotLight.position.set(
+            (bk[0]-1)*side+0.2*side,
+            side*0.1,
+            -bk[1]*side+0.2*side,
+        );
+        scene.add(pointLight);
+
+        const helper = new THREE.SpotLightHelper(spotLight);
+        scene.add(helper);
+    },
 }
 
 const self = {
@@ -41,6 +83,16 @@ const self = {
     },
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
+    },
+    getAnimateQueue: (world, dom_id) => {
+        const ani_chain = ["block", dom_id, world, "queue"];
+        const ans = VBW.cache.get(ani_chain);
+        return ans;
+    },
+    getAnimateMap: (world, dom_id) => {
+        const ani_chain = ["block", dom_id, world, "animate"];
+        const ans = VBW.cache.get(ani_chain);
+        return ans;
     },
 
     //coordination convert to satisfy to Three.js system
@@ -759,43 +811,6 @@ const self = {
         }
         VBW.cache.set(ani_chain, arr);
     },
-
-    //demo code for 3D objects testing
-    demo:(scene,dom_id)=>{
-        const cvt=self.getConvert();
-        const bk=[2025,620],side=16000;
-
-        //1. PointLight demo
-        const cfg={convert:cvt,distance:cvt*100,intensity:200,color:0xff0000};
-        const pointLight=ThreeObject.get("light","point",cfg);
-        pointLight.position.set(
-            (bk[0]-1)*side+0.5*side,
-            side*0.1,
-            -bk[1]*side+0.5*side,
-        );
-        scene.add(pointLight);
-
-        const lightHelper = new THREE.PointLightHelper(pointLight, 200);
-        scene.add(lightHelper);
-
-        //2. SpotLight demo
-        const target=[
-            (bk[0]-1)*side+0.5*side,
-            side*0.5,
-            -bk[1]*side+0.5*side
-        ]
-        const s_cfg={convert:cvt,distance:cvt*8,intensity:200,color:0x00ff00,target:target,angle:Math.PI / 6};
-        const spotLight=ThreeObject.get("light","spot",s_cfg);
-        spotLight.position.set(
-            (bk[0]-1)*side+0.2*side,
-            side*0.1,
-            -bk[1]*side+0.2*side,
-        );
-        scene.add(pointLight);
-
-        const helper = new THREE.SpotLightHelper(spotLight);
-        scene.add(helper);
-    },  
 };
 
 const renderer={
@@ -845,6 +860,14 @@ const renderer={
         return dt.render.domElement;
     },
 
+    //3D animation entry
+    animate:(world,dom_id)=>{
+        //console.log(`Here to struct and manage animation`,Effects);
+        const meshes=self.getAnimateMap(world,dom_id);
+        const list=self.getAnimateQueue(world,dom_id);
+        
+    },
+
     /** 3D renderer entry to fresh scene
      * @functions
      * 1. check wether the first time to run, if so, set the env
@@ -882,7 +905,7 @@ const renderer={
             UI.show("toast", `3D renderer is loaded.`);
 
             //3. demo code to test 3D object
-            self.demo(scene, dom_id);
+            demo.light(scene, dom_id)
         }
 
         //update target block and fresh scene

@@ -43,7 +43,7 @@ const Fall = (cfg, active, ck) => {
                     camera.position.y + r_step,       //!important, transform from Septopus to three.js     
                     camera.position.z,
                 );
-                console.log(`Recovering Z: `, camera.position.y);
+                //console.log(`Recovering Z: `, camera.position.y);
             }, single);
 
             setTimeout(() => {
