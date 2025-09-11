@@ -520,7 +520,66 @@ const self = {
         self.drawing.add("tag", tags);
     },
     ax:()=>{
+        const key="ax";
+        self.drawing.remove(key);
 
+        const ax=[];
+        const cfg = { anticlock: true };
+        const side = env.side;
+        //1. X ax
+        //1.1. Xline
+        const style_x={
+            width: 2,
+            color: 0xff8888,
+            fill:0xff8888,
+            opacity:1,
+        }
+        const line_x={
+            from:[env.offset[0]+side[0]*0.5,env.offset[1]+side[1]*0.5],
+            to:[env.offset[0]+side[0],env.offset[1]+side[1]*0.5],
+        }
+        const ax_x=TwoObject.get("line", line_x, style_x, cfg);
+        ax.push(ax_x);
+
+        //1.2. X arrow
+        
+        //1.3. X tag
+        const params = {
+            text: "X",
+            size: 4000,
+            position: [env.offset[0]+side[0]+1000,env.offset[1]+side[1]*0.5-1000],
+        };
+        const tag_x = TwoObject.get("text", params, style_x, cfg);
+        ax.push(tag_x);
+
+        //2. Y ax
+        
+        //2.1. Y line
+        const style_y={
+            width: 2,
+            color: 0x0a519d,
+            fill:0x0a519d,
+            opacity:1,
+        }
+        const line_y={
+            from:[env.offset[0]+side[0]*0.5,env.offset[1]+side[1]*0.5],
+            to:[env.offset[0]+side[0]*0.5,env.offset[1]+side[1]],
+        }
+        const ax_y=TwoObject.get("line", line_y, style_y, cfg);
+        ax.push(ax_y);
+
+        //1.2. Y arrow
+
+        //1.3. Y tag
+        const params_y = {
+            text: "Y",
+            size: 4000,
+            position: [env.offset[0]+side[0]*0.5-800,env.offset[1]+side[1]+1000],
+        };
+        const tag_y = TwoObject.get("text", params_y, style_y, cfg);
+        ax.push(tag_y);
+
+        self.drawing.add(key, ax);
     },
 };
 

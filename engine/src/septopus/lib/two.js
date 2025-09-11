@@ -379,12 +379,13 @@ const drawing={
             const [left,top]=pos;
             const rotation=0;
             const font=disBtoC(data.size, rotation, scale, ratio, density);
+            //console.log(data.size,font);
             pen.font=`${font}px Arial`;
 
             pen.fillText(data.content,left,top);
         },
         sample:{
-            text:"text sample",      //sample text
+            text:"text sample",         //sample text
             font:14,                    //screen pixel
             position:[600,900],         //[left,bottom]
         },
