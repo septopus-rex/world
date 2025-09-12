@@ -114,17 +114,17 @@
         ) -> Result<()> {
             //0. 数据检测
             //0.1. 是否为合约里的king账号，只有King可以启动世界
-            //0.2. 是否已经存在PDA["SEPTOPU_WORLD"]账号，如有的话，已经初始化过了
+            //0.2. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号，如有的话，已经初始化过了
 
-            //1. 建立PDA["SEPTOPU_WORLD"]账号，用于保存以上的通用配置
+            //1. 建立PDA["SEPTOPUS_WORLD_DEFAULT"]账号，用于保存以上的通用配置
             //1.0. 数据结构：JSON string
             //1.1. 将initiator设置为方法传入的账号。
 
-            //2. 建立PDA["SEPTOPU_WORLD_LIST"]账号， 
+            //2. 建立PDA["SEPTOPUS_WORLD_LIST"]账号， 
             //2.0. 数据结构：[{owner:"SOLANA_ADDRESS",block:"",signature:"",auction:[2000000,2340000]},...]
             //2.1. 用于记录world的owner等基础信息
 
-            //3. 建立PDA["SEPTOPU_WORLD_INDEX"]账号
+            //3. 建立PDA["SEPTOPUS_WORLD_INDEX"]账号
             //3.0. 数据结构：u32
             //3.1. 当前未启动的world的index
         }
@@ -186,18 +186,18 @@
             agent:Account,       //拍卖押金的托管账号,保存拍卖资金池的账号，king下的PDA账号，可以控制转账
         ) -> Result<()> {  
             //0. 数据检测
-            //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+            //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
             //0.2. 如果index === 0，判断是否为来自配置里的initiator账号的请求
-            //0.3. 获取PDA["SEPTOPU_WORLD_INDEX"]的值，是否和传入的index一致
+            //0.3. 获取PDA["SEPTOPUS_WORLD_INDEX"]的值，是否和传入的index一致
 
 
-            //1. 修改PDA["SEPTOPU_WORLD_LIST"]
+            //1. 修改PDA["SEPTOPUS_WORLD_LIST"]
             //1.1. 增加 {owner:"SOLANA_ADDRESS",block:"",signature:""}
 
-            //2. 建立PDA["SEPTOPU_WORLD",index]账号，用于保存该世界的配置信息
+            //2. 建立PDA["SEPTOPUS_WORLD",index]账号，用于保存该世界的配置信息
             //2.0. 数据结构：JSON string
 
-            //3. 修改["SEPTOPU_WORLD_INDEX"]，执行其inc方法，+1
+            //3. 修改PDA["SEPTOPUS_WORLD_INDEX"]，执行其inc方法，+1
 
             //4. 建立PDA["WORLD_AUCTION",index]账号，用于记录世界拍卖的过程
             //4.0. 数据结构：{rounds:[{start:BLOCK_HEIGHT,end:BLOCK_HEIGHT,type:1,pledge:PLEDGE_FEE,pool:[ACCOUNT...],winner:ACCOUNT,payment:false},...],agent:ACCOUNT}           type:[1.荷兰式拍卖;2.乐透随机选]
@@ -216,7 +216,7 @@
             code:Account,
         ) -> Result<()> {  
             //0. 数据检测
-            //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+            //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
             //0.2. 是否为initiator账号的请求
         }
     ```
@@ -243,7 +243,7 @@
         index:u32,
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
         //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
         //0.3. 是否已经超出了加入pool的时限
 
@@ -260,10 +260,10 @@
         index: u32,
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
         //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
 
-        //1. 读取PDA["SEPTOPU_WORLD"]账号，取出拍卖价格
+        //1. 读取PDA["SEPTOPUS_WORLD_DEFAULT"]账号，取出拍卖价格
 
         //1. 写入PDA["WORLD_AUCTION",index]
         //1.1. 写入到rounds里最后一次的数据, winner为拍卖账号
@@ -278,14 +278,16 @@
         index: u32,
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
         //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
         //0.3. 检测是否为winner
 
         //1. 依据PDA["WORLD_AUCTION",index]里记录的价格，支付费用
 
-        //2. 获取PDA["SEPTOPU_WORLD",index]账号
+        //2. 获取PDA["SEPTOPUS_WORLD",index]账号
         //2.1. 修改其`owner`为支付账号
+
+        //3. 创建PDA["SEPTOPUS_WORLD_COUNTER",index]，用于保存售卖状态
     }
 ```
 
@@ -300,7 +302,7 @@
         index:u32,
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
         //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
         //0.3. 是否已经超出了加入lottery pool的时限
 
@@ -318,7 +320,7 @@
         index:u32,
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
         //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
         //0.3. 检测是否为lottery模式
         //0.4. 检测是否为合法的lottery开奖（已开奖过，看是否超时）
@@ -338,14 +340,16 @@
         index:u32,
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
         //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
         //0.3. 检测是否为lottery模式
         //0.4. 检测是否为合法的lottery开奖（已开奖过，看是否超时）
         //0.5. 检测是否为winner
-        
-        //2. 获取PDA["SEPTOPU_WORLD",index]账号
+
+        //2. 获取PDA["SEPTOPUS_WORLD",index]账号
         //2.1. 修改其`owner`为支付账号
+
+        //3. 创建PDA["SEPTOPUS_WORLD_COUNTER",index]，用于保存售卖数量状态
     }
 ```
 
@@ -362,7 +366,7 @@
         index: u32,
     ) -> Result<()> {
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD_DEFAULT"]账号
         //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
         //0.3. 确认上一次的操作已经过期
 
@@ -387,12 +391,12 @@
         value:String,           //JSON格式数据
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD",world]账号
         //0.2. 是否请求账号为世界所有者
         //0.3. 检测key是否存在
         //0.4. 检测value是否合法
 
-        //1. 更新PDA["SEPTOPU_WORLD",world]账号数据
+        //1. 更新PDA["SEPTOPUS_WORLD",world]账号数据
         //1.1.将 key --> value的数据写入
     }
 ```
@@ -409,10 +413,10 @@
         adjunct: u32,               //adjucnt的ID
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD",world]账号
         //0.2. 是否请求账号为世界所有者
 
-        //1. 更新PDA["SEPTOPU_WORLD",world]账号数据
+        //1. 更新PDA["SEPTOPUS_WORLD",world]账号数据
         //1.1.将adjunct ID添加到adjunct --> list数组里
     }
 ```
@@ -425,10 +429,10 @@
         adjucnt: u32,
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD",world]账号
         //0.2. 是否请求账号为世界所有者
 
-        //1. 更新PDA["SEPTOPU_WORLD",world]账号数据
+        //1. 更新PDA["SEPTOPUS_WORLD",world]账号数据
         //1.1.将adjunct ID从adjunct --> list数组里移除
     }
 ```
@@ -458,7 +462,7 @@
         price:u64,              //销售价格(SOL)
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD",world]账号
         //0.2. 是否请求账号为世界所有者
 
         //1. 设置销售状态及价格
@@ -473,7 +477,7 @@
         world:u32,            //world index
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD",world]账号
         //0.2. 是否selling值为0
 
         //1. 转账
@@ -492,7 +496,7 @@
         world:u32,          //world index
     ) -> Result<()> {  
         //0. 数据检测
-        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD",world]账号
         //0.2. 是否请求账号为世界所有者
 
         //1. 撤销销售状态
@@ -548,7 +552,7 @@
 
 * Block的销售状态，用两种方式来维持状态。
   1. 用counter来记录总销售数量。可以用于判断是否可以进行下一步操作，例如发行新的世界。
-  2. 用Bit位来标识指定block是否已经销售，例如[x,y],即去查询PDA[x]，该账号长度为512字节(8*512=4096)来存储状态。该方法也可以满足遍历要求，看看哪些block还可以购买。
+  2. 用Bit位来标识指定block是否已经销售，例如[x,y],即去查询PDA[y]，该账号长度为512字节(8*512=4096)来存储状态。该方法也可以满足遍历要求，看看哪些block还可以购买。
 * Block的数据，存储在PDA[world,x,y]的独立账号里，由购买者支付租金。
 
 ### Block买卖
@@ -557,17 +561,30 @@
     //以初始化的价格购买block的过程，可以批量购买
     pub fn block_init(
         ctx: Context<>, 
-        world:u32,
+        world:u32,          //world index
         x:u32,              //开始的x坐标
         y:u32,              //开始的y坐标
         ex:u32,             //x方向数量，默认为0
         ey:u32              //y方向数量，默认为0
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPUS_WORLD",world]账号
+        //0.2. 根据ey值获取PDA["SEPTOPUS_WORLD",y]...，检测是否已经被初始化过
 
-        //需要支付租金，来维持数据，降低系统的开销
+        //1. 创建PDA["SEPTOPUS_BLOCK",world,x,y]账号
+        //1.1. 创建账号，保存基本数据[0,1,[],OWNER,0];        //注意，owner不参与PDA账号关联，不然交易有问题
+
+        //2. 更新PDA["SEPTOPUS_WORLD",y]...的初始化状态
+        //2.1. 位操作，在PDA["SEPTOPUS_WORLD",y]中修改x～(x+ex)为1。PDA["SEPTOPUS_WORLD",y]不存在时，创建下
+
+        //3. 更新PDA["SEPTOPUS_WORLD_COUNTER",index]
+        //3.1. 增加计数器(ex*ey)值，记录销售状态
+
+        //4. 检测是否可以开始新world的销售 （后继世界的销售，都依靠这里设置）
+        //4.0. 取出PDA["SEPTOPUS_WORLD_INDEX"],和world进行比较，是否为最新的世界
+        //4.1. 取出PDA["SEPTOPUS_WORLD_DEFAULT"]，根据world --> block 的值，计算出TOTAL的block数量
+        //4.2. 如果100*COUNTER/TOTAL > RATE， RATE为 world --> rate的值，即销售率
+        //4.3. 开启新的World的拍卖， 和`world_start`方法一致
     }
 ```
 
@@ -578,11 +595,15 @@
         x:u32,
         y:u32,
         price:u64,
-        target:Account,         //可选，可以卖给指定账号的人
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+        //0.2. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,0]中ROW[3]是否和请求账号一致
+
+        //1. 设置销售状态
+        //1.1. 设置ROW[4]的值为传入的price,即为设置好block的销售价格
+
+        //触发事件(BLOCK.sell)，细节待描述
     }
 ```
 
@@ -594,9 +615,14 @@
         x:u32,
         y:u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+        //0.2. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,0]中ROW[3]是否和请求账号一致
+
+        //1. 设置销售状态
+        //1.1. 设置ROW[4]的值为0，撤销销售状态
+
+        //触发事件(BLOCK.revoke)，细节待描述
     }
 ```
 
@@ -608,9 +634,18 @@
         x:u32,
         y:u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+        //0.2. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,9000000]，价格ROW[4]是否不为0
+
+        //1. 支付购买费用
+        //1.1. 支付ROW[4]的SOL给ROW[3]的owner
+
+        //2. 修改所有者
+        //2.1. 将ROW[3]修改给支付者的Account
+        //2.2. 将ROW[4]修改为0
+
+        //触发事件(BLOCK.sold)，细节待描述
     }
 ```
 
@@ -620,18 +655,24 @@
     //更新block的内容
     pub fn block_update(
         ctx: Context<>, 
-        world:u32,
+        world:u32,                  //world index
         x:u32,
         y:u32,
-        content:String
+        content:String              //JSON格式的数据
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+        //0.2. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,0]中ROW[3]是否和请求账号一致
+
+        //1. 修改数据
+        //1.1. 解析JSON串content
+        //1.2. 设置到ROW里
     }
 ```
 
-### Block管理
+### Complain管理
+
+* 举报可以由任何人发起，但是处理举报的是world的owner，通过对举报的处理，也在塑造着world的形态。
 
 ```Rust
     //举报block的内容
@@ -640,11 +681,22 @@
         world:u32,
         x:u32,
         y:u32,
-        signature:String            //对应的block内容的signature
+        signature:String,            //对应的block内容的signature, last update
+        comment:String,              //JSON comment
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+        //0.2. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,0]中ROW[3]是否和请求账号一致。不能自己举报自己
+
+        //1. 记录complain的值
+        //1.1. 创建PDA["BLOCK_COMPLAIN",world,x,y]来保存数据
+        //1.2. 保存complain的数据{whistle:ACCOUNT,signature:BLOCK_CONTENT_SIGNATURE,comment:{type:1,words:""},result:1};
+
+        //2. 将complain添加到队列
+        //2.1. 获取PDA["BLOCK_COMPLAIN_QUEUE",world]
+        //2.2. 插入数据[x,y]，管理者可以遍历PDA["BLOCK_COMPLAIN_QUEUE",world]来处理举报内容
+
+        //触发事件(COMPLAIN.added)，细节待描述
     }
 ```
 
@@ -656,9 +708,50 @@
         x:u32,
         y:u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_WORLD",world]账号
+        //0.2. 判断请求是否来自World的owner
+        //0.3. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+
+        //1. 修改block的状态
+        //1.1. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,0],设置ROW[1]为0（0为被禁止访问，需要前端解析器支持）
+
+        //2. 处理队列数据
+        //2.1. 获取PDA["BLOCK_COMPLAIN_QUEUE",world]
+        //2.2. 移除数据[x,y]
+
+        //3. 修改complain的结果
+        //3.1. 获取PDA["BLOCK_COMPLAIN",world,x,y]来保存数据
+        //3.2. 修改result为1,(1.禁止;6.不禁止) }
+
+        //触发事件(COMPLAIN.solved)，细节待描述
+```
+
+```Rust
+    //忽略block禁止访问的操作
+    pub fn block_ignore(
+        ctx: Context<>, 
+        world:u32,
+        x:u32,
+        y:u32,
+    ) -> Result<()> {  
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_WORLD",world]账号
+        //0.2. 判断请求是否来自World的owner
+        //0.3. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+
+        //1. 修改block的状态
+        //1.1. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,0],设置ROW[1]为0（0为被禁止访问，需要前端解析器支持）
+
+        //2. 处理队列数据
+        //2.1. 获取PDA["BLOCK_COMPLAIN_QUEUE",world]
+        //2.2. 移除数据[x,y]
+
+        //3. 修改complain的结果
+        //3.1. 获取PDA["BLOCK_COMPLAIN",world,x,y]来保存数据
+        //3.2. 修改result为6,(1.禁止;6.不禁止) }
+
+        //触发事件(COMPLAIN.solved)，细节待描述
     }
 ```
 
@@ -670,8 +763,14 @@
         x:u32,
         y:u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否存在PDA["SEPTOPUS_WORLD",world]账号
+        //0.2. 判断请求是否来自World的owner
+        //0.3. 是否存在PDA["SEPTOPUS_BLOCK",world,x,y]账号
+
+        //1. 修改block的状态
+        //1.1. PDA["SEPTOPUS_BLOCK",world,x,y]中记录为ROW[0,1,[],OWNER,0],设置ROW[1]为1（0为被禁止访问，需要前端解析器支持）
+
+        //触发事件(BLOKC.recover)，细节待描述
     }
 ```
