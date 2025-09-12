@@ -35,7 +35,7 @@
                 side: [16, 16],                 //单个block的尺寸限制
                 max: 10,                        //最大世界发行数量
                 rate:60,                        //前一个世界销售比例之后，开启下一个世界
-                price: [0.001,0.1],             //block的价格范围
+                price: 0.01,                    //block的初始化价格
             },
             auction:{                       //World拍卖的参数
                 type:"dutch",
@@ -113,7 +113,7 @@
             recipient:Account,      //接受世界拍卖费用的账号
         ) -> Result<()> {
             //0. 数据检测
-            //0.1. 是否为合约里的king账号
+            //0.1. 是否为合约里的king账号，只有King可以启动世界
             //0.2. 是否已经存在PDA["SEPTOPU_WORLD"]账号，如有的话，已经初始化过了
 
             //1. 建立PDA["SEPTOPU_WORLD"]账号，用于保存以上的通用配置
@@ -125,10 +125,8 @@
             //2.1. 用于记录world的owner等基础信息
 
             //3. 建立PDA["SEPTOPU_WORLD_INDEX"]账号
-            //1.0. 数据结构：u32
-            //1.1. 当前未启动的world的index
-
-            //4.
+            //3.0. 数据结构：u32
+            //3.1. 当前未启动的world的index
         }
     ```
 
@@ -141,13 +139,12 @@
             name:"",
             descrption:"",
             homepage:"",
-            accuracy:1000,
+            accuracy:1,             //单位换算，默认为mm，取整
             block:{
                 height:30,          //地块支持的附属物最大高度
                 fee:1,              //0～100,block的交易费率
                 elevation: 0,       //地块的初始海拔高度
                 texture:2,
-                price:0.01,         //初始化土地的价格
             },
             sky:{
                 color:[],           //天空的渐变颜色设置
@@ -173,12 +170,8 @@
                 amount: 60,         //adjunct的数量上限
                 list:[],            //支持的adjunct的列表
             },
-            //owner:"SOLANA_ADDRESS",
-            //genesis:{
-            //    block:2034343,
-            //    signature:"",
-            //    index:0,
-            //},
+            owner:"SOLANA_ADDRESS",
+            selling:0,                  //当这个值不为0时，即为销售状态
         }
     ```
 
@@ -188,8 +181,9 @@
         //启动新的世界的方法
         pub fn world_start(
             ctx: Context<>, 
-            index:u32,
-            block:u64,
+            index:u32,              //拟启动的世界的编号
+            block:u64,              //拟启动的block的height编号，实现预定时间启动
+            agent:Account,       //拍卖押金的托管账号,保存拍卖资金池的账号，king下的PDA账号，可以控制转账
         ) -> Result<()> {  
             //0. 数据检测
             //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
@@ -198,8 +192,7 @@
 
 
             //1. 修改PDA["SEPTOPU_WORLD_LIST"]
-            //1.1. 增加 {owner:"SOLANA_ADDRESS",block:"",signature:"",auction:[${block},2340000]}, 设置好拍卖启动的时间
-            //1.2.
+            //1.1. 增加 {owner:"SOLANA_ADDRESS",block:"",signature:""}
 
             //2. 建立PDA["SEPTOPU_WORLD",index]账号，用于保存该世界的配置信息
             //2.0. 数据结构：JSON string
@@ -207,8 +200,24 @@
             //3. 修改["SEPTOPU_WORLD_INDEX"]，执行其inc方法，+1
 
             //4. 建立PDA["WORLD_AUCTION",index]账号，用于记录世界拍卖的过程
-            //4.0. 数据结构：{type:"",log:[]}
+            //4.0. 数据结构：{rounds:[{start:BLOCK_HEIGHT,end:BLOCK_HEIGHT,type:1,pledge:PLEDGE_FEE,pool:[ACCOUNT...],winner:ACCOUNT,payment:false},...],agent:ACCOUNT}           type:[1.荷兰式拍卖;2.乐透随机选]
+            //4.1. 计算出end的block_height
+        }
+    ```
 
+### 解析器
+
+* 解析Septopus链上数据的程序，不包括adjunct部分，独立部署，可以更新。
+
+    ```Rust
+        //发布解析器的地方，即Septopus的运行前端JS
+        pub fn world_decodor(
+            ctx: Context<>, 
+            code:Account,
+        ) -> Result<()> {  
+            //0. 数据检测
+            //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+            //0.2. 是否为initiator账号的请求
         }
     ```
 
@@ -233,9 +242,14 @@
         ctx: Context<>,
         index:u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
+        //0.3. 是否已经超出了加入pool的时限
+
+        //1. 修改PDA["WORLD_AUCTION",index]里的pool，增加账号（检测是否重复）
+
+        //2. 支付押金到指定的Agent账号
     }
 ```
 
@@ -245,10 +259,16 @@
         ctx: Context<>, 
         index: u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
-    }
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
+
+        //1. 读取PDA["SEPTOPU_WORLD"]账号，取出拍卖价格
+
+        //1. 写入PDA["WORLD_AUCTION",index]
+        //1.1. 写入到rounds里最后一次的数据, winner为拍卖账号
+        //1.2. 根据BLOCK_HEIGHT来计算最终的价格（根据[BLOCK_START,BLOCK_END]来线性计算费用）
+    }   
 ```
 
 ```Rust
@@ -257,13 +277,21 @@
         ctx: Context<>, 
         index: u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
+        //0.3. 检测是否为winner
+
+        //1. 依据PDA["WORLD_AUCTION",index]里记录的价格，支付费用
+
+        //2. 获取PDA["SEPTOPU_WORLD",index]账号
+        //2.1. 修改其`owner`为支付账号
     }
 ```
 
 ### 乐透模式
+
+* 当World的拍卖进入乐透模式后，需要有个`开奖`的操作，该操作任何人都可以执行。通过Solana的随机数，来抽取World的所有者
 
 ```Rust
     //加入世界所有者的lottory pool
@@ -271,9 +299,35 @@
         ctx: Context<>, 
         index:u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
+        //0.3. 是否已经超出了加入lottery pool的时限
+
+        //1. 修改PDA["WORLD_AUCTION",index]数据
+        //1.1. rounds里的最后一个元素的pool，增加账号（检测是否重复）
+
+        //2. 支付抽奖金（不退）到指定的Agent账号
+    }
+```
+
+```Rust
+    //乐透开奖操作，任何人都可以执行
+    pub fn world_lottery_draw(
+        ctx: Context<>, 
+        index:u32,
+    ) -> Result<()> {  
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
+        //0.3. 检测是否为lottery模式
+        //0.4. 检测是否为合法的lottery开奖（已开奖过，看是否超时）
+
+        //1. 从PDA["WORLD_AUCTION",index]里记录的pool开奖
+        //1.1. 使用SOlana的随机数，从pool里选取出一个winner
+        //1.2. 修改winner值为这个账号
+        //1.3. 设置expire值为1天对应的solana区块高度变化
+        //1.4. 将winner从pool里移除
     }
 ```
 
@@ -283,25 +337,38 @@
         ctx: Context<>, 
         index:u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
-
-        //需要支付维持world配置的租金
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
+        //0.3. 检测是否为lottery模式
+        //0.4. 检测是否为合法的lottery开奖（已开奖过，看是否超时）
+        //0.5. 检测是否为winner
+        
+        //2. 获取PDA["SEPTOPU_WORLD",index]账号
+        //2.1. 修改其`owner`为支付账号
     }
 ```
 
 ### 失败确认
 
+* 所有的账号都可以对失败的拍卖进行重启，主要是防止出现以下的情况：
+  1. 使用initiator来验证的话，因其是启动世界的临时账号，出现遗忘的情况，就完蛋了。
+  2. 使用上个World所有者来验证的话，其有可能不做推进，来人为减少World的发布，提高稀缺度。
+  
 ```Rust
     //确认拍卖失败的情况，任何人都可以执行
     pub fn world_restart(
         ctx: Context<>, 
         index: u32,
-    ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+    ) -> Result<()> {
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD"]账号
+        //0.2. 是否已经存在PDA["WORLD_AUCTION",index]账号
+        //0.3. 确认上一次的操作已经过期
+
+        //1. 创建新一轮的World发布操作
+        //1.1. 当拍卖没有到达3轮的时候，在rounds里插入一个`拍卖`的数据{type:1,start:BLOCK_HEIGHT,end:BLOCK_HEIGHT,pledge:PLEDGE_FEE,pool:[ACCOUNT...]}
+        //1.2. 当拍卖达到3轮的时候，在rounds里插入一个`随机选择`的数据{type:2,start:BLOCK_HEIGHT,end:BLOCK_HEIGHT,pledge:PLEDGE_FEE,pool:[ACCOUNT...],winner:""}
     }
 ```
 
@@ -309,32 +376,44 @@
 
 ### 参数设置
 
+* World所有者，对参数进行设置，会影响所有的玩家，是需要谨慎的操作。也是通过参数的设置，可以塑造风格各异的World，形成丰富的世界。
+
 ```Rust
     //更新世界的配置的操作
     pub fn world_setting_update(
         ctx: Context<>, 
-        world:u32,              //世界编号
-        key:String,
-        value:String,
+        world:u32,              //world index
+        key:String,             //配置里的键值
+        value:String,           //JSON格式数据
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.2. 是否请求账号为世界所有者
+        //0.3. 检测key是否存在
+        //0.4. 检测value是否合法
+
+        //1. 更新PDA["SEPTOPU_WORLD",world]账号数据
+        //1.1.将 key --> value的数据写入
     }
 ```
 
 ### 附属物
 
+* 对于World不支持的adjunct, 前端报错，然后放弃解析数据。
+
 ```Rust
     //给世界增加adjunct的操作
     pub fn world_adjucnt_add(
         ctx: Context<>, 
-        world: u32,
-        adjunct: u32,
+        world: u32,                 //world index
+        adjunct: u32,               //adjucnt的ID
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.2. 是否请求账号为世界所有者
+
+        //1. 更新PDA["SEPTOPU_WORLD",world]账号数据
+        //1.1.将adjunct ID添加到adjunct --> list数组里
     }
 ```
 
@@ -345,9 +424,12 @@
         world: u32,
         adjucnt: u32,
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.2. 是否请求账号为世界所有者
+
+        //1. 更新PDA["SEPTOPU_WORLD",world]账号数据
+        //1.1.将adjunct ID从adjunct --> list数组里移除
     }
 ```
 
@@ -372,12 +454,15 @@
     //转让世界所有权,设置售卖价格
     pub fn world_sell(
         ctx: Context<>, 
-        world:u32,
-        price:u64,
+        world:u32,              //world index
+        price:u64,              //销售价格(SOL)
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.2. 是否请求账号为世界所有者
+
+        //1. 设置销售状态及价格
+        //1.1. 设置 selling值为price
     }
 ```
 
@@ -385,11 +470,18 @@
     //购买世界所有权
     pub fn world_buy(
         ctx: Context<>, 
-        world:u32,
+        world:u32,            //world index
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.2. 是否selling值为0
+
+        //1. 转账
+        //1.1. 按照selling的值，支付给现在world的owner
+
+        //2. 设置新的所有者
+        //2.1. 设置 owner为支付者的账号
+        //2.2. 设置 selling 为 0
     }
 ```
 
@@ -397,11 +489,14 @@
     //撤销世界所有权售卖状态
     pub fn world_revoke(
         ctx: Context<>, 
-        world:u32,
+        world:u32,          //world index
     ) -> Result<()> {  
-        //1.
-        //2.
-        //3.
+        //0. 数据检测
+        //0.1. 是否已经存在PDA["SEPTOPU_WORLD",world]账号
+        //0.2. 是否请求账号为世界所有者
+
+        //1. 撤销销售状态
+        //1.1. 设置 selling值为0
     }
 ```
 
