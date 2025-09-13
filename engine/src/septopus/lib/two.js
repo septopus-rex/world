@@ -289,6 +289,70 @@ const drawing={
             position:[600,900],     // circle center
         },
     },
+    ring:{
+        format:(raw)=>{
+            const data={
+                outer:raw.radius[0],
+                inner:raw.radius[1],        
+                center:raw.position,
+                start:raw.radian[0],           
+                end:raw.radian[1],
+            };
+            if(raw.radian!==undefined){
+                data.start=raw.radian[0];
+                data.end=raw.radian[1];
+            }
+            return data;
+        },
+        drawing:(data,pen,env,cfg)=>{
+            //stoke width way to draw a ring
+            const {scale, offset, height, density, ratio } = env;
+            const pBtoC = self.calculate.point.b2c;
+            const disBtoC = self.calculate.distance.b2c;
+            const anClear = self.calculate.angle.clean;
+            const npoint=self.calculate.point.extend;
+
+            const rotation=0;
+            const antiHeight = cfg.anticlock?height * ratio:0;
+            const center= pBtoC(data.center, scale, offset, density, antiHeight);            
+            const radius=disBtoC(data.radius, rotation, scale, ratio, density);
+            
+            //1.Radial Gradient support
+            if (cfg.grad) {
+                let grd = null;
+                grd = pen.createRadialGradient(center[0], center[1], 1, center[0], center[1], radius);
+                for (let i in cfg.grad) {
+                    const stop = cfg.grad[i];
+                    grd.addColorStop(stop[0],`#${stop[1].toString(16).padStart(6,'0')}`);
+                }
+                pen.fillStyle =grd;
+            }
+
+            if(!data.start){
+                //drawing circle
+                
+            }else{
+                const start= cfg.anticlock?-Math.PI*data.start/180:Math.PI*data.start/180;
+                const end = cfg.anticlock?-Math.PI*data.end/180:Math.PI*data.end/180;
+            }
+
+            //2. actual drawing of sector
+            // pen.beginPath();
+            // pen.moveTo(center[0], center[1]);
+            // if(cfg.anticlock){
+            //     pen.arc(center[0], center[1], radius,anClear(end), anClear(start));
+            // }else{
+            //     pen.arc(center[0], center[1], radius,anClear(start), anClear(end));
+            // }
+            // pen.closePath();
+            // pen.fill();
+        },
+        sample:{
+            radius:[300,0],         //[outer,inner]
+            radian:[0,360],         //[start,end]
+            position:[600,900],     //rectangle center
+        },
+    },
     arc:{
         format:(raw)=>{
             return {
@@ -331,6 +395,7 @@ const drawing={
             position:[600,900],     // circle center
         },
     },
+    
     polygons:{
         format:(raw)=>{
             //console.log(raw);
@@ -404,25 +469,7 @@ const drawing={
             position:[600,900],     //[left,bottom]
         },
     },
-    ring:{
-        format:(raw)=>{
-            return {
-                outer:raw.radius[0],
-                inner:raw.radius[1],
-                center:raw.position,
-                start:raw.radian[0],
-                end:raw.radian[1],
-            };
-        },
-        drawing:(data,pen,env,cfg)=>{
-            const {scale, offset, height, density, ratio } = env;
-        },
-        sample:{
-            radius:[300,0],         //[outer,inner]
-            radian:[0,360],         //[start,end]
-            position:[600,900],     //rectangle center
-        },
-    },
+    
     
     curves:{
         format:(raw)=>{
