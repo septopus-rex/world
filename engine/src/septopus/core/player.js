@@ -565,8 +565,9 @@ const vbw_player = {
     * 1. set player position
     * 2. trigger event `player.fall` or `player.death`.
     * @param    {number}    fall    - fall height
+    * @param {boolean}   skip  - weather skip syncCameraPosition
     */
-    cross:(fall)=>{
+    cross:(fall,skip)=>{
         console.log(`Cross fall height:`,fall);
         const cvt=self.getConvert();
         const player=env.player;
@@ -597,7 +598,7 @@ const vbw_player = {
             VBW.event.trigger("player","fall",evt);
         }else{
             //2.3 block elevation sync
-           self.syncCameraPosition([0,0,fall*cvt],true);
+            if(!skip) self.syncCameraPosition([0,0,fall*cvt],true);
         }   
         return true;
     },

@@ -492,7 +492,6 @@ const self = {
 
                 if(check.orgin){
                     //5.from `block` cross to `stop`
-                    //console.log(`Here to solve?`,JSON.stringify(check));
                     VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
                 }else{
                     //6.from `block` cross to `block`
@@ -501,10 +500,7 @@ const self = {
                         const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
                         //VBW.player.cross(parseFloat(act_fall));
                         if( act_fall > 0 ){
-                            VBW.player.cross(parseFloat(act_fall));
-                            VBW.player.synchronous({position:[0,0,check.edelta]},true);
-                        }else{
-                            
+                            VBW.player.cross(parseFloat(act_fall),true);        //need to set skip 
                         }
                     }
                 }
