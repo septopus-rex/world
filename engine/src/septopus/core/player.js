@@ -358,7 +358,10 @@ const vbw_player = {
         VBW.event.on("player","fall",(ev)=>{
             if(env.lock) return false;
             env.lock=true;      //set to lock movement;
-            const cfg={height:ev.fall,convert:self.getConvert()};
+            const cfg={
+                height:ev.fall,
+                convert:self.getConvert()
+            };
             VBW.effects.get("camera","fall",cfg,()=>{
                 env.lock=false;
             });
@@ -366,7 +369,11 @@ const vbw_player = {
 
         VBW.event.on("player","death",(ev)=>{
             env.lock=true;      //set to lock movement;
-            const cfg={height:ev.fall,convert:self.getConvert(),skip:true};
+            const cfg={ 
+                height:ev.fall,
+                convert:self.getConvert(),
+                skip:true
+            };
             VBW.effects.get("camera","fall",cfg,()=>{
                 UI.show("countdown", 10, {callback:()=>{
                     env.lock=false;

@@ -192,6 +192,7 @@ const Calc = {
             //index: -1,          //index of stops
         }
         if(cfg.cross){
+            console.log(`Elevation now: ${cfg.elevation}, next: ${cfg.next}`);
             result.cross=true;
             result.edelta=cfg.next-cfg.elevation;
         }

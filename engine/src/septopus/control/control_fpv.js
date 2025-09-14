@@ -438,6 +438,11 @@ const self = {
      * @return void
      */
     checkMoving: (check, stop, diff) => {
+
+        if(runtime.player.location.block[0]===2025 && runtime.player.location.block[1]===619 && check.cross){
+            console.log("CHECK",JSON.stringify(check));
+        }
+
         //1. check delta to comfirm standing changing. Set player status correctly.
         if (check.delta!==undefined) {
             if (check.cross) {
@@ -481,6 +486,10 @@ const self = {
             }
         }else{
             if(check.cross){
+                if(check.edelta!==undefined){
+                    VBW.player.synchronous({position:[0,0,check.edelta]},true);
+                }
+
                 if(check.orgin){
                     //5.from `block` cross to `stop`
                     //console.log(`Here to solve?`,JSON.stringify(check));
@@ -490,7 +499,13 @@ const self = {
                     if (check.edelta !== 0) {
                         const fall = runtime.player.location.position[2];
                         const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
-                        VBW.player.cross(parseFloat(act_fall));
+                        //VBW.player.cross(parseFloat(act_fall));
+                        if( act_fall > 0 ){
+                            VBW.player.cross(parseFloat(act_fall));
+                            VBW.player.synchronous({position:[0,0,check.edelta]},true);
+                        }else{
+                            
+                        }
                     }
                 }
             }else{
