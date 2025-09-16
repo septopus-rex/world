@@ -21,7 +21,9 @@ import Effects from "../effects/entry";
 const reg = {
     name: "rd_three",
     type: 'render',
-    desc: "three.js renderer. Create three.js 3D objects here."
+    desc: "three.js renderer. Create three.js 3D objects here.",
+    version:"1.0.0",
+    events:["ready","done"],
 }
 
 const config = {
@@ -862,14 +864,15 @@ const renderer={
     animate:(world,dom_id)=>{
         //1.init system
         if(env.animate===null){
-            const meshes=self.getAnimateMap(world,dom_id);
-            const list=self.getAnimateQueue(world,dom_id);
-            if(meshes.error || list.error) return false;
-            env.animate={
-                meshes:meshes,
-                raw:list,
-            }
-            //console.log(`ready to struct animate`);
+            return false;
+            // const meshes=self.getAnimateMap(world,dom_id);
+            // const list=self.getAnimateQueue(world,dom_id);
+            // if(meshes.error || list.error) return false;
+            // env.animate={
+            //     meshes:meshes,
+            //     raw:list,
+            // }
+            // VBW.event.trigger("rd_three", "ready",{stamp:Toolbox.stamp()},"animate_data_ready");
         }
 
         //console.log(`Here to struct and manage animation`,Effects);
@@ -927,6 +930,30 @@ const renderer={
             self.fresh(scene, x, y, world, dom_id);
             self.loadEdit(scene, dom_id);
         }
+
+        // VBW.event.on("rd_three", "ready", ()=>{
+        //     console.log(env.animate);
+        // },"animate_data_ready");
+
+        // VBW.event.on("rd_three", "done", ()=>{
+
+        // },"animate_start");
+
+        VBW.event.on("system","launch",(ev)=>{
+            //console.log("System Launched, start to animate");
+            const world=env.player.location.world;
+            const meshes=self.getAnimateMap(world,dom_id);
+            const list=self.getAnimateQueue(world,dom_id);
+            if(meshes.error || list.error) return false;
+            env.animate={
+                meshes:meshes,
+                raw:list,
+            };
+            console.log(env.animate);
+
+            renderer.animate();
+                    
+        },"three_animate"); 
     },
 
     /** clean target block data in scene

@@ -139,6 +139,7 @@
             name:"",
             descrption:"",
             homepage:"",
+            network:"solana",       //使用的网络，后期可以支持其他的网络，入口在Solana
             accuracy:1,             //单位换算，默认为mm，取整
             block:{
                 height:30,          //地块支持的附属物最大高度
@@ -573,6 +574,7 @@
 
         //1. 创建PDA["SEPTOPUS_BLOCK",world,x,y]账号
         //1.1. 创建账号，保存基本数据[0,1,[],OWNER,0];        //注意，owner不参与PDA账号关联，不然交易有问题
+        //1.2. 如果ex!=0||ey!=0，循环创建其他Block的PDA账号     //注意，这里就需要对ex和ey进行限制，创建账号很消耗gas
 
         //2. 更新PDA["SEPTOPUS_WORLD",y]...的初始化状态
         //2.1. 位操作，在PDA["SEPTOPUS_WORLD",y]中修改x～(x+ex)为1。PDA["SEPTOPUS_WORLD",y]不存在时，创建下
@@ -585,6 +587,8 @@
         //4.1. 取出PDA["SEPTOPUS_WORLD_DEFAULT"]，根据world --> block 的值，计算出TOTAL的block数量
         //4.2. 如果100*COUNTER/TOTAL > RATE， RATE为 world --> rate的值，即销售率
         //4.3. 开启新的World的拍卖， 和`world_start`方法一致
+
+        //触发事件(BLOCK.init)，细节待描述
     }
 ```
 

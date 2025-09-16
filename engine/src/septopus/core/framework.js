@@ -811,7 +811,7 @@ const Framework = {
         //     if (map[key] === undefined) continue;
         //     const effects = Framework[name].hooks.animate(map[key],row);
         // }
-        if(Framework.rd_three.animate) Framework.rd_three.animate(world,dom_id);
+        //if(Framework.rd_three.animate) Framework.rd_three.animate(world,dom_id);
 
         //4.frame synchronization queue
         const list = self.getLoopQueue(world, dom_id);

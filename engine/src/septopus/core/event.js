@@ -9,7 +9,6 @@
  * @date 2025-06-18
  */
 
-import Toolbox from "../lib/toolbox";
 import VBW  from "./framework";
 
 const reg={
@@ -129,10 +128,10 @@ const vbw_event = {
 
     /**
      * binding event, multi function support, identify by `obj`.
-     * @param   {string}    cat      - event cat
-     * @param   {string}    event    - special event
-     * @param   {function}  fun      - binding function
-     * @param   {object}    [obj]    - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
+     * @param   {string}            cat      - event cat
+     * @param   {string}            event    - special event
+     * @param   {function}          fun      - binding function
+     * @param   {object|string}     [obj]    - binding object, {x:2025,y:619,world:0,index:0,adjunct:"wall"}
      * 
      * */
     on:(cat,event,fun,obj)=>{

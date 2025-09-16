@@ -23,6 +23,7 @@ const self={
         VBW.event.on("system","init",(ev)=>{
             console.log("system.init",ev);
         });
+        
         VBW.event.on("system","launch",(ev)=>{
             console.log("System Launched");
             VBW.cache.dump();
