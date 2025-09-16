@@ -46,16 +46,6 @@ const self = {
         if (active.error !== undefined) return false;
         return active;
     },
-    // getAnimateQueue: (world, dom_id) => {
-    //     const ani_chain = ["block", dom_id, world, "queue"];
-    //     const ans = self.cache.get(ani_chain);
-    //     return ans;
-    // },
-    // getAnimateMap: (world, dom_id) => {
-    //     const ani_chain = ["block", dom_id, world, "animate"];
-    //     const ans = self.cache.get(ani_chain);
-    //     return ans;
-    // },
     getLoopQueue: (world, dom_id) => {
         const queue_chain = ["block", dom_id, world, "loop"];
         return self.cache.get(queue_chain);
@@ -787,33 +777,17 @@ const Framework = {
     loop: (ev) => {
 
         //1.get the active scene
-        const current_chain = ["active", "current"];
-        if (!self.cache.exsist(current_chain)) return false;
+        const dom_id = self.cache.get(["active", "current"]);
+        if (dom_id.error) return false;
 
-        const dom_id = self.cache.get(current_chain);
         const active = self.getActive(dom_id);
         const world = self.cache.get(["env","player","location","world"]);
 
         //2.group cache.block.id.world.animate
         //TODO, need to think about this carefully, how to get default world.
         
-                 
 
-        //3.animate here. scene as parameters to functions
-        //const ans = self.getAnimateQueue(world, dom_id);
-        //const map = self.getAnimateMap(world, dom_id);
-        // `x_y_adj_index` --> ThreeObject[]
-        // for (let i = 0; i < ans.length; i++) {
-        //     const row = ans[i];
-        //     const name = row.adjunct;
-        //     if (!Framework[name] || !Framework[name].hooks || !Framework[name].hooks.animate) continue;
-        //     const key = `${row.x}_${row.y}_${name}_${row.index}`;
-        //     if (map[key] === undefined) continue;
-        //     const effects = Framework[name].hooks.animate(map[key],row);
-        // }
-        //if(Framework.rd_three.animate) Framework.rd_three.animate(world,dom_id);
-
-        //4.frame synchronization queue
+        //3.frame synchronization queue
         const list = self.getLoopQueue(world, dom_id);
         if (!list.error) {
             for (let i = 0; i < list.length; i++) {
@@ -821,7 +795,7 @@ const Framework = {
             }
         }
 
-        //5.fresh scene
+        //4.fresh scene
         active.render.render(active.scene, active.camera);
         active.status.update();
     },

@@ -33,7 +33,7 @@ const config = {
 
 const env={
     player:null,
-    animate:null,
+    animation:null,
 }
 
 const demo={
@@ -811,6 +811,45 @@ const self = {
         }
         VBW.cache.set(ani_chain, arr);
     },
+
+    //3D animation entry
+    animate:()=>{
+        if(env.animation===null) return false;
+
+        env.animation.frame++;
+        for(let key in env.animation.queue){
+            //1. run animation function;
+            const fun=env.animation.queue[key];
+            const n=env.animation.frame;
+            fun(env.animation.meshes[key],env.animation.frame);
+
+            //2. check point to remove animation from queue;
+            if(env.animation.checkpoint[n]){
+
+            }
+        }
+        
+    },
+    structEffects:(world,dom_id)=>{
+        if(!env.animation.meshes){
+            env.animation.meshes=self.getAnimateMap(world,dom_id);
+        }
+
+        const list=self.getAnimateQueue(world,dom_id);
+        for(let i=0;i<list.length;i++){
+            const row=list[i];
+            const key=`${row.x}_${row.y}_${row.adjunct}_${row.index}`;
+            if(!env.animation.meshes[key]) continue;            //check meshes is ready
+
+            console.log(row,env.animation.frame);
+
+            const fun=(meshes,n)=>{
+                //console.log(n);
+            };
+
+            env.animation.queue[key]=fun;
+        }
+    },
 };
 
 const renderer={
@@ -860,29 +899,6 @@ const renderer={
         return dt.render.domElement;
     },
 
-    //3D animation entry
-    animate:(world,dom_id)=>{
-        //1.init system
-        if(env.animate===null){
-            return false;
-            // const meshes=self.getAnimateMap(world,dom_id);
-            // const list=self.getAnimateQueue(world,dom_id);
-            // if(meshes.error || list.error) return false;
-            // env.animate={
-            //     meshes:meshes,
-            //     raw:list,
-            // }
-            // VBW.event.trigger("rd_three", "ready",{stamp:Toolbox.stamp()},"animate_data_ready");
-        }
-
-        //console.log(`Here to struct and manage animation`,Effects);
-        // const meshes=self.getAnimateMap(world,dom_id);
-        // const list=self.getAnimateQueue(world,dom_id);
-
-        // console.log(list);
-        
-    },
-
     /** 3D renderer entry to fresh scene
      * @functions
      * 1. check wether the first time to run, if so, set the env
@@ -904,56 +920,50 @@ const renderer={
         //first running functions
         if (first) {
             UI.show("toast", `Start 3D renderer.`);
+
             //1.load basic component
-            //1.1. set sun light
-            self.setSunLight(scene, dom_id);
+            self.setSunLight(scene, dom_id);        //1.1. set sun light
+            self.setSky(scene, dom_id);     //1.1. set cube sky
+            self.loadBlocks(scene, dom_id); //1.3.load range of blocks
 
-            //1.1. set cube sky
-            self.setSky(scene, dom_id);
-
-            //1.3.load range of blocks
-            self.loadBlocks(scene, dom_id);
-
-            //2.set the loop to support animation
+            //2.set the frame-loop to support animation
             render.setAnimationLoop(VBW.loop);
+            UI.show("toast", `Start framework.loop() to support "Frame Synchronization".`);
 
-            UI.show("toast", `3D renderer is loaded.`);
+            //3. add system.launch event to start aniamation
+            VBW.event.on("system","launch",(ev)=>{
+                //4.1. get raw animation data;
+                const world=env.player.location.world;
+                env.animation={
+                    queue:{},               //animation map, can be removed by key directly
+                    checkpoint:{},          //checkpoint to stop animation
+                    frame:0,                //frame counter                      
+                    start:ev.stamp,         //start point of 3D animation
+                };
+                console.log("Animation:",env.animation);
 
-            //3. demo code to test 3D object
-            demo.light(scene, dom_id)
+                //4.2. construct animation data;
+                self.structEffects(world,dom_id);
+
+                //4.3. start the animation by frame-loop way
+                const chain = ["block", dom_id, world, "loop"];
+                const queue = VBW.cache.get(chain);
+                if(!queue.error) queue.push({ name: "three_animation", fun: self.animate});
+                        
+            },"three_animate");
+
+            //4. demo code to test 3D object
+            demo.light(scene, dom_id);
         }
 
-        //update target block and fresh scene
+        //2.update target block and fresh scene
         if (block !== undefined) {
             const [x, y, world] = block;
             self.clean(scene, x, y, world, dom_id);
             self.fresh(scene, x, y, world, dom_id);
             self.loadEdit(scene, dom_id);
+            
         }
-
-        // VBW.event.on("rd_three", "ready", ()=>{
-        //     console.log(env.animate);
-        // },"animate_data_ready");
-
-        // VBW.event.on("rd_three", "done", ()=>{
-
-        // },"animate_start");
-
-        VBW.event.on("system","launch",(ev)=>{
-            //console.log("System Launched, start to animate");
-            const world=env.player.location.world;
-            const meshes=self.getAnimateMap(world,dom_id);
-            const list=self.getAnimateQueue(world,dom_id);
-            if(meshes.error || list.error) return false;
-            env.animate={
-                meshes:meshes,
-                raw:list,
-            };
-            console.log(env.animate);
-
-            renderer.animate();
-                    
-        },"three_animate"); 
     },
 
     /** clean target block data in scene
@@ -967,10 +977,13 @@ const renderer={
      * @return void
      * */
     clean: (dom_id, world, x, y) => {
+        //1. clean scene
         const chain = ["active", "containers", dom_id];
         const data = VBW.cache.get(chain);
         const scene = data.scene;
         self.clean(scene, x, y, world, dom_id);
+
+        //2. clean animation
     },
 }
 

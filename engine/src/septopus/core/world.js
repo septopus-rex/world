@@ -794,6 +794,7 @@ const self = {
     setChecker: (dom_id, world) => {
         const chain = ["block", dom_id, world, "loop"];
         const queue = VBW.cache.get(chain);
+        if(queue.error) return false;
         queue.push({ name: "block_checker", fun: self.checkBlock });
         queue.push({ name: "resource_checker", fun: self.checkResource });
         queue.push({ name: "trigger_runtime", fun: self.runTrigger });
