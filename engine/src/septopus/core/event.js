@@ -114,7 +114,7 @@ const vbw_event = {
     },
 
     dump:()=>{
-        console.log(events);
+        console.log("Events:",events);
     },
 
     //print support events list.

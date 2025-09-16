@@ -18,7 +18,7 @@ const reg = {
     category: "system",      //component category
     desc: "Block deocoder, basic component of system.",
     version: "1.0.0",
-    events:["in","out","hold","stop","loaded","cross"],
+    events:["in","out","hold","stop","loaded","cross","unload"],
 }
 
 const config = {

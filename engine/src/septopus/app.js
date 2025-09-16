@@ -26,6 +26,7 @@ const self={
         VBW.event.on("system","launch",(ev)=>{
             console.log("System Launched");
             VBW.cache.dump();
+            VBW.event.dump();
         });
 
         self.autoSize(container,cfg);

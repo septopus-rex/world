@@ -31,9 +31,7 @@ const config = {
 
 const env={
     player:null,
-    animate:{
-
-    },
+    animate:null,
 }
 
 const demo={
@@ -862,9 +860,23 @@ const renderer={
 
     //3D animation entry
     animate:(world,dom_id)=>{
+        //1.init system
+        if(env.animate===null){
+            const meshes=self.getAnimateMap(world,dom_id);
+            const list=self.getAnimateQueue(world,dom_id);
+            if(meshes.error || list.error) return false;
+            env.animate={
+                meshes:meshes,
+                raw:list,
+            }
+            //console.log(`ready to struct animate`);
+        }
+
         //console.log(`Here to struct and manage animation`,Effects);
-        const meshes=self.getAnimateMap(world,dom_id);
-        const list=self.getAnimateQueue(world,dom_id);
+        // const meshes=self.getAnimateMap(world,dom_id);
+        // const list=self.getAnimateQueue(world,dom_id);
+
+        // console.log(list);
         
     },
 
