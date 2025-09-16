@@ -29,6 +29,7 @@ const reg = {
 const config = {
     fov: 50,
     color: 0xff0000,
+    speed:60,               //frame update rate to calc time
 }
 
 const env={
@@ -819,9 +820,9 @@ const self = {
         env.animation.frame++;
         for(let key in env.animation.queue){
             //1. run animation function;
-            const fun=env.animation.queue[key];
+            const fn=env.animation.queue[key];
             const n=env.animation.frame;
-            fun(env.animation.meshes[key],env.animation.frame);
+            fn(env.animation.meshes[key],env.animation.frame);
 
             //2. check point to remove animation from queue;
             if(env.animation.checkpoint[n]){
@@ -840,14 +841,21 @@ const self = {
             const row=list[i];
             const key=`${row.x}_${row.y}_${row.adjunct}_${row.index}`;
             if(!env.animation.meshes[key]) continue;            //check meshes is ready
+            //console.log(row,env.animation.frame);
+            //1. get SDT animation format from adjunct
+            if(!VBW[row.adjunct] || !VBW[row.adjunct].hooks || !VBW[row.adjunct].hooks.animate) continue;
 
-            console.log(row,env.animation.frame);
+            //console.log(VBW[row.adjunct].hooks.animate);
+            const std=VBW[row.adjunct].hooks.animate(row.effect);
+            console.log(std);
 
-            const fun=(meshes,n)=>{
+            //2. construct SDT animation
+            const fn=(meshes,n)=>{
                 //console.log(n);
             };
 
-            env.animation.queue[key]=fun;
+            //3. attatch to animation queue
+            env.animation.queue[key]=fn;
         }
     },
 };
@@ -962,7 +970,6 @@ const renderer={
             self.clean(scene, x, y, world, dom_id);
             self.fresh(scene, x, y, world, dom_id);
             self.loadEdit(scene, dom_id);
-            
         }
     },
 

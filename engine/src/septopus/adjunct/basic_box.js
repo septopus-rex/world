@@ -86,15 +86,14 @@ const valid={
 }
 
 let definition=null;       //cache adjunct definition here.
-const animate_router=[
+const router=[
     {
         name:"rotate",
-        todo:[
+        breakdown:[
             {
                 type:"rotate",
                 param:{
                     ax:"XYZ",
-                    //way:definition.MOVING_DELTA,        //
                     value:Math.PI/180,                  //when array, random | function to calculate
                 }
             }
@@ -102,7 +101,7 @@ const animate_router=[
     },
     {
         name:"rotateZ",
-        todo:[
+        breakdown:[
             {
                 type:"rotate",
                 param:{
@@ -115,7 +114,7 @@ const animate_router=[
     },
     {
         name:"rotateX",
-        todo:[
+        breakdown:[
             {
                 type:"rotate",
                 param:{
@@ -128,12 +127,11 @@ const animate_router=[
     },
     {
         name:"breath",
-        todo:[
+        breakdown:[
             {
                 type:"scale",
                 param:{
                     ax:"X",
-                    //way:definition.MOVING_DELTA,        //
                     value:Math.PI/180,                  //when array, random | function to calculate
                 }
             },
@@ -141,7 +139,6 @@ const animate_router=[
                 type:"moving",
                 param:{
                     ax:"z",
-                    //way:definition.MOVING_DELTA,        //
                     value:[-0.3,0.3],                  //when array, random | function to calculate
                 }
             }
@@ -149,7 +146,7 @@ const animate_router=[
     },
     {
         name:"texture",
-        todo:[
+        breakdown:[
             {
                 type:"texture",
                 param:{
@@ -160,7 +157,7 @@ const animate_router=[
     },
     {
         name:"shake",
-        todo:[
+        breakdown:[
             {
                 type:"rotate",
                 param:{
@@ -173,7 +170,6 @@ const animate_router=[
                 type:"moving",
                 param:{
                     ax:"XYZ",
-                    //way:definition.MOVING_DELTA,        //
                     value:[-0.1,0.1],                  //when array, random | function to calculate
                 }
             }
@@ -189,39 +185,10 @@ const self={
         def:(data)=>{
             definition=data;
         },
-        //`cfg` to support more complex animation
-        animate:(meshes,cfg)=>{
-            const effect=cfg.effect-1;
-            if(effect<0) return false;
-            
-            if(animate_router[effect]===undefined) return false;
-            //const param=animate_router[effect];
-            switch (effect) {
-                case 0:
-                    for(let i=0;i<meshes.length;i++){
-                        const mesh=meshes[i];
-                        mesh.rotation.x+=0.1;
-                        mesh.rotation.y+=0.1;
-                        mesh.rotation.z+=0.1;
-                    }
-                    break;
-                
-                case 1:
-                    for(let i=0;i<meshes.length;i++){
-                        const mesh=meshes[i];
-                        mesh.rotation.y+=0.1;
-                    }
-                    break;
-                case 2:
-                    for(let i=0;i<meshes.length;i++){
-                        const mesh=meshes[i];
-                        mesh.rotation.x+=0.1;
-                    }
-                    break;
-            
-                default:
-                    break;
-            }
+        animate:(effect)=>{
+            const index=effect-1;
+            if(!router[index]) return false;
+            return router[index];
         },
     },
     menu: {
@@ -352,7 +319,7 @@ const self={
                     stop:!d[6]?false:true,
                 }
                 
-                if(d[5]!==undefined && animate_router[d[5]-1]!==undefined){
+                if(d[5]!==undefined && router[d[5]-1]!==undefined){
                     dt.animate=d[5];
                 }
                 

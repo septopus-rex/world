@@ -1,8 +1,11 @@
 /**
- * Effects - camera
+ * Effects - 3D effect constructor
  *
  * @fileoverview
  *  1. entry of effects
+ *  2. camera effects support
+ *  3. mesh effects suport
+ *  4. scene effects support
  *
  * @author Fuu
  * @date 2025-07-28
@@ -21,7 +24,7 @@ const reg={
     category:'lib',         
     desc:"",
     version:"1.0.0",
-    events:["start"],
+    //events:["start"],
 }
 
 const active={
