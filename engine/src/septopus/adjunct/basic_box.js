@@ -122,6 +122,8 @@ const router=[
     },
     {
         name:"breath",
+        duration: 5000,          //not set or 0, endless
+        loops: 10,             //not set or 0, endless
         timeline:[
             {
                 type:"scale",
@@ -139,6 +141,27 @@ const router=[
             },
         ],
     },
+    {
+        name:"shake",
+        duration: 3000,          //not set or 0, endless
+        loops: 3,             //not set or 0, endless
+        timeline:[
+            {
+                type: "moving",
+                time: 0,
+                mode: "add",
+                axis: "XYZ",
+                value:[0,0.3],
+            },
+            {
+                type:"rotate",
+                time: 0,
+                mode: "set",
+                axis: "Y",
+                value:[0,0.3],
+            }
+        ],
+    },
     // {
     //     name:"texture",
     //     timeline:[
@@ -146,26 +169,6 @@ const router=[
     //             type:"texture",
     //             param:{
     //                 list:[3,5,6],       //texture ID list
-    //             }
-    //         }
-    //     ],
-    // },
-    // {
-    //     name:"shake",
-    //     timeline:[
-    //         {
-    //             type:"rotate",
-    //             param:{
-    //                 ax:"XYZ",
-    //                 //way:definition.MOVING_DELTA,        //
-    //                 value:[0,Math.PI/180],                  //when array, random | function to calculate
-    //             }
-    //         },
-    //         {
-    //             type:"moving",
-    //             param:{
-    //                 ax:"XYZ",
-    //                 value:[-0.1,0.1],                  //when array, random | function to calculate
     //             }
     //         }
     //     ],

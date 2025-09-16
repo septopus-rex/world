@@ -41,6 +41,34 @@ const self={
             return reg;
         },
     },
+    simple:(std,category)=>{
+        return (meshes,n)=>{
+            //if(n!==1) return false;
+            for(let i=0;i<std.timeline.length;i++){
+                const row=std.timeline[i];
+                if(!router[category] || !router[category][row.type] ) continue;
+                router[category][row.type]({mesh:meshes},row);
+            }
+        }
+    },
+    complex:(std,category)=>{
+        let status=null;
+        return (meshes,n)=>{
+            if(status===null){
+                status={
+                    start:n,
+                    end:n+999,
+                    check:0,
+                }
+            }
+            
+            if(n>10) return false;
+            status.check++;
+            console.log(JSON.stringify(std));
+            console.log(JSON.stringify(status));
+
+        }
+    },
 }
 
 const router={
@@ -123,14 +151,11 @@ const vbw_effects = {
      * @return {function}
      */
     decode:(std,category)=>{
-        return (meshes,n)=>{
-            //if(n!==1) return false;
-            for(let i=0;i<std.timeline.length;i++){
-                const row=std.timeline[i];
-                if(!router[category] || !router[category][row.type] ) continue;
-                router[category][row.type](meshes,row);
-            }
+        if(!std.loops && !std.duration){
+            return self.simple(std,category);
         }
+        
+        return self.complex(std,category);
     },
 }
 

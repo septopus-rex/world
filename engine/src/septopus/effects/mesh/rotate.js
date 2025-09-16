@@ -8,16 +8,16 @@
  * @date 2025-09-08
  */
 
-
-const Rotate = (meshes,cfg) => {
-    // const {meshes,config} = todo;
-    console.log(cfg);
-    for(let i=0;i<meshes.length;i++){
-        const mesh=meshes[i];
-        //console.log(mesh);
-        mesh.rotation.x+=cfg.value;
-        mesh.rotation.y+=cfg.value;
-        mesh.rotation.z+=cfg.value;
+const Rotate = (target,cfg, ck ) => {
+    const {mesh}=target;
+    if(!mesh || mesh.error) return false;
+    
+    const {mode,value}=cfg;
+    for(let i=0;i<mesh.length;i++){
+        const row=mesh[i];
+        row.rotation.x+=value;
+        row.rotation.y+=value;
+        row.rotation.z+=value;
     }
 }
 

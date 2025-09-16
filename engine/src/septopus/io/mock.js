@@ -397,7 +397,14 @@ const mock = {
         }
 
         if (x === 2026 && y === 619 ) {
-            return { x: x, y: y, world: world, data: [0.2, 1, [], 999], owner: "LOCATION_ADDRESS" }
+            return { x: x, y: y, world: world, data: [0.2, 1, [
+                [0x00a2,    //box
+                    [
+                        [[3,3,6],[8,8,6],[0, 0, 0],rand(60, 90), [1,1], 4, 0],
+                        [[2,2,6],[3,3,4],[0, 0, 0],rand(60, 90), [1,1], 5, 0],
+                    ]
+                ],
+            ], 999], owner: "LOCATION_ADDRESS" }
         }
 
         if (x === 2024 && (y === 619 || y===618)) {
