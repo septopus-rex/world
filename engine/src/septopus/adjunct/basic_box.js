@@ -24,16 +24,6 @@ const config={
         color: 0xffffff,
         opacity:0.5,    
     },
-    // animate:[
-    //     {way:"rotate",param:{speed:0.2,ax:"x"}},
-    //     {way:"rotateZ",param:{speed:0.2,ax:"x"}},
-    //     {way:"rotateX",param:{speed:0.2,ax:"x"}},
-    //     {way:"breath",param:{}},
-    //     {way:"texture",param:{}},
-    //     {way:"shake",param:{}},
-    //     {way:"fall",param:{}},
-    //     {way:"ticker",param:{}},
-    // ],
 }
 
 const valid={
@@ -89,92 +79,97 @@ let definition=null;       //cache adjunct definition here.
 const router=[
     {
         name:"rotate",
-        breakdown:[
+        duration: 0,          //not set or 0, endless
+        loops: 0,             //not set or 0, endless
+        category:"mesh",      //category of animation
+        timeline:[
             {
                 type:"rotate",
-                param:{
-                    ax:"XYZ",
-                    value:Math.PI/180,                  //when array, random | function to calculate
-                }
+                mode: "add",
+                axis:"XYZ",
+                time: 0,                    //
+                value:Math.PI/180,          //when array, random | function to calculate
             }
         ],
     },
     {
         name:"rotateZ",
-        breakdown:[
+        duration: 0,          //not set or 0, endless
+        loops: 0,             //not set or 0, endless
+        timeline:[
             {
                 type:"rotate",
-                param:{
-                    ax:"Z",
-                    //way:definition.MOVING_DELTA,        //
-                    value:Math.PI/180,                  //when array, random | function to calculate
-                }
+                mode: "add",
+                axis:"Z",
+                time: 0,                    //
+                value:Math.PI/180,          //when array, random | function to calculate
             }
         ],
     },
     {
         name:"rotateX",
-        breakdown:[
+        duration: 0,          //not set or 0, endless
+        loops: 0,             //not set or 0, endless
+        timeline:[
             {
                 type:"rotate",
-                param:{
-                    ax:"X",
-                    //way:definition.MOVING_DELTA,        //
-                    value:Math.PI/180,                  //when array, random | function to calculate
-                }
+                mode: "add",
+                axis:"X",
+                time: 0,                    //
+                value:Math.PI/180,          //when array, random | function to calculate
             }
         ],
     },
     {
         name:"breath",
-        breakdown:[
+        timeline:[
             {
                 type:"scale",
-                param:{
-                    ax:"X",
-                    value:Math.PI/180,                  //when array, random | function to calculate
-                }
+                mode: "add",
+                axis:"X",
+                time: 0,                    //
+                value:Math.PI/180,          //when array, random | function to calculate
             },
             {
                 type:"moving",
-                param:{
-                    ax:"z",
-                    value:[-0.3,0.3],                  //when array, random | function to calculate
-                }
-            }
-        ],
-    },
-    {
-        name:"texture",
-        breakdown:[
-            {
-                type:"texture",
-                param:{
-                    list:[3,5,6],       //texture ID list
-                }
-            }
-        ],
-    },
-    {
-        name:"shake",
-        breakdown:[
-            {
-                type:"rotate",
-                param:{
-                    ax:"XYZ",
-                    //way:definition.MOVING_DELTA,        //
-                    value:[0,Math.PI/180],                  //when array, random | function to calculate
-                }
+                mode: "random",
+                axis:"X",
+                time: 0,                    //
+                value:[-0.3,0.3],          //when array, random | function to calculate
             },
-            {
-                type:"moving",
-                param:{
-                    ax:"XYZ",
-                    value:[-0.1,0.1],                  //when array, random | function to calculate
-                }
-            }
         ],
     },
+    // {
+    //     name:"texture",
+    //     timeline:[
+    //         {
+    //             type:"texture",
+    //             param:{
+    //                 list:[3,5,6],       //texture ID list
+    //             }
+    //         }
+    //     ],
+    // },
+    // {
+    //     name:"shake",
+    //     timeline:[
+    //         {
+    //             type:"rotate",
+    //             param:{
+    //                 ax:"XYZ",
+    //                 //way:definition.MOVING_DELTA,        //
+    //                 value:[0,Math.PI/180],                  //when array, random | function to calculate
+    //             }
+    //         },
+    //         {
+    //             type:"moving",
+    //             param:{
+    //                 ax:"XYZ",
+    //                 value:[-0.1,0.1],                  //when array, random | function to calculate
+    //             }
+    //         }
+    //     ],
+    // },
 ]
 
 const self={

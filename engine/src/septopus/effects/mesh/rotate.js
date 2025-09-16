@@ -9,13 +9,15 @@
  */
 
 
-const Rotate = (todo, active , ck) => {
-    const {meshes,config} = todo;
-
-    for(let i=0;i<todo.length;i++){
-        const row=todo[i];
-
-
+const Rotate = (meshes,cfg) => {
+    // const {meshes,config} = todo;
+    console.log(cfg);
+    for(let i=0;i<meshes.length;i++){
+        const mesh=meshes[i];
+        //console.log(mesh);
+        mesh.rotation.x+=cfg.value;
+        mesh.rotation.y+=cfg.value;
+        mesh.rotation.z+=cfg.value;
     }
 }
 

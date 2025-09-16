@@ -847,12 +847,15 @@ const self = {
 
             //console.log(VBW[row.adjunct].hooks.animate);
             const std=VBW[row.adjunct].hooks.animate(row.effect);
-            console.log(std);
 
+            //console.log(std);
+            const cat=!std.category?"mesh":std.category;
+            const fn=Effects.decode(std,cat);
+            //console.log(fn);
             //2. construct SDT animation
-            const fn=(meshes,n)=>{
-                //console.log(n);
-            };
+            // const fn=(meshes,n)=>{
+            //     //console.log(n);
+            // };
 
             //3. attatch to animation queue
             env.animation.queue[key]=fn;

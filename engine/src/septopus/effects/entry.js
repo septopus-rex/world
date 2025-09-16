@@ -18,6 +18,9 @@ import Rotate from "./mesh/rotate";
 import Moving from "./mesh/moving";
 import Scale from "./mesh/scale";
 import Texture from "./mesh/texture";
+import Color from "./mesh/color";
+import Opacity from "./mesh/opacity";
+import Morph from "./mesh/morph";
 
 const reg={
     name:"effects",
@@ -53,6 +56,9 @@ const router={
         moving:Moving,
         scale:Scale,
         texture:Texture,
+        color:Color,
+        opacity:Opacity,
+        morph:Morph,
     },
 };
 
@@ -66,7 +72,7 @@ const vbw_effects = {
      * 
      * @param   {object}    cam   - parameters for creating 3D object
      * @returns
-     * @return boolean
+     * @return {boolean}
      */
     set:(cam,sce)=>{
         active.camera = cam;
@@ -84,7 +90,7 @@ const vbw_effects = {
      * @param   {object}    params   - parameters for effect
      * @param   {function}  ck       - callback function when effect done
      * @returns
-     * @return callback
+     * @return {callback}
      */
 
     get:(cat,type,params,ck)=>{
@@ -100,14 +106,31 @@ const vbw_effects = {
      * 
      * @param   {object[]}    list      - category of effect, ["camera","scene"]
      * @returns
-     * @return boolean
+     * @return {boolean}
      */
     group:(list)=>{
 
     },
 
-    decode:()=>{
-
+    /** 
+     * Standard animation decodor (for mesh)
+     * @functions
+     * 1.multi effects
+     * 
+     * @param   {object[]}  std         - STD animation, check the doc to get details
+     * @param   {string}    catetory    - STD animation, check the doc to get details
+     * @returns
+     * @return {function}
+     */
+    decode:(std,category)=>{
+        return (meshes,n)=>{
+            //if(n!==1) return false;
+            for(let i=0;i<std.timeline.length;i++){
+                const row=std.timeline[i];
+                if(!router[category] || !router[category][row.type] ) continue;
+                router[category][row.type](meshes,row);
+            }
+        }
     },
 }
 
