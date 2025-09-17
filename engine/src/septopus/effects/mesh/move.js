@@ -8,14 +8,16 @@
  * @date 2025-09-08
  */
 
-
-const Move = (todo, active , ck) => {
-    const {meshes,config} = todo;
-    //console.log(`here to move`);
-    for(let i=0;i<todo.length;i++){
-        const row=todo[i];
-
-
+const Move = (target, cfg , ck) => {
+    const {mesh}=target;
+    if(!mesh || mesh.error) return false;
+    
+    const {mode,value, axis}=cfg;
+    for(let i=0;i<mesh.length;i++){
+        const row=mesh[i];
+        if(axis.x) row.position.x+=value;
+        if(axis.y) row.position.z+=-value;
+        if(axis.z) row.position.y+=value;
     }
 }
 

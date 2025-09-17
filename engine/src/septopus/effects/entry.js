@@ -27,7 +27,7 @@ const reg={
     category:'lib',         
     desc:"",
     version:"1.0.0",
-    //events:["start"],
+    events:["start","end"],
 }
 
 const config={
@@ -154,7 +154,7 @@ const self={
 
             //1. check wether round ends
             const step = n - status.start;
-            if(n===status.end){
+            if(n === status.end){
                 status.round.now++;
                 console.log(`Round ${status.round.now} of ${std.name}`);
                 if(status.round.limit!==0){
@@ -253,7 +253,6 @@ const vbw_effects = {
 
     get:(cat,type,params,ck)=>{
         if(!router[cat] || !router[cat][type]) return {error:"Invalid effects."};
-
         return router[cat][type](params,active,ck);
     },
 
@@ -271,7 +270,7 @@ const vbw_effects = {
     },
 
     /** 
-     * Standard animation decodor (for mesh)
+     * Standard animation decodor
      * @functions
      * 1.multi effects
      * 

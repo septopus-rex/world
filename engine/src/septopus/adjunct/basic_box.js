@@ -121,24 +121,45 @@ const router=[
         ],
     },
     {
-        name:"breath",
+        name:"turning",
         duration: 5000,          //not set or 0, endless
         pending:[300,600],
         loops: 10,             //not set or 0, endless
         timeline:[
+            // {
+            //     type:"rotate",
+            //     mode: "add",
+            //     axis:"X",
+            //     time: [0,1000],  
+            //     value: Math.PI/180,
+            // },
+            // {
+            //     type:"rotate",
+            //     mode: "add",
+            //     axis:"Y",
+            //     time: [1000,4000],  
+            //     value: Math.PI/180,
+            // },
+            // {
+            //     type:"rotate",
+            //     mode: "add",
+            //     axis:"Z",
+            //     time: [4000,5000],  
+            //     value: Math.PI/180,
+            // },
             {
-                type:"scale",
+                type:"move",
                 mode: "add",
-                axis:"X",
-                time: 0,                    //
-                value:[0.1,0.4],          //when array, random | function to calculate
+                axis:"Y",
+                time: [0,2500],  
+                value: 10,
             },
             {
                 type:"move",
-                mode: "random",
-                axis:"X",
-                time: 0,                    //
-                value:[-0.3,0.3],          //when array, random | function to calculate
+                mode: "add",
+                axis:"Y",
+                time: [2500,5000],  
+                value: -10,
             },
         ],
     },
