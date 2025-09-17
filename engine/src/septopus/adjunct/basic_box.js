@@ -131,10 +131,10 @@ const router=[
                 mode: "add",
                 axis:"X",
                 time: 0,                    //
-                value:Math.PI/180,          //when array, random | function to calculate
+                value:[0.1,0.4],          //when array, random | function to calculate
             },
             {
-                type:"moving",
+                type:"move",
                 mode: "random",
                 axis:"X",
                 time: 0,                    //
@@ -149,7 +149,7 @@ const router=[
         loops: 3,             //not set or 0, endless
         timeline:[
             {
-                type: "moving",
+                type: "move",
                 time: 0,
                 mode: "add",
                 axis: "XYZ",

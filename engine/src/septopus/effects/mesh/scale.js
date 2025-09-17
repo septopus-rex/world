@@ -11,7 +11,7 @@
 
 const Scale = (todo, active , ck) => {
     const {meshes,config} = todo;
-
+    //console.log(`here to scale`);
     for(let i=0;i<todo.length;i++){
         const row=todo[i];
 

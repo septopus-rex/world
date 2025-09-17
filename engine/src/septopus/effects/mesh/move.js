@@ -9,9 +9,9 @@
  */
 
 
-const Moving = (todo, active , ck) => {
+const Move = (todo, active , ck) => {
     const {meshes,config} = todo;
-
+    //console.log(`here to move`);
     for(let i=0;i<todo.length;i++){
         const row=todo[i];
 
@@ -19,4 +19,4 @@ const Moving = (todo, active , ck) => {
     }
 }
 
-export default Moving;
+export default Move;

@@ -15,7 +15,7 @@ import Fall from "./camera/fall";
 import Linger from "./camera/linger";
 import Lightning from "./scene/lightning";
 import Rotate from "./mesh/rotate";
-import Moving from "./mesh/moving";
+import Move from "./mesh/move";
 import Scale from "./mesh/scale";
 import Texture from "./mesh/texture";
 import Color from "./mesh/color";
@@ -98,7 +98,6 @@ const self={
         for(let i=0;i<timeline.length;i++){
             const row=timeline[i];
             const period=self.getPeriod(row.time,duration,ends);
-            //console.log(period);
             line=self.insertBreakpoint(period,line)
         }
         return line;
@@ -115,18 +114,27 @@ const self={
     getStatus:(std,n)=>{
         const breakpoints=self.getBreakpoint(std.duration,std.timeline,std.pending);
         const end=breakpoints[breakpoints.length-1];
+        const per=1000/config.frame;
         const status={
-                    start:n,
-                    end:n + 999,
-                    check:0,
-                    round:{          //whole loop counter
-                        limit:std.loops,        //
-                        now:0,
-                    },           
-                    section:breakpoints,                 //animation section
-                    actions:[],
-                }
+            start:n,
+            end:n + Math.round(end/per),
+            counter:0,
+            round:{          //whole loop counter
+                limit:std.loops,        //
+                now:0,
+            },           
+            section:breakpoints,                 //animation section
+            //actions:[],
+        }
+        console.log(JSON.stringify(status));
         return status;
+    },
+
+    action:(step,timeline,meshes,status,category)=>{
+        //console.log(`Actual action`,step,JSON.stringify(status.section));
+        const point=Math.round(step*1000/config.frame);
+
+        console.log(point);
     },
 
     simple:(std,category)=>{
@@ -143,12 +151,52 @@ const self={
         let status=null;
         return (meshes,n)=>{
             if(status===null) status=self.getStatus(std,n);
-            //const step= n - status.start;
-            if(n>10) return false;
 
-            //status.check++;
-            //console.log(JSON.stringify(std));
-            //console.log(JSON.stringify(status));
+            //1. check wether round ends
+            const step = n - status.start;
+            if(n===status.end){
+                status.round.now++;
+                console.log(`Round ${status.round.now} of ${std.name}`);
+                if(status.round.limit!==0){
+                    if(status.round.now >= status.round.limit){
+                        console.log(`Rounds end of ${std.name}, total ${status.round.now}`);
+                        return false;
+                    }
+                }
+                const full=status.end-status.start;
+                status.start=n;
+                status.end=n+full;
+            }
+
+            //2. action by step
+            const point=Math.round(step*1000/config.frame);
+            const ends=[0,0];
+            if(std.pending){
+                if(Array.isArray(std.pending)){
+                    ends[0]=std.pending[0];
+                    ends[1]=std.pending[1];
+                }else{
+                    ends[0]=std.pending;
+                }
+            }
+
+            for(let i=0;i<std.timeline.length;i++){
+                const row=std.timeline[i];
+                if(!router[category] || !router[category][row.type] ) continue;
+                if(typeof row.axis==="string") row.axis=self.getAxis(row.axis);
+                if(!row.time){
+                    router[category][row.type]({mesh:meshes},row);
+                }else{
+                    const time=row.time;
+                    if(Array.isArray(time)){
+                        if(point < time[0]+ ends[0] || point> time[1]+ends[0] ) continue;
+                        router[category][row.type]({mesh:meshes},row);
+                    }else{
+                        if(point < time[0]+ ends[0]) continue;
+                        router[category][row.type]({mesh:meshes},row);
+                    }
+                }
+            }
         }
     },
 }
@@ -163,7 +211,7 @@ const router={
     },
     mesh:{
         rotate:Rotate,
-        moving:Moving,
+        move:Move,
         scale:Scale,
         texture:Texture,
         color:Color,
