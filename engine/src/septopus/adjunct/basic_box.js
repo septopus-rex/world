@@ -157,7 +157,7 @@ const router=[
             },
             {
                 type:"rotate",
-                time: 0,
+                time: 1000,
                 mode: "set",
                 axis: "Y",
                 value:[0,0.3],

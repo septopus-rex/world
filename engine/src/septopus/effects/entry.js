@@ -45,7 +45,44 @@ const self={
             return reg;
         },
     },
-    getBreakpoint:(timeline,pending)=>{
+    getPeriod:(time,duration,ends)=>{
+        const period=[0,0];
+        if(!time) period[1]=duration;
+        if(Array.isArray(time)){
+            period[0]=time[0];
+            period[1]=time[1];
+        }else{
+            period[0]=time;
+            period[1]=duration;
+        }
+
+        period[0]+=ends[0];
+        period[1]+=ends[0];
+
+        return period;
+    },
+    insertBreakpoint:(period,line)=>{
+        //console.log(`Break ${JSON.stringify(line)} by period ${JSON.stringify(period)}`);
+        //1. start point
+        const start=period[0];
+        if(start && !line.includes(start)){
+            const index = line.findIndex(element => start <= element);
+            if (index !== -1){
+                line.splice(index, 0, start);
+            }
+        }
+
+        //2. end point
+        const end=period[1];
+        if(!line.includes(end)){
+            const index = line.findIndex(element => end <= element);
+            if (index !== -1){
+                line.splice(index, 0, end);
+            }
+        }
+        return line;
+    },
+    getBreakpoint:(duration,timeline,pending)=>{
         const ends=[0,0];
         if(pending){
             if(Array.isArray(pending)){
@@ -55,14 +92,16 @@ const self={
                 ends[0]=pending;
             }
         }
-        const line=[];
+        let line=[0,ends[0]+ends[1]+duration];
+        if(ends[1]!==0) line=self.insertBreakpoint([line[1]-ends[1],line[1]],line);
+        if(ends[0]!==0) line=self.insertBreakpoint([0,ends[0]],line);
         for(let i=0;i<timeline.length;i++){
             const row=timeline[i];
-            const period=[0,0];
-
-            console.log(row);
-
+            const period=self.getPeriod(row.time,duration,ends);
+            //console.log(period);
+            line=self.insertBreakpoint(period,line)
         }
+        return line;
     },
     getAxis:(str)=>{
         const arr=str.split("");
@@ -72,6 +111,22 @@ const self={
             ax[key]=true;
         }
         return ax;
+    },
+    getStatus:(std,n)=>{
+        const breakpoints=self.getBreakpoint(std.duration,std.timeline,std.pending);
+        const end=breakpoints[breakpoints.length-1];
+        const status={
+                    start:n,
+                    end:n + 999,
+                    check:0,
+                    round:{          //whole loop counter
+                        limit:std.loops,        //
+                        now:0,
+                    },           
+                    section:breakpoints,                 //animation section
+                    actions:[],
+                }
+        return status;
     },
 
     simple:(std,category)=>{
@@ -87,29 +142,13 @@ const self={
     complex:(std,category)=>{
         let status=null;
         return (meshes,n)=>{
-
-            if(status===null){
-                const breakpoints=self.getBreakpoint(std.timeline,std.pending);
-
-                status={
-                    start:n,
-                    end:n+999,
-                    check:0,
-                    round:{          //whole loop counter
-                        limit:std.loops,        //
-                        now:0,
-                    },           
-                    section:breakpoints,                 //animation section
-                    actions:[],
-                }
-            }
-
+            if(status===null) status=self.getStatus(std,n);
+            //const step= n - status.start;
             if(n>10) return false;
 
             //status.check++;
             //console.log(JSON.stringify(std));
             //console.log(JSON.stringify(status));
-
         }
     },
 }
