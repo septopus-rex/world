@@ -30,9 +30,13 @@ const reg={
     //events:["start"],
 }
 
+const config={
+    frame:60,           //frame rate, 60fps
+}
+
 const active={
     camera:null,
-    scene:null
+    scene:null,
 }
 
 const self={
@@ -41,12 +45,41 @@ const self={
             return reg;
         },
     },
+    getBreakpoint:(timeline,pending)=>{
+        const ends=[0,0];
+        if(pending){
+            if(Array.isArray(pending)){
+                ends[0]=pending[0];
+                ends[1]=pending[1];
+            }else{
+                ends[0]=pending;
+            }
+        }
+        const line=[];
+        for(let i=0;i<timeline.length;i++){
+            const row=timeline[i];
+            const period=[0,0];
+
+            console.log(row);
+
+        }
+    },
+    getAxis:(str)=>{
+        const arr=str.split("");
+        const ax={x:false,y:false,z:false};
+        for(let i=0;i<arr.length;i++){
+            const key=arr[i].toLocaleLowerCase();
+            ax[key]=true;
+        }
+        return ax;
+    },
+
     simple:(std,category)=>{
         return (meshes,n)=>{
-            //if(n!==1) return false;
             for(let i=0;i<std.timeline.length;i++){
                 const row=std.timeline[i];
                 if(!router[category] || !router[category][row.type] ) continue;
+                if(typeof row.axis==="string") row.axis=self.getAxis(row.axis);
                 router[category][row.type]({mesh:meshes},row);
             }
         }
@@ -54,18 +87,28 @@ const self={
     complex:(std,category)=>{
         let status=null;
         return (meshes,n)=>{
+
             if(status===null){
+                const breakpoints=self.getBreakpoint(std.timeline,std.pending);
+
                 status={
                     start:n,
                     end:n+999,
                     check:0,
+                    round:{          //whole loop counter
+                        limit:std.loops,        //
+                        now:0,
+                    },           
+                    section:breakpoints,                 //animation section
+                    actions:[],
                 }
             }
-            
+
             if(n>10) return false;
-            status.check++;
-            console.log(JSON.stringify(std));
-            console.log(JSON.stringify(status));
+
+            //status.check++;
+            //console.log(JSON.stringify(std));
+            //console.log(JSON.stringify(status));
 
         }
     },

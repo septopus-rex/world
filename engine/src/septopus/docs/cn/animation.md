@@ -24,6 +24,7 @@
     },
     "duration": 3000,             //动画的循环时间，以ms为单位。0:持续执行;
     "loops": 0,                   //动画循环次数。0:endless; >0:run times
+    "pending",2000,               //[pre,next]|next, 动画悬停事件，即启动下一个loop等待的时间
     "timeline": [                 //动画的实现，在时间线上的分布
       {
         "time": 0,                //动画开始的时间，格式为"start"或"[start,end]"
@@ -85,6 +86,13 @@
         "mode": "add",            //数值设置方式，["add","set","multi","random"]中的一种 
         "value": -0.01,           //当mode为set时，顺序执行
       },
+      {
+        "time": [1900,2000],      //动画开始的时间，格式为"start"或"[start,end]"
+        "type": "fall",           //基础动画方式
+        "category":"camera",      //非mesh的调用方式
+        "mode": "add",            //数值设置方式，["add","set","multi","random"]中的一种 
+        "value": -0.01,           //当mode为set时，顺序执行
+      },
     ]
   }
 ```
@@ -96,6 +104,7 @@
 |  name  |  string | 动画的名称 |
 |  target | object  | 动画的执行对象 |
 |  duration  | number  | 动画的时长  |
+|  pending  | number[],number  | 动画的停顿时间  |
 |  loops  | number  | 全局控制整个动画的重复次数 |
 |  timeline  | object[] | 动画执行的动作列表 |
 
@@ -127,13 +136,14 @@
 |  mode取值   | value类型  | 实现方法  |
 |  ----  | ----  | ----  |
 |  add  |  number | 将值加到对应的位置 |
+|    |  number[start,end] | 添加随机的值 |
 |  set | number  | 将值加到对应的位置 |
 |    | number[start,end]  | 数组长度为2的时候，为[start,end]形式，在动画时间内，随机设置其中的一个值 |
 |    | number[]  | 在动画时间内，顺序设置对应的值 |
 |  multi  | number  | 将值乘对应的位置  |
 |    | number[]  | 在动画时间内，将值乘对应的位置 |
 |  random  | number[start,end]  | 数组长度为2的时候，为[start,end]形式，随机选取其中的一个值 |
-|    | number[]  | 在动画时间内，随机设置 |
+|    | number[]  | 在动画时间内，随机设置，即random时候仅使用set方式 |
 
 * `repeat`的值处理。在时间段内，该动画切换的频率，即被执行的次数，为局部循环。
 
@@ -144,6 +154,8 @@
 
 * `bias`的值处理。只在`rotate`和`scale`时候发挥作用，用于实现偏心旋转和偏心缩放。
   
+* `category`的值设置及作用。当设置为`camera`时，可以设置玩家的视角，调整玩家的位置。
+
 ## 自定义动画
 
 * 用户自定义的动画方法，也需要使用统一的逻辑来进行处理。

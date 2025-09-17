@@ -102,7 +102,7 @@ const router=[
                 mode: "add",
                 axis:"Z",
                 time: 0,                    //
-                value:Math.PI/180,          //when array, random | function to calculate
+                value:5*Math.PI/180,          //when array, random | function to calculate
             }
         ],
     },
@@ -116,13 +116,14 @@ const router=[
                 mode: "add",
                 axis:"X",
                 time: 0,                    //
-                value:Math.PI/180,          //when array, random | function to calculate
+                value:5*Math.PI/180,          //when array, random | function to calculate
             }
         ],
     },
     {
         name:"breath",
         duration: 5000,          //not set or 0, endless
+        pending:[300,600],
         loops: 10,             //not set or 0, endless
         timeline:[
             {
@@ -144,6 +145,7 @@ const router=[
     {
         name:"shake",
         duration: 3000,          //not set or 0, endless
+        pending:1200,
         loops: 3,             //not set or 0, endless
         timeline:[
             {
@@ -186,7 +188,7 @@ const self={
         animate:(effect)=>{
             const index=effect-1;
             if(!router[index]) return false;
-            return router[index];
+            return  JSON.parse(JSON.stringify(router[index]));
         },
     },
     menu: {

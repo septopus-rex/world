@@ -12,12 +12,13 @@ const Rotate = (target,cfg, ck ) => {
     const {mesh}=target;
     if(!mesh || mesh.error) return false;
     
-    const {mode,value}=cfg;
+    const {mode,value, axis}=cfg;
+    //console.log(axis);
     for(let i=0;i<mesh.length;i++){
         const row=mesh[i];
-        row.rotation.x+=value;
-        row.rotation.y+=value;
-        row.rotation.z+=value;
+        if(axis.x) row.rotation.x+=value;
+        if(axis.y) row.rotation.y+=value;
+        if(axis.z) row.rotation.z+=value;
     }
 }
 
