@@ -428,7 +428,7 @@ const self = {
     },
 
     /**
-     * movement checker
+     * movement checker, set player stand height here.
      * @functions
      * 1. 8 cases to set player location
      * 2. `stop.on` event trigger
@@ -498,7 +498,6 @@ const self = {
                     if (check.edelta !== 0) {
                         const fall = runtime.player.location.position[2];
                         const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
-                        //VBW.player.cross(parseFloat(act_fall));
                         if( act_fall > 0 ){
                             VBW.player.cross(parseFloat(act_fall),true);        //need to set skip 
                         }

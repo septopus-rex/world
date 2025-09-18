@@ -586,6 +586,7 @@ const vbw_player = {
                 stamp:Toolbox.stamp(),
             }
             //!important, `player.death` event trigger
+            //only for effects, stand height should be modified right now
             VBW.event.trigger("player","death",evt);
         }else if(fall>=capacity.span){
             //2.2 player fall normally
@@ -595,10 +596,12 @@ const vbw_player = {
                 stamp:Toolbox.stamp(),
             }
             //!important, `player.fall` event trigger
+            //only for effects, stand height should be modified right now
             VBW.event.trigger("player","fall",evt);
         }else{
             //2.3 block elevation sync
             if(!skip) self.syncCameraPosition([0,0,fall*cvt],true);
+            //self.syncCameraPosition([0,0,fall*cvt],!skip);
         }   
         return true;
     },

@@ -126,27 +126,6 @@ const router=[
         pending:[300,600],
         loops: 10,             //not set or 0, endless
         timeline:[
-            // {
-            //     type:"rotate",
-            //     mode: "add",
-            //     axis:"X",
-            //     time: [0,1000],  
-            //     value: Math.PI/180,
-            // },
-            // {
-            //     type:"rotate",
-            //     mode: "add",
-            //     axis:"Y",
-            //     time: [1000,4000],  
-            //     value: Math.PI/180,
-            // },
-            // {
-            //     type:"rotate",
-            //     mode: "add",
-            //     axis:"Z",
-            //     time: [4000,5000],  
-            //     value: Math.PI/180,
-            // },
             {
                 type:"move",
                 mode: "add",
@@ -161,12 +140,19 @@ const router=[
                 time: [2500,5000],  
                 value: -100,
             },
-            {
-                type:"move",
-                mode: "add",
-                axis:"Z",
-                value: [-300,300],
-            },
+            // {
+            //     type:"move",
+            //     mode: "add",
+            //     axis:"Z",
+            //     value: [-300,300],
+            // },
+            // {
+            //     type:"rotate",
+            //     mode: "set",
+            //     axis:"Z",
+            //     time: 0,  
+            //     value: [Math.PI/180,Math.PI/30,Math.PI/60],
+            // },
             // {
             //     type:"scale",
             //     mode: "add",
