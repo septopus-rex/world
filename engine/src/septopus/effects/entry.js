@@ -22,178 +22,189 @@ import Color from "./mesh/color";
 import Opacity from "./mesh/opacity";
 import Morph from "./mesh/morph";
 
-const reg={
-    name:"effects",
-    category:'lib',         
-    desc:"",
-    version:"1.0.0",
-    events:["start","end"],
+const reg = {
+    name: "effects",
+    category: 'lib',
+    desc: "",
+    version: "1.0.0",
+    events: ["start", "end"],
 }
 
-const config={
-    frame:60,           //frame rate, 60fps
+const config = {
+    frame: 60,           //frame rate, 60fps
 }
 
-const active={
-    camera:null,
-    scene:null,
+const active = {
+    camera: null,
+    scene: null,
 }
 
-const self={
-    hooks:{
-        reg:()=>{
+const self = {
+    hooks: {
+        reg: () => {
             return reg;
         },
     },
-    getPeriod:(time,duration,ends)=>{
-        const period=[0,0];
-        if(!time) period[1]=duration;
-        if(Array.isArray(time)){
-            period[0]=time[0];
-            period[1]=time[1];
-        }else{
-            period[0]=time;
-            period[1]=duration;
+    getPeriod: (time, duration, ends) => {
+        const period = [0, 0];
+        if (!time) period[1] = duration;
+        if (Array.isArray(time)) {
+            period[0] = time[0];
+            period[1] = time[1];
+        } else {
+            period[0] = time;
+            period[1] = duration;
         }
 
-        period[0]+=ends[0];
-        period[1]+=ends[0];
+        period[0] += ends[0];
+        period[1] += ends[0];
 
         return period;
     },
-    insertBreakpoint:(period,line)=>{
+    insertBreakpoint: (period, line) => {
         //console.log(`Break ${JSON.stringify(line)} by period ${JSON.stringify(period)}`);
         //1. start point
-        const start=period[0];
-        if(start && !line.includes(start)){
+        const start = period[0];
+        if (start && !line.includes(start)) {
             const index = line.findIndex(element => start <= element);
-            if (index !== -1){
+            if (index !== -1) {
                 line.splice(index, 0, start);
             }
         }
 
         //2. end point
-        const end=period[1];
-        if(!line.includes(end)){
+        const end = period[1];
+        if (!line.includes(end)) {
             const index = line.findIndex(element => end <= element);
-            if (index !== -1){
+            if (index !== -1) {
                 line.splice(index, 0, end);
             }
         }
         return line;
     },
-    getBreakpoint:(duration,timeline,pending)=>{
-        const ends=[0,0];
-        if(pending){
-            if(Array.isArray(pending)){
-                ends[0]=pending[0];
-                ends[1]=pending[1];
-            }else{
-                ends[0]=pending;
+    getBreakpoint: (duration, timeline, pending) => {
+        const ends = [0, 0];
+        if (pending) {
+            if (Array.isArray(pending)) {
+                ends[0] = pending[0];
+                ends[1] = pending[1];
+            } else {
+                ends[0] = pending;
             }
         }
-        let line=[0,ends[0]+ends[1]+duration];
-        if(ends[1]!==0) line=self.insertBreakpoint([line[1]-ends[1],line[1]],line);
-        if(ends[0]!==0) line=self.insertBreakpoint([0,ends[0]],line);
-        for(let i=0;i<timeline.length;i++){
-            const row=timeline[i];
-            const period=self.getPeriod(row.time,duration,ends);
-            line=self.insertBreakpoint(period,line)
+        let line = [0, ends[0] + ends[1] + duration];
+        if (ends[1] !== 0) line = self.insertBreakpoint([line[1] - ends[1], line[1]], line);
+        if (ends[0] !== 0) line = self.insertBreakpoint([0, ends[0]], line);
+        for (let i = 0; i < timeline.length; i++) {
+            const row = timeline[i];
+            const period = self.getPeriod(row.time, duration, ends);
+            line = self.insertBreakpoint(period, line)
         }
         return line;
     },
-    getAxis:(str)=>{
-        const arr=str.split("");
-        const ax={x:false,y:false,z:false};
-        for(let i=0;i<arr.length;i++){
-            const key=arr[i].toLocaleLowerCase();
-            ax[key]=true;
+    getAxis: (str) => {
+        const arr = str.split("");
+        const ax = { x: false, y: false, z: false };
+        for (let i = 0; i < arr.length; i++) {
+            const key = arr[i].toLocaleLowerCase();
+            ax[key] = true;
         }
         return ax;
     },
-    getStatus:(std,n)=>{
-        const breakpoints=self.getBreakpoint(std.duration,std.timeline,std.pending);
-        const end=breakpoints[breakpoints.length-1];
-        const per=1000/config.frame;
-        const status={
-            start:n,
-            end:n + Math.round(end/per),
-            counter:0,
-            round:{          //whole loop counter
-                limit:std.loops,        //
-                now:0,
-            },           
-            section:breakpoints,                 //animation section
+    getPrecision: (num) => {
+        const numStr = num.toString();
+
+        const decimalIndex = numStr.indexOf('.');
+        if (decimalIndex === -1)return 1;
+
+        const decimalPart = numStr.substring(decimalIndex + 1);
+        const decimalLength = decimalPart.length;
+        
+        return Math.pow(10, -decimalLength);
+    },
+    getStatus: (std, n) => {
+        const breakpoints = self.getBreakpoint(std.duration, std.timeline, std.pending);
+        const end = breakpoints[breakpoints.length - 1];
+        const per = 1000 / config.frame;
+        const status = {
+            start: n,
+            end: n + Math.round(end / per),
+            counter: 0,
+            round: {          //whole loop counter
+                limit: std.loops,        //
+                now: 0,
+            },
+            section: breakpoints,                 //animation section
             //actions:[],
         }
-        console.log(JSON.stringify(status));
+        //console.log(JSON.stringify(status));
         return status;
     },
 
-    action:(step,timeline,meshes,status,category)=>{
+    action: (step, timeline, meshes, status, category) => {
         //console.log(`Actual action`,step,JSON.stringify(status.section));
-        const point=Math.round(step*1000/config.frame);
+        const point = Math.round(step * 1000 / config.frame);
 
         console.log(point);
     },
 
-    simple:(std,category)=>{
-        return (meshes,n)=>{
-            for(let i=0;i<std.timeline.length;i++){
-                const row=std.timeline[i];
-                if(!router[category] || !router[category][row.type] ) continue;
-                if(typeof row.axis==="string") row.axis=self.getAxis(row.axis);
-                router[category][row.type]({mesh:meshes},row);
+    simple: (std, category) => {
+        return (meshes, n) => {
+            for (let i = 0; i < std.timeline.length; i++) {
+                const row = std.timeline[i];
+                if (!router[category] || !router[category][row.type]) continue;
+                if (typeof row.axis === "string") row.axis = self.getAxis(row.axis);
+                router[category][row.type]({ mesh: meshes }, row);
             }
         }
     },
-    complex:(std,category)=>{
-        let status=null;
-        return (meshes,n)=>{
-            if(status===null) status=self.getStatus(std,n);
+    complex: (std, category) => {
+        let status = null;
+        return (meshes, n) => {
+            if (status === null) status = self.getStatus(std, n);
 
             //1. check wether round ends
             const step = n - status.start;
-            if(n === status.end){
+            if (n === status.end) {
                 status.round.now++;
                 console.log(`Round ${status.round.now} of ${std.name}`);
-                if(status.round.limit!==0){
-                    if(status.round.now >= status.round.limit){
+                if (status.round.limit !== 0) {
+                    if (status.round.now >= status.round.limit) {
                         console.log(`Rounds end of ${std.name}, total ${status.round.now}`);
                         return false;
                     }
                 }
-                const full=status.end-status.start;
-                status.start=n;
-                status.end=n+full;
+                const full = status.end - status.start;
+                status.start = n;
+                status.end = n + full;
             }
 
             //2. action by step
-            const point=Math.round(step*1000/config.frame);
-            const ends=[0,0];
-            if(std.pending){
-                if(Array.isArray(std.pending)){
-                    ends[0]=std.pending[0];
-                    ends[1]=std.pending[1];
-                }else{
-                    ends[0]=std.pending;
+            const point = Math.round(step * 1000 / config.frame);
+            const ends = [0, 0];
+            if (std.pending) {
+                if (Array.isArray(std.pending)) {
+                    ends[0] = std.pending[0];
+                    ends[1] = std.pending[1];
+                } else {
+                    ends[0] = std.pending;
                 }
             }
 
-            for(let i=0;i<std.timeline.length;i++){
-                const row=std.timeline[i];
-                if(!router[category] || !router[category][row.type] ) continue;
-                if(typeof row.axis==="string") row.axis=self.getAxis(row.axis);
-                if(!row.time){
-                    router[category][row.type]({mesh:meshes},row);
-                }else{
-                    const time=row.time;
-                    if(Array.isArray(time)){
-                        if(point < time[0]+ ends[0] || point> time[1]+ends[0] ) continue;
-                        router[category][row.type]({mesh:meshes},row);
-                    }else{
-                        if(point < time[0]+ ends[0]) continue;
-                        router[category][row.type]({mesh:meshes},row);
+            for (let i = 0; i < std.timeline.length; i++) {
+                const row = std.timeline[i];
+                if (!router[category] || !router[category][row.type]) continue;
+                if (typeof row.axis === "string") row.axis = self.getAxis(row.axis);
+                if (!row.time) {
+                    router[category][row.type]({ mesh: meshes }, row);
+                } else {
+                    const time = row.time;
+                    if (Array.isArray(time)) {
+                        if (point < time[0] + ends[0] || point > time[1] + ends[0]) continue;
+                        router[category][row.type]({ mesh: meshes }, row);
+                    } else {
+                        if (point < time[0] + ends[0]) continue;
+                        router[category][row.type]({ mesh: meshes }, row);
                     }
                 }
             }
@@ -201,28 +212,28 @@ const self={
     },
 }
 
-const router={
-    camera:{
-        fall:Fall,
-        linger:Linger,
+const router = {
+    camera: {
+        fall: Fall,
+        linger: Linger,
     },
-    scene:{
-        lightning:Lightning,
+    scene: {
+        lightning: Lightning,
     },
-    mesh:{
-        rotate:Rotate,
-        move:Move,
-        scale:Scale,
-        texture:Texture,
-        color:Color,
-        opacity:Opacity,
-        morph:Morph,
+    mesh: {
+        rotate: Rotate,
+        move: Move,
+        scale: Scale,
+        texture: Texture,
+        color: Color,
+        opacity: Opacity,
+        morph: Morph,
     },
 };
 
 
 const vbw_effects = {
-    hooks:self.hooks,
+    hooks: self.hooks,
     /** 
      * set camera for effects
      * @functions
@@ -232,12 +243,12 @@ const vbw_effects = {
      * @returns
      * @return {boolean}
      */
-    set:(cam,sce)=>{
+    set: (cam, sce) => {
         active.camera = cam;
         active.scene = sce;
         return true;
     },
-    
+
     /** 
      * Entry to get effects,
      * @functions
@@ -251,9 +262,9 @@ const vbw_effects = {
      * @return {callback}
      */
 
-    get:(cat,type,params,ck)=>{
-        if(!router[cat] || !router[cat][type]) return {error:"Invalid effects."};
-        return router[cat][type](params,active,ck);
+    get: (cat, type, params, ck) => {
+        if (!router[cat] || !router[cat][type]) return { error: "Invalid effects." };
+        return router[cat][type](params, active, ck);
     },
 
     /** 
@@ -265,7 +276,7 @@ const vbw_effects = {
      * @returns
      * @return {boolean}
      */
-    group:(list)=>{
+    group: (list) => {
 
     },
 
@@ -279,12 +290,12 @@ const vbw_effects = {
      * @returns
      * @return {function}
      */
-    decode:(std,category)=>{
-        if(!std.loops && !std.duration){
-            return self.simple(std,category);
+    decode: (std, category) => {
+        if (!std.loops && !std.duration) {
+            return self.simple(std, category);
         }
-        
-        return self.complex(std,category);
+
+        return self.complex(std, category);
     },
 }
 

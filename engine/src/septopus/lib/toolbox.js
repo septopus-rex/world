@@ -32,8 +32,8 @@ const Toolbox = {
           : String.fromCharCode(Toolbox.rand(97, 122));
     return pre;
   },
-  hash: (n)=>{
-    const len=!n?64:n;
+  hash: (n) => {
+    const len = !n ? 64 : n;
     let hash = '0x';
     const hexChars = '0123456789abcdef';
     for (let i = 0; i < n; i++) {
@@ -57,7 +57,7 @@ const Toolbox = {
   type: (obj) => {
     return Object.prototype.toString.call(obj).slice(8, -1).toLowerCase();
   },
-  unique:(arr)=>{
+  unique: (arr) => {
     return [...new Set(arr)];
   },
   empty: (obj) => {
@@ -69,6 +69,17 @@ const Toolbox = {
   },
   toF: (a, fix) => {
     fix = fix || 3; return parseFloat(a.toFixed(fix))
+  },
+  precision: (num) => {
+    const numStr = num.toString();
+
+    const decimalIndex = numStr.indexOf('.');
+    if (decimalIndex === -1) return 1;
+
+    const decimalPart = numStr.substring(decimalIndex + 1);
+    const decimalLength = decimalPart.length;
+
+    return Math.pow(10, -decimalLength);
   },
   extend: (path, data, force, target) => {
     const len = path.length
