@@ -144,7 +144,7 @@ const router=[
             //     type:"move",
             //     mode: "add",
             //     axis:"Z",
-            //     value: [-300,300],
+            //     value: [-1000,1000],
             // },
             // {
             //     type:"rotate",
