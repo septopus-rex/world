@@ -355,7 +355,10 @@ const self = {
         //{"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
         //Stop check result: {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
 
-        return Calc.check(pos, stops, cfg);
+        const result=Calc.check(pos, stops, cfg);
+        if(cross) result.block=[bx,by];
+
+        return result;
     },
 
     /**
@@ -427,6 +430,62 @@ const self = {
         }
     },
 
+    actualMoving: (check, stop, diff) => {
+        //!important, need to remove `player [checkLocation]` function, do the same thing as `self.checkStop`
+        //1. update stand status
+        if (check.orgin){
+            //1.1.set player stand on stop, only set `stop`
+            VBW.player.stand(check.orgin);     
+        }else{
+            //1.2.set player stand on block;
+        }
+
+        //2. filter out Z changing and do moving on XY plane
+        //const delta= diff.position[2] + (check.cross?check.delta - check.edelta:check.delta);
+        //if(check.cross) console.log(`Z delta: ${delta}`,diff.position[2],JSON.stringify(check));
+        //diff.position[2]=0;
+        //VBW.player.update(diff,check);
+
+        //3. deal with Z changing
+        if(stop.on){
+            if(check.cross){
+                if(check.orgin){
+                    //1.from `stand stop` cross to `stop`
+
+                }else{
+                    //2.from `stand stop` cross to `block`
+                }
+            }else{
+                if(check.orgin){
+                    //3.from `stand stop` to `stop`
+                    if (check.orgin.adjunct !== stop.adjunct || check.orgin.index !== stop.index) {
+                        
+                    }
+                }else{
+                    //4.from `stand stop` to `block`
+
+                }
+            }
+        }else{
+            if(check.cross){
+                if(check.orgin){
+                    //5.from `block` cross to `stop`
+
+                }else{
+                    //6.from `block` cross to `block`
+                }
+            }else{
+                if(check.orgin){
+                    //7.from `block` to `stop`
+
+                }else{
+                    //8.from `block` to `block`
+
+                }
+            }
+        }
+    },
+
     /**
      * movement checker, set player stand height here.
      * @functions
@@ -437,35 +496,28 @@ const self = {
      * @param   {object}  diff  - {position:[x,y,z],rotation:[x,y,z]}, movement detail
      * @return void
      */
-    checkMoving: (check, stop, diff) => {
+    doMoving: (check, stop, diff) => {
 
-        if(runtime.player.location.block[0]===2025 && runtime.player.location.block[1]===619 && check.cross){
-            console.log("CHECK",JSON.stringify(check));
-        }
+        // if(runtime.player.location.block[0]===2025 && runtime.player.location.block[1]===619 && check.cross){
+        //     console.log("CHECK",JSON.stringify(check));
+        // }
+
+        //new solution
+        //1. synchronous diff without position.z
+        //2. animation of Z
+        //3. stand status update.
 
         //1. check delta to comfirm standing changing. Set player status correctly.
         if (check.delta!==undefined) {
-            if (check.cross) {
-                diff.position[2] += check.delta - check.edelta;
-            } else {
-                diff.position[2] += check.delta;
-            }
-            if (check.orgin) VBW.player.stand(check.orgin);     //set player stand on stop
+            diff.position[2] += check.cross?check.delta - check.edelta:check.delta;
+            if (check.orgin) VBW.player.stand(check.orgin);     //set player stand on stop, only set `stop`
         }
-        
-        VBW.player.synchronous(diff);       //set player stay in block
-
         //2. more actions for UX
         if(stop.on){
             if(check.cross){
-                if(check.edelta!==undefined){
-                    VBW.player.synchronous({position:[0,0,check.edelta]},true);
-                }
-
                 if(check.orgin){
                     //1.from `stand stop` cross to `stop`
-                    //!important, `stop.on` event trigger 
-                    VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+
                 }else{
                     //2.from `stand stop` cross to `block`
                     VBW.player.leave(check);
@@ -476,8 +528,7 @@ const self = {
                     if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
                         //do nothing if stand on the same stop
                     } else {
-                        //!important, `stop.on` event trigger 
-                        VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+
                     }
                 }else{
                     //4.from `stand stop` to `block`
@@ -486,35 +537,26 @@ const self = {
             }
         }else{
             if(check.cross){
-                if(check.edelta!==undefined){
-                    VBW.player.synchronous({position:[0,0,check.edelta]},true);
-                }
-
                 if(check.orgin){
                     //5.from `block` cross to `stop`
-                    VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+
                 }else{
                     //6.from `block` cross to `block`
                     if (check.edelta !== 0) {
                         const fall = runtime.player.location.position[2];
                         const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
                         if( act_fall > 0 ){
-                            VBW.player.cross(parseFloat(act_fall),true);        //need to set skip 
+                            VBW.player.cross(parseFloat(act_fall));        //need to set skip 
                         }
                     }
                 }
             }else{
-                if(check.edelta!==undefined){
-                    VBW.player.synchronous({position:[0,0,check.edelta]},true);
-                }
-
                 if(check.orgin){
                     //7.from `block` to `stop`
                     if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
 
                     } else {
-                        //!important, `stop.on` event trigger 
-                        VBW.event.trigger("stop", "on", { stamp: Toolbox.stamp() }, check.block);
+
                     }
                 }else{
                     //8.from `block` to `block`
@@ -730,10 +772,10 @@ const self = {
             const act = runtime.actions[i];
             if (!env.todo[act]) continue;
             const diff = env.todo[act](dis, ak);
-
+            
             //2.if no position change, just synchronous player rotation.
             if (!diff.position) {
-                VBW.player.synchronous(diff);
+                VBW.player.update(diff,{});
                 continue;
             }
 
@@ -753,8 +795,8 @@ const self = {
                     continue;
                 }
 
-                //3.2. moving action.
-                self.checkMoving(check, local.stop, diff);
+                //3.2. moving action update to player
+                VBW.player.update(diff,check);
             }
         }
 

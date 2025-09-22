@@ -211,22 +211,16 @@ const self = {
         return { load: glist, destroy: dlist };
     },
 
-    syncCameraPosition: (pos, cam_only) => {
+    syncCameraPosition: (pos) => {
         if(env.lock) return false;
-
+        //1. change camera position
         for (let dom_id in env.camera) {
-            //1. change camera position
             const cam = env.camera[dom_id];
             cam.position.set(                    //!important, transform from Septopus to three.js
                 cam.position.x + pos[0],
                 cam.position.y + pos[2],
                 cam.position.z - pos[1],
             );
-
-            //2. inc player position to set block
-            if(pos[0]!==0 || pos[1]!==0){
-                self.checkLocation(cam,pos,dom_id,cam_only);
-            }
         }
     },
 
@@ -239,14 +233,7 @@ const self = {
                 cam.rotation.y - ro[2],
                 cam.rotation.z + ro[1],
             );
-
-            //2. increate player rotation
-            env.player.location.rotation[0] += ro[0];
-            env.player.location.rotation[1] += ro[1];
-            env.player.location.rotation[2] += ro[2];
         }
-        const ak = env.player.location.rotation[2];
-        Actions.common.compass(ak);
     },
 
     saveLocation:()=>{
@@ -261,6 +248,34 @@ const self = {
         }
 
         localStorage.setItem(config.autosave.key, JSON.stringify(data));
+    },
+    updateRotation:(ro)=>{
+        //2. increate player rotation
+        const player=env.player;
+        player.location.rotation[0] += ro[0];
+        player.location.rotation[1] += ro[1];
+        player.location.rotation[2] += ro[2];
+
+        //3. update compass
+        const ak = player.location.rotation[2];
+        Actions.common.compass(ak);
+    },
+    updatePosition:(pos,block)=>{
+        const player=env.player;
+        if(!block){
+            player.location.position[0] += pos[0];
+            player.location.position[1] += pos[1];
+            player.location.position[2] += pos[2];
+
+        }else{
+            const side = self.getSide();
+            const px=player.location.position[0]+pos[0];
+            const py=player.location.position[1]+pos[1];
+            player.location.position[0] = px>0?px%side[0]:px+side[0];
+            player.location.position[1] = py>0?py%side[1]:py+side[1];
+            player.location.position[2] += pos[2];
+            player.location.block = [block[0],block[1]];
+        }
     },
 
     auto: () => {
@@ -471,11 +486,41 @@ const vbw_player = {
 
     /**
     * synchronous location changing to camera and player.
+    * @param   {object|object[]}    diff        - {position:[0,0,0],rotation:[0,0,0]}
+    * @param   {boolean}            check       -  {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700,block:[0,0]}
+    * @return  void
+    */
+    update:(diff,check)=>{
+        console.log(diff,check);
+        if(check && check.cross) console.log(diff,check);
+
+        //2. player status update
+        //2.1. update stand status
+        if (check && check.orgin) vbw_player.stand(check.orgin);
+
+        //2.2. update rotation
+        if (diff.rotation){
+            self.syncCameraRotation(diff.rotation);
+            self.updateRotation(diff.rotation);
+        }
+
+        //2.3. update XY position then Z position
+        if (diff.position){
+            const pos=[diff.position[0],diff.position[1],0];
+            self.syncCameraPosition(pos);
+            console.log(pos)
+            self.updatePosition(pos,check.block===undefined?false:check.block);
+        }
+        
+    },
+
+    /**
+    * synchronous location changing to camera and player.
     * @param   {object|object[]}    diff     - {position:[0,0,0],rotation:[0,0,0]}
     * @param   {boolean}   cam_only - wether only set camera, ignore the player location checking
     * @return  void
     */
-    synchronous: (diff,cam_only) => {
+    _synchronous: (diff,cam_only) => {
         if (Array.isArray(diff)) {
 
         } else {
@@ -600,7 +645,7 @@ const vbw_player = {
             VBW.event.trigger("player","fall",evt);
         }else{
             //2.3 block elevation sync
-            if(!skip) self.syncCameraPosition([0,0,fall*cvt],true);
+            //if(!skip) self.syncCameraPosition([0,0,fall*cvt],true);
             //self.syncCameraPosition([0,0,fall*cvt],!skip);
         }   
         return true;
@@ -610,7 +655,7 @@ const vbw_player = {
     * player leave from special object to block
     * @functions
     * 1. reset player position.
-    * 2. trigger event `stop.on` trigger.
+    * 2. trigger event `stop.leave` trigger.
     * 3. trigger event `player.fall` or `player.death`.
     * @param {object}   check  - {"interact":false,"move":true,"cross":true,"edelta":-100}
     * @return
@@ -632,7 +677,7 @@ const vbw_player = {
         self.saveLocation();
 
         //2. event trigger
-        //!important, `stop.on` event trigger
+        //!important, `stop.leave` event trigger
         const target={
             stamp:Toolbox.stamp(),
             adjunct:stop.adjunct,
@@ -666,8 +711,8 @@ const vbw_player = {
             //!important, `player.fall` event trigger
             VBW.event.trigger("player","fall",evt);
         }else{
-            const skip=true;
-            self.syncCameraPosition([0,0,-fall*cvt],skip);
+            //const skip=true;
+            //self.syncCameraPosition([0,0,-fall*cvt],skip);
         }
         return true;
     },
