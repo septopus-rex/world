@@ -308,8 +308,8 @@ const self = {
      * @functions
      * 1. wether cross block, if so, need to get the stops by the new block
      * 2. wether stopped by objects;
-     * @param {number[]}    delta   - [x,y,z], value of postion changing
-     * @return {object}  - {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
+     * @param   {number[]}    delta   - [x,y,z], value of postion changing
+     * @return  {object}  - {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
      */
     checkStop: (delta) => {
         const cvt = runtime.convert, side = runtime.side;
@@ -341,16 +341,20 @@ const self = {
 
         //2.check whether stopped by stops
         //also check the nearby block stops if not stopped by block
-        const pos = cross ? [nx % side[0], ny % side[1], nz] : [nx, ny, nz];
+        const pos = cross ? [
+            nx<0 ? nx + side[0] : nx%side[0],
+            ny<0 ? ny + side[0] : ny%side[1], 
+            nz] : [nx, ny, nz];
         const stops = self.getStops([[bx, by]], side);
 
         const cfg = {
             cap: capacity.span * cvt,               //cross limit
             height: body.height * cvt,              //player body height
             elevation: va,                          //block elevation
-            cross: cross,                            //whether block cross
+            cross: cross,                           //whether block cross
         };
         if (cross) cfg.next = self.getElevation(bx, by);    //if cross, prepare the next block elevation
+        //if (player.location.stop.on) cfg.on=true;
 
         //{"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
         //Stop check result: {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}
@@ -426,142 +430,6 @@ const self = {
                 evt.stamp = Toolbox.stamp();
                 VBW.event.trigger("trigger", "out", evt, Toolbox.clone(env.trigger));
                 env.trigger = null;
-            }
-        }
-    },
-
-    actualMoving: (check, stop, diff) => {
-        //!important, need to remove `player [checkLocation]` function, do the same thing as `self.checkStop`
-        //1. update stand status
-        if (check.orgin){
-            //1.1.set player stand on stop, only set `stop`
-            VBW.player.stand(check.orgin);     
-        }else{
-            //1.2.set player stand on block;
-        }
-
-        //2. filter out Z changing and do moving on XY plane
-        //const delta= diff.position[2] + (check.cross?check.delta - check.edelta:check.delta);
-        //if(check.cross) console.log(`Z delta: ${delta}`,diff.position[2],JSON.stringify(check));
-        //diff.position[2]=0;
-        //VBW.player.update(diff,check);
-
-        //3. deal with Z changing
-        if(stop.on){
-            if(check.cross){
-                if(check.orgin){
-                    //1.from `stand stop` cross to `stop`
-
-                }else{
-                    //2.from `stand stop` cross to `block`
-                }
-            }else{
-                if(check.orgin){
-                    //3.from `stand stop` to `stop`
-                    if (check.orgin.adjunct !== stop.adjunct || check.orgin.index !== stop.index) {
-                        
-                    }
-                }else{
-                    //4.from `stand stop` to `block`
-
-                }
-            }
-        }else{
-            if(check.cross){
-                if(check.orgin){
-                    //5.from `block` cross to `stop`
-
-                }else{
-                    //6.from `block` cross to `block`
-                }
-            }else{
-                if(check.orgin){
-                    //7.from `block` to `stop`
-
-                }else{
-                    //8.from `block` to `block`
-
-                }
-            }
-        }
-    },
-
-    /**
-     * movement checker, set player stand height here.
-     * @functions
-     * 1. 8 cases to set player location
-     * 2. `stop.on` event trigger
-     * @param   {object}  check - {"interact":false,"move":true,"index":-1,"cross":true,"edelta":-1700}, check result if movement is done
-     * @param   {object}  stop  - {}, stop status if movement is done.
-     * @param   {object}  diff  - {position:[x,y,z],rotation:[x,y,z]}, movement detail
-     * @return void
-     */
-    doMoving: (check, stop, diff) => {
-
-        // if(runtime.player.location.block[0]===2025 && runtime.player.location.block[1]===619 && check.cross){
-        //     console.log("CHECK",JSON.stringify(check));
-        // }
-
-        //new solution
-        //1. synchronous diff without position.z
-        //2. animation of Z
-        //3. stand status update.
-
-        //1. check delta to comfirm standing changing. Set player status correctly.
-        if (check.delta!==undefined) {
-            diff.position[2] += check.cross?check.delta - check.edelta:check.delta;
-            if (check.orgin) VBW.player.stand(check.orgin);     //set player stand on stop, only set `stop`
-        }
-        //2. more actions for UX
-        if(stop.on){
-            if(check.cross){
-                if(check.orgin){
-                    //1.from `stand stop` cross to `stop`
-
-                }else{
-                    //2.from `stand stop` cross to `block`
-                    VBW.player.leave(check);
-                }
-            }else{
-                if(check.orgin){
-                    //3.from `stand stop` to `stop`
-                    if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
-                        //do nothing if stand on the same stop
-                    } else {
-
-                    }
-                }else{
-                    //4.from `stand stop` to `block`
-                    VBW.player.leave(check);
-                }
-            }
-        }else{
-            if(check.cross){
-                if(check.orgin){
-                    //5.from `block` cross to `stop`
-
-                }else{
-                    //6.from `block` cross to `block`
-                    if (check.edelta !== 0) {
-                        const fall = runtime.player.location.position[2];
-                        const act_fall = check.cross ? (fall - check.edelta / runtime.convert) : fall;
-                        if( act_fall > 0 ){
-                            VBW.player.cross(parseFloat(act_fall));        //need to set skip 
-                        }
-                    }
-                }
-            }else{
-                if(check.orgin){
-                    //7.from `block` to `stop`
-                    if (check.orgin.adjunct === stop.adjunct && check.orgin.index === stop.index) {
-
-                    } else {
-
-                    }
-                }else{
-                    //8.from `block` to `block`
-                    //do nothing here.
-                }
             }
         }
     },
@@ -765,14 +633,13 @@ const self = {
         //!important, need to confirm the `AK` definition, it is camera coordination
         //FIXME, change to calculate on the player rotation.
         const ak = runtime.camera.rotation.y;
-        const local = runtime.player.location;
 
         //1.deal with keyboard inputs.
         for (let i = 0; i < runtime.actions.length; i++) {
             const act = runtime.actions[i];
             if (!env.todo[act]) continue;
             const diff = env.todo[act](dis, ak);
-            
+
             //2.if no position change, just synchronous player rotation.
             if (!diff.position) {
                 VBW.player.update(diff,{});

@@ -51,7 +51,7 @@ const self={
     getCameraHeight:()=>{
         const dom_id=VBW.cache.get(["active","current"]);
         const camera=VBW.cache.get(["active","containers",dom_id,"camera"]);
-        console.log(camera);
+        //console.log(camera);
         return camera.position.y;
     },
 

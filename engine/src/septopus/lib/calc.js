@@ -143,6 +143,36 @@ const self = {
 }
 
 const Calc = {
+    cross: (from, to, ext) => {
+        const delta = [to[0] - from[0], to[1] - from[1]];
+        const dlist = [], glist = [], rg = ext + ext + 1;
+        const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
+        if (delta[0] != 0 && delta[1] == 0) {
+            for (let i = -ext; i <= ext; i++) {
+                dlist.push([x, from[1] + i]);
+                glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i])
+            }
+        } else if (delta[0] == 0 && delta[1] != 0) {
+            for (let i = -ext; i <= ext; i++) {
+                dlist.push([from[0] + i, y]);
+                glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
+            }
+        } else if (delta[0] != 0 && delta[1] != 0) {
+            const sx = delta[0] > 0 ? 1 : 0, ex = delta[0] > 0 ? 0 : -1;
+            const sy = delta[1] > 0 ? 1 : 0, ey = delta[1] > 0 ? 0 : -1;
+
+            //1.get the remove list
+            for (let i = -ext; i <= ext; i++) dlist.push([x, from[1] + i]);
+            for (let i = -ext + sx; i <= ext + ex; i++) dlist.push([from[0] + i, y]);
+
+            //2.get the load list
+            for (let i = -ext + sy; i <= ext + ey; i++)glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i]);
+            for (let i = -ext + sx; i <= ext + ex; i++)glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
+            glist.push([from[0] + (delta[0] > 0 ? ext + 1 : -ext - 1), from[1] + (delta[1] > 0 ? ext + 1 : -ext - 1)]);
+
+        }
+        return { load: glist, destroy: dlist };
+    },
     /**
     * calc distance of two points
     * @param {number[]}   pa  - [x,y]
@@ -180,21 +210,21 @@ const Calc = {
     * @param {object}       cfg     - {"cap":310,"height":1700,"elevation":1900,"cross":true,"next":200}
     * 
     * @return   {object}
-    * {"interact":true,"move":true,"index":0,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
+    * {"interact":true,"move":true,"delta":0,"orgin":{"adjunct":"box","index":0,"type":"box"}}
     */
     check: (pos, objs, cfg) => {
-        //console.log(JSON.stringify(cfg),JSON.stringify(pos));
-        //console.log(`Amount of stop: ${objs.length}`);
-
         const result = {         //stop result
             interact: false,     //whether on a stop
             move: true,          //whether allow to move
-            //index: -1,          //index of stops
+            delta:0,             //
+            cross:false,
+            elevation:0,
+            orgin:null,
         }
         if(cfg.cross){
-            console.log(`Elevation now: ${cfg.elevation}, next: ${cfg.next}`);
+            //console.log(`Elevation now: ${cfg.elevation}, next: ${cfg.next},check position: ${JSON.stringify(pos)}`);
             result.cross=true;
-            result.edelta=cfg.next-cfg.elevation;
+            result.elevation=cfg.next-cfg.elevation;
         }
         if (objs.length < 1) return result;
 
@@ -215,8 +245,9 @@ const Calc = {
         //3.filter out the target stop for movement;
         const fs = self.filter(arr);
         result.move = !fs.stop;
-        //result.index = fs.index;
-        if (fs.delta !== undefined) result.delta = fs.delta;
+        if ( fs.delta !== undefined) result.delta = !cfg.cross?fs.delta:fs.delta+(cfg.elevation-cfg.next);     //already calc the elevation
+        //if (cfg.on) result.delta=result.delta - pos[2];
+        
         if (fs.orgin) result.orgin = fs.orgin;
         
         return result;  

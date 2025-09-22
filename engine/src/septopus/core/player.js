@@ -11,6 +11,7 @@
  */
 
 import Toolbox from "../lib/toolbox";
+import Calc from "../lib/calc";
 import VBW from "./framework";
 import UI from "../io/io_ui";
 //import Effects from "../effects/entry";
@@ -84,14 +85,12 @@ const self = {
         const key = config.autosave.key;
         const pp = localStorage.getItem(key);
         if (pp === null) {
-            //localStorage.setItem(key, JSON.stringify(config.location));
             return { world: config.defaultWorld };
         } else {
             try {
                 const data = JSON.parse(pp);
                 return data;
             } catch (error) {
-                //localStorage.setItem(key, JSON.stringify(config.location));
                 localStorage.removeItem(key);
                 return { world: config.defaultWorld };
             }
@@ -128,88 +127,6 @@ const self = {
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
     },
-
-    //parameter skip: wether adding pos z(pos[2]) to player z position  
-    checkLocation: (camera,pos,dom_id,cam_only) => {
-        //console.log(`Check location:`,JSON.stringify(pos));
-        const px = camera.position.x;
-        const py = -camera.position.z;
-        const player = env.player;
-        const side = self.getSide();
-        const cvt = self.getConvert();
-        const world=player.location.world;
-
-        //1.set player position
-        const x = Math.floor(px / side[0] + 1);
-        const y = Math.floor(py / side[1] + 1);
-
-        //2.deal with the cross stuff, load more data
-        const [bx, by] = player.location.block;
-        if (bx !== x || by !== y) {
-
-            //!important, `block.in` event trigger 
-            VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},{x:x,y:y,world:world,adjunct:"block",index:0});
-            VBW.event.trigger("block","out",{stamp:Toolbox.stamp()},{x:bx,y:by,world:world,adjunct:"block",index:0});
-            //console.log(`Trigger block out.`);
-
-            const change = self.cross(player.location.block, [x, y], player.location.extend);
-            const tasks = VBW.cache.get(["task", dom_id, world]);
-            if (change.load.length !== 0) {
-                for (let i = 0; i < change.load.length; i++) {
-                    const bk = change.load[i];
-                    tasks.push({ block: bk, action: "load" });
-                }
-            }
-
-            if (change.destroy.length !== 0) {
-                for (let i = 0; i < change.destroy.length; i++) {
-                    const bk = change.destroy[i];
-                    tasks.push({ block: bk, action: "unload" });
-                }
-            }
-        }
-        
-        VBW.update(dom_id, world,(done)=>{
-            VBW.event.trigger("system","update",{stamp:Toolbox.stamp(),container:dom_id,world:world});
-        });
-        player.location.block = [x, y];
-
-        //update player position
-        player.location.position[0] = px % side[0] / cvt;
-        player.location.position[1] = py % side[1] / cvt;
-        if(!cam_only) player.location.position[2] = player.location.position[2] + pos[2] / cvt;
-    },
-
-    cross: (from, to, ext) => {
-        const delta = [to[0] - from[0], to[1] - from[1]];
-        const dlist = [], glist = [], rg = ext + ext + 1;
-        const x = delta[0] > 0 ? from[0] - ext : from[0] + ext, y = delta[1] > 0 ? from[1] - ext : from[1] + ext;
-        if (delta[0] != 0 && delta[1] == 0) {
-            for (let i = -ext; i <= ext; i++) {
-                dlist.push([x, from[1] + i]);
-                glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i])
-            }
-        } else if (delta[0] == 0 && delta[1] != 0) {
-            for (let i = -ext; i <= ext; i++) {
-                dlist.push([from[0] + i, y]);
-                glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
-            }
-        } else if (delta[0] != 0 && delta[1] != 0) {
-            const sx = delta[0] > 0 ? 1 : 0, ex = delta[0] > 0 ? 0 : -1;
-            const sy = delta[1] > 0 ? 1 : 0, ey = delta[1] > 0 ? 0 : -1;
-
-            //1.get the remove list
-            for (let i = -ext; i <= ext; i++) dlist.push([x, from[1] + i]);
-            for (let i = -ext + sx; i <= ext + ex; i++) dlist.push([from[0] + i, y]);
-
-            //2.get the load list
-            for (let i = -ext + sy; i <= ext + ey; i++)glist.push([x + (delta[0] > 0 ? rg : -rg), from[1] + i]);
-            for (let i = -ext + sx; i <= ext + ex; i++)glist.push([from[0] + i, y + (delta[1] > 0 ? rg : -rg)]);
-            glist.push([from[0] + (delta[0] > 0 ? ext + 1 : -ext - 1), from[1] + (delta[1] > 0 ? ext + 1 : -ext - 1)]);
-
-        }
-        return { load: glist, destroy: dlist };
-    },
     prepareBlocks:(to)=>{
         const player=env.player;
         const from=player.location.block;
@@ -217,7 +134,7 @@ const self = {
         const world=player.location.world;
         const dom_id=VBW.cache.get(["active","current"]);
         
-        const change = self.cross(from, to, ext);
+        const change = Calc.cross(from, to, ext);
         const tasks = VBW.cache.get(["task", dom_id, world]);
         if (change.load.length !== 0) {
             for (let i = 0; i < change.load.length; i++) {
@@ -310,10 +227,77 @@ const self = {
         }
     },
 
-    auto: () => {
-        if ( env.clean ){
-            return false;
+    updateStopStatus:(orgin)=>{
+        const { location } = env.player;
+        if(orgin===null){
+            if(location.stop.on){
+                //!important, `stop.leave` event trigger
+                const target={
+                    stamp:Toolbox.stamp(),
+                    adjunct:location.stop.adjunct,
+                    index:location.stop.index,
+                    world:location.world,
+                    x:location.block[0],
+                    y:location.block[1],
+                }
+                VBW.event.trigger("stop","leave",{stamp:Toolbox.stamp()},target);
+
+                location.stop.on=false;
+                location.stop.adjunct="";
+                location.stop.index=0;
+                location.position[2]=0;
+            }
+
+        }else{
+            if(!location.stop.on){
+                VBW.player.stand(orgin);
+            }else{
+                if(location.stop.adjunct===orgin.adjunct && location.stop.index===orgin.index){
+                    //do nothing if on the same adjunct
+                }else{
+                    VBW.player.stand(orgin);
+                }
+            }
         }
+    },
+
+    checkFall:(fall)=>{
+        //console.log(`Leaving`,fall);
+        const pos=[0,0,-fall];
+        self.syncCameraPosition(pos);
+
+
+        // const evt={
+        //     from:target,
+        //     fall:act_fall,
+        //     stamp:Toolbox.stamp(),
+        // }
+        //!important, `player.death` event trigger
+        // VBW.event.trigger("player","death",evt);
+    },
+
+    changeZ:(delta,elevation,orgin)=>{
+        const location=env.player.location;        //stop status right now
+        if(location.stop.on && orgin===null){
+            const cvt=self.getConvert();
+            const fall=location.position[2]*cvt;
+            if(elevation){
+                self.checkFall(fall-elevation);
+            }else{
+                self.checkFall(fall);
+            }
+        }else{
+            if(delta===0 && elevation===0) return false;
+            if(elevation){
+                self.checkFall(-delta-elevation);
+            }else{
+                self.checkFall(-delta);
+            }
+        }
+    },
+
+    auto: () => {
+        if ( env.clean )  return false;
 
         if (env.count > config.autosave.interval) {
             env.count = 0;
@@ -524,53 +508,37 @@ const vbw_player = {
     */
     update:(diff,check)=>{
         //console.log(diff,check);
-        if(check && check.cross) console.log(diff,check);
+        //if(check && check.cross) console.log(diff,check);
 
         //1. cross stuff
         if(check && check.cross){
             self.prepareBlocks(check.block);
         }
 
-        //2. player status update
-        //2.1. update stand status
-        if (check && check.orgin) vbw_player.stand(check.orgin);
-
-        //2.2. update rotation
+        //2.1. update rotation
         if (diff.rotation){
             self.syncCameraRotation(diff.rotation);
             self.updateRotation(diff.rotation);
         }
 
-        //2.3. update XY position then Z position
+        //2.2. update XY position then Z position
         if (diff.position){
             const pos=[diff.position[0],diff.position[1],0];
             self.syncCameraPosition(pos);
             self.updatePosition(pos,check.block===undefined?false:check.block);
         }
         
-    },
-
-    /**
-    * synchronous location changing to camera and player.
-    * @param   {object|object[]}    diff     - {position:[0,0,0],rotation:[0,0,0]}
-    * @param   {boolean}   cam_only - wether only set camera, ignore the player location checking
-    * @return  void
-    */
-    _synchronous: (diff,cam_only) => {
-        if (Array.isArray(diff)) {
-
-        } else {
-            if (diff.position){
-                if(cam_only){
-                    self.syncCameraPosition(diff.position,true);
-                }else{
-                    self.syncCameraPosition(diff.position);
-                }
-            }
-            if (diff.rotation) self.syncCameraRotation(diff.rotation);
+        //2.3. update Z postion
+        if(check && (check.delta || check.elevation || check.orgin===null)){
+            const pos=[0,0,check.delta];
+            self.updatePosition(pos);
+            self.changeZ(check.delta,check.elevation,check.orgin);
         }
-        return true;
+
+        //3. player status update
+        if(diff.position) self.updateStopStatus(!check.orgin?null:check.orgin);
     },
+
 
     /**
     * teleport player to target block
@@ -619,6 +587,7 @@ const vbw_player = {
     * @return {boolean}
     */
     stand:(orgin)=>{
+        //console.log(`Set player to stand on adjucnt.`);
         //1. location update
         const player=env.player;
         player.location.stop.on=true;
@@ -637,119 +606,7 @@ const vbw_player = {
             y:player.location.block[1],
         }
         VBW.event.trigger("stop","on",{stamp:Toolbox.stamp()},target);
-        return true;
-    },
-
-    /**
-    * player go cross to `block` from `stop`
-    * @functions
-    * 1. set player position
-    * 2. trigger event `player.fall` or `player.death`.
-    * @param    {number}    fall    - fall height
-    * @param {boolean}   skip  - weather skip syncCameraPosition
-    */
-    cross:(fall,skip)=>{
-        console.log(`Cross fall height:`,fall);
-        const cvt=self.getConvert();
-        const player=env.player;
-        const target={
-            stamp:Toolbox.stamp(),
-            world:player.location.world,
-            x:player.location.block[0],
-            y:player.location.block[1],
-        }
-
-        if(fall>=capacity.death){
-            //2.1. player fall to death
-            const evt={
-                from:target,
-                fall:fall,
-                stamp:Toolbox.stamp(),
-            }
-            //!important, `player.death` event trigger
-            //only for effects, stand height should be modified right now
-            VBW.event.trigger("player","death",evt);
-        }else if(fall>=capacity.span){
-            //2.2 player fall normally
-            const evt={
-                from:target,
-                fall:fall,
-                stamp:Toolbox.stamp(),
-            }
-            //!important, `player.fall` event trigger
-            //only for effects, stand height should be modified right now
-            VBW.event.trigger("player","fall",evt);
-        }else{
-            //2.3 block elevation sync
-            //if(!skip) self.syncCameraPosition([0,0,fall*cvt],true);
-            //self.syncCameraPosition([0,0,fall*cvt],!skip);
-        }   
-        return true;
-    },
-
-    /**
-    * player leave from special object to block
-    * @functions
-    * 1. reset player position.
-    * 2. trigger event `stop.leave` trigger.
-    * 3. trigger event `player.fall` or `player.death`.
-    * @param {object}   check  - {"interact":false,"move":true,"cross":true,"edelta":-100}
-    * @return
-    */
-    leave:(check)=>{
-        console.log("Player leave:", JSON.stringify(check));
-
-        const cvt=self.getConvert();
-        const player=env.player;
-
-        //1. location update
-        const fall=player.location.position[2];
-        player.location.position[2]=0;      //reset player stand height
-
-        const stop=Toolbox.clone(player.location.stop);
-        player.location.stop.on=false;
-        player.location.stop.adjunct="";
-        player.location.stop.index=0;
-        self.saveLocation();
-
-        //2. event trigger
-        //!important, `stop.leave` event trigger
-        const target={
-            stamp:Toolbox.stamp(),
-            adjunct:stop.adjunct,
-            index:stop.index,
-            world:player.location.world,
-            fall:fall,
-            x:player.location.block[0],
-            y:player.location.block[1],
-        }
-        VBW.event.trigger("stop","leave",{stamp:Toolbox.stamp()},target);
-
-        const act_fall=check.cross?(fall-check.edelta/cvt):fall;
-        console.log(`Actual fall height`,act_fall);
-        
-        if(act_fall>=capacity.death){
-            //2.1. player fall to death
-            const evt={
-                from:target,
-                fall:act_fall,
-                stamp:Toolbox.stamp(),
-            }
-            //!important, `player.death` event trigger
-            VBW.event.trigger("player","death",evt);
-        }else if(act_fall>=capacity.span){
-            //2.2 player fall normally
-            const evt={
-                from:target,
-                fall:act_fall,
-                stamp:Toolbox.stamp(),
-            }
-            //!important, `player.fall` event trigger
-            VBW.event.trigger("player","fall",evt);
-        }else{
-            //const skip=true;
-            //self.syncCameraPosition([0,0,-fall*cvt],skip);
-        }
+        //console.log(`Stand on stop event triggered.`);
         return true;
     },
 }
