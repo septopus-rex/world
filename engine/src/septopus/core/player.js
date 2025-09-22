@@ -210,6 +210,36 @@ const self = {
         }
         return { load: glist, destroy: dlist };
     },
+    prepareBlocks:(to)=>{
+        const player=env.player;
+        const from=player.location.block;
+        const ext=player.location.extend;
+        const world=player.location.world;
+        const dom_id=VBW.cache.get(["active","current"]);
+        
+        const change = self.cross(from, to, ext);
+        const tasks = VBW.cache.get(["task", dom_id, world]);
+        if (change.load.length !== 0) {
+            for (let i = 0; i < change.load.length; i++) {
+                const bk = change.load[i];
+                tasks.push({ block: bk, action: "load" });
+            }
+        }
+
+        if (change.destroy.length !== 0) {
+            for (let i = 0; i < change.destroy.length; i++) {
+                const bk = change.destroy[i];
+                tasks.push({ block: bk, action: "unload" });
+            }
+        }
+
+        VBW.event.trigger("block","in",{stamp:Toolbox.stamp()},{x:to[0],y:to[1],world:world,adjunct:"block",index:0});
+        VBW.event.trigger("block","out",{stamp:Toolbox.stamp()},{x:from[0],y:from[1],world:world,adjunct:"block",index:0});
+
+        VBW.update(dom_id, world,(done)=>{
+            VBW.event.trigger("system","update",{stamp:Toolbox.stamp(),container:dom_id,world:world});
+        });
+    },
 
     syncCameraPosition: (pos) => {
         if(env.lock) return false;
@@ -262,18 +292,20 @@ const self = {
     },
     updatePosition:(pos,block)=>{
         const player=env.player;
+        const cvt=self.getConvert();
         if(!block){
-            player.location.position[0] += pos[0];
-            player.location.position[1] += pos[1];
-            player.location.position[2] += pos[2];
+            player.location.position[0] += pos[0]/cvt;
+            player.location.position[1] += pos[1]/cvt;
+            player.location.position[2] += pos[2]/cvt;
 
         }else{
             const side = self.getSide();
-            const px=player.location.position[0]+pos[0];
-            const py=player.location.position[1]+pos[1];
-            player.location.position[0] = px>0?px%side[0]:px+side[0];
-            player.location.position[1] = py>0?py%side[1]:py+side[1];
-            player.location.position[2] += pos[2];
+            const sx=side[0]/cvt,sy=side[1]/cvt;
+            const px=player.location.position[0]+pos[0]/cvt;
+            const py=player.location.position[1]+pos[1]/cvt;
+            player.location.position[0] = px>0?px%sx:px+sx;
+            player.location.position[1] = py>0?py%sy:py+sy;
+            player.location.position[2] += pos[2]/cvt;
             player.location.block = [block[0],block[1]];
         }
     },
@@ -491,8 +523,13 @@ const vbw_player = {
     * @return  void
     */
     update:(diff,check)=>{
-        console.log(diff,check);
+        //console.log(diff,check);
         if(check && check.cross) console.log(diff,check);
+
+        //1. cross stuff
+        if(check && check.cross){
+            self.prepareBlocks(check.block);
+        }
 
         //2. player status update
         //2.1. update stand status
@@ -508,7 +545,6 @@ const vbw_player = {
         if (diff.position){
             const pos=[diff.position[0],diff.position[1],0];
             self.syncCameraPosition(pos);
-            console.log(pos)
             self.updatePosition(pos,check.block===undefined?false:check.block);
         }
         
