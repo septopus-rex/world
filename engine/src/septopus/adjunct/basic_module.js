@@ -218,7 +218,7 @@ const self={
                     material:{
                         color:config.color,
                     },
-                    stop:!d[5]?false:true,
+                    stop:!d[4]?false:true,
                 }
                 
                 if(d[5]!==undefined && config.animate[d[5]]!==undefined){

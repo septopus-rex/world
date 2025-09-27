@@ -783,11 +783,7 @@ const Framework = {
         const active = self.getActive(dom_id);
         const world = self.cache.get(["env","player","location","world"]);
 
-        //2.group cache.block.id.world.animate
-        //TODO, need to think about this carefully, how to get default world.
-        
-
-        //3.frame synchronization queue
+        //2.frame synchronization queue
         const list = self.getLoopQueue(world, dom_id);
         if (!list.error) {
             for (let i = 0; i < list.length; i++) {
@@ -795,7 +791,7 @@ const Framework = {
             }
         }
 
-        //4.fresh scene
+        //3.fresh scene
         active.render.render(active.scene, active.camera);
         active.status.update();
     },

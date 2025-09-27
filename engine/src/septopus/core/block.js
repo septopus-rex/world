@@ -304,6 +304,9 @@ const vbw_block = {
     transform: self.transform,
     attribute: self.attribute,
     menu: self.menu,
+    task:{
+
+    },
 }
 
 export default vbw_block;

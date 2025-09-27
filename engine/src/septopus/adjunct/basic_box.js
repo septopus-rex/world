@@ -338,8 +338,12 @@ const self={
                     stop:!d[6]?false:true,
                 }
                 
-                if(d[5]!==undefined && router[d[5]-1]!==undefined){
-                    dt.animate=d[5];
+                if(d[5]!==undefined){
+                    if(Array.isArray(d[5])){
+
+                    }else{
+                        if(router[d[5]-1]!==undefined) dt.animate=d[5];
+                    }
                 }
                 
                 rst.push(dt);

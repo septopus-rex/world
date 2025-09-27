@@ -846,6 +846,7 @@ const self = {
             if(!VBW[row.adjunct] || !VBW[row.adjunct].hooks || !VBW[row.adjunct].hooks.animate) continue;
 
             //console.log(VBW[row.adjunct].hooks.animate);
+            console.log(row);
             const std=VBW[row.adjunct].hooks.animate(row.effect);
 
             //console.log(std);
