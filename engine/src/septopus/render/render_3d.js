@@ -825,9 +825,9 @@ const self = {
             fn(env.animation.meshes[key],env.animation.frame);
 
             //2. check point to remove animation from queue;
-            if(env.animation.checkpoint[n]){
+            // if(env.animation.checkpoint[n]){
 
-            }
+            // }
         }
     },
     structEffects:(world,dom_id)=>{
@@ -849,11 +849,6 @@ const self = {
 
             const cat=!std.category?"mesh":std.category;
             const fn=Effects.decode(std,cat);
-            //console.log(fn);
-            //2. construct SDT animation
-            // const fn=(meshes,n)=>{
-            //     //console.log(n);
-            // };
 
             //3. attatch to animation queue
             env.animation.queue[key]=fn;

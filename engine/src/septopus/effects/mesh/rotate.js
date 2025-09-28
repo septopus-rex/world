@@ -8,7 +8,7 @@
  * @date 2025-09-08
  */
 
-const Rotate = (target,cfg, ck ) => {
+const Rotate = (target,cfg,frame, ck ) => {
     const {mesh}=target;
     if(!mesh || mesh.error) return false;
     

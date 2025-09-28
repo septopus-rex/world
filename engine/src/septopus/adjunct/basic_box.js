@@ -112,7 +112,7 @@ const effects={
         }
     },
     rotateX:(param)=>{
-        console.log(param);
+        //console.log(param);
         const val=!param?5*Math.PI/180:param[0];
         return {
             name:"rotateX",
@@ -195,15 +195,44 @@ const effects={
                 }
             ],
         }
-    }
+    },
+    sin:(param)=>{
+        console.log(`Sin`,param);
+        return {
+            name:"curve",
+            duration: 2000,       //not set or 0, endless
+            loops: 0,             //not set or 0, endless
+            timeline:[
+                {
+                    type: "move",
+                    time: [0,1000],
+                    mode: "add",
+                    axis: "Y",
+                    value:(n)=>{
+                        return 20;
+                    },
+                },
+                {
+                    type:"move",
+                    time: [1000,2000],
+                    mode: "add",
+                    axis: "Y",
+                    value:(n)=>{
+                        return -20;
+                    },
+                }
+            ],
+        }
+    },
 };
 
 const router=[
-    effects.rotate,
-    effects.rotateZ,
-    effects.rotateX,
-    effects.turning,
-    effects.shake,
+    effects.rotate,     //Animate 1
+    effects.rotateZ,    //Animate 2
+    effects.rotateX,    //Animate 3
+    effects.turning,    //Animate 4
+    effects.shake,      //Animate 5
+    effects.sin,        //Animate 6
 ]
 
 const self={

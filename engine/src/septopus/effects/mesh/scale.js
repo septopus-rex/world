@@ -30,7 +30,7 @@ const self={
     },
 };
 
-const Scale = (target,cfg, ck ) => {
+const Scale = (target,cfg, frame,  ck ) => {
     const { mesh } = target;
     if(!mesh || mesh.error) return false;
     const {mode,value,axis}=cfg;

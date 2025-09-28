@@ -17,7 +17,7 @@ const self={
 
         return Toolbox.rand(start,end);
     },
-    getValue:(value)=>{
+    getValue:(value,frame)=>{
         if(Array.isArray(value)){
             if(value.length===2){
                 return self.calcRandom(value[0],value[1]);
@@ -25,19 +25,24 @@ const self={
                 return value[Toolbox.rand(0,value.length-1)];
             }
         }else{
+            //console.log(frame);
+            if(typeof value === 'function'){
+                //console.log(frame,value(frame));
+                return value(frame);
+            }
             return value;
         }
     },
 };
 
-const Move = (target, cfg , ck) => {
+const Move = (target, cfg ,frame,  ck) => {
     const { mesh } = target;
     if(!mesh || mesh.error) return false;
     const {mode,value,axis}=cfg;
 
     for(let i=0;i<mesh.length;i++){
         const row=mesh[i];
-        const val=self.getValue(value);
+        const val=self.getValue(value,frame);
         switch (mode) {
             case "add" :
                 if(axis.x) row.position.x+=val;

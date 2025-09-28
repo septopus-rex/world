@@ -154,7 +154,7 @@ const self = {
                 const row = std.timeline[i];
                 if (!router[category] || !router[category][row.type]) continue;
                 if (typeof row.axis === "string") row.axis = self.getAxis(row.axis);
-                router[category][row.type]({ mesh: meshes }, row);
+                router[category][row.type]({ mesh: meshes }, row, n);
             }
         }
     },
@@ -196,15 +196,15 @@ const self = {
                 if (!router[category] || !router[category][row.type]) continue;
                 if (typeof row.axis === "string") row.axis = self.getAxis(row.axis);
                 if (!row.time) {
-                    router[category][row.type]({ mesh: meshes }, row);
+                    router[category][row.type]({ mesh: meshes }, row, step);
                 } else {
                     const time = row.time;
                     if (Array.isArray(time)) {
                         if (point < time[0] + ends[0] || point > time[1] + ends[0]) continue;
-                        router[category][row.type]({ mesh: meshes }, row);
+                        router[category][row.type]({ mesh: meshes }, row, step);
                     } else {
                         if (point < time[0] + ends[0]) continue;
-                        router[category][row.type]({ mesh: meshes }, row);
+                        router[category][row.type]({ mesh: meshes }, row, step);
                     }
                 }
             }
