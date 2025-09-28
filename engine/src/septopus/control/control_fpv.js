@@ -577,10 +577,16 @@ const self = {
         Touch.on(id, "touchMove", (point, distance) => {
             const dx = point[0] - env.screen.touch[0];
             env.screen.distance = distance;
+            //console.log(`Touch move....`,dx);
+            const qu=config.queue;
+            const left=config.keyboard[config.code.HEAD_LEFT];
+            const right=config.keyboard[config.code.HEAD_RIGHT];
             if (dx > 0) {       //swipe right
-                VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_LEFT]);
+                VBW.queue.insert(qu, left);
+                VBW.queue.remove(qu, right);
             } else {            //swipe left
-                VBW.queue.insert(config.queue, config.keyboard[config.code.HEAD_RIGHT]);
+                VBW.queue.insert(qu, right);
+                VBW.queue.remove(qu, left);
             }
             env.screen.touch = point;
         });

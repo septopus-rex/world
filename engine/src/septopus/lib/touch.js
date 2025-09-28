@@ -165,8 +165,6 @@ const self={
                 const env=map[id].data;
                 const now= self.getStamp();
 
-                //console.log("End",JSON.stringify(env));
-
                 //Touchend event
                 if(events.touchEnd[id]) events.touchEnd[id](now);
 

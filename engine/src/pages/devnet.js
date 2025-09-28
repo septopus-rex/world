@@ -53,7 +53,7 @@ export default function Contract() {
     },
   }
 
-  useEffect(async () => {
+  useEffect(() => {
     if (wallet.publicKey !== null) {
       setAddress(wallet.publicKey.toString());
     }
@@ -66,8 +66,6 @@ export default function Contract() {
     });
 
     self.setWallet();
-
-
   }, [wallet]);
 
   const cmap = {
