@@ -76,124 +76,134 @@ const valid={
 }
 
 let definition=null;       //cache adjunct definition here.
+const effects={
+    rotate:(param)=>{
+        const val=!param?Math.PI/180:param[0];
+        return {
+            name:"rotate",
+            duration: 0,          //not set or 0, endless
+            loops: 0,             //not set or 0, endless
+            category:"mesh",      //category of animation
+            timeline:[
+                {
+                    type:"rotate",
+                    mode: "add",
+                    axis:"XYZ",
+                    time: 0,                    //
+                    value:val,          //when array, random | function to calculate
+                }
+            ],
+        };
+    },
+    rotateZ:(param)=>{
+        return {
+            name:"rotateZ",
+            duration: 0,          //not set or 0, endless
+            loops: 0,             //not set or 0, endless
+            timeline:[
+                {
+                    type:"rotate",
+                    mode: "add",
+                    axis:"Z",
+                    time: 0,                    //
+                    value:5*Math.PI/180,          //when array, random | function to calculate
+                }
+            ],
+        }
+    },
+    rotateX:(param)=>{
+        console.log(param);
+        const val=!param?5*Math.PI/180:param[0];
+        return {
+            name:"rotateX",
+            duration: 0,          //not set or 0, endless
+            loops: 0,             //not set or 0, endless
+            timeline:[
+                {
+                    type:"rotate",
+                    mode: "add",
+                    axis:"X",
+                    time: 0,                    //
+                    value:val,          //when array, random | function to calculate
+                }
+            ],
+        }
+    },
+    turning:(param)=>{
+        return {
+            name:"turning",
+            duration: 5000,          //not set or 0, endless
+            pending:[300,600],
+            loops: 10,             //not set or 0, endless
+            timeline:[
+                {
+                    type:"move",
+                    mode: "add",
+                    axis:"Y",
+                    time: [0,2500],  
+                    value: 100,
+                },
+                {
+                    type:"move",
+                    mode: "add",
+                    axis:"Y",
+                    time: [2500,5000],  
+                    value: -100,
+                },
+                // {
+                //     type:"move",
+                //     mode: "add",
+                //     axis:"Z",
+                //     value: [-1000,1000],
+                // },
+                // {
+                //     type:"rotate",
+                //     mode: "set",
+                //     axis:"Z",
+                //     time: 0,  
+                //     value: [Math.PI/180,Math.PI/30,Math.PI/60],
+                // },
+                // {
+                //     type:"scale",
+                //     mode: "add",
+                //     axis:"Z",
+                //     value: [-1.2,1.2],
+                // },
+            ],
+        };
+    },
+    shake:(param)=>{
+        return {
+            name:"shake",
+            duration: 3000,          //not set or 0, endless
+            pending:1200,
+            loops: 3,             //not set or 0, endless
+            timeline:[
+                {
+                    type: "move",
+                    time: 0,
+                    mode: "add",
+                    axis: "XYZ",
+                    value:[0,0.3],
+                },
+                {
+                    type:"rotate",
+                    time: 1000,
+                    mode: "set",
+                    axis: "Y",
+                    value:[0,0.3],
+                }
+            ],
+        }
+    }
+};
+
 const router=[
-    {
-        name:"rotate",
-        duration: 0,          //not set or 0, endless
-        loops: 0,             //not set or 0, endless
-        category:"mesh",      //category of animation
-        timeline:[
-            {
-                type:"rotate",
-                mode: "add",
-                axis:"XYZ",
-                time: 0,                    //
-                value:Math.PI/180,          //when array, random | function to calculate
-            }
-        ],
-    },
-    {
-        name:"rotateZ",
-        duration: 0,          //not set or 0, endless
-        loops: 0,             //not set or 0, endless
-        timeline:[
-            {
-                type:"rotate",
-                mode: "add",
-                axis:"Z",
-                time: 0,                    //
-                value:5*Math.PI/180,          //when array, random | function to calculate
-            }
-        ],
-    },
-    {
-        name:"rotateX",
-        duration: 0,          //not set or 0, endless
-        loops: 0,             //not set or 0, endless
-        timeline:[
-            {
-                type:"rotate",
-                mode: "add",
-                axis:"X",
-                time: 0,                    //
-                value:5*Math.PI/180,          //when array, random | function to calculate
-            }
-        ],
-    },
-    {
-        name:"turning",
-        duration: 5000,          //not set or 0, endless
-        pending:[300,600],
-        loops: 10,             //not set or 0, endless
-        timeline:[
-            {
-                type:"move",
-                mode: "add",
-                axis:"Y",
-                time: [0,2500],  
-                value: 100,
-            },
-            {
-                type:"move",
-                mode: "add",
-                axis:"Y",
-                time: [2500,5000],  
-                value: -100,
-            },
-            // {
-            //     type:"move",
-            //     mode: "add",
-            //     axis:"Z",
-            //     value: [-1000,1000],
-            // },
-            // {
-            //     type:"rotate",
-            //     mode: "set",
-            //     axis:"Z",
-            //     time: 0,  
-            //     value: [Math.PI/180,Math.PI/30,Math.PI/60],
-            // },
-            // {
-            //     type:"scale",
-            //     mode: "add",
-            //     axis:"Z",
-            //     value: [-1.2,1.2],
-            // },
-        ],
-    },
-    {
-        name:"shake",
-        duration: 3000,          //not set or 0, endless
-        pending:1200,
-        loops: 3,             //not set or 0, endless
-        timeline:[
-            {
-                type: "move",
-                time: 0,
-                mode: "add",
-                axis: "XYZ",
-                value:[0,0.3],
-            },
-            {
-                type:"rotate",
-                time: 1000,
-                mode: "set",
-                axis: "Y",
-                value:[0,0.3],
-            }
-        ],
-    },
-    // {
-    //     name:"texture",
-    //     timeline:[
-    //         {
-    //             type:"texture",
-    //             param:{
-    //                 list:[3,5,6],       //texture ID list
-    //             }
-    //         }
-    //     ],
-    // },
+    effects.rotate,
+    effects.rotateZ,
+    effects.rotateX,
+    effects.turning,
+    effects.shake,
 ]
 
 const self={
@@ -204,9 +214,13 @@ const self={
         def:(data)=>{
             definition=data;
         },
-        animate:(effect)=>{
+        animate:(effect,param)=>{
             const index=effect-1;
             if(!router[index]) return false;
+
+            if(typeof router[index] === 'function'){
+                return router[index](param);
+            }
             return  JSON.parse(JSON.stringify(router[index]));
         },
     },
@@ -340,9 +354,16 @@ const self={
                 
                 if(d[5]!==undefined){
                     if(Array.isArray(d[5])){
-
+                        dt.animate={
+                            router:d[5][0],
+                            param:[...d[5].slice(1)],
+                        }
                     }else{
-                        if(router[d[5]-1]!==undefined) dt.animate=d[5];
+                        if(router[d[5]-1]!==undefined){
+                            dt.animate={
+                                router:d[5],
+                            }
+                        } 
                     }
                 }
                 
