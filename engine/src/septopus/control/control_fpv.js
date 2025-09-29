@@ -626,6 +626,48 @@ const self = {
         });
     },
 
+    controller:()=>{
+        const qu=config.queue;
+        const code=config.code;
+        console.log(config.keyboard);
+        const left=config.keyboard[code.LEFT];
+        const right=config.keyboard[code.RIGHT];
+        const forward=config.keyboard[code.FORWARD];
+        const backward=config.keyboard[code.BACKWARD];
+    
+        const cfg={
+            start:{
+                forward:()=>{
+                    VBW.queue.insert(qu, forward);
+                },
+                backward:()=>{
+                    VBW.queue.insert(qu, backward);
+                },
+                leftward:()=>{
+                    VBW.queue.insert(qu, left);
+                },
+                rightward:()=>{
+                    VBW.queue.insert(qu, right);
+                },
+            },
+            end:{
+                forward:()=>{
+                    VBW.queue.remove(qu, forward);
+                },
+                backward:()=>{
+                    VBW.queue.remove(qu, backward);
+                },
+                leftward:()=>{
+                    VBW.queue.remove(qu, left);
+                },
+                rightward:()=>{
+                    VBW.queue.remove(qu, right);
+                },
+            }
+        }
+        UI.show("controller","",cfg);
+    },
+
     /**
      * Frame Synchronization ( frame-loop for short ), movement here to imply
      * @functions
@@ -709,7 +751,10 @@ const controller = {
         self.setWidth(dom_id);
         self.initCode();            //set keyborad code --> player action
 
-        //1.add keyboard listener and screen control
+        //1.flip the code --> key to key --> code, run once.
+        if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
+
+        //2.add keyboard listener and screen control
         const device = VBW.cache.get(["env", "device"]);
         env.mobile = device.mobile;
         VBW.queue.init(config.queue);
@@ -719,19 +764,17 @@ const controller = {
             self.keyboard();
             self.edit(dom_id);
         }
+        self.controller();
 
-        //2.set the related link
+        //3.set the related link
         self.setRuntime(dom_id);
 
-        //3.set frame-loop function
+        //4.set frame-loop function
         const world = runtime.player.location.world;
         const chain = ["block", dom_id, world, "loop"];
         if (!VBW.cache.exsist(chain)) VBW.cache.set(chain, []);
         const queue = VBW.cache.get(chain);
         queue.push({ name: "movement", fun: self.action });
-
-        //4.flip the code --> key to key --> code, run once.
-        if (config.keyboard === undefined) config.keyboard = self.flip(config.code);
 
         //5. init compass;
         const ak = runtime.player.location.rotation[2];

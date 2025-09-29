@@ -83,6 +83,11 @@ const doms={
             click:null,
         },
     },
+    controller:{
+        events:{
+            close:null,
+        },
+    }
 }
 
 const inputs={
@@ -577,7 +582,36 @@ const router={
             el.addEventListener("click",doms.status.events.click)
         }
     },
-    
+    controller:(val,cfg)=>{
+        const id=`${config.prefix}controller`;
+        const el=document.getElementById(id);
+        if(el===null) return console.error(`No container to show "controller"`);
+        const dom=self.getDom(`
+            <div class="grid">
+                <div class="direction" id="forward">↑</div>
+            </div>
+            <div class="half">
+                <div class="direction" id="leftward">←</div>
+            </div>
+            <div class="half">
+                <div class="direction" id="rightward">→</div>
+            </div>
+            <div class="grid">
+                <div class="direction" id="backward">↓</div>
+            </div>
+        `);
+        el.innerHTML="";
+        el.appendChild(dom.body);
+
+        if(cfg && cfg.start && cfg.end){
+            for(let key in cfg.start){
+                const btn=document.getElementById(key);
+                if(btn===null) return console.error(`Invalid key name "${key}"`);
+                btn.addEventListener("touchstart",cfg.start[key]);
+                btn.addEventListener("touchend",cfg.end[key]);
+            }
+        }
+    },
 };
 
 const UI={
