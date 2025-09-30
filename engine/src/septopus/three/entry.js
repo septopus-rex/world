@@ -23,6 +23,8 @@ import Loader from "./basic/loader";
 import Clock from "./basic/clock";
 import Box from "./basic/box3";
 import Vector from "./basic/vector";
+import Skeleton from "./basic/skeleton";
+import Mixer from "./basic/mixer";
 
 import light_direct from "./light/light_direct";
 import light_point from "./light/light_point";
@@ -58,6 +60,8 @@ const router={
         clock:Clock,
         box:Box,
         vector:Vector,      
+        skeleton:Skeleton,
+        mixer:Mixer,
     },
     light:{
         spot:light_spot,

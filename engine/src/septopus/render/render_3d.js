@@ -354,14 +354,38 @@ const self = {
         return false;
     },
 
-    getMeshFromModule:(obj)=>{
-        if(obj.isGroup) return obj.clone();
+    getMeshFromModule:(obj,mesh)=>{
+        const cvt=VBW.cache.get(["env", "world", "accuracy"]);
+        if(obj.isGroup){
+            const md=obj.clone();
+            md.position.copy(mesh.position);
+            md.userData=Toolbox.clone(mesh.userData);
+            md.scale.set(cvt,cvt,cvt);
+            md.rotation.set(
+                mesh.rotation.x - Math.PI * 0.5,
+                mesh.rotation.y,
+                mesh.rotation.z
+            );
+            return md;
+        }
+        
         if(obj.scene){
-            const size=ThreeObject.boundy(obj.scene);
-            console.log(size,obj);
-            //obj.scene.scale.set(1000,1000,1000);
-            return obj.scene.clone();
+            const skeleton=ThreeObject.get("basic","skeleton",{});
+            const md = skeleton.clone( obj.scene );
+            md.position.copy(mesh.position);
+            md.userData=Toolbox.clone(mesh.userData);
+            md.scale.set(5*cvt,5*cvt,5*cvt);
+            md.rotation.set(
+                mesh.rotation.x,
+                mesh.rotation.y,
+                mesh.rotation.z
+            );
+            //const mixed=ThreeObject.get("basic","mixer",{model:md});
+            //mixed.clipAction( obj.animations[ 1 ] ).play();
+            return md;
         } 
+
+
     },
 
     /** 3D module autoreplace function creator
@@ -393,20 +417,7 @@ const self = {
 
                 //3. manage mesh in scene;
                 //3.1. add module to scene
-                const md=self.getMeshFromModule(obj);
-                md.position.copy(mesh.position);
-                md.userData=Toolbox.clone(mesh.userData);
-                
-                const cvt=2*VBW.cache.get(["env", "world", "accuracy"]);
-                md.scale.set(cvt,cvt,cvt);
-                md.rotation.set(
-                    mesh.rotation.x - Math.PI * 0.5,
-                    mesh.rotation.y,
-                    mesh.rotation.z
-                );
-
-                console.log(md);
-
+                const md=self.getMeshFromModule(obj,mesh);
                 scene.add(md);
 
                 //3.2. remove replaced mesh
