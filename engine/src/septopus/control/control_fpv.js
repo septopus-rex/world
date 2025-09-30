@@ -555,17 +555,23 @@ const self = {
     touch: (dom_id) => {
         const id = `#${dom_id} canvas`;
 
-        //1. double tap to go forward
-        Touch.on(id, "doubleTap", (point) => {
-            if (!env.moving) {
-                VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
-                env.moving = true;
-                UI.hide(["pop", "sidebar"]);
-            } else {
-                env.moving = false;
-                VBW.queue.remove(config.queue, config.keyboard[config.code.FORWARD]);
-            }
+
+        //0. Disable context menu globally
+        document.addEventListener('contextmenu', function(event) {
+            event.preventDefault();
         });
+
+        //1. double tap to go forward
+        // Touch.on(id, "doubleTap", (point) => {
+        //     if (!env.moving) {
+        //         VBW.queue.insert(config.queue, config.keyboard[config.code.FORWARD]);
+        //         env.moving = true;
+        //         UI.hide(["pop", "sidebar"]);
+        //     } else {
+        //         env.moving = false;
+        //         VBW.queue.remove(config.queue, config.keyboard[config.code.FORWARD]);
+        //     }
+        // });
 
         Touch.on(id, "touchStart", (point) => {
             env.screen.touch = point;
@@ -760,11 +766,11 @@ const controller = {
         VBW.queue.init(config.queue);
         if (device.mobile) {
             self.touch(dom_id);
+            self.controller();
         } else {
             self.keyboard();
             self.edit(dom_id);
         }
-        self.controller();
 
         //3.set the related link
         self.setRuntime(dom_id);

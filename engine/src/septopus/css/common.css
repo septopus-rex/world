@@ -56,6 +56,7 @@
   flex-direction: row; 
   display: grid;
   place-items: center; 
+  user-select: none;
 }
 
 .controller:hover{
@@ -72,6 +73,7 @@
   text-align: center;
   margin: 0 auto;
   display: block;
+  user-select: none;
 }
 
 .grid{
@@ -81,6 +83,7 @@
   display: flex;
   flex-direction: row;
   float: left;
+  user-select: none;
 }
 .half{
   width: 3.5rem;
@@ -89,6 +92,7 @@
   display: flex;
   flex-direction: row;
   float: left;
+  user-select: none;
 }
 
 .countdown{
@@ -442,8 +446,11 @@
 
 @media (max-width: 768px) {
   body{
-      padding: 0px 0px 0px 0px;
-      margin: 0px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    margin: 0px 0px 0px 0px;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   .close{
