@@ -51,10 +51,10 @@
   width: 7rem;
   height: 7rem;
   border-radius: 8rem;
-  background-color: #bbbbbb;
+  background-color: #252933;
   opacity: 0.3;
-  flex-direction: row; 
-  display: grid;
+  flex-direction: row;
+  display: none;
   place-items: center; 
   user-select: none;
 }
@@ -69,11 +69,12 @@
   border-radius: 2rem;
   line-height: 2rem;
   color: #ffffff;
-  background-color: #101e78;
+  background-color: #3b468b;
   text-align: center;
   margin: 0 auto;
   display: block;
   user-select: none;
+  font-weight: 900;
 }
 
 .grid{

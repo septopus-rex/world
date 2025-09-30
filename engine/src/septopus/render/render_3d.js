@@ -178,6 +178,8 @@ const self = {
                                 const row=VBW.cache.get(o_chain);
                                 row.three=obj;
 
+                                console.log(obj);
+
                                 //3.replace module in active scene;
                                 setTimeout(()=>{
                                     const ev={id:id,stamp:Toolbox.stamp()}

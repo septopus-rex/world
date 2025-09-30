@@ -167,7 +167,7 @@ const self = {
             const step = n - status.start;
             if (n === status.end) {
                 status.round.now++;
-                console.log(`Round ${status.round.now} of ${std.name}`);
+                //console.log(`Round ${status.round.now} of ${std.name}`);
                 if (status.round.limit !== 0) {
                     if (status.round.now >= status.round.limit) {
                         console.log(`Rounds end of ${std.name}, total ${status.round.now}`);

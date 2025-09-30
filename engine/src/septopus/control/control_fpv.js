@@ -635,7 +635,6 @@ const self = {
     controller:()=>{
         const qu=config.queue;
         const code=config.code;
-        console.log(config.keyboard);
         const left=config.keyboard[code.LEFT];
         const right=config.keyboard[code.RIGHT];
         const forward=config.keyboard[code.FORWARD];

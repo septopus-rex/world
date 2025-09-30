@@ -586,6 +586,7 @@ const router={
         const id=`${config.prefix}controller`;
         const el=document.getElementById(id);
         if(el===null) return console.error(`No container to show "controller"`);
+
         const dom=self.getDom(`
             <div class="grid">
                 <div class="direction" id="forward">↑</div>
@@ -602,6 +603,7 @@ const router={
         `);
         el.innerHTML="";
         el.appendChild(dom.body);
+        el.style.display="grid";
 
         if(cfg && cfg.start && cfg.end){
             for(let key in cfg.start){

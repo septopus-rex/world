@@ -404,6 +404,11 @@ const mock = {
                         [[2,2,6],[3,3,4],[0, 0, 0],rand(60, 90), [1,1], 6, 0],
                     ]
                 ],
+                [0x00a4,    //module
+                    [
+                        [[4, 3, 5], [8, 12, 2.5], [0, 0, 0], 8, 0, 1, 2025]
+                    ]
+                ],
             ], 999], owner: "LOCATION_ADDRESS" }
         }
 
@@ -612,6 +617,7 @@ const mock = {
             }
         }
 
+        const sss=rand(1, 3);
         return {
             x: x,
             y: y,
@@ -620,13 +626,13 @@ const mock = {
                 0.2,        //block elevation
                 1,          //block status
                 [           //adjuncts list
-                    [0x00a1,    //wall
-                        [[[1.5, 0.5, rand(2, 5)], [2, 6, 0], [0, 0, 0], rand(60, 90), [1, 1], 1, 1, [], 2025]]],
+                    //[0x00a1,    //wall
+                    //    [[[1.5, 0.5, rand(2, 5)], [2, 6, 0], [0, 0, 0], rand(60, 90), [1, 1], 1, 1, [], 2025]]],
                     [0x00a2,    //box
                         //[[[rand(1, 3), rand(1, 3), rand(1, 3)], [8, 8, 2], [0, 0, 0], rand(100, 300), [1, 1], 1, 1]]],
-                        [[[rand(1, 3), rand(1, 3), rand(1, 3)], [8, 8, 2], [0, 0, 0], rand(100, 300), [1, 1], [1, rand(1, 30)*0.01], 1]]],
-                    [0x00a4,    //module
-                        [[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], rand(10, 20), 0, 2025]]],
+                        [[[sss,sss,sss], [8, 8, 2], [0, 0, 0], rand(100, 300), [1, 1], [1, rand(1, 30)*0.01], 1]]],
+                    //[0x00a4,    //module
+                    //    [[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], rand(10, 20), 0, 2025]]],
                         //[[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], 6, 0, 2025]]],
                     //[0x00b4,    //stop
                     //    [[[rand(2, 4), 0, 0], [3, 2, 0.5], [0, 0, 0], 2, 2025]]],
@@ -661,43 +667,71 @@ const mock = {
     texture: (id) => {
         const arr = [
             "texture/vbw.png",
-            "texture/grass.jpg",
             "texture/avatar.jpg",
             "texture/qr.png",
-            "texture/ad.png",
+            "texture/grass.jpg",
         ];
 
-        //special ad png
-        if(id===666){
-            return {
+        const map={
+            666:{
                 index: id,
                 type:"texture",
                 format:"jpg",
-                raw: arr[4],
-                repeat: [1, 1]
-            }
-        }
+                raw: "texture/ad.png",
+                repeat: [1, 1],
+            },
+            88:{
+                index: id,
+                type:"texture",
+                format:"jpg",
+                raw: "texture/fabric.jpg",
+                repeat: [1, 1],
+            },
+        };
 
-        return {
+        //special ad png
+        if(!map[id]) return {
             index: id,
             type:"texture",
             format:"jpg",
             raw: arr[Toolbox.rand(0, arr.length - 2)],
             repeat: [1, 1]
         }
+
+        return JSON.parse(JSON.stringify(map[id]));
     },
     module: (id) => {
-        if(id===6){
-            return {
-                index: id,
+        const map={
+            6:{
+               index: id,
                 type:"module",
                 format:"FBX",
                 raw: "module/house.fbx",
                 params: {
                     size:[4,3,3],
-                },
-            }
+                }, 
+            },
+            8:{
+               index: id,
+                type:"module",
+                format:"FBX",
+                raw: "module/monkey.fbx",
+                params: {
+                    size:[40,30,30],
+                }, 
+            },
+            11:{
+               index: id,
+                type:"module",
+                format:"FBX",
+                raw: "module/mixamo.fbx",
+                params: {
+                    size:[4,3,3],
+                }, 
+            },
         }
+        if(map[id]!==undefined) return JSON.parse(JSON.stringify(map[id]));
+        
         return {
             index: id,
             type:"module",
