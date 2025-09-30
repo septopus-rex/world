@@ -325,7 +325,7 @@ const mock = {
                 start: {
                     block: [2025, 619],         //玩家的默认启动位置
                     position: [12, 12, 0],      //默认开始的位置[x,y,z],z为站立高度(相对于block的高度)
-                    rotation: [0, 0, 0],        //默认的旋转位置
+                    rotation: [0.108, 0, 0],        //默认的旋转位置
                     world:0,
                     extend:2,              
                     stop:{
@@ -406,7 +406,7 @@ const mock = {
                 ],
                 [0x00a4,    //module
                     [
-                        [[4, 3, 5], [8, 12, 2.5], [0, 0, 0], 8, 0, 1, 2025]
+                        [[4, 3, 5], [8, 12, 2.5], [0, 0, 0], 23, 0, 1, 2025]
                     ]
                 ],
             ], 999], owner: "LOCATION_ADDRESS" }
@@ -709,6 +709,7 @@ const mock = {
                 raw: "module/house.fbx",
                 params: {
                     size:[4,3,3],
+                    scale:[1,1,1],
                 }, 
             },
             8:{
@@ -727,6 +728,27 @@ const mock = {
                 raw: "module/mixamo.fbx",
                 params: {
                     size:[4,3,3],
+                    scale:[1,1,1],
+                }, 
+            },
+            22:{
+                index: id,
+                type:"module",
+                format:"GLTF",
+                raw: "module/robot.glb",
+                params: {
+                    size:[4,3,3],
+                    scale:[1,1,1],
+                }, 
+            },
+            23:{
+                index: id,
+                type:"module",
+                format:"GLTF",
+                raw: "module/soldier.glb",
+                params: {
+                    size:[4,3,3],
+                    scale:[1,1,1],
                 }, 
             },
         }

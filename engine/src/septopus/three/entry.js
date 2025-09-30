@@ -20,6 +20,9 @@ import Status from "./basic/status";
 import Raycast from "./basic/raycast";
 import Helper from "./basic/helper";
 import Loader from "./basic/loader";
+import Clock from "./basic/clock";
+import Box from "./basic/box3";
+import Vector from "./basic/vector";
 
 import light_direct from "./light/light_direct";
 import light_point from "./light/light_point";
@@ -51,7 +54,10 @@ const router={
         raycast:Raycast, 
         helper:Helper, 
         loader:Loader, 
-        status:Status,      
+        status:Status,
+        clock:Clock,
+        box:Box,
+        vector:Vector,      
     },
     light:{
         spot:light_spot,
@@ -124,7 +130,7 @@ const ThreeObject = {
 
         //2. coordination adaptation
         //!important,change size of 3D object
-        if(params.size) params.size=[
+        if(params && params.size) params.size=[
             params.size[0],
             params.size[2],
             params.size[1]
@@ -132,6 +138,28 @@ const ThreeObject = {
 
         //3.create 3D object
         return router[cat][mod].create(params);
+    },
+
+    boundy:(model)=>{
+        // 1. create Bounding Box object
+        const b3=ThreeObject.get("basic","box");
+        const box = b3.setFromObject(model);
+
+        // 2. Dimension Vector calculation
+        // box.max - box.min to get THREE.Vector3, model size
+        const size = ThreeObject.get("basic","vector");
+        box.getSize(size);
+
+        // 3. Center Point calculation
+        const center = ThreeObject.get("basic","vector");
+        box.getCenter(center);
+        
+        return {
+            width: size.x,
+            height: size.y,
+            depth: size.z,
+            center: center
+        };
     },
 
     /** 

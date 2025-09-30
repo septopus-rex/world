@@ -615,7 +615,6 @@ const self = {
     keyboard: () => {
         self.bind('keydown', (ev) => {
             const code = ev.which;
-
             
             if (config.keyboard[code]) {
                 //hide popup menu when moving 

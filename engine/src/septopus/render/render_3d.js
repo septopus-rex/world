@@ -177,8 +177,15 @@ const self = {
                                 const o_chain = ["resource", "module", parseInt(id)];
                                 const row=VBW.cache.get(o_chain);
                                 row.three=obj;
-
-                                console.log(obj);
+                                // if(obj.isGroup){
+                                //     row.three=obj;
+                                // }else{
+                                //     if(obj.scene && obj.scene.isGroup){
+                                //         obj.scene.scale.set(1000,1000,1000);
+                                //         row.three=obj.scene;
+                                //     }
+                                // }
+                                //console.log(obj);
 
                                 //3.replace module in active scene;
                                 setTimeout(()=>{
@@ -347,6 +354,16 @@ const self = {
         return false;
     },
 
+    getMeshFromModule:(obj)=>{
+        if(obj.isGroup) return obj.clone();
+        if(obj.scene){
+            const size=ThreeObject.boundy(obj.scene);
+            console.log(size,obj);
+            //obj.scene.scale.set(1000,1000,1000);
+            return obj.scene.clone();
+        } 
+    },
+
     /** 3D module autoreplace function creator
      * @functions
      * 1. filter out the module mesh 
@@ -376,15 +393,20 @@ const self = {
 
                 //3. manage mesh in scene;
                 //3.1. add module to scene
-                const md=obj.clone();
+                const md=self.getMeshFromModule(obj);
                 md.position.copy(mesh.position);
-                md.rotation.copy(mesh.rotation);
                 md.userData=Toolbox.clone(mesh.userData);
                 
-                const cvt=VBW.cache.get(["env", "world", "accuracy"]);
+                const cvt=2*VBW.cache.get(["env", "world", "accuracy"]);
                 md.scale.set(cvt,cvt,cvt);
-                md.rotation.set(md.rotation.x - Math.PI * 0.5, md.rotation.y,md.rotation.z);
-    
+                md.rotation.set(
+                    mesh.rotation.x - Math.PI * 0.5,
+                    mesh.rotation.y,
+                    mesh.rotation.z
+                );
+
+                console.log(md);
+
                 scene.add(md);
 
                 //3.2. remove replaced mesh
@@ -397,7 +419,6 @@ const self = {
             };
         })(target);
     },
-
     
     /** entry of getting 3D meshes
      * @functions
