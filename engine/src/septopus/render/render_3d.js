@@ -356,36 +356,27 @@ const self = {
 
     getMeshFromModule:(obj,mesh)=>{
         const cvt=VBW.cache.get(["env", "world", "accuracy"]);
+        let md = null;
         if(obj.isGroup){
-            const md=obj.clone();
-            md.position.copy(mesh.position);
-            md.userData=Toolbox.clone(mesh.userData);
-            md.scale.set(cvt,cvt,cvt);
-            md.rotation.set(
-                mesh.rotation.x - Math.PI * 0.5,
-                mesh.rotation.y,
-                mesh.rotation.z
-            );
-            return md;
+            md=obj.clone();
         }
         
         if(obj.scene){
             const skeleton=ThreeObject.get("basic","skeleton",{});
-            const md = skeleton.clone( obj.scene );
-            md.position.copy(mesh.position);
-            md.userData=Toolbox.clone(mesh.userData);
-            md.scale.set(5*cvt,5*cvt,5*cvt);
-            md.rotation.set(
-                mesh.rotation.x,
-                mesh.rotation.y,
-                mesh.rotation.z
-            );
-            //const mixed=ThreeObject.get("basic","mixer",{model:md});
-            //mixed.clipAction( obj.animations[ 1 ] ).play();
-            return md;
+            md = skeleton.clone( obj.scene );
         } 
 
+        if(md===null) return {error:"Invalid module."}
+        md.position.copy(mesh.position);
+        md.userData=Toolbox.clone(mesh.userData);
+        md.scale.set(cvt,cvt,cvt);
+        md.rotation.set(
+            mesh.rotation.x,
+            mesh.rotation.y,
+            mesh.rotation.z
+        );
 
+        return md;
     },
 
     /** 3D module autoreplace function creator
