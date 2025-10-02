@@ -4,6 +4,7 @@ use {
     anchor_lang::system_program,
     serde_json::{Value},
 };
+use crate::Pubkey;
 
 use crate::constants::{
     SOLANA_PDA_LEN,
@@ -230,7 +231,8 @@ fn is_valid_block(x:u32,y:u32,world:u32,world_list:&WorldList) -> bool {
 }
 
 fn is_owner(check_pubkey:Pubkey,record:&str) -> bool{
-    let pubkey = solana_program::pubkey::Pubkey::from_str(record).expect("Invalid pubkey");
+    //let pubkey = solana_program::pubkey::Pubkey::from_str(record).expect("Invalid pubkey");
+    let pubkey = Pubkey::from_str(record).expect("Invalid pubkey");
     let pubkey_bytes: [u8; 32] = pubkey.to_bytes();
     let manage_pubkey = anchor_lang::prelude::Pubkey::new_from_array(pubkey_bytes);
     if check_pubkey != manage_pubkey {
