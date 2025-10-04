@@ -177,15 +177,6 @@ const self = {
                                 const o_chain = ["resource", "module", parseInt(id)];
                                 const row=VBW.cache.get(o_chain);
                                 row.three=obj;
-                                // if(obj.isGroup){
-                                //     row.three=obj;
-                                // }else{
-                                //     if(obj.scene && obj.scene.isGroup){
-                                //         obj.scene.scale.set(1000,1000,1000);
-                                //         row.three=obj.scene;
-                                //     }
-                                // }
-                                //console.log(obj);
 
                                 //3.replace module in active scene;
                                 setTimeout(()=>{
@@ -375,6 +366,9 @@ const self = {
             mesh.rotation.y,
             mesh.rotation.z
         );
+
+        const size=ThreeObject.boundy(md);
+        console.log(md,size);
 
         return md;
     },

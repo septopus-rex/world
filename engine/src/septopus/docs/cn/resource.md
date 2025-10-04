@@ -24,9 +24,9 @@
         format:"fbx",
         raw:"BASE64_ENCODE_STRING",
         metadata:{
-            size:[4,10,6],
-            scale:[1,1,1],                  //原始模型缩放到m为单位的比例
-            rotation:[0,0,0],               //设置旋转值来调整模型到符合septopus的坐标系
+            size:[4,10,6],      //修正后的模型放置尺寸
+            scale:[1,1,1],      //原始模型缩放到m为单位的比例
+            rotation:[0,0,0],   //设置旋转值来调整模型到符合septopus的坐标系
         },
     }
     ```

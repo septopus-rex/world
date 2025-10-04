@@ -38,4 +38,5 @@
 |  文件类型   | 支持软件  | 导出格式  | 动画支持 |
 |  ----  | ----  | ---- | ---- |
 |  FBX   |  Autodesk | Group  | ❌ |
-|  GLTF   |  主流格式,Blender | {scene:{Group},animations:[],asset:{},scenes:[]}  | ✅ |
+|  3MF   |  3MF Consortium, 3D打印使用 | Group  | ❌ |
+|  GLTF   |  Khronos Group,开放格式 | {scene:{Group},animations:[],asset:{},scenes:[]}  | ✅ |
