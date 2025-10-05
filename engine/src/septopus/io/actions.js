@@ -151,6 +151,16 @@ const buttons = {
             Pages.world();
         }
     },
+    block: {
+        label: "Block", icon: "", action: async () => {
+            Pages.single();
+        }
+    },
+    review: {
+        label: "Resource", icon: "", action: async () => {
+            Pages.resource();
+        }
+    },
 
     game: {
         label: "Game", icon: "", action: async () => {

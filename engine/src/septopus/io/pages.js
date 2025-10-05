@@ -41,6 +41,14 @@ const config = {
         container: "setting_container",
         title: "setting_title",
     },
+    single:{
+        container: "single_container",
+        title: "single_title", 
+    },
+    resource:{
+        container: "resource_container",
+        title: "resource_title", 
+    },
 }
 
 const self={
@@ -232,8 +240,8 @@ const Pages = {
     },
     //setting page
     setting:()=>{
-        const container_id = config.system.container;
-        const title_id = config.system.title;
+        const container_id = config.setting.container;
+        const title_id = config.setting.title;
         const ctx = {
             title: `<div id="${title_id}">System Setting</div>`,
             content: `<div class="map" id="${container_id}"></div>`,
@@ -253,6 +261,52 @@ const Pages = {
         };
         UI.show("dialog", ctx, cfg);
     },
+
+    //single block page
+    single:()=>{
+        const container_id = config.single.container;
+        const title_id = config.single.title;
+        const ctx = {
+            title: `<div id="${title_id}">Single Block</div>`,
+            content: `<div class="" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`Single block page closed.`);
+                },
+                show:()=>{
+                    console.log(`Single block page show.`);
+                },
+            },
+            auto: () => {
+
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    },
+    resource:()=>{
+        const container_id = config.resource.container;
+        const title_id = config.resource.title;
+        const ctx = {
+            title: `<div id="${title_id}">Resource Review</div>`,
+            content: `<div class="" id="${container_id}"></div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`Resource review page closed.`);
+                },
+                show:()=>{
+                    console.log(`Resource review page show.`);
+                },
+            },
+            auto: () => {
+
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    }
 }
 
 export default Pages;

@@ -13,16 +13,25 @@ import * as THREE from "three";
 
 const self={
     get:(type,params)=>{
+        let controller=null;
         switch (type) {
             case "orbit":
                 const render={};
                 const camera={};
-                return new THREE.OrbitControls(camera, render.domElement);
+                controller = new THREE.OrbitControls(camera, render.domElement);
+
+                // controls.enableDamping = true; // 开启阻尼（惯性）
+                // controls.dampingFactor = 0.05;
+                // controls.minDistance = 2;      // 最小缩放距离
+                // controls.maxDistance = 50;     // 最大缩放距离
+                // controls.maxPolarAngle = Math.PI / 2; // 限制俯仰角（不能转到地下）
+
                 break;
         
             default:
                 break;
         }
+        return controller;
     },
     valid:(params)=>{
 

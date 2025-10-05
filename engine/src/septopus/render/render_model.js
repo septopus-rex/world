@@ -1,18 +1,18 @@
 /**
- * Render - 3D Render
+ * Render - 3D Model Renderer
  *
  * @fileoverview
  *  1. 3D render from `3D STD` data for observing
  *
  * @author Fuu
- * @date 2025-04-23
+ * @date 2025-10-05
  */
 
 
 const reg={
-    name:"rd_observe",
+    name:"rd_model",
     type:'render',
-    desc: "Ovserve renderer to show single block.",
+    desc: "Model renderer, more details for showing.",
     version:"1.0.0",
     events:["ready","done"],
 }
@@ -34,10 +34,10 @@ const renderer={
     construct:(width, height, dom_id, cfg)=>{
 
     },
-    show:(dom_id, block)=>{
+    show:(dom_id, index)=>{
 
     },
-    clean:(dom_id, world, x, y)=>{
+    clean:(dom_id)=>{
 
     },
 }
