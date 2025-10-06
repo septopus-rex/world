@@ -18,15 +18,24 @@ const reg={
 }
 
 const config={
-    
-}
+    container:"observe_container",
+    camera:{
+
+    },
+};
+
+const env = {
+    camera:null,
+    block:[0,0],
+};
 
 const self={
     hooks:{
         reg:()=>{
             return reg;
         },
-    }
+    },
+
 };
 
 const renderer={

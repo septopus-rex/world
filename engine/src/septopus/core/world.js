@@ -35,6 +35,7 @@ import API from "../io/api";
 import render_3d from "../render/render_3d";
 import render_2d from "../render/render_2d";
 import render_observe from "../render/render_observe";
+import render_model from "../render/render_model";
 
 import control_fpv from "../control/control_fpv";
 import control_2d from "../control/control_2d";
@@ -55,7 +56,7 @@ import TriggerBuilder from "../lib/builder";
 
 const regs = {
     core: [vbw_detect, vbw_sky, vbw_time, vbw_weather, vbw_block, vbw_player, vbw_movement, vbw_event, vbw_bag,vbw_effects, API],
-    render: [render_3d, render_2d, render_observe],
+    render: [render_3d, render_2d, render_observe,render_model],
     controller: [control_fpv, control_2d, control_observe],
     adjunct: [basic_stop, basic_trigger, basic_light, basic_box, basic_module, adj_wall, adj_water],
     plugin: [plug_link],

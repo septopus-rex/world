@@ -2,7 +2,6 @@
 
 use anchor_lang::prelude::*;
 
-//declare_id!("7tUr1JZECqmPAHqew3sjrzmygXsxCfzWoqfXaLsn6AZF");
 declare_id!("7tUr1JZECqmPAHqew3sjrzmygXsxCfzWoqfXaLsn6AZF");
 
 use {
