@@ -368,8 +368,7 @@ const self = {
         );
 
         const size=ThreeObject.boundy(md);
-        console.log(md,size);
-
+        //console.log(md,size);
         return md;
     },
 
