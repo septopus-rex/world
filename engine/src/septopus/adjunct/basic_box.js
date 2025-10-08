@@ -100,6 +100,7 @@ const effects = {
         };
     },
     rotateZ: (param) => {
+        const val = !param ? 5 * Math.PI / 180 : param[0];
         return {
             name: "rotateZ",
             duration: 0,          //not set or 0, endless
@@ -110,7 +111,7 @@ const effects = {
                     mode: "add",
                     axis: "Z",
                     time: 0,                    //
-                    value: 5 * Math.PI / 180,          //when array, random | function to calculate
+                    value: val,          //when array, random | function to calculate
                 }
             ],
         }
