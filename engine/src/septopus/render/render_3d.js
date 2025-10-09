@@ -695,6 +695,22 @@ const self = {
         }
     },
 
+    /** set shadow support
+     * @param {object}      scene     - 3D scene
+     * @param {boolean}      enable   - wether enable shadow
+     * @return void
+     * */
+    shadow:(scene, enable)=>{
+        scene.traverse(( obj )=>{
+            if(obj.isMesh && obj.userData && obj.userData.name && obj.userData.name==="block"){
+                obj.castShadow=enable;
+            }else{
+                obj.castShadow=enable;
+                obj.receiveShadow=enable;
+            }
+        });      
+    },
+
     /** fresh target block
      * @functions
      * 1. get all block 3D data and add to scene.
@@ -750,17 +766,14 @@ const self = {
                         UI.show("toast", ms[i].error, { type: "error" });
                         continue;
                     }
-
-                    //!important, here to set shadow
-                    if(obj.userData && obj.userData.name && obj.userData.name==="block"){
-                        obj.receiveShadow=true;   
-                    }else{
-                        obj.castShadow=true;
-                    }
                     scene.add(ms[i]);
                 }
             }
 
+            //4.more setting of scene
+            //4.1. set shadow
+            const enable=false;
+            self.shadow(scene,enable);
             //4.2.group animation queue
             const ani_chain = ["block", dom_id, world, "queue"];
             const ani_queue = VBW.cache.get(ani_chain);

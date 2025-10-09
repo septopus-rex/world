@@ -324,11 +324,11 @@ const mock = {
             },
             player: {
                 start: {
-                    block: [2025, 619],         //玩家的默认启动位置
-                    position: [12, 12, 0],      //默认开始的位置[x,y,z],z为站立高度(相对于block的高度)
+                    block: [2022, 617],         //玩家的默认启动位置
+                    position: [8, 8, 0],      //默认开始的位置[x,y,z],z为站立高度(相对于block的高度)
                     rotation: [0.108, 0, 0],        //默认的旋转位置
                     world:0,
-                    extend:2,              
+                    extend:4,              
                     stop:{
                         on:false,               //whether on stop ( including adjunct type )
                         adjunct:"",             //adjunct support stop attribution, need to figure out
@@ -392,41 +392,8 @@ const mock = {
         }
     },
     block: (x, y, world) => {
-        const dt=Design.block(x,y,world);
-        if(dt!==false) return dt;
-    
-        const rand = Toolbox.rand;
-        const sss=rand(1, 3);
-        return {
-            x: x,
-            y: y,
-            world: world,
-            data: [
-                0.2,        //block elevation
-                1,          //block status
-                [           //adjuncts list
-                    //[0x00a1,    //wall
-                    //    [[[1.5, 0.5, rand(2, 5)], [2, 6, 0], [0, 0, 0], rand(60, 90), [1, 1], 1, 1, [], 2025]]],
-                    [0x00a2,    //box
-                        //[[[rand(1, 3), rand(1, 3), rand(1, 3)], [8, 8, 2], [0, 0, 0], rand(100, 300), [1, 1], 1, 1]]],
-                        [[[sss,sss,sss], [8, 8, 2], [0, 0, 0], rand(100, 300), [1, 1], [1, rand(1, 30)*0.01], 1]]],
-                    //[0x00a4,    //module
-                    //    [[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], rand(10, 20), 0, 2025]]],
-                        //[[[rand(2, 4), rand(2, 4), rand(2, 4)], [8, 12, 0.5], [0, 0, 0], 6, 0, 2025]]],
-                    //[0x00b4,    //stop
-                    //    [[[rand(2, 4), 0, 0], [3, 2, 0.5], [0, 0, 0], 2, 2025]]],
-
-                    // [0x00b8,    //trigger
-                    //     [[[3, 3, 6], [4, 4, 0], [0, 0, 0],  1, 2, [
-                    //         [],     //check condition
-                    //         [],     //action todo format
-                    //         [],     //condition to abord
-                    //         []      //action todo after abord
-                    //     ], 3, 0]]],
-                ],
-            ],
-            owner: "SOLANA_ADDRESS",
-        };
+        return Design.show(x,y,world);
+        //return Design.block(x,y,world);
     },
 
     content: (id) => {

@@ -29,7 +29,7 @@ const self={
 const light_point={
     create:(params)=>{
         if(!self.valid(params)) return {error:"Invalid parameters to create PointLight."};
-        //const {size} = params;
+
         const color=!params.color?0xffffff:params.color;
         const intensity=!params.intensity?1:params.intensity;
         const distance=!params.distance?10*params.convert:params.distance;
