@@ -8,6 +8,7 @@
  * @date 2025-04-23
  */
 
+import VBW from "../core/framework";
 
 const reg={
     name:"rd_observe",
@@ -43,7 +44,12 @@ const renderer={
     construct:(width, height, dom_id, cfg)=>{
 
     },
-    show:(dom_id, block)=>{
+    show:(container,blocks)=>{
+        
+        const dom_id= VBW.cache.get(["active","current"]);
+
+        console.log(`Container ID`,container);
+        console.log(`Dom ID`,dom_id);
 
     },
     clean:(dom_id, world, x, y)=>{

@@ -393,7 +393,7 @@ const self = {
                 buttons.stop,
                 buttons.start,
                 buttons.clean,
-                //buttons.block,
+                buttons.block,
                 //buttons.review,
             ];
         return arr;

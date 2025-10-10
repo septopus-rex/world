@@ -274,13 +274,17 @@ const Pages = {
             events: {
                 close: () => {
                     console.log(`Single block page closed.`);
+                    //VBW.con_two.clean(container_id);
+                    //VBW.rd_two.clean(container_id);
                 },
                 show:()=>{
-                    console.log(`Single block page show.`);
+                    
                 },
             },
             auto: () => {
-
+                console.log(`Single block page show.`);
+                VBW.rd_observe.show(container_id);
+                //VBW.con_two.start(container_id, title_id);
             },
         };
         UI.show("dialog", ctx, cfg);
@@ -296,13 +300,15 @@ const Pages = {
             events: {
                 close: () => {
                     console.log(`Resource review page closed.`);
+                    
                 },
                 show:()=>{
-                    console.log(`Resource review page show.`);
+                    
                 },
             },
-            auto: () => {
-
+            auto:() => {
+                console.log(`Resource review page show.`);
+                
             },
         };
         UI.show("dialog", ctx, cfg);
