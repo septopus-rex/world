@@ -110,3 +110,19 @@
         }
     }
     ```
+
+### Chord
+
+* Meta Septopus支持的chord模版，用于快速建造。
+
+    ```Javascript
+    {
+        type:"chord",
+        format:"json",
+        raw:"BASE64_ENCODE_STRING",
+        metadata:{
+            size:[4,4,4],
+            style:"",
+        }
+    }
+    ```

@@ -268,7 +268,7 @@ const Pages = {
         const title_id = config.single.title;
         const ctx = {
             title: `<div id="${title_id}">Single Block</div>`,
-            content: `<div class="" id="${container_id}"></div>`,
+            content: `<div class="observe" id="${container_id}"></div>`,
         }
         const cfg = {
             events: {

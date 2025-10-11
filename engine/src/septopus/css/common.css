@@ -37,6 +37,13 @@
   border-bottom-right-radius: 3rem; */
 }
 
+.observe{
+  min-height: 400px;
+  cursor: pointer;
+  padding: auto;
+  padding: 0px 0px 0px 0px;
+}
+
 .mode{
   position: absolute;
   top: 40rem;
