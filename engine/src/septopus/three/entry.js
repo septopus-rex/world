@@ -25,6 +25,7 @@ import Box from "./basic/box3";
 import Vector from "./basic/vector";
 import Skeleton from "./basic/skeleton";
 import Mixer from "./basic/mixer";
+import Controller from "./basic/controller";
 
 import light_direct from "./light/light_direct";
 import light_point from "./light/light_point";
@@ -62,6 +63,7 @@ const router={
         vector:Vector,      
         skeleton:Skeleton,
         mixer:Mixer,
+        controller:Controller,
     },
     light:{
         spot:light_spot,

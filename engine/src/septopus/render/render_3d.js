@@ -774,6 +774,7 @@ const self = {
             //4.1. set shadow
             const enable=false;
             self.shadow(scene,enable);
+            
             //4.2.group animation queue
             const ani_chain = ["block", dom_id, world, "queue"];
             const ani_queue = VBW.cache.get(ani_chain);

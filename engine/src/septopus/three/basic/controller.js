@@ -9,16 +9,17 @@
  * @date 2025-06-07
  */
 
-import * as THREE from "three";
+
+//import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 const self={
     get:(type,params)=>{
         let controller=null;
         switch (type) {
             case "orbit":
-                const render={};
-                const camera={};
-                controller = new THREE.OrbitControls(camera, render.domElement);
+                const {renderer,camera }=params;
+                controller = new OrbitControls(camera, renderer.domElement);
 
                 // controls.enableDamping = true; // 开启阻尼（惯性）
                 // controls.dampingFactor = 0.05;
@@ -39,14 +40,14 @@ const self={
     },
 };
 
-const material_linedashed={
+const Controller={
     create:(input)=>{
         if(!self.valid(input)) return {error:"Invalid parameters to create BOX."};
         const cfg={
 
         };
-        return self.get(input.type,input.params);
+        return self.get(input.type, input.params);
     }
 };
 
-export default material_linedashed;
+export default Controller;
