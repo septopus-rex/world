@@ -38,6 +38,7 @@ import geometry_plane from "./geometry/ge_plane";
 import geometry_tube from "./geometry/ge_tube";
 import geometry_ball from "./geometry/ge_ball";
 import geometry_cylinder from "./geometry/ge_cylinder";
+import geometry_cone from "./geometry/ge_cone";
 
 import texture_basic from "./texture/tx_basic";
 import material_meshphong from "./material/mt_meshphong";
@@ -90,6 +91,7 @@ const router={
         ball: geometry_ball,
         cylinder:geometry_cylinder,
         tube:geometry_tube,         //for Septopus Rex
+        cone:geometry_cone,
     },
     extend:{
         grid:extend_grid,       //Location gird
