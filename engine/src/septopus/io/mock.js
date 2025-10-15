@@ -435,68 +435,10 @@ const mock = {
         }
     },
     module: (id) => {
-        const map={
-            6:{
-               index: id,
-                type:"module",
-                format:"FBX",
-                raw: "module/house.fbx",
-                params: {
-                    size:[4,3,3],
-                    scale:[1,1,1],
-                }, 
-            },
-            8:{
-               index: id,
-                type:"module",
-                format:"FBX",
-                raw: "module/monkey.fbx",
-                params: {
-                    size:[40,30,30],
-                }, 
-            },
-            11:{
-               index: id,
-                type:"module",
-                format:"FBX",
-                raw: "module/mixamo.fbx",
-                params: {
-                    size:[4,3,3],
-                    scale:[1,1,1],
-                }, 
-            },
-            22:{
-                index: id,
-                type:"module",
-                format:"GLTF",
-                raw: "module/robot.glb",
-                params: {
-                    size:[4,3,3],
-                    scale:[1,1,1],
-                }, 
-            },
-            23:{
-                index: id,
-                type:"module",
-                format:"GLTF",
-                raw: "module/soldier.glb",
-                params: {
-                    size:[4,3,3],
-                    scale:[1,1,1],
-                }, 
-            },
-            30:{
-                index: id,
-                type:"module",
-                format:"MF",
-                raw: "module/truck.3mf",
-                params: {
-                    size:[4,3,3],
-                    scale:[1,1,1],
-                },
-            }
-        }
-        if(map[id]!==undefined) return JSON.parse(JSON.stringify(map[id]));
+        const dt=Design.model(id);
+
+        console.log(id,dt);
+        if(dt!==false) return dt;
         
         return {
             index: id,
