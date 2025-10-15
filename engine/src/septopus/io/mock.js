@@ -436,8 +436,6 @@ const mock = {
     },
     module: (id) => {
         const dt=Design.model(id);
-
-        console.log(id,dt);
         if(dt!==false) return dt;
         
         return {
