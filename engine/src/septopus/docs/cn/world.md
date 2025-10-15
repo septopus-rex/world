@@ -1,6 +1,8 @@
 # 世界实现说明
 
-* `世界`(world)是Septopus的发行单元，可以通过世界的配置来实现不同风格和尺寸的`世界`。例如，在Septopus的设置中，将发行99个独立的`世界`，每个世界的尺寸为4096*4096，每个`地块`的尺寸为物理世界的16m*16m。
+* `世界`(world)是Septopus的发行单元，可以通过世界的配置来实现不同风格和尺寸的`世界`。例如，在Septopus的设置中，将发行96个独立的`世界`，每个世界的尺寸为4096*4096，每个`地块`的尺寸为物理世界的16m*16m。
+
+* 96个世界，以4*4为一面，分布在正立方体的6个面，[详情](#定义说明)
 
 ## 世界基础信息
 
@@ -139,3 +141,16 @@
     6. 分析`地块`，获取到需要链上加载的资源，推入到帧同步的队列里；
     7. 运行渲染器；
     8. 运行控制器；
+
+## 定义说明
+
+* Septopus星球的世界排列。
+  
+|  Face   | 编号  |
+|  ----  | ----  |
+|  前面  | ![Septopus星球前面](../images/world_face0_front.png)  |
+|  右面  | ![Septopus星球右面](../images/world_face1_right.png)  |
+|  后面  | ![Septopus星球后面](../images/world_face2_back.png)  |
+|  左面  | ![Septopus星球左面](../images/world_face3_left.png)  |
+|  上面  | ![Septopus星球上面](../images/world_face4_top.png)  |
+|  下面  | ![Septopus星球下面](../images/world_face5_bottom.png)  |
