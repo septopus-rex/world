@@ -7,7 +7,6 @@ export default function Demo() {
       return "w-screen h-screen min-h-80";
     },
   }
-
   const dom_id="three_demo";
 
   useEffect(() => {

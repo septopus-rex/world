@@ -157,6 +157,7 @@ const self = {
         //2.1.clean DOM already exsist
 
         //2.2.add new DOM needed
+        //console.log(dom_controller);
         target.appendChild(dom_render);
         target.appendChild(dom_controller);
 
