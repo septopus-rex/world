@@ -81,24 +81,6 @@ const valid = {
 
 let definition = null;       //cache adjunct definition here.
 const effects = {
-    rotate: (param) => {
-        const val = !param ? Math.PI / 180 : param[0];
-        return {
-            name: "rotate",
-            duration: 0,          //not set or 0, endless
-            loops: 0,             //not set or 0, endless
-            category: "mesh",      //category of animation
-            timeline: [
-                {
-                    type: "rotate",
-                    mode: "add",
-                    axis: "XYZ",
-                    time: 0,                    //
-                    value: val,          //when array, random | function to calculate
-                }
-            ],
-        };
-    },
     rotateZ: (param) => {
         const val = !param ? 5 * Math.PI / 180 : param[0];
         return {
@@ -116,128 +98,10 @@ const effects = {
             ],
         }
     },
-    rotateX: (param) => {
-        //console.log(param);
-        const val = !param ? 5 * Math.PI / 180 : param[0];
-        return {
-            name: "rotateX",
-            duration: 0,          //not set or 0, endless
-            loops: 0,             //not set or 0, endless
-            timeline: [
-                {
-                    type: "rotate",
-                    mode: "add",
-                    axis: "X",
-                    time: 0,                    //
-                    value: val,          //when array, random | function to calculate
-                }
-            ],
-        }
-    },
-    turning: (param) => {
-        return {
-            name: "turning",
-            duration: 5000,          //not set or 0, endless
-            pending: [300, 600],
-            loops: 10,             //not set or 0, endless
-            timeline: [
-                {
-                    type: "move",
-                    mode: "add",
-                    axis: "Y",
-                    time: [0, 2500],
-                    value: 100,
-                },
-                {
-                    type: "move",
-                    mode: "add",
-                    axis: "Y",
-                    time: [2500, 5000],
-                    value: -100,
-                },
-                // {
-                //     type:"move",
-                //     mode: "add",
-                //     axis:"Z",
-                //     value: [-1000,1000],
-                // },
-                // {
-                //     type:"rotate",
-                //     mode: "set",
-                //     axis:"Z",
-                //     time: 0,  
-                //     value: [Math.PI/180,Math.PI/30,Math.PI/60],
-                // },
-                // {
-                //     type:"scale",
-                //     mode: "add",
-                //     axis:"Z",
-                //     value: [-1.2,1.2],
-                // },
-            ],
-        };
-    },
-    shake: (param) => {
-        return {
-            name: "shake",
-            duration: 3000,          //not set or 0, endless
-            pending: 1200,
-            loops: 3,             //not set or 0, endless
-            timeline: [
-                {
-                    type: "move",
-                    time: 0,
-                    mode: "add",
-                    axis: "XYZ",
-                    value: [0, 0.3],
-                },
-                {
-                    type: "rotate",
-                    time: 1000,
-                    mode: "set",
-                    axis: "Y",
-                    value: [0, 0.3],
-                }
-            ],
-        }
-    },
-    sin: (param) => {
-        console.log(`Sin`, param);
-        return {
-            name: "curve",
-            duration: 2000,       //not set or 0, endless
-            loops: 0,             //not set or 0, endless
-            timeline: [
-                {
-                    type: "move",
-                    time: [0, 1000],
-                    mode: "add",
-                    axis: "Y",
-                    value: (n) => {
-                        return 20;
-                    },
-                },
-                {
-                    type: "move",
-                    time: [1000, 2000],
-                    mode: "add",
-                    axis: "Y",
-                    value: (n) => {
-                        return -20;
-                    },
-                }
-            ],
-        }
-    },
 };
 
 const router = [
-    effects.rotate,     //Animate 1
-    effects.rotateZ,    //Animate 2
-    effects.rotateX,    //Animate 3
-    effects.turning,    //Animate 4
-    effects.shake,      //Animate 5
-    effects.sin,        //Animate 6
+    effects.rotateZ,    //Animate 1
 ]
 
 const hooks = {
@@ -261,43 +125,13 @@ const hooks = {
 const menu = {
     pop: (std) => {
         return [
-            {
-                type: "button", label: "Info", icon: "", action: (ev) => {
-                    console.log(ev);
-                }
-            },
-            {
-                type: "button", label: "Remove", icon: "", action: (ev) => {
-                    console.log(ev);
-                }
-            },
-            {
-                type: "button", label: "Copy", icon: "", action: (ev) => {
-                    console.log(ev);
-                }
-            },
+            
         ];
     },
     sidebar: (std) => {
-        const animate_options = [
-            { key: "Null", value: 0 },
-        ];
+        
         return {
-            size: [
-                { type: "number", key: "x", value: std.x, label: "X", icon: "", desc: "X of wall", valid: (val, cvt) => { return valid.x(val, cvt, std) } },
-                { type: "number", key: "y", value: std.y, label: "Y", icon: "", desc: "Y of wall", valid: (val, cvt) => { return valid.y(val, cvt, std) } },
-                { type: "number", key: "z", value: std.z, label: "Z", icon: "", desc: "Z of wall", valid: (val, cvt) => { return valid.z(val, cvt, std) } },
-            ],
-            position: [
-                { type: "number", key: "ox", value: std.ox, label: "X", icon: "", desc: "X of postion", valid: (val, cvt) => { return valid.ox(val, cvt, std) } },
-                { type: "number", key: "oy", value: std.oy, label: "Y", icon: "", desc: "Y of postion", valid: (val, cvt) => { return valid.oy(val, cvt, std) } },
-                { type: "number", key: "oz", value: std.oz, label: "Z", icon: "", desc: "Z of postion", valid: (val, cvt) => { return valid.oz(val, cvt, std) } },
-            ],
-            rotation: [
-                { type: "number", key: "rx", value: std.rx, label: "X", icon: "", desc: "X of rotation", valid: (val, cvt) => { return valid.rx(val, cvt, std) } },
-                { type: "number", key: "ry", value: std.ry, label: "Y", icon: "", desc: "Y of rotation", valid: (val, cvt) => { return valid.ry(val, cvt, std) } },
-                { type: "number", key: "rz", value: std.rz, label: "Z", icon: "", desc: "Z of rotation", valid: (val, cvt) => { return valid.rz(val, cvt, std) } },
-            ],
+            
         }
     },
 }
@@ -383,9 +217,9 @@ const transform = {
         for (let i in arr) {
             const d = arr[i], s = d[0], p = d[1], r = d[2], tid = d[3], rpt = d[4];
             const dt = {
-                x: s[0] * cvt, y: s[1] * cvt, z: s[2] * cvt,
+                x: s[0] * cvt, y: s[1], z: s[2] * cvt,
                 ox: p[0] * cvt, oy: p[1] * cvt, oz: p[2] * cvt,
-                rx: r[0], ry: r[1], rz: r[2],
+                rx: r[0], ry: r[1], rz: r[2],  
                 material: {
                     texture: tid,
                     repeat: rpt,
@@ -419,7 +253,7 @@ const transform = {
         for (let i = 0; i < stds.length; i++) {
             const row = stds[i];
             const single = {
-                type: "box",
+                type: "cone",
                 index: i,
                 params: {
                     size: [row.x, row.y, row.z],
@@ -463,7 +297,7 @@ const transform = {
                         type: "rectangle",
                         index: i,
                         params: {
-                            size: [std.x, std.y],
+                            size: [std.x, std.x],
                             position: [std.ox, std.oy],
                             rotation: std.rz,
                         },
@@ -474,7 +308,7 @@ const transform = {
                             width: 1,                //stroke width
                         },
                     }
-                    //console.log(`Struct "box" 2D data.`);
+
                     objs.push(row);
                     break;
 
@@ -489,24 +323,6 @@ const transform = {
     },
 }
 const task = {
-    dance: (meshes, cfg) => {
-        //console.log(`Box dance.`,meshes,cfg);
-        let count = 100;
-        let fun = (n) => {
-            console.log(n, meshes);
-
-            for (let i = 0; i < meshes.length; i++) {
-                const mesh = meshes[i];
-                // if(mesh.scale.x===0) mesh.scale.x=1;
-                // if(mesh.scale.y===0) mesh.scale.y=1;
-                // if(mesh.scale.z===0) mesh.scale.z=1;
-                // mesh.scale.x=mesh.scale.x*Toolbox.rand(0.3,1.9);
-                // mesh.scale.y=mesh.scale.y*Toolbox.rand(0.3,1.9);
-                // mesh.scale.z=mesh.scale.z*Toolbox.rand(0.3,1.9);
-            }
-        };
-        return [fun, count];
-    },
     hide: (meshes, cfg) => {
 
     },

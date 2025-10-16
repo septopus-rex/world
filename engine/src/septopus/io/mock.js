@@ -185,6 +185,20 @@ const mock = {
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
+            cone: {
+                definition: {
+                    "RESOURCE_ID_ON_CHAIN": 3,
+                    "TEXTURE_REPEAT_SETTING": 4,
+                    "ANIMATION_OPTION": 5,
+                    "AUTO_STOP": 6,
+                },
+                sample:[[1.2,1.2,1.2],[8,8,2],[0,0,0],2,[2,2],0,0,1],
+                version:2025,
+                short:0x00a6,
+                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                source: "SOLANA_DATA_ACCOUNT",
+                owner: "ADJUNCT_OWNER",
+            },
             module: {
                 definition: {
                     "RESOURCE_ID_ON_CHAIN": 3,
