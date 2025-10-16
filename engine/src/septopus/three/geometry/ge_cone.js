@@ -13,12 +13,10 @@ import * as THREE from "three";
 
 const self={
     get:(size)=>{
-        console.log(`Cone size:`,size);
-        //const geometry = new THREE.BoxGeometry( 1, 1, 1 ); 
         const radius=size[0];
         const height=size[1];
         const amount=size[2];
-        const gg= new THREE.ConeGeometry(radius, height,amount);
+        const gg= new THREE.ConeGeometry(radius, height, amount);
         return gg;
     },
     valid:(params)=>{
