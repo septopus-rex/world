@@ -44,6 +44,9 @@
             hide:(meshes,cfg)=>{},
             show:(meshes,cfg)=>{},
             dance:(meshes,cfg)=>{},
+            setting:{
+                gameonly:true,
+            },
             ...
         },
     };

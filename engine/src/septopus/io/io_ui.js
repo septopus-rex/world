@@ -691,7 +691,11 @@ const UI={
             },
             toast:router.toast,
             countdown:router.countdown,
-            router:["toast","dialog","countdown"],
+            router: [
+                { method:"dialog", gameonly:false},
+                { method:"toast", gameonly:false},
+                { method:"countdown", gameonly:true},
+            ],
         }
     },
 }

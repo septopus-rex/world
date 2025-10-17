@@ -71,7 +71,18 @@ const transform = {
 const menu = {
 
 }
-const task = {}
+const task = {
+    hide:()=>{
+
+    },
+    show:()=>{
+
+    },
+    router: [
+        { method:"hide", gameonly:true},
+        { method:"show", gameonly:true},
+    ],
+}
 const events = {}
 
 const adj_sample = {

@@ -721,6 +721,31 @@ const self = {
 
         self.checkTrigger();
     },
+
+    mouse:(dom_id)=>{
+        //console.log(dom_id);
+        const el = document.getElementById(dom_id);
+        if (!el) return false;
+        el.addEventListener('click', (ev) => {
+            const obj=self.select(ev);
+            if(!obj.adjunct || obj.adjunct==="block") return false;
+
+            console.log(`Clicked!`,obj);
+            const player=runtime.player;
+            const [x, y] = player.location.block;
+            const world = player.location.world;
+            const target = {
+                x: x, y: y, world: world,
+                index: obj.index,
+                adjunct: obj.adjunct,
+            };
+
+            const evt = Toolbox.clone(target);
+            evt.stamp = Toolbox.stamp();
+
+            VBW.event.trigger(obj.adjunct, "touch", evt, Toolbox.clone(target));
+        });
+    },  
 }
 
 const controller = {
@@ -767,6 +792,7 @@ const controller = {
             self.controller();
         } else {
             self.keyboard();
+            self.mouse(dom_id);
             self.edit(dom_id);
         }
 

@@ -169,14 +169,12 @@ const vbw_event = {
      * 
      * */
     trigger:(cat,event,param,obj)=>{
-        //console.log(cat,event,param,obj)
+        if(cat==="box" && event==="touch"){
+            console.log(event,obj);
+        }
+
         if(!events[cat]) return {error:"Invalid event type"};
         if(self.empty(events[cat][event])) return {error:"Invalid special event"};
-
-        // if(cat==="weather" && event==="change"){
-        //     console.log(events);
-        // }
-
         if(obj===undefined){
             for(let name in events[cat][event]){
                 events[cat][event][name](param)

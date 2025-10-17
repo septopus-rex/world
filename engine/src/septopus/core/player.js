@@ -365,7 +365,12 @@ const vbw_player = {
             dance:(ev)=>{
 
             },
-            router:["body","capacity","fly","dance"],
+            router: [
+                { method:"fly", gameonly:true},
+                { method:"capacity", gameonly:true},
+                { method:"body", gameonly:true},
+                { method:"dance", gameonly:true},
+            ],
         }
     },
 

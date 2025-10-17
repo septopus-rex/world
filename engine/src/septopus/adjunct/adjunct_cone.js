@@ -329,7 +329,10 @@ const task = {
     show: (meshes, cfg) => {
 
     },
-    router: ["hide", "show", "dance"],
+    router: [
+        { method:"hide", gameonly:true},
+        { method:"show", gameonly:true},
+    ],
 }
 
 const events = {

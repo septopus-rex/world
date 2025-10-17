@@ -57,7 +57,12 @@ const vbw_bag={
             consume:()=>{
 
             },
-            router:["consume","mint"],
+            router: [
+                { method:"hide", gameonly:false},
+                { method:"show", gameonly:false},
+                { method:"consume", gameonly:true},
+                { method:"mint", gameonly:true},
+            ],
         }
     },
 }

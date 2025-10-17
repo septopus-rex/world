@@ -373,7 +373,11 @@ const task = {
     crash: (meshes, cfg) => {
         console.log(`Wall crash.`, meshes, cfg);
     },
-    router: ["hide", "show", "crash"],
+    router: [
+        { method:"hide", gameonly:true},
+        { method:"show", gameonly:true},
+        { method:"crash", gameonly:true},
+    ],
 }
 
 const events = {

@@ -296,6 +296,10 @@ const self = {
     },
 }
 
+const task={
+    router:[],
+}
+
 const vbw_block = {
     holder: () => {
         return Toolbox.clone([0.2, 1, []]);
@@ -304,9 +308,7 @@ const vbw_block = {
     transform: self.transform,
     attribute: self.attribute,
     menu: self.menu,
-    task:{
-
-    },
+    task:task,
 }
 
 export default vbw_block;

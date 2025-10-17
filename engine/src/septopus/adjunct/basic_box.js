@@ -14,7 +14,7 @@ const reg = {
     category: 'basic',
     desc: "Basic adjunct of meta septopus.",
     version: "1.0.0",
-    events: [],
+    events: ["in","out","touch"],
 }
 
 const config = {
@@ -409,6 +409,11 @@ const transform = {
                 }
             }
 
+            if(d[7]!==undefined){
+                //console.log(arr,cvt);
+                dt.event={};
+            }
+
             rst.push(dt);
         }
         return rst;
@@ -513,7 +518,11 @@ const task = {
     show: (meshes, cfg) => {
 
     },
-    router: ["hide", "show", "dance"],
+    router: [
+        { method:"hide", gameonly:true},
+        { method:"show", gameonly:true},
+        { method:"dance", gameonly:true},
+    ],
 }
 
 const events = {
