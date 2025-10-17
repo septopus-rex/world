@@ -283,7 +283,18 @@ const self = {
             const data = Framework[name].transform.std_3d(std, va);
             for (let i = 0; i < data.length; i++) {
                 const row = data[i];
-                if (row.material && row.material.texture) preload.texture.push(row.material.texture);
+                
+                if (row.material && row.material.texture){
+                    if(Array.isArray(row.material.texture)){
+                        for(let j=0;j<row.material.texture.length;j++){
+                            const tid=row.material.texture[j];
+                            preload.texture.push(tid);
+                        }
+                    }else{
+                        preload.texture.push(row.material.texture);
+                    }
+                } 
+                if (row.module) preload.module.push(row.module);
                 if (row.module) preload.module.push(row.module);
                 if (row.stop){
                     const obj=Toolbox.clone(row.params);
@@ -429,6 +440,9 @@ const self = {
                 if (cx < 1 || cy < 1) continue;
                 if (cx > limit[0] || cy > limit[1]) continue;
                 const sub = fun_render(cx, cy, world, dom_id);
+                // if(cx===2022 && cy==619){
+                //     console.log(sub);
+                // }
                 if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
                 if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
             }
@@ -472,7 +486,16 @@ const self = {
             edit.border.length=0;
             for (let i = 0; i < bk.helper.length; i++) {
                 const row = bk.helper[i];
-                if (row.material && row.material.texture) preload.texture.push(row.material.texture);
+                if (row.material && row.material.texture){
+                    if(Array.isArray(row.material.texture)){
+                        for(let j=0;j<row.material.texture.length;j++){
+                            const tid=row.material.texture[j];
+                            preload.texture.push(tid);
+                        }
+                    }else{
+                        preload.texture.push(row.material.texture);
+                    }
+                } 
                 if (row.module) preload.module.push(row.module);
 
                 //1.2. attatch border objects
@@ -528,7 +551,17 @@ const self = {
         if(act.helper && act.helper.length!==0){
             for (let i = 0; i < bk.helper.length; i++) {
                 const row = bk.helper[i];
-                if (row.material && row.material.texture) preload.texture.push(row.material.texture);
+                if (row.material && row.material.texture){
+                    if(Array.isArray(row.material.texture)){
+                        for(let j=0;j<row.material.texture.length;j++){
+                            const tid=row.material.texture[j];
+                            preload.texture.push(tid);
+                        }
+                    }else{
+                        preload.texture.push(row.material.texture);
+                    }
+                } 
+                if (row.module) preload.module.push(row.module);
                 if (row.module) preload.module.push(row.module);
 
                 //1.2. attatch to `helper` key

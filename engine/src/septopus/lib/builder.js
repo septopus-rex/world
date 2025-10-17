@@ -78,9 +78,9 @@ const self={
         const cat=arr.shift();
         if(cat < 1 || !objects[cat-1]) return {error:"Invalid task category"};
         const group=objects[cat-1];
-        //console.log(group,JSON.stringify(arr));
+        console.log(group);
+
         if(group.name==="adjunct"){
-            //console.log(arr);
             const index=arr.shift();
             const adj=self.getAdjunctNameByIndex(index);
             if(adj===false) return {error:"Invalid adjunct index."};
@@ -89,6 +89,7 @@ const self={
             return res;
         }else{
             const res=self.getTaskByRouter(arr,group);
+            console.log(res);
             if(!res) return {error:"Failed to get task function."}
             return res;
         }

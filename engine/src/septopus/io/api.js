@@ -249,7 +249,10 @@ const API = {
      * @return {object}  key(`${id}`) --> TEXTURE_DATA
      */
     texture: (ids, ck, cfg) => {
+        
         if (Array.isArray(ids)) {
+            if(ids.includes(100)) console.log(ids);
+            
             const map = {};
             for (let i = 0; i < ids.length; i++) {
                 const id = ids[i];

@@ -18,6 +18,7 @@ import UI from "../io/io_ui";
 import Toolbox from "../lib/toolbox";
 import Effects from "../effects/entry";
 import TriggerBuilder from "../lib/builder";
+import { Tiro_Devanagari_Marathi } from "next/font/google";
 
 const reg = {
     name: "rd_three",
@@ -113,6 +114,10 @@ const self = {
      * @callback  - callback failed to parse texture IDs.
      */
     parseTexture: (arr, world, dom_id, ck) => {
+        // if(arr.includes(100)){
+        //     console.log(`Parse:`,arr);
+        // }
+
         const failed = []
         const set = VBW.cache.set;
         const get = VBW.cache.get;
@@ -136,6 +141,7 @@ const self = {
                 set(chain, { error: "Failed to create 3D object." });
                 continue;
             }
+            
             set(chain, dt);
         }
         return ck && ck(failed);
@@ -254,8 +260,20 @@ const self = {
 
                 //1.filter out texture and material for preload
                 if (row.material && row.material.texture) {
-                    if (!result.texture.includes(row.material.texture)) {
-                        result.texture.push(row.material.texture);
+                    if(Array.isArray(row.material.texture)){
+                        for(let i=0;i<row.material.texture.length;i++){
+                            const tid=row.material.texture[i];
+                            // if(x===2022 && y===619){
+                            //     console.log(tid);
+                            // }
+                            if (!result.texture.includes(tid)){
+                                result.texture.push(tid);
+                            }
+                        }
+                    }else{
+                        if (!result.texture.includes(row.material.texture)) {
+                            result.texture.push(row.material.texture);
+                        }
                     }
                 }
 
@@ -304,7 +322,6 @@ const self = {
                 }
             }
         }
-
         return result;
     },
 
@@ -325,11 +342,37 @@ const self = {
      * */
     checkMaterial: (cfg, world, dom_id) => {
         if (cfg.texture) {
-            const chain = ["block", dom_id, world, "texture", cfg.texture];
-            const dt = VBW.cache.get(chain);
-            if (dt !== undefined && !dt.error) {
-                //return { type: "meshphong", params: { texture: dt } };
-                return { type: "meshstandard", params: { texture: dt } };
+            if(Array.isArray(cfg.texture)){
+                //console.log(cfg.texture);
+                const cube = { type: "meshstandard", params: { texture: [] } };
+                for(let i=0;i<cfg.texture.length;i++){
+                    const tid=cfg.texture[i];
+                    const chain = ["block", dom_id, world, "texture", tid];
+                    const dt = VBW.cache.get(chain);
+                    if (dt !== undefined && !dt.error) {
+                        cube.params.texture.push(dt);
+                    }
+                }
+
+                if(cube.params.texture.length!==0){
+                    return cube;
+                }else{
+                    return {
+                        type: "meshbasic",
+                        params: {
+                            color: cfg.color,
+                            opacity: !cfg.opacity ? 1 : cfg.opacity,
+                        }
+                    };
+                }
+
+            }else{
+                const chain = ["block", dom_id, world, "texture", cfg.texture];
+                const dt = VBW.cache.get(chain);
+                if (dt !== undefined && !dt.error) {
+                    //return { type: "meshphong", params: { texture: dt } };
+                    return { type: "meshstandard", params: { texture: dt } };
+                }
             }
         }
 
@@ -744,6 +787,7 @@ const self = {
      * @return void
      * */
     fresh: (scene, x, y, world, dom_id) => {
+        if(x===2022 && y===619)console.log(`Major 3D renderer fresh...`);
         let mds = [], txs = [], objs = [], ans = [];
         const data_chain = ["block", dom_id, world, `${x}_${y}`, "three"];
         const tdata = VBW.cache.get(data_chain);

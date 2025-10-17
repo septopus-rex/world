@@ -269,6 +269,8 @@ const self = {
         }
         const failed = [];
         VBW.datasource.texture(arr, (map) => {
+            //if(map["100"]) console.log(map);
+
             for (let id in map) {
                 const chain = ["resource", "texture", id];
                 VBW.cache.set(chain, map[id]);
@@ -286,6 +288,7 @@ const self = {
      * @param {object} failed  - {texture:[],module:[]}, failed IDs
      */
     prefetch: (txs, mds, ck) => {
+        //console.log(txs);
         const failed = { module: [], texture: [] };
         self.fetchTextures(txs, (tx_failed) => {
             failed.texture = tx_failed;
@@ -342,7 +345,7 @@ const self = {
 
         //2. start to load resource
         self.prefetch(pre.texture, pre.module, (failed) => {
-
+            //console.log(`Resource loading failed,`,failed);
         });
         return true;
     },
@@ -779,6 +782,9 @@ const self = {
 
         const todo = queue[0];
         const { x, y, world, container, preload } = todo;
+        // if(preload.texture===100){
+        //     console.log(JSON.stringify(todo));
+        // }
         if (self.checkLoaded(preload.texture, preload.module)) {
             //rebuild 3D data then render
             const range = { x: x, y: y, world: world, container: container };

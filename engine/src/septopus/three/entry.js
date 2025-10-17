@@ -192,7 +192,7 @@ const ThreeObject = {
         if(gg.error) return {error:gg.error};
 
         const mm=ThreeObject.get("material",mt.type,mt.params);
-        //console.log(mt);
+        
         if(mm.error) return {error:mm.error};
 
         const mesh=ThreeObject.get("basic","mesh",{geometry:gg,material:mm});
