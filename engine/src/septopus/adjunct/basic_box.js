@@ -410,8 +410,16 @@ const transform = {
             }
 
             if(d[7]!==undefined){
-                //console.log(arr,cvt);
-                dt.event={};
+                const [index,condition,todo]=d[7];
+                if(index>=0 && index<reg.events.length){
+                    dt.event={};
+                    dt.event[reg.events[index]]={
+                        adjunct:reg.name,
+                        index:i,
+                        condition:condition,
+                        todo:todo,
+                    }
+                }
             }
 
             rst.push(dt);
@@ -440,6 +448,10 @@ const transform = {
                     opacity: config.stop.opacity,
                     color: !config.stop.color ? 0xfffffff : config.stop.color
                 }
+            }
+
+            if(row.event){
+                single.event=row.event;
             }
             arr.push(single);
         }

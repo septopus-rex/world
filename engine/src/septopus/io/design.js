@@ -540,9 +540,9 @@ const septopus = {
         [0x00a2,
             [
                 [[3, 3, 3], [8, 8, 1.5], [0, 0, 0], 600, [1, 1], 0, 1, [ 
-                    2,          //event index
-                    [],         //condition
-                    []          //task to run
+                    2,                  //event index
+                    [],                 //condition
+                    [[1,1,2],[1,20]]    //task to run
                 ]],
             ]
         ]

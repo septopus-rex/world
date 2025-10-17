@@ -383,7 +383,6 @@ const self = {
         //3.cache game setting
         const GAME_INDEX = cache.def.block.BLOCK_INDEX_GAME_SETTING===undefined?config.common.INDEX_OF_GAME_SETTING:cache.def.block.BLOCK_INDEX_GAME_SETTING;
         if(bk.data[GAME_INDEX]!==undefined){
-            //console.log(bk);
             return {x:bk.x,y:bk.y,world:world,setting:bk.data[GAME_INDEX]};
         }
 

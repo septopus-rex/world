@@ -17,6 +17,7 @@ import ThreeObject from "../three/entry";
 import UI from "../io/io_ui";
 import Toolbox from "../lib/toolbox";
 import Effects from "../effects/entry";
+import TriggerBuilder from "../lib/builder";
 
 const reg = {
     name: "rd_three",
@@ -245,8 +246,6 @@ const self = {
      * @return void
      */
     singleBlock: (x, y, world, dt) => {
-        //console.log(`Construct block: #${world} world [${x},${y}]`);
-        //console.log(JSON.stringify(dt));
         const result = { object: [], module: [], texture: [], animate: [] };
         for (let name in dt) {
             const list = dt[name];
@@ -290,10 +289,32 @@ const self = {
                 if (row.module !== undefined) obj3.module = row.module;
                 if (row.animate !== undefined) obj3.animate = row.animate;
                 result.object.push(obj3);
+
+                //5.bind events
+                if(row.event!==undefined){
+                    for(let ev in row.event){
+                        const data=row.event[ev];
+                        //console.log(data);
+                        const act=[data.condition, data.todo];
+                        const key=`normal_${name}_${i}_${x}_${y}_${world}`;
+                        const fun=self.decode([act],key, false);
+                        const obj={x:x,y:y,world:world,index:data.index,adjunct:data.adjunct}
+                        VBW.event.on(data.adjunct,ev,fun,obj);
+                    }
+                }
             }
         }
 
         return result;
+    },
+
+    decode:(actions,key,ontime)=>{
+        const cfg={
+            onetime:ontime,
+            key:key,
+        }
+        const core = TriggerBuilder.get(actions,cfg);
+        return core;
     },
 
     /** create different type of material
