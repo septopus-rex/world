@@ -207,8 +207,8 @@ const self={
         //return [objs, preload]
         raw_std:(arr,cvt)=>{
             const rst=[]
-            for(let i in arr){
-                const d=arr[i],s=d[0],p=d[1],r=d[2],mid=d[3];
+            for(const d of arr){
+                const s=d[0],p=d[1],r=d[2],mid=d[3];
                 //root.core.setTextureQueue(tid);//推送材质队列
                 const dt={
                     x:s[0]*cvt,y:s[1]*cvt,z:s[2]*cvt,

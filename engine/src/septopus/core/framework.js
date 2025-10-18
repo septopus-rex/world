@@ -62,8 +62,7 @@ const self = {
     getRawByName:(name,list)=>{
         if(!cache.map[name]) return {error:"Invalid adjunct name"};
         const short=cache.map[name];
-        for(let i=0;i<list.length;i++){
-            const row=list[i];
+        for(const row of list){
             if(row[0]===short) return row[1];
         }
         return {error:"No adjunct raw data."};
@@ -286,8 +285,7 @@ const self = {
                 
                 if (row.material && row.material.texture){
                     if(Array.isArray(row.material.texture)){
-                        for(let j=0;j<row.material.texture.length;j++){
-                            const tid=row.material.texture[j];
+                        for(let tid of row.material.texture){
                             preload.texture.push(tid);
                         }
                     }else{
@@ -321,8 +319,7 @@ const self = {
             rdata[name] = data;
 
             if(name==="trigger"){
-                for(let i=0;i<std.length;i++){
-                    const single=std[i];
+                for(const single of std){
                     if(!single.event || !single.event.type || !single.event.fun) continue;
                     const target={x:x,y:y,world:world,index:i,adjunct:"trigger"}
                     Framework.event.on("trigger",single.event.type,single.event.fun,target);
@@ -488,8 +485,7 @@ const self = {
                 const row = bk.helper[i];
                 if (row.material && row.material.texture){
                     if(Array.isArray(row.material.texture)){
-                        for(let j=0;j<row.material.texture.length;j++){
-                            const tid=row.material.texture[j];
+                        for(let tid of row.material.texture){
                             preload.texture.push(tid);
                         }
                     }else{
@@ -553,8 +549,7 @@ const self = {
                 const row = bk.helper[i];
                 if (row.material && row.material.texture){
                     if(Array.isArray(row.material.texture)){
-                        for(let j=0;j<row.material.texture.length;j++){
-                            const tid=row.material.texture[j];
+                        for(let tid of row.material.texture){
                             preload.texture.push(tid);
                         }
                     }else{

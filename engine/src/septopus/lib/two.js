@@ -498,10 +498,7 @@ const TwoObject = {
     },
     show:(pen,env,arr,ck)=>{
         const errors=[];
-        //console.log(env);
-        for(let i=0;i<arr.length;i++){
-            const row=arr[i];
-            
+        for(const row of arr){
             //0. check data;
             if(!row.type || !drawing[row.type]){
                 errors.push({error:`Failed to drawing row[${i}]: ${JSON.stringify(row)}`});

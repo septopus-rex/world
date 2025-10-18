@@ -105,9 +105,8 @@ const inputs={
     },
     select:(val,key,placeholder,prefix)=>{
         let ctx=`<select id="${!prefix?"":(prefix+"_")}${key}">`;
-        //console.log(val,key,placeholder,prefix);
-        for(let i=0;i<val.length;i++){
-            ctx+=`<option value="${val[i]}">${val[i]}</option>`;
+        for(const vv of val){
+            ctx+=`<option value="${vv}">${vv}</option>`;
         }
         ctx+=`</select>`;
         return ctx

@@ -60,20 +60,7 @@ const self = {
      * */
     getThree: (single, world, dom_id, side) => {
         const arr = [];
-        //1. get module to show
-        if (single.module) {
-            const target={
-                x:single.x,
-                y:single.y,
-                world:world,
-                index:single.index,
-                adjunct:single.adjunct,
-                module:single.module
-            }
-            VBW.event.on("module","parsed",self.replaceFun(target),target);
-        }
-
-        //2. get geometry to show
+        //1. get geometry to show
         if (single.geometry && single.material) {
             const { geometry } = single;
             const { rotation, position } = geometry.params;
@@ -147,8 +134,7 @@ const self = {
                 if(Array.isArray(cfg.texture)){
                     //console.log(cfg.texture);
                     const cube = { type: "meshstandard", params: { texture: [] } };
-                    for(let i=0;i<cfg.texture.length;i++){
-                        const tid=cfg.texture[i];
+                    for(const tid of cfg.texture){
                         const chain = ["block", dom_id, world, "texture", tid];
                         const dt = VBW.cache.get(chain);
                         if (dt !== undefined && !dt.error) {
@@ -210,7 +196,7 @@ const self = {
                 //1.filter out texture and material for preload
                 if (row.material && row.material.texture) {
                     if(Array.isArray(row.material.texture)){
-                        for(const tid of ow.material.texture){
+                        for(const tid of row.material.texture){
                             if (!result.texture.includes(tid)){
                                 result.texture.push(tid);
                             }

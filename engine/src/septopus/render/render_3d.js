@@ -260,14 +260,8 @@ const self = {
                 //1.filter out texture and material for preload
                 if (row.material && row.material.texture) {
                     if(Array.isArray(row.material.texture)){
-                        for(let i=0;i<row.material.texture.length;i++){
-                            const tid=row.material.texture[i];
-                            // if(x===2022 && y===619){
-                            //     console.log(tid);
-                            // }
-                            if (!result.texture.includes(tid)){
-                                result.texture.push(tid);
-                            }
+                        for(const tid of row.material.texture){
+                            if (!result.texture.includes(tid))result.texture.push(tid)
                         }
                     }else{
                         if (!result.texture.includes(row.material.texture)) {
@@ -344,8 +338,7 @@ const self = {
             if(Array.isArray(cfg.texture)){
                 //console.log(cfg.texture);
                 const cube = { type: "meshstandard", params: { texture: [] } };
-                for(let i=0;i<cfg.texture.length;i++){
-                    const tid=cfg.texture[i];
+                for(const tid of cfg.texture){
                     const chain = ["block", dom_id, world, "texture", tid];
                     const dt = VBW.cache.get(chain);
                     if (dt !== undefined && !dt.error) {
@@ -394,16 +387,16 @@ const self = {
      * @return {false | object}     - false or 3D mesh for replacing
      * */
     filterMeshes:(target,scene)=>{
-        for(let i=0;i<scene.children.length;i++){
-            const data=scene.children[i].userData;
+        for(const obj of scene.children){
+            const data=obj.userData;
             if(data.x===undefined || 
                 data.y===undefined || 
                 data.name===undefined ||
-                !scene.children[i].isMesh
+                !obj.isMesh
             ) continue;
             if(data.x===target.x && 
                 data.y===target.y && 
-                data.name===target.adjunct) return scene.children[i];
+                data.name===target.adjunct) return obj;
         }
         return false;
     },
@@ -932,8 +925,7 @@ const self = {
         }
 
         const list=self.getAnimateQueue(world,dom_id);
-        for(let i=0;i<list.length;i++){
-            const row=list[i];
+        for(const row of list){
             const key=`${row.x}_${row.y}_${row.adjunct}_${row.index}`;
             if(!env.animation.meshes[key]) continue;            //check meshes is ready
             //console.log(row,env.animation.frame);

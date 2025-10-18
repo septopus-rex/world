@@ -106,8 +106,7 @@ const vbw_event = {
 
     reg:(cat,list)=>{
         if(!events[cat]) events[cat]={};
-        for(let i=0;i<list.length;i++){
-            const evt=list[i];
+        for(const evt of list){
             events[cat][evt]={};
         }
     },
