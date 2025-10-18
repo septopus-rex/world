@@ -25,11 +25,16 @@ const config = {
     camera: {
 
     },
+    extend:0,
 };
 
 const env = {
     player: null,
-    controller:null,
+    controller: null,
+    camera:null,
+    renderer:null,
+    scene:null,
+    container:"",
 };
 
 const self = {
@@ -42,9 +47,45 @@ const self = {
     getCenter: (blocks) => {
 
     },
+    calculateBlockBounds: (blocks,border) => {
+        const ext=!border?0:parseInt(border);
+        if (!blocks || blocks.length === 0) return {error:"Invalid block array."}
+
+        // 1. calc the range
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        for (const [x, y] of blocks) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+        }
+
+        // 2. Center block
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const centerBlock = [ Math.round(centerX), Math.round(centerY)];
+
+        // 3. Corner Coordinates
+        const cornerCoordinates = [
+            [minX-ext, minY-ext],   //Left-Bottom
+            [maxX+ext, minY-ext],   //Right-Bottom
+            [maxX+ext, maxY+ext],   //Right-Top
+            [minX-ext, maxY+ext]    //Left-Top
+        ];
+
+        return {
+            center: centerBlock,
+            corner: cornerCoordinates
+        };
+    },
     loadObjects: (scene, blocks) => {
         const bks = !blocks ? [env.player.location.block] : blocks;
-        console.log(bks);
+        const boundy=self.calculateBlockBounds(bks,config.extend);
+    
     },
     loadLight: (scene) => {
         //new THREE.DirectionalLight( 0xffffff, 5 );
@@ -59,30 +100,33 @@ const self = {
         light.shadow.mapSize.set(1024, 1024);
         scene.add(light);
     },
-    loadOrbit:(camera,renderer)=>{
+    loadOrbit: (camera, renderer) => {
         const PI90 = Math.PI / 2;
 
-        const cfg={
-            type:"orbit",
-            params:{camera:camera,renderer:renderer},
+        const cfg = {
+            type: "orbit",
+            params: { camera: camera, renderer: renderer },
         }
-        const orbitControls= ThreeObject.get("basic","controller",cfg);
-        
-		orbitControls.target.set( 0, 1, 0 );
-		orbitControls.enableDamping = true;
-		orbitControls.enablePan = false;
-		orbitControls.maxPolarAngle = PI90 - 0.05;
-		orbitControls.update();
+        const orbitControls = ThreeObject.get("basic", "controller", cfg);
+
+        orbitControls.target.set(0, 1, 0);
+        orbitControls.enableDamping = true;
+        orbitControls.enablePan = false;
+        orbitControls.maxPolarAngle = PI90 - 0.05;
+        orbitControls.update();
         return orbitControls;
     },
-    animate: () => {
 
+    animate: () => {
+        
+        env.renderer.render(env.scene, env.camera);
     },
 };
 
 const renderer = {
     hooks: self.hooks,
     construct: (width, height, dom_id, cfg) => {
+        console.log(`Construct:`,dom_id);
         const chain = ["active", "containers", dom_id];
         if (!VBW.cache.exsist(chain)) {
             const cfg_scene = {}
@@ -95,14 +139,20 @@ const renderer = {
             const camera = ThreeObject.get("basic", "camera", cfg_camera);
 
             VBW.cache.set(chain, { render: render, camera: camera, scene: scene });
+
+            env.camera=camera;
+            env.renderer=render;
+            env.scene=scene;
         }
 
         if (env.player === null) env.player = VBW.cache.get(["env", "player"]);
+        if (!env.container) env.container=dom_id;
 
         const dt = VBW.cache.get(chain);
         return dt.render.domElement;
     },
     show: (container, blocks) => {
+        console.log("Show:",container);
         //0. set basic env
         const chain = ["active", "containers", container];
         if (!VBW.cache.exsist(chain)) {
@@ -124,8 +174,9 @@ const renderer = {
         self.loadLight(scene);
         env.controller = self.loadOrbit(camera, render);
 
-        render.setAnimationLoop( self.animate );
-    },  
+        render.setAnimationLoop(self.animate);
+    },
+
     clean: (dom_id, world, x, y) => {
 
     },

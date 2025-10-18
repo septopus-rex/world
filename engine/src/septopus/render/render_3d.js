@@ -879,11 +879,11 @@ const self = {
             todo.forEach((row) => {
                 scene.remove(row);
                 if (row.isMesh) {
-                    if (row.material.map) {
+                    if (row.material.map && row.material.map.dispose) {
                         row.material.map.dispose();
                     }
-                    row.geometry.dispose();
-                    row.material.dispose();
+                    if(row.geometry.dispose)row.geometry.dispose();
+                    if(row.material.dispose)row.material.dispose();
                 }
             });
         }
