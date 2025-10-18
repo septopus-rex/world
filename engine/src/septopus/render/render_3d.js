@@ -18,7 +18,6 @@ import UI from "../io/io_ui";
 import Toolbox from "../lib/toolbox";
 import Effects from "../effects/entry";
 import TriggerBuilder from "../lib/builder";
-import { Tiro_Devanagari_Marathi } from "next/font/google";
 
 const reg = {
     name: "rd_three",
@@ -818,20 +817,20 @@ const self = {
                     if (!exsist(chain)) VBW.cache.set(chain, {});
                     const map = VBW.cache.get(chain);
                     if (map[key] === undefined) map[key] = [];
-                    for (let i = 0; i < ms.length; i++) {
-                        if (ms[i].error) continue;
-                        map[key].push(ms[i]);
+                    for (let j = 0; j < ms.length; j++) {
+                        if (ms[j].error) continue;
+                        map[key].push(ms[j]);
                     }
                 }
 
                 //3.4.add threeObjects to scene
-                for (let i = 0; i < ms.length; i++) {
-                    const obj=ms[i];
+                for (let j = 0; j < ms.length; j++) {
+                    const obj=ms[j];
                     if (obj.error) {
-                        UI.show("toast", ms[i].error, { type: "error" });
+                        UI.show("toast", ms[j].error, { type: "error" });
                         continue;
                     }
-                    scene.add(ms[i]);
+                    scene.add(ms[j]);
                 }
             }
 

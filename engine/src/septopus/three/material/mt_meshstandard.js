@@ -30,7 +30,7 @@ const material_meshstandard={
     create:(params)=>{
         if(!self.valid(params)) return {error:"Invalid parameters to create MeshPhong material."};
         if(Array.isArray(params.texture)){
-            console.log(params.texture);
+            //console.log(params.texture);
             const ms=[];
             for(let i=0;i<params.texture.length;i++){
                 const tx=params.texture[i];

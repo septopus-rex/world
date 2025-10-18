@@ -274,8 +274,7 @@ const Pages = {
             events: {
                 close: () => {
                     console.log(`Single block page closed.`);
-                    //VBW.con_two.clean(container_id);
-                    //VBW.rd_two.clean(container_id);
+                    VBW.rd_observe.clean(container_id);
                 },
                 show:()=>{
                     
