@@ -26,16 +26,17 @@ const config = {
     camera: {
 
     },
-    extend:0,
+    extend: 0,
 };
 
 const env = {
     player: null,
     controller: null,
-    camera:null,
-    renderer:null,
-    scene:null,
-    container:"",
+    camera: null,
+    renderer: null,
+    scene: null,
+    followGroup:null,
+    container: "",
 };
 
 const self = {
@@ -47,7 +48,10 @@ const self = {
     getSide: () => {
         return VBW.cache.get(["env", "world", "side"]);
     },
-        /** entry of getting 3D meshes
+    getConvert: () => {
+        return VBW.cache.get(["env", "world", "accuracy"]);
+    },
+    /** entry of getting 3D meshes
      * @functions
      * 1. create 3D object from `STD 3D` raw data
      * 2. calc the position of new mesh
@@ -88,9 +92,9 @@ const self = {
 
         return arr;
     },
-    calculateBlockBounds: (blocks,border) => {
-        const ext=!border?0:parseInt(border);
-        if (!blocks || blocks.length === 0) return {error:"Invalid block array."}
+    calculateBlockBounds: (blocks, border) => {
+        const ext = !border ? 0 : parseInt(border);
+        if (!blocks || blocks.length === 0) return { error: "Invalid block array." }
 
         // 1. calc the range
         let minX = Infinity;
@@ -108,14 +112,14 @@ const self = {
         // 2. Center block
         const centerX = (minX + maxX) / 2;
         const centerY = (minY + maxY) / 2;
-        const centerBlock = [ Math.round(centerX), Math.round(centerY)];
+        const centerBlock = [Math.round(centerX), Math.round(centerY)];
 
         // 3. Corner Coordinates
         const cornerCoordinates = [
-            [minX-ext, minY-ext],   //Left-Bottom
-            [maxX+ext, minY-ext],   //Right-Bottom
-            [maxX+ext, maxY+ext],   //Right-Top
-            [minX-ext, maxY+ext]    //Left-Top
+            [minX - ext, minY - ext],   //Left-Bottom
+            [maxX + ext, minY - ext],   //Right-Bottom
+            [maxX + ext, maxY + ext],   //Right-Top
+            [minX - ext, maxY + ext]    //Left-Top
         ];
 
         return {
@@ -123,59 +127,59 @@ const self = {
             corner: cornerCoordinates
         };
     },
-        /** create different type of material
-         * @param {object}      cfg     - {color:0x334455,texture:13}
-         * @param {integer}     world   - index of world
-         * @param {string}      dom_id  - container DOM id
-         * @return {object}     - standard 3D format to create material
-         * */
-        checkMaterial: (cfg, world, dom_id) => {
-            if (cfg.texture) {
-                if(Array.isArray(cfg.texture)){
-                    //console.log(cfg.texture);
-                    const cube = { type: "meshstandard", params: { texture: [] } };
-                    for(const tid of cfg.texture){
-                        const chain = ["block", dom_id, world, "texture", tid];
-                        const dt = VBW.cache.get(chain);
-                        if (dt !== undefined && !dt.error) {
-                            cube.params.texture.push(dt);
-                        }
-                    }
-    
-                    if(cube.params.texture.length!==0){
-                        return cube;
-                    }else{
-                        return {
-                            type: "meshbasic",
-                            params: {
-                                color: cfg.color,
-                                opacity: !cfg.opacity ? 1 : cfg.opacity,
-                            }
-                        };
-                    }
-    
-                }else{
-                    const chain = ["block", dom_id, world, "texture", cfg.texture];
+    /** create different type of material
+     * @param {object}      cfg     - {color:0x334455,texture:13}
+     * @param {integer}     world   - index of world
+     * @param {string}      dom_id  - container DOM id
+     * @return {object}     - standard 3D format to create material
+     * */
+    checkMaterial: (cfg, world, dom_id) => {
+        if (cfg.texture) {
+            if (Array.isArray(cfg.texture)) {
+                //console.log(cfg.texture);
+                const cube = { type: "meshstandard", params: { texture: [] } };
+                for (const tid of cfg.texture) {
+                    const chain = ["block", dom_id, world, "texture", tid];
                     const dt = VBW.cache.get(chain);
                     if (dt !== undefined && !dt.error) {
-                        //return { type: "meshphong", params: { texture: dt } };
-                        return { type: "meshstandard", params: { texture: dt } };
+                        cube.params.texture.push(dt);
                     }
                 }
+
+                if (cube.params.texture.length !== 0) {
+                    return cube;
+                } else {
+                    return {
+                        type: "meshbasic",
+                        params: {
+                            color: cfg.color,
+                            opacity: !cfg.opacity ? 1 : cfg.opacity,
+                        }
+                    };
+                }
+
+            } else {
+                const chain = ["block", dom_id, world, "texture", cfg.texture];
+                const dt = VBW.cache.get(chain);
+                if (dt !== undefined && !dt.error) {
+                    //return { type: "meshphong", params: { texture: dt } };
+                    return { type: "meshstandard", params: { texture: dt } };
+                }
             }
-    
-            if (cfg.color) {
-                return {
-                    type: "meshbasic",
-                    params: {
-                        color: cfg.color,
-                        opacity: !cfg.opacity ? 1 : cfg.opacity,
-                    }
-                };
-            }
-    
-            return { type: "linebasic", params: { color: config.color, opacity: 1 } };
-        },
+        }
+
+        if (cfg.color) {
+            return {
+                type: "meshbasic",
+                params: {
+                    color: cfg.color,
+                    opacity: !cfg.opacity ? 1 : cfg.opacity,
+                }
+            };
+        }
+
+        return { type: "linebasic", params: { color: config.color, opacity: 1 } };
+    },
     /** 
      *construct STD data to render data.
      * @functions
@@ -195,13 +199,13 @@ const self = {
             for (const row of list) {
                 //1.filter out texture and material for preload
                 if (row.material && row.material.texture) {
-                    if(Array.isArray(row.material.texture)){
-                        for(const tid of row.material.texture){
-                            if (!result.texture.includes(tid)){
+                    if (Array.isArray(row.material.texture)) {
+                        for (const tid of row.material.texture) {
+                            if (!result.texture.includes(tid)) {
                                 result.texture.push(tid);
                             }
                         }
-                    }else{
+                    } else {
                         if (!result.texture.includes(row.material.texture)) {
                             result.texture.push(row.material.texture);
                         }
@@ -237,19 +241,17 @@ const self = {
 
     loadObjects: (scene, blocks) => {
         const bks = !blocks ? [env.player.location.block] : blocks;
-        const boundy=self.calculateBlockBounds(bks,config.extend);
+        const boundy = self.calculateBlockBounds(bks, config.extend);
 
-        const dom_id= VBW.cache.get(["active","current"]);
-        const world=env.player.location.world;
-        console.log(dom_id,world);
+        const dom_id = VBW.cache.get(["active", "current"]);
+        const world = env.player.location.world;
+        console.log(dom_id, world);
 
         let mds = [], txs = [], objs = [], ans = [];
         for (const [x, y] of bks) {
             const data_chain = ["block", dom_id, world, `${x}_${y}`, "three"];
             const tdata = VBW.cache.get(data_chain);
-            //console.log(tdata);
             const data = self.singleBlock(x, y, world, tdata);
-            //console.log(data);
             if (data.texture.length !== 0) txs = txs.concat(data.texture);
             if (data.module.length !== 0) mds = mds.concat(data.module);
             objs = objs.concat(data.object);
@@ -259,32 +261,53 @@ const self = {
         const side = self.getSide();
         for (const single of objs) {
             const ms = self.getThree(single, world, dom_id, side);
-            console.log(ms);
+            for(const mesh of ms) scene.add(mesh);
         }
+
+        return boundy;
     },
-    loadLight: (scene) => {
-        //new THREE.DirectionalLight( 0xffffff, 5 );
+    calcPosition:(block)=>{
+        const side=self.getSide();
+        const [x,y]=block;
+        return [
+            (x-1)*side[0],
+            (y-1)*side[1],
+            side[0]+side[0],
+        ];
+    },
+    loadLight: (scene,corner) => {
+        const side=self.getSide();
+        const pos=self.calcPosition(corner[2]);
+
+        //1.set direct light
         const light = ThreeObject.get("light", "direct", { intensity: 5, color: 0xffffff });
-        light.position.set(- 2, 5, - 3);
         light.castShadow = true;
         const cam = light.shadow.camera;
-        cam.top = cam.right = 2;
-        cam.bottom = cam.left = - 2;
+        cam.top = cam.right = side[0]*2;
+        cam.bottom = cam.left = -side[0]*2;
         cam.near = 3;
-        cam.far = 8;
-        light.shadow.mapSize.set(1024, 1024);
-        scene.add(light);
-    },
-    loadOrbit: (camera, renderer) => {
-        const PI90 = Math.PI / 2;
+        cam.far = side[0]*4;
 
+        env.followGroup.add( light );
+		env.followGroup.add( light.target );
+        env.followGroup.position.set(pos[0], pos[2], -pos[1]);
+        scene.add(env.followGroup);
+
+        //2. set camera position
+        console.log(`Before`,JSON.stringify(env.camera.position));
+        env.camera.position.set(pos[0], pos[2], -pos[1]);
+        console.log(`After`,JSON.stringify(env.camera.position));
+    },
+    loadOrbit: (camera, renderer,center) => {
+
+        const side=self.getSide();
+        const PI90 = Math.PI / 2;
         const cfg = {
             type: "orbit",
             params: { camera: camera, renderer: renderer },
         }
         const orbitControls = ThreeObject.get("basic", "controller", cfg);
-
-        orbitControls.target.set(0, 1, 0);
+        orbitControls.target.set((center[0]-0.5)*side[0],0, -(center[1]-0.5)*side[1]);
         orbitControls.enableDamping = true;
         orbitControls.enablePan = false;
         orbitControls.maxPolarAngle = PI90 - 0.05;
@@ -293,8 +316,6 @@ const self = {
     },
 
     animate: () => {
-        //1. animation support
-
         //2. update scene
         env.renderer.render(env.scene, env.camera);
     },
@@ -304,34 +325,38 @@ const renderer = {
     hooks: self.hooks,
 
     construct: (width, height, dom_id, cfg) => {
-        console.log(`Construct:`,dom_id);
+        console.log(`Construct:`, dom_id);
         const chain = ["active", "containers", dom_id];
         if (!VBW.cache.exsist(chain)) {
+            //const cvt=self.getConvert();
+            const side=self.getSide();
             const cfg_scene = {}
             const scene = ThreeObject.get("basic", "scene", cfg_scene);
 
             const cfg_render = { width: width, height: height, shadow: (cfg.shadow === undefined ? false : cfg.shadow) }
             const render = ThreeObject.get("basic", "render", cfg_render);
 
-            const cfg_camera = { width: width, height: height, fov: 50, near: 0.1, far: 1000000 };
+            const cfg_camera = { width: width, height: height, fov: 35, near: 1, far: 10 * side[0] };
             const camera = ThreeObject.get("basic", "camera", cfg_camera);
+            camera.rotation.order="ZYX";
 
             VBW.cache.set(chain, { render: render, camera: camera, scene: scene });
 
-            env.camera=camera;
-            env.renderer=render;
-            env.scene=scene;
+            env.camera = camera;
+            env.renderer = render;
+            env.scene = scene;
+            env.followGroup=ThreeObject.get("basic","group");
         }
 
         if (env.player === null) env.player = VBW.cache.get(["env", "player"]);
-        if (!env.container) env.container=dom_id;
+        if (!env.container) env.container = dom_id;
 
         const dt = VBW.cache.get(chain);
         return dt.render.domElement;
     },
 
     show: (container, blocks) => {
-        console.log("Show:",container);
+        console.log("Show:", container);
         //0. set basic env
         const chain = ["active", "containers", container];
         if (!VBW.cache.exsist(chain)) {
@@ -340,27 +365,28 @@ const renderer = {
             const target = document.getElementById(container);
             target.appendChild(dom_render);
         }
-        const data = VBW.cache.get(chain);
-        const { render, scene, camera } = data;
 
-        const info = render.info.render;
+        const info = env.renderer.info.render;
         const first = info.frame === 0 ? true : false;
 
         //1. load objects
-        const center = self.loadObjects(scene, blocks);
+        const boundy = self.loadObjects(env.scene, blocks);
 
         //2. add light
-        self.loadLight(scene);
-        env.controller = self.loadOrbit(camera, render);
+        self.loadLight(env.scene,boundy.corner);
 
-        render.setAnimationLoop(self.animate);
+        env.controller = self.loadOrbit(env.camera, env.renderer, boundy.center);
+
+        env.renderer.setAnimationLoop(self.animate);
+
+        //console.log(env);
     },
 
     clean: (dom_id, world, x, y) => {
         env.renderer.setAnimationLoop(null);
-        env.scene=null;
-        env.camera=null;
-        env.scene=null;
+        env.scene = null;
+        env.camera = null;
+        env.scene = null;
 
         const chain = ["active", "containers", dom_id];
         VBW.cache.remove(chain);
