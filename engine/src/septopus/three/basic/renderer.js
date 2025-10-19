@@ -17,6 +17,8 @@ const Renderer={
         const renderer=new THREE.WebGLRenderer(cfg);
 
         if(cfg.shadow){
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			renderer.toneMappingExposure = 0.5;
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         }

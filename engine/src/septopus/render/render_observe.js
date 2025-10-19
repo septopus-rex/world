@@ -275,12 +275,24 @@ const self = {
             side[0]+side[0],
         ];
     },
-    loadLight: (scene,corner) => {
+    setShadow:(scene)=>{
+        for(const obj of scene.children){
+            if(obj.isMesh){
+                obj.castShadow = true;
+                if(obj.userData && obj.userData.name && obj.userData.name==="block"){
+                    obj.receiveShadow=true;
+                }
+            }
+        }
+    },
+    loadLight: (scene,corner, shadow) => {
+        if(shadow) self.setShadow(scene);
+
         const side=self.getSide();
         const pos=self.calcPosition(corner[2]);
 
         //1.set direct light
-        const light = ThreeObject.get("light", "direct", { intensity: 5, color: 0xffffff });
+        const light = ThreeObject.get("light", "direct", { intensity: 3, color: 0xffffff });
         light.castShadow = true;
         const cam = light.shadow.camera;
         cam.top = cam.right = side[0]*2;
@@ -361,7 +373,7 @@ const renderer = {
         const chain = ["active", "containers", container];
         if (!VBW.cache.exsist(chain)) {
             const dt = VBW.detect.check(container);
-            const dom_render = renderer.construct(dt.width, dt.height, container, {});
+            const dom_render = renderer.construct(dt.width, dt.height, container, {shadow:true});
             const target = document.getElementById(container);
             target.appendChild(dom_render);
         }
@@ -373,13 +385,14 @@ const renderer = {
         const boundy = self.loadObjects(env.scene, blocks);
 
         //2. add light
-        self.loadLight(env.scene,boundy.corner);
+        self.loadLight(env.scene,boundy.corner, true);
 
+        //3. set controller
         env.controller = self.loadOrbit(env.camera, env.renderer, boundy.center);
 
         env.renderer.setAnimationLoop(self.animate);
 
-        //console.log(env);
+        console.log(env);
     },
 
     clean: (dom_id, world, x, y) => {

@@ -273,7 +273,7 @@ const Pages = {
         const cfg = {
             events: {
                 close: () => {
-                    console.log(`Single block page closed.`);
+                    //console.log(`Single block page closed.`);
                     VBW.rd_observe.clean(container_id);
                 },
                 show:()=>{
@@ -281,9 +281,9 @@ const Pages = {
                 },
             },
             auto: () => {
-                console.log(`Single block page show.`);
+                //console.log(`Single block page show.`);
+                //const bks=[[2023,618],[2023,619],[2023,620]];
                 VBW.rd_observe.show(container_id);
-                //VBW.con_two.start(container_id, title_id);
             },
         };
         UI.show("dialog", ctx, cfg);
