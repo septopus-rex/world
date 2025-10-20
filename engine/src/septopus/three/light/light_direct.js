@@ -31,7 +31,11 @@ const light_direct={
         const {size} = params;
         const color=!params.color?0xffffff:params.color;
         const intensity=!params.intensity?1:params.intensity;
-        return new THREE.DirectionalLight(color, intensity);
+        const light=new THREE.DirectionalLight(color, intensity);
+        if(params.shadow){
+            light.castShadow=true;
+        }
+        return light;
     },
     standard:()=>{
         return self.sample();

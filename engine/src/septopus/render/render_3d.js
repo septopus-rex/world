@@ -31,6 +31,11 @@ const config = {
     fov: 50,
     color: 0xff0000,
     speed:60,               //frame update rate to calc time
+    sun:{
+        intensity:1.5,
+        color:0xffffff,
+        ground:0xeeeeee,
+    }
 }
 
 const env={
@@ -543,7 +548,8 @@ const self = {
         const cvt = self.getConvert();
 
         //1.set sun
-        const sun = ThreeObject.get("light", "sun", { colorSky: 0xffffff, colorGround: 0xeeeeee, intensity: 0.5 });
+        const cfg=config.sun;
+        const sun = ThreeObject.get("light", "sun", { colorSky: cfg.color, colorGround: cfg.ground, intensity: cfg.intensity });
         sun.position.set(
             x * side[0],
             y * side[1],
@@ -552,7 +558,7 @@ const self = {
         scene.add(sun);
 
         //2.set directlight to create shadow
-        const light = ThreeObject.get("light", "direct", { color: 0xffffff,intensity:0.2 });
+        const light = ThreeObject.get("light", "direct", { shadow:false,color: cfg.color, intensity:  cfg.intensity*0.4 });
         light.position.set(
             x * side[0],
             y * side[1],
@@ -757,14 +763,15 @@ const self = {
      * @return void
      * */
     shadow:(scene, enable)=>{
-        scene.traverse(( obj )=>{
-            if(obj.isMesh && obj.userData && obj.userData.name && obj.userData.name==="block"){
-                obj.castShadow=enable;
-            }else{
-                obj.castShadow=enable;
-                obj.receiveShadow=enable;
+        for(const obj of scene.children){
+            if(obj.isMesh){
+                obj.castShadow = enable;
+                if(obj.userData && obj.userData.name && obj.userData.name==="block"){
+                    obj.receiveShadow=enable;
+                }
             }
-        });      
+        }
+        return true;    
     },
 
     /** fresh target block
