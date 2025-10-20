@@ -137,6 +137,8 @@ const self = {
      * @return {boolean}
      */
     struct: (container, cfg) => {
+        //console.log(container);
+
         if (VBW.block === undefined) return UI.show("toast", `No more component.`, { type: "error" });
 
         //0.device detect
@@ -152,6 +154,9 @@ const self = {
 
         //2.construct the DOM
         const target = document.getElementById(container);
+        // console.log(dom_render);
+        // console.log(dom_controller);
+        // console.log(target);
 
         //FIXME, need to clean all DOM to avoid new screen of system
         //2.1.clean DOM already exsist
@@ -391,15 +396,16 @@ const self = {
                 buttons.world,
                 buttons.system,
                 buttons.setting,
-                // buttons.buy,
-                // buttons.edit,
-                // buttons.normal,
+                buttons.buy,
+                buttons.edit,
+                buttons.normal,
                 // buttons.mint,
                 buttons.stop,
                 buttons.start,
                 buttons.clean,
                 buttons.block,
                 //buttons.review,
+                
             ];
         return arr;
     },

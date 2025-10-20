@@ -23,7 +23,6 @@ const config={
     interval:60*30,
 };
 
-
 let def=null;
 let counter=0;
 const self={

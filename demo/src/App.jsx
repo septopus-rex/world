@@ -44,7 +44,12 @@ function App() {
     });
   }, []);
   return (
-    <div id={dom_id} className={self.getRenderClass()} style={{width:"100%"}}></div>
+    <>
+      <div id={dom_id} className={self.getRenderClass()} style={{width:"100%"}}>
+
+      </div>
+      <div id="tailwind-check" className="w-[1px] h-[1px] fixed top-0 left-0 bg-fuchsia-500"></div>
+    </>
   )
 }
 

@@ -17,7 +17,7 @@ const reg={
     events:["change"],
 }
 const config={
-    frequency:300,      //frames to update
+    frequency: 300,      //frames to update
 };
 
 const env={
@@ -56,7 +56,6 @@ const self={
                 from:"sky",
                 stamp:Toolbox.stamp(),
             }
-            //console.log(`Trigger weather`);
             VBW.event.trigger("sky","change",evt);
 
         } else {
@@ -79,6 +78,20 @@ const vbw_sky={
         //2. update sky
         self.update();
     },
+    task:()=>{
+        return {
+            set:()=>{
+
+            },
+            night:()=>{
+
+            },
+            router: [
+                { method:"set", gameonly:true},
+                { method:"night", gameonly:true},
+            ],
+        }
+    }
 }
 
 export default vbw_sky;
