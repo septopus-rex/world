@@ -136,7 +136,7 @@
     {
         type:"module",              //资源类型，["module","texture","avatar",...]，可按需扩展
         format:"fbx",               //文件格式
-        more:{},                    //更多附属的属性，按照需要加载
+        metadata:{},                //更多附属的属性，按照需要加载
         data:"BASE64_FILE_STRING",  //原始文件base64编码后的数据
     }
 ```
@@ -145,7 +145,7 @@
     {
         type:"text",                //文本资源类型，用于给trigger进行显示调用
         format:"json",              //文件格式
-        more:{lang:"cn"},           //更多附属的属性，按照需要加载
+        metadata:{lang:"cn"},           //更多附属的属性，按照需要加载
         data:"BASE64_FILE_STRING",  //原始文件base64编码后的数据
     }
 ```

@@ -40,14 +40,15 @@
             ...
         },
         task:{
-            router:["hide","show","dance"],
             hide:(meshes,cfg)=>{},
             show:(meshes,cfg)=>{},
             dance:(meshes,cfg)=>{},
-            setting:{
-                gameonly:true,
-            },
-            ...
+            ...,
+            router:[
+                { method:"hide", gameonly:true},
+                { method:"show", gameonly:true},
+                { method:"dance", gameonly:true}
+            ],
         },
     };
 
@@ -136,7 +137,7 @@ export default adjunct;
 
 * 在`正常模式`下，可以通过绑定的事件来触发动画和互动，提升趣味性。例如，可以创建NPC并聊天，而不需要进入游戏模式。
 * `事件`由系统定义，[in,out,hold,beside,under,touch]等，统一进行支持。需要在注册时主动申明，才能使用。
-* `事件`仅能驱动`附属物`自己的task来实现功能，为安全考虑不能调用其他task，也不能与游戏服务器进行交互。
+* `事件`仅能调用设置为`gameonly=false`，来限制其功能，提升系统安全性。
 
 ## 数据压缩
 

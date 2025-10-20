@@ -9,8 +9,6 @@
  * @date 2025-07-21
  */
 
-//import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-//import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';

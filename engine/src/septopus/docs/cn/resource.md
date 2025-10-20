@@ -7,7 +7,7 @@
   
 | 键名 | 说明 | 可选值 |
 | --- | --- | --- |
-| type | Meta Septopus支持的类型 | [module,texture,avatar,lines,block，adjunct...] |
+| type | Meta Septopus支持的类型 | [module,texture,avatar,lines,block,adjunct,chord...] |
 | format | 原始文件类型 |  |
 | raw | base64格式编码的字符串 |  |
 | metadata | 扩展配置 |  |
@@ -16,17 +16,17 @@
 
 ### Module
 
-* 各种导出的3D模型文件，需要明确format进行解析。
+* 各种导出的3D模型文件，需要明确format进行解析。因为需要将模型的尺寸整合到系统里，需奥metadata里的参数来对其尺寸进行修正。
   
     ```Javascript
     {
         type:"module",
-        format:"fbx",
+        format:"fbx",               //[gltb,fbx,obj,mf]
         raw:"BASE64_ENCODE_STRING",
         metadata:{
-            size:[4,10,6],      //修正后的模型放置尺寸
-            scale:[1,1,1],      //原始模型缩放到m为单位的比例
-            rotation:[0,0,0],   //设置旋转值来调整模型到符合septopus的坐标系
+            size:[4,10,6],          //修正后的模型放置尺寸
+            scale:[1,1,1],          //原始模型缩放到m为单位的比例
+            rotation:[0,0,0],       //设置旋转值来调整模型到符合septopus的坐标系
         },
     }
     ```
@@ -38,10 +38,10 @@
     ```Javascript
     {
         type:"texture",
-        format:"png",
+        format:"png",               //[jpg,png]
         raw:"BASE64_ENCODE_STRING",
         metadata:{
-            size:[2,2],
+            size:[2,2],             //贴图对应的物理尺寸，用于进行贴图的repeat计算
         },
     }
     ```
@@ -54,10 +54,24 @@
     {
         type:"lines",
         format:"json",
-        raw:"BASE64_ENCODE_STRING",
+        raw:"BASE64_ENCODE_STRING",     //{en:[],zh:[]}, support lang in array
         metadata:{
             lang:["zh","en"],
+            encode:"utf8",              //文字编码设置
         },
+    }
+    ```
+
+* 台词的数据结构如下：
+
+    ```Javascript
+    {
+        en:[
+
+        ],
+        cn:[
+
+        ],
     }
     ```
 
@@ -126,3 +140,5 @@
         }
     }
     ```
+
+* Chord的数据结构如下：
