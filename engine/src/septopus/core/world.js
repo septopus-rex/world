@@ -1173,17 +1173,25 @@ const World = {
      * @param {boolean} result
      * */
     select: (dom_id, world, x, y, name, index, face, ck) => {
+
         //1. set selected adjunct
         const chain = ["block", dom_id, world, "edit", "selected"];
         const selected = VBW.cache.get(chain);
+
+        if(selected.error) return false;
+
         selected.adjunct = name;
         selected.index = index;
         selected.face = face;
 
+        console.log(`Here to show selected.`,selected);
+
         //2. fresh 
         const target = { x: x, y: y, world: world, container: dom_id }
         const cfg = { selected: true };
-        VBW.mode("edit", target, (pre) => {
+        const def=VBW.cache.get(["def","common"]);
+        VBW.mode(def.MODE_EDIT, target, (pre) => {
+            console.log(`Here to show grid helper.`);
             if (pre.error) {
                 UI.show("toast", pre.error, { type: "error" });
                 return ck && ck(false);

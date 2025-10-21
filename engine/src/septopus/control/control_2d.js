@@ -208,9 +208,11 @@ const self = {
      * */ 
     screen:(dom_id)=>{
         const id=`#${dom_id} canvas`;
+        
         Touch.on(id,"doubleTap",(ev)=>{
             console.log(`Double`);
         });
+
         Touch.on(id,"touchStart",(point)=>{
             env.pre=point;
             const cp=[point[0],env.height-point[1]];

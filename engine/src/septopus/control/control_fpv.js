@@ -14,6 +14,7 @@
  */
 
 import VBW from "../core/framework";
+import World from "../core/world";
 import UI from "../io/io_ui";
 import Calc from "../lib/calc";
 import ThreeObject from "../three/entry";
@@ -104,6 +105,11 @@ const self = {
             acc[value] = key;
             return acc;
         }, {});
+    },
+    onEdit:(dom_id,world)=>{
+        const check=VBW.cache.get(["block",dom_id,world,"edit"]);
+        if(check.error) return false;
+        return true;
     },
 
     setWidth: (dom_id) => {
@@ -234,6 +240,7 @@ const self = {
         const selected = {
             adjunct: "",
             index: 0,
+            face:"y",
         }
         const arr = [];
         for (let i = 0; i < objs.length; i++) {
@@ -730,26 +737,32 @@ const self = {
             const obj=self.select(ev);
             if(!obj.adjunct || obj.adjunct==="block") return false;
 
-            console.log(`Clicked!`,obj);
             const player=runtime.player;
-            const [x, y] = player.location.block;
             const world = player.location.world;
-            const target = {
-                x: x, y: y, world: world,
-                index: obj.index,
-                adjunct: obj.adjunct,
-            };
+            const [x, y] = player.location.block;
 
-            const evt = Toolbox.clone(target);
-            evt.stamp = Toolbox.stamp();
+            console.log(`Edit status`,self.onEdit());
+            if(!self.onEdit(dom_id,world)){
+                
+                const target = {
+                    x: x, y: y, world: world,
+                    index: obj.index,
+                    adjunct: obj.adjunct,
+                    face:obj.face,
+                };
+                const evt = Toolbox.clone(target);
+                evt.stamp = Toolbox.stamp();
+                VBW.event.trigger(obj.adjunct, "touch", evt, Toolbox.clone(target));
+            }else{
+                World.select(dom_id, world, x, y, obj.adjunct, obj.index, obj.face, ()=>{
 
-            VBW.event.trigger(obj.adjunct, "touch", evt, Toolbox.clone(target));
+                });
+            }
         });
     },  
 }
 
 const controller = {
-    //component hook.
     hooks: self.hooks,
     
     /** 

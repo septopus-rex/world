@@ -672,6 +672,7 @@ const self = {
      * @return void
      * */
     loadEdit: (scene, dom_id) => {
+        //console.log(`Load edit mode.`);
         const world=env.player.location.world;
         const chain = ["block", dom_id, world, "edit"];
         if (!VBW.cache.exsist(chain)) return false;
@@ -719,7 +720,7 @@ const self = {
                 limitZ: 12000,
             }
             const gs = ThreeObject.get("extend", "grid", params);
-
+            //console.log("Grid",gs);
             edit.grid.line = gs;
             gs.position[0] += (edit.x - 1) * side[0];
             gs.position[1] += (edit.y - 1) * side[1];
@@ -1052,7 +1053,7 @@ const renderer={
             },"three_animate");
 
             //4. demo code to test 3D object
-            demo.light(scene, dom_id);
+            //demo.light(scene, dom_id);
         }
 
         //2.update target block and fresh scene
