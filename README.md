@@ -9,7 +9,7 @@
 
 ## Demo
 
-* 3D Engine Demo: [https://world.septopus.xyz/demo](https://world.septopus.xyz/demo)
+* 3D Engine Demo: [https://world.septopus.xyz](https://world.septopus.xyz)
 * Contract: [https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet](https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet)
 
 ## Roadmap

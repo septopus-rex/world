@@ -125,6 +125,22 @@
     }
     ```
 
+### IDL
+
+* Solana合约的IDL文件，供前端进行调用。
+
+    ```Javascript
+    {
+        type:"idl",
+        format:"json",
+        raw:"BASE64_ENCODE_STRING",
+        metadata:{
+            program:"",
+            framework:"",
+        }
+    }
+    ```
+
 ### Chord
 
 * Meta Septopus支持的chord模版，用于快速建造。
