@@ -339,6 +339,7 @@ const self = {
      * @return {object}     - standard 3D format to create material
      * */
     checkMaterial: (cfg, world, dom_id) => {
+        //console.log(cfg);
         if (cfg.texture) {
             if(Array.isArray(cfg.texture)){
                 //console.log(cfg.texture);
@@ -367,8 +368,17 @@ const self = {
                 const chain = ["block", dom_id, world, "texture", cfg.texture];
                 const dt = VBW.cache.get(chain);
                 if (dt !== undefined && !dt.error) {
-                    //return { type: "meshphong", params: { texture: dt } };
-                    return { type: "meshstandard", params: { texture: dt } };
+                    if(cfg.repeat){
+                        dt.repeat.set(cfg.repeat[0],cfg.repeat[1]);
+                    }
+                    if(cfg.offset){
+                        dt.offset.set(cfg.offset[0],cfg.offset[1]);
+                    }
+                    if(cfg.rotation) dt.rotation=cfg.rotation;
+
+                    const mst={ type: "meshstandard", params: { texture: dt } };
+                    
+                    return mst; 
                 }
             }
         }

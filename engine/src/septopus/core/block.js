@@ -23,7 +23,7 @@ const reg = {
 
 const config = {
     opacity: 1,
-    texture: 88,          //ground texture ID
+    texture: 206,          //88 grid, ground texture ID
     color: 0xdddddd,      //when no texture, ground color setting
     repeat: [10, 10],     //texture repeat parameters
     active: {            //active ground cordon setting

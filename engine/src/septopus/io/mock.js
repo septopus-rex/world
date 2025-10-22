@@ -252,7 +252,7 @@ const mock = {
                 desc: "Septopus description.",   //Septopus世界的描述
                 range: [4096, 4096],              //每个世界的尺寸 
                 side: [16, 16, 64],             //单个block的尺寸限制
-                max: 99,                          //最大世界发行数量
+                max: 96,                          //最大世界发行数量
             },
             time: {      //time setting
                 year: 12,        // months/year

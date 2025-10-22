@@ -416,7 +416,6 @@ const self = {
         const prefetch = { module: [], texture: [],game:[] };
 
         //1.construct all blocks data
-        //FIXME, get the limit by world not setting.
         const limit = self.cache.get(["setting", "limit"]);
         const fun_single = self.structSingle;
         for (let i = - ext; i < ext + 1; i++) {
@@ -437,9 +436,6 @@ const self = {
                 if (cx < 1 || cy < 1) continue;
                 if (cx > limit[0] || cy > limit[1]) continue;
                 const sub = fun_render(cx, cy, world, dom_id);
-                // if(cx===2022 && cy==619){
-                //     console.log(sub);
-                // }
                 if (sub.module.length !== 0) prefetch.module = prefetch.module.concat(sub.module);
                 if (sub.texture.length !== 0) prefetch.texture = prefetch.texture.concat(sub.texture);
             }

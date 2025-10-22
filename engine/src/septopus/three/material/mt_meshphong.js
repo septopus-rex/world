@@ -34,6 +34,8 @@ const material_meshphong={
             map:params.texture,
             shininess: 30,          //hightlight instensity
         };
+
+        //console.log(params);
         return new THREE.MeshPhongMaterial(cfg);
     },
     standard:()=>{

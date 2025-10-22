@@ -388,7 +388,9 @@ const transform = {
                 rx: r[0], ry: r[1], rz: r[2],
                 material: {
                     texture: tid,
-                    repeat: rpt,
+                    repeat: [2,2],      //rpt
+                    offset:[0,0],
+                    rotation:Math.PI*0.25,
                     color: config.color,
                 },
                 stop: !d[6] ? false : true,
