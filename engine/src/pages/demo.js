@@ -1,10 +1,17 @@
 import { useEffect } from "react";
 import World from "../septopus/app";
 
+import * as anchor from '@coral-xyz/anchor';
+import { Connection, PublicKey, Keypair, SystemProgram, Transaction } from '@solana/web3.js';
+
 export default function Demo() {
   const self = {
     getRenderClass: () => {
       return "w-screen h-screen min-h-80";
+    },
+    //connet to Solana node to run program
+    connect:()=>{
+
     },
   }
   const dom_id="three_demo";
@@ -35,6 +42,14 @@ export default function Demo() {
       },
       fullscreen:true,
       shadow:true,
+      actuator:{
+        decode:(idl)=>{
+
+        },
+        call:async (pid)=>{
+
+        },
+      },
     };
     
     World.launch(dom_id,cfg,(done)=>{

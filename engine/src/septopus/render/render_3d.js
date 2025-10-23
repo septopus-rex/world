@@ -797,7 +797,7 @@ const self = {
      * @return void
      * */
     fresh: (scene, x, y, world, dom_id) => {
-        if(x===2022 && y===619)console.log(`Major 3D renderer fresh...`);
+        //if(x===2022 && y===619)console.log(`Major 3D renderer fresh...`);
         let mds = [], txs = [], objs = [], ans = [];
         const data_chain = ["block", dom_id, world, `${x}_${y}`, "three"];
         const tdata = VBW.cache.get(data_chain);

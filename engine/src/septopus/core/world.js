@@ -550,8 +550,15 @@ const self = {
         self.subcribe();
 
         //0.3. set contract requests.
-        if (cfg && cfg.contract && VBW.datasource && VBW.datasource.contract) {
-            VBW.datasource.contract.set(cfg.contract);
+        if (cfg  && VBW.datasource && VBW.datasource.contract) {
+            if(cfg.contract){
+                VBW.datasource.contract.set(cfg.contract);
+            }
+
+            if(cfg.actuator){
+                VBW.datasource.contract.set(cfg.actuator,"actuator");
+            }
+            
         }
     },
     /**
@@ -1055,7 +1062,7 @@ const World = {
      * Septopus World entry, start from 0 to start the 3D world
      * @param   {string}    id      - container DOM id
      * @param   {function}  ck      - callback when loaded
-     * @param   {object}    [cfg]   - {contract:methods,fullscreen:false,shadow:true}, config setting
+     * @param   {object}    [cfg]   - {contract:methods,fullscreen:false,shadow:true,actuator:{}}, config setting
      * @return  {boolean}   - whether load successful
      * */
     first: (dom_id, ck, cfg) => {

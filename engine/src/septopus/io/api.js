@@ -135,14 +135,18 @@ const self = {
 }
 
 const contract={
-    set:(reqs)=>{
-        contract.instructions=reqs;       // attatch to contract directly
+    set:(reqs,cat)=>{
+        const key=!cat?"instructions":cat;
+        contract[key]=reqs;       // attatch to contract directly
+
+        if(cat==="actuator") console.log(contract);
         return true;
     },
 
-    call:async (method,params)=>{
-        if(!contract.instructions || !contract.instructions[method]) return {error:`No such method "${method}"`}
-        return await contract.instructions[method](...params);
+    call:async (method,params,cat)=>{
+        const key=!cat?"instructions":cat;
+        if(!contract[key] || !contract[key][method]) return {error:`No such method "${method}"`}
+        return await contract[key][method](...params);
     },
 }
 
