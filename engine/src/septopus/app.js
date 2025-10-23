@@ -77,6 +77,13 @@ const Septo={
             const wd_index=0;
 
             setTimeout(()=>{
+                //datasource
+                VBW.datasource.idl(888,(data)=>{
+                    console.log(`IDL raw data,`,data);
+                    console.log(`Datasource,`,VBW.datasource);
+
+                    VBW.datasource.contract.run("decode",[data],"actuator");
+                });
 
                 /*********** Mode Switch Demo ***********/
                 // World.edit(container,wd_index,2025,501);

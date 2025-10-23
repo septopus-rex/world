@@ -12,6 +12,7 @@
 
 import Toolbox from "../lib/toolbox";
 import Design from "./design";
+import lucky from "./idl/luckysig.json";
 
 const mock = {
     adjunct: (index) => {
@@ -512,6 +513,15 @@ const mock = {
                         },
                     ],
                 },
+            }
+        }
+
+        if(id===888){
+            return {
+                index:id,
+                type:"idl",
+                format:"json",
+                raw:lucky,
             }
         }
 

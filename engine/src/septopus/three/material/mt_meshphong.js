@@ -32,10 +32,10 @@ const material_meshphong={
         const cfg={
             color: 0xFFFFFF,
             map:params.texture,
+            transparent: true,
             shininess: 30,          //hightlight instensity
         };
 
-        //console.log(params);
         return new THREE.MeshPhongMaterial(cfg);
     },
     standard:()=>{

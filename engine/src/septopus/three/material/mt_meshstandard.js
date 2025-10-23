@@ -37,15 +37,19 @@ const material_meshstandard={
                 const cfg={
                     color: 0xFFFFFF,
                     map:tx,
+                    transparent: true,
                     shininess: 50,          //hightlight instensity
                 };
-                ms.push(new THREE.MeshPhongMaterial(cfg))
+                const cube_mt=new THREE.MeshPhongMaterial(cfg);
+                cube_mt.opacity=0.6;
+                ms.push(cube_mt);
             }
             return ms;
         }else{
             const cfg={
                 color: 0xFFFFFF,
                 map:params.texture,
+                transparent: true,
             };
             return new THREE.MeshStandardMaterial(cfg);
         }

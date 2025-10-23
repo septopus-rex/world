@@ -551,14 +551,8 @@ const self = {
 
         //0.3. set contract requests.
         if (cfg  && VBW.datasource && VBW.datasource.contract) {
-            if(cfg.contract){
-                VBW.datasource.contract.set(cfg.contract);
-            }
-
-            if(cfg.actuator){
-                VBW.datasource.contract.set(cfg.actuator,"actuator");
-            }
-            
+            if(cfg.contract) VBW.datasource.contract.set(cfg.contract);
+            if(cfg.actuator) VBW.datasource.contract.set(cfg.actuator,"actuator");
         }
     },
     /**

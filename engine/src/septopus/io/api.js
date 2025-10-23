@@ -143,7 +143,7 @@ const contract={
         return true;
     },
 
-    call:async (method,params,cat)=>{
+    run:async (method,params,cat)=>{
         const key=!cat?"instructions":cat;
         if(!contract[key] || !contract[key][method]) return {error:`No such method "${method}"`}
         return await contract[key][method](...params);
@@ -283,6 +283,11 @@ const API = {
     },
 
     game:(id,ck)=>{
+        const dt = mock.resource(id);
+        return ck && ck(dt);
+    },
+
+    idl:(id,ck)=>{
         const dt = mock.resource(id);
         return ck && ck(dt);
     },
