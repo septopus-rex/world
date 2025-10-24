@@ -5,15 +5,11 @@ use {
 
 use crate::constants::{
     BlockData,
-    ResourceData,
     ComplainData,
     SPW_SEEDS_BLOCK_DATA,
-    SPW_SEEDS_RESOURCE_DATA,
     SPW_SEEDS_COMPLAIN_RESOURCE,
     SPW_SEEDS_COMPLAIN_BLOCK,
     SOLANA_PDA_LEN,
-    ResoureStatus,
-    ErrorCode,
 };
 
 /********************************************************************/

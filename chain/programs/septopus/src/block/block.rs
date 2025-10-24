@@ -12,11 +12,9 @@ use crate::constants::{
     WorldList,
     WorldData,
     BlockData,
-    ComplainData,
     SPW_SEEDS_WORLD_LIST,
     SPW_SEEDS_WORLD_COUNT,
     SPW_SEEDS_BLOCK_DATA,
-    SPW_SEEDS_COMPLAIN_BLOCK,
     BlockStatus,
     ErrorCode,
 };

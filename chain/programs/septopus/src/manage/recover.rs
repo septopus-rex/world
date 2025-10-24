@@ -10,7 +10,6 @@ use crate::constants::{
     SPW_SEEDS_RESOURCE_DATA,
     ResoureStatus,
     BlockStatus,
-    ErrorCode,
 };
 
 /********************************************************************/

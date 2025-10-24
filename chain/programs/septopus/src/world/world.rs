@@ -2,14 +2,11 @@ use {
     //std::str::FromStr,
     anchor_lang::prelude::*,
     //anchor_lang::system_program,
-    serde_json::{json, Value},
-
 };
 
 use crate::constants::{
     SOLANA_PDA_LEN,
     SPW_WORLD_LIST_SIZE,
-    SPW_RESOURE_MAP_SIZE,
     SPW_WHITELIST_MAP_SIZE,
     WorldList,
     WhiteList,
@@ -76,7 +73,7 @@ pub fn start(
     //1. logical check
     //1.1. ready to start new world.
     
-    let white = &mut ctx.accounts.whitelist_account;
+    let _white = &mut ctx.accounts.whitelist_account;
 
     
     //2. create world accounts

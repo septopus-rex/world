@@ -11,4 +11,3 @@ pub mod recover;
 pub use recover::*;
 
 pub mod revoke;
-pub use revoke::*;
