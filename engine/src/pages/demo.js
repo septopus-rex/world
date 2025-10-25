@@ -1,25 +1,19 @@
 
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { UnsafeBurnerWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { clusterApiUrl } from "@solana/web3.js";
+
+import { useEffect } from "react";
+import { Connection } from "@solana/web3.js";
+import * as anchor from "@coral-xyz/anchor";
+
 import "@solana/wallet-adapter-react-ui/styles.css";
-import { useEffect, useMemo } from "react";
+import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { FaWallet } from 'react-icons/fa';
 import World from "../septopus/app";
 
-// import * as anchor from '@coral-xyz/anchor';
-// import { Connection, PublicKey, Keypair, SystemProgram, Transaction } from '@solana/web3.js';
-import { PublicKey, Connection, Keypair } from "@solana/web3.js";
-import * as anchor from "@coral-xyz/anchor";
-import { useWallet } from "@solana/wallet-adapter-react";
-
-// import IDL from "./luckysig.json";
+const devnet = "https://winter-old-bridge.solana-devnet.quiknode.pro/982a105c0cf37e14d1977ecba41113f7ef2ea049";
+let CONNECTION = null;
 
 export default function Demo() {
-
-  let CONNECTION = null;
-  const devnet = "https://winter-old-bridge.solana-devnet.quiknode.pro/982a105c0cf37e14d1977ecba41113f7ef2ea049";
 
   const self = {
     getRenderClass: () => {
@@ -33,28 +27,30 @@ export default function Demo() {
     },
     getContract: async (wallet, IDL) => {
       const provider = new anchor.AnchorProvider(CONNECTION, wallet, { commitment: 'confirmed' });
-      console.log(IDL,provider);
+      console.log(IDL, provider);
       const caller = new anchor.Program(IDL, provider);
       return caller
     },
-    getSlotHash: async (slot,ck)=>{
-        self.init();
-        try {
-            const cfg={commitment: "confirmed",maxSupportedTransactionVersion:0};
-            //console.log(CONNECTION.getBlock);
-            const block = await CONNECTION.getBlock(slot, cfg);
-            if (block && block.blockhash) {
-                return ck && ck(block.blockhash);
-            } else {
-                return ck && ck({error:"Unconfirmed block."});
-            }
-        } catch (error) {
-            //console.log(error);
-            return ck && ck({error:"Failed to get block hash."});
+    getSlotHash: async (slot, ck) => {
+      self.init();
+      try {
+        const cfg = { commitment: "confirmed", maxSupportedTransactionVersion: 0 };
+        //console.log(CONNECTION.getBlock);
+        const block = await CONNECTION.getBlock(slot, cfg);
+        if (block && block.blockhash) {
+          return ck && ck(block.blockhash);
+        } else {
+          return ck && ck({ error: "Unconfirmed block." });
         }
+      } catch (error) {
+        //console.log(error);
+        return ck && ck({ error: "Failed to get block hash." });
+      }
     },
   }
   const dom_id = "three_demo";
+  //const wallet = useWallet();
+  const { publicKey } = useWallet();
 
   useEffect(() => {
     const cfg = {
@@ -95,32 +91,20 @@ export default function Demo() {
 
     World.launch(dom_id, cfg, (done) => {
       console.log(`App loaded:`, done);
-      self.getSlotHash(334567,(data)=>{
-        console.log(data);
-      });
+      // self.getSlotHash(334567, (data) => {
+      //   console.log(data);
+      // });
     });
   }, []);
 
-  const WalletConnectionProvider = ({ children }) => {
-    const endpoint = clusterApiUrl("devnet");
-    const wallets = useMemo(() => [
-      new UnsafeBurnerWalletAdapter(),
-    ], []);
-
-    return (
-      <ConnectionProvider endpoint={endpoint}>
-        <WalletProvider wallets={wallets} autoConnect>
-          <WalletModalProvider>{children}</WalletModalProvider>
-        </WalletProvider>
-      </ConnectionProvider>
-    );
-  };
-
   return (
-    <WalletConnectionProvider>
+    <>
       <div id={dom_id} className={self.getRenderClass()}></div>
-      {/* <WalletMultiButton className="btn-md"/> */}
-    </WalletConnectionProvider>
-
+      <div style={{position:"fixed",top:"15px",right:"15px"}}>
+        <WalletMultiButton className="wallet-icon-button">
+          <FaWallet size={20} />
+        </WalletMultiButton>
+      </div>
+    </>
   );
 }
