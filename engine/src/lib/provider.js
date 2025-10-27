@@ -8,8 +8,8 @@ import { PhantomWalletAdapter, SolflareWalletAdapter} from '@solana/wallet-adapt
 
 export function WalletContextProvider({ children }) {
 
-  //const devnet = "https://winter-old-bridge.solana-devnet.quiknode.pro/982a105c0cf37e14d1977ecba41113f7ef2ea049";
-  const endpoint = clusterApiUrl('devnet');
+  const devnet = "https://winter-old-bridge.solana-devnet.quiknode.pro/982a105c0cf37e14d1977ecba41113f7ef2ea049";
+  const endpoint = devnet;
   const wallets = useMemo(
     () => [
       new PhantomWalletAdapter(),

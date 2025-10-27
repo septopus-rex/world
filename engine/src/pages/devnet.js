@@ -1,38 +1,11 @@
 'use client';
 
-import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
-import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { UnsafeBurnerWalletAdapter, PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { clusterApiUrl } from "@solana/web3.js";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useWallet } from "@solana/wallet-adapter-react";
-
-import { useState, useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import World from "../septopus/app";
 import SeptopusContract from "../lib/contract";
-
-export const WalletConnectionProvider = ({ children }) => {
-
-  const endpoint = clusterApiUrl('devnet');
-
-  const wallets = useMemo(
-    () => [
-      //new PhantomWalletAdapter(),
-      //new BackpackWalletAdapter(),
-      new UnsafeBurnerWalletAdapter(),
-    ],
-    []
-  );
-
-  return (
-    <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect>
-        <WalletModalProvider>{children}</WalletModalProvider>
-      </WalletProvider>
-    </ConnectionProvider>
-  );
-};
 
 export default function Contract() {
   const wallet = useWallet();
@@ -54,19 +27,15 @@ export default function Contract() {
   }
 
   useEffect(() => {
-    if (wallet.publicKey !== null) {
-      setAddress(wallet.publicKey.toString());
-    }
-
-    const cfg = {
-
-    };
+    const cfg = {};
     World.launch("three_demo", cfg, (done) => {
       console.log(`App loaded:`, done);
     });
 
-    self.setWallet();
-  }, [wallet]);
+    if (wallet.publicKey) {
+      self.setWallet();
+    }
+  }, [wallet.publicKey]);
 
   const cmap = {
     position: "absolute",
@@ -78,7 +47,7 @@ export default function Contract() {
   }
 
   return (
-    <WalletConnectionProvider>
+    <>
       <div style={cmap}>
         <WalletMultiButton className="btn-md" ></WalletMultiButton>
       </div>
@@ -86,6 +55,6 @@ export default function Contract() {
       <button className="btn btn-md" onClick={(ev) => {
         self.clickInit(ev);
       }}>Init</button>
-    </WalletConnectionProvider>
+    </>
   )
 }   

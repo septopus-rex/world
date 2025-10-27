@@ -1,0 +1,18 @@
+<svg viewBox="0 0 200 200" width="300" height="300" xmlns="http://www.w3.org/2000/svg">
+  <line x1="100" y1="100" x2="180" y2="100" stroke="red" stroke-width="2" />
+  <text x="185" y="104" font-size="12" fill="red">X</text>
+  <line x1="100" y1="100" x2="100" y2="20" stroke="green" stroke-width="2" />
+  <text x="85" y="30" font-size="12" fill="green">Y</text>
+  <line x1="100" y1="100" x2="60" y2="160" stroke="blue" stroke-width="2" />
+  <text x="50" y="165" font-size="12" fill="blue">Z</text>
+  <circle cx="100" cy="100" r="3" fill="black" />
+
+  <line x1="145" y1="120" x2="105" y2="180" stroke="red" stroke-width="2" />
+  <line x1="100" y1="150" x2="150" y2="150" stroke="green" stroke-width="2" />
+  <text x="140" y="115" font-size="12" fill="gray">N</text>
+  <text x="95" y="190" font-size="12" fill="gray">S</text>
+  <text x="155" y="155" font-size="12" fill="gray">E</text>
+  <text x="85" y="155" font-size="12" fill="gray">W</text>
+  <circle cx="125" cy="150" r="3" fill="black" />
+
+</svg>

@@ -1,7 +1,32 @@
-import { useEffect } from 'react';
+import { ConnectionProvider, WalletProvider,useWallet } from "@solana/wallet-adapter-react";
+import { WalletModalProvider,WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { UnsafeBurnerWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { clusterApiUrl } from "@solana/web3.js";
+import "@solana/wallet-adapter-react-ui/styles.css";
+
+import { useEffect,useMemo } from 'react';
 import './App.css';
 import './engine/septopus.bundle.css';
-import Septo from './engine/septopus.bundle';
+//import Septo from './engine/septopus.bundle';
+import Septo from "./septopus/app";
+import { FaWallet } from 'react-icons/fa';
+
+export const WalletConnectionProvider = ({ children }) => {
+  const endpoint = clusterApiUrl("devnet");
+  const wallets = useMemo(() => [
+    new UnsafeBurnerWalletAdapter(),
+  ], []);
+  //console.log(endpoint)
+  //console.log(new UnsafeBurnerWalletAdapter());
+
+  return (
+    <ConnectionProvider endpoint={endpoint}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>{children}</WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
+  );
+};
 
 function App() {
   const self = {
@@ -9,6 +34,9 @@ function App() {
       return "w-screen h-screen min-h-80";
     },
   }
+
+  const wallet = useWallet();
+  console.log(wallet);
 
   const dom_id="three_demo";
   useEffect(() => {
@@ -44,12 +72,15 @@ function App() {
     });
   }, []);
   return (
-    <>
-      <div id={dom_id} className={self.getRenderClass()} style={{width:"100%"}}>
-
+    <WalletConnectionProvider>
+      <div id={dom_id} className={self.getRenderClass()} style={{width:"100%"}}></div>
+      {/* <div id="tailwind-check" className="w-[1px] h-[1px] fixed top-0 left-0 bg-fuchsia-500"></div> */}
+      <div style={{position:"fixed",top:"15px",right:"15px"}}>
+        <WalletMultiButton className="wallet-icon-button">
+          <FaWallet size={20} />
+        </WalletMultiButton>
       </div>
-      <div id="tailwind-check" className="w-[1px] h-[1px] fixed top-0 left-0 bg-fuchsia-500"></div>
-    </>
+    </WalletConnectionProvider>
   )
 }
 
