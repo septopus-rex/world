@@ -49,6 +49,10 @@ const config = {
         container: "resource_container",
         title: "resource_title", 
     },
+    texture:{
+        container: "texture_container",
+        title: "texture_title", 
+    },
 }
 
 const self={
@@ -284,6 +288,34 @@ const Pages = {
                 //console.log(`Single block page show.`);
                 //const bks=[[2023,618],[2023,619],[2023,620]];
                 VBW.rd_observe.show(container_id);
+            },
+        };
+        UI.show("dialog", ctx, cfg);
+    },
+    texture:()=>{
+        const container_id = config.texture.container;
+        const title_id = config.texture.title;
+        const ctx = {
+            title: `<div id="${title_id}">Texture Preview</div>`,
+            content: `<div class="" id="${container_id}">
+                <div>Texture 3D Viewer</div>
+                <div>Texture Image</div>
+                <div>Box size</div>
+            </div>`,
+        }
+        const cfg = {
+            events: {
+                close: () => {
+                    console.log(`Resource review page closed.`);
+                    
+                },
+                show:()=>{
+                    
+                },
+            },
+            auto:() => {
+                console.log(`Resource review page show.`);
+                
             },
         };
         UI.show("dialog", ctx, cfg);

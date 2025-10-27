@@ -162,6 +162,12 @@ const buttons = {
         }
     },
 
+    texture: {
+        label: "Texture preview", icon: "", action: async () => {
+            Pages.texture();
+        }
+    },
+
     game: {
         label: "Game", icon: "", action: async () => {
             const dom_id = VBW.cache.get(["active", "current"]);

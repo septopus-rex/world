@@ -406,6 +406,7 @@ const self = {
                 buttons.clean,
                 buttons.block,
                 //buttons.review,
+                buttons.texture,
                 
             ];
         return arr;

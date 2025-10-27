@@ -125,6 +125,21 @@
     }
     ```
 
+### Audio
+
+* 音效类型
+
+    ```Javascript
+    {
+        type:"audio",
+        format:"mp3",
+        raw:"BASE64_ENCODE_STRING",
+        metadata:{
+            
+        }
+    }
+    ```
+
 ### IDL
 
 * Solana合约的IDL文件，供前端进行调用。
