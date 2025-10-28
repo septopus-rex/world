@@ -8,7 +8,7 @@
  * @date 2025-04-23
  */
 
-import VBW from "../core/framework";
+import VBW from "./framework";
 import Toolbox from "../lib/toolbox";
 
 const reg={
