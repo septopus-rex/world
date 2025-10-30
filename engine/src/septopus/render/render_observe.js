@@ -378,8 +378,8 @@ const renderer = {
             target.appendChild(dom_render);
         }
 
-        const info = env.renderer.info.render;
-        const first = info.frame === 0 ? true : false;
+        //const info = env.renderer.info.render;
+        //const first = info.frame === 0 ? true : false;
 
         //1. load objects
         const boundy = self.loadObjects(env.scene, blocks);
@@ -395,7 +395,7 @@ const renderer = {
         console.log(env);
     },
 
-    clean: (dom_id, world, x, y) => {
+    clean: (dom_id) => {
         env.renderer.setAnimationLoop(null);
         env.scene = null;
         env.camera = null;

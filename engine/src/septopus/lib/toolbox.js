@@ -20,7 +20,7 @@ const Toolbox = {
     return `${hour}${sp}${minute}`;
   },
   rand: (m, n) => {
-    return Math.round(Math.random() * (m - n) + n);
+    return Math.floor(Math.random() * (m - n)) + n;
   },
   char: (n, pre) => {
     n = n || 7;
@@ -28,8 +28,8 @@ const Toolbox = {
     for (let i = 0; i < n; i++)
       pre +=
         i % 2
-          ? String.fromCharCode(Toolbox.rand(65, 90))
-          : String.fromCharCode(Toolbox.rand(97, 122));
+          ? String.fromCharCode(Toolbox.rand(65, 90+1))
+          : String.fromCharCode(Toolbox.rand(97, 122+1));
     return pre;
   },
   hash: (n) => {

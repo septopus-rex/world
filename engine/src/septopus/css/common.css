@@ -1,3 +1,13 @@
+.preview{
+  width: 60%;
+  text-align: center;
+}
+
+.parameters{
+  width: 40%;
+  text-align: left;
+}
+
 .sidebar{
   background-color: #333333;
   position: absolute;

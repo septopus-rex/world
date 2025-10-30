@@ -295,27 +295,41 @@ const Pages = {
     texture:()=>{
         const container_id = config.texture.container;
         const title_id = config.texture.title;
+        const ids={
+            preview:"texture_three",
+            image:"image_texture",
+            editor:"size_texture",
+        };
         const ctx = {
             title: `<div id="${title_id}">Texture Preview</div>`,
             content: `<div class="" id="${container_id}">
-                <div>Texture 3D Viewer</div>
-                <div>Texture Image</div>
-                <div>Box size</div>
+                <div class="left preview observe" id="${ids.preview}"></div>
+                <div class="right parameters">
+                    <div id="${ids.image}">
+                        <img src="" />
+                    </div>
+                    <div id="${ids.editor}">Box size</div>
+                </div>
             </div>`,
         }
         const cfg = {
             events: {
                 close: () => {
-                    console.log(`Resource review page closed.`);
-                    
+                    //console.log(`Resource review page closed.`);
+                    VBW.rd_observe.clean(ids.preview);
                 },
                 show:()=>{
                     
                 },
             },
             auto:() => {
-                console.log(`Resource review page show.`);
-                
+                const basic={
+                    box:[3,4,5],
+                    source:"",
+                    offset:[0,0],
+                    opacity:1,
+                }   
+                VBW.rd_texture.show(ids.preview,basic);
             },
         };
         UI.show("dialog", ctx, cfg);
