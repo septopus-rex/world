@@ -1,5 +1,3 @@
-import { BufferAttribute } from "three";
-
 const Toolbox = {
   stamp: () => {
     return new Date().getTime();
@@ -36,7 +34,7 @@ const Toolbox = {
     const len = !n ? 64 : n;
     let hash = '0x';
     const hexChars = '0123456789abcdef';
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < len; i++) {
       hash += hexChars[Math.floor(Math.random() * 16)];
     }
     return hash;
@@ -52,7 +50,7 @@ const Toolbox = {
     return str.substr(0, n) + (tailor === undefined ? "..." : tailor);
   },
   isType: (obj, type) => {
-    return !!type ? Toolbox.type(obj) === type.toLowerCase() : Toolbox.type(obj)
+    return type!==undefined ? Toolbox.type(obj) === type.toLowerCase() : Toolbox.type(obj)
   },
   type: (obj) => {
     return Object.prototype.toString.call(obj).slice(8, -1).toLowerCase();
