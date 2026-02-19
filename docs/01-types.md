@@ -1,27 +1,130 @@
 # TypeScript 类型定义
 
-本文档包含 Septopus World 重构所需的所有 TypeScript 类型定义。
+本文档包含 Septopus World 重构所需的所有 TypeScript 类型定义，基于 ECS 架构设计。
 
 ## 目录
 
-- [核心数据类型](#核心数据类型)
-- [Block 类型](#block-类型)
-- [附属物类型](#附属物类型)
-- [渲染类型](#渲染类型)
-- [玩家类型](#玩家类型)
-- [事件类型](#事件类型)
+- [ECS 核心类型](#ecs-核心类型)
 - [坐标类型](#坐标类型)
+- [Block 类型](#block-类型)
+- [组件类型](#组件类型)
+- [材质与渲染类型](#材质与渲染类型)
+- [事件类型](#事件类型)
+- [管线类型](#管线类型)
+- [资源类型](#资源类型)
+- [玩家类型](#玩家类型)
 - [效果类型](#效果类型)
-- [组件接口](#组件接口)
 - [配置类型](#配置类型)
+- [AI 集成类型](#ai-集成类型)
 
-## 核心数据类型
+---
 
-### Vector3
+## ECS 核心类型
+
+### Entity
 
 ```typescript
 /**
- * 3D 向量坐标
+ * 实体唯一标识
+ */
+export type EntityId = string;  // 格式: "${x}_${y}_${world}"
+
+/**
+ * 实体 - ECS 中的基本对象
+ * Block 是最基础的实体单元（16M×16M 空间）
+ */
+export interface Entity {
+    readonly id: EntityId;
+    readonly coord: BlockCoord;
+    components: Map<string, Component>;
+    active: boolean;
+    tags: Set<string>;  // 实体标签，用于快速分类查询
+}
+
+/**
+ * 组件基类 - 纯数据容器，不含逻辑
+ */
+export interface Component {
+    readonly type: string;
+}
+
+/**
+ * 系统接口 - 处理具有特定组件组合的实体
+ */
+export interface System {
+    readonly name: string;
+    readonly requiredComponents: string[];
+    priority: number;
+    enabled: boolean;
+    
+    init(context: SystemContext): void;
+    update(dt: number, entities: Entity[]): void;
+    destroy(): void;
+}
+
+/**
+ * 系统上下文 - 系统运行时可访问的共享资源
+ */
+export interface SystemContext {
+    readonly engine: EngineInstance;
+    readonly registry: RegistryInstance;
+    readonly resources: ResourceManagerInstance;
+    readonly events: EventBusInstance;
+    readonly coordinator: CoordinateServiceInstance;
+}
+
+// 实例类型前向声明（避免循环依赖）
+export type EngineInstance = import('./core/engine').Engine;
+export type RegistryInstance = import('./core/registry').Registry;
+export type ResourceManagerInstance = import('./core/resource').ResourceManager;
+export type EventBusInstance = import('./core/event').EventBus;
+export type CoordinateServiceInstance = import('./core/coordinate').CoordinateService;
+```
+
+### 组件注册
+
+```typescript
+/**
+ * 组件工厂 - 用于注册和创建组件
+ */
+export interface ComponentFactory<T extends Component = Component> {
+    readonly type: string;
+    readonly category: ComponentCategory;
+    readonly meta: ComponentMeta;
+    create(data: any): T;
+}
+
+/**
+ * 组件分类
+ */
+export type ComponentCategory = 
+    | 'builtin'     // 内置组件（Transform, Renderable, Collider）
+    | 'adjunct'     // 附属物组件（Box, Wall, Water, Module）
+    | 'plugin';     // 插件组件（外部扩展）
+
+/**
+ * 组件元数据
+ */
+export interface ComponentMeta {
+    name: string;
+    short: string;          // 缩写，用于 AI 可读格式
+    typeId: number;         // 二进制编码类型 ID（u8: 0-255）
+    binarySize: number;     // 每项的固定字节数
+    desc: string;
+    version: string;
+    events?: string[];      // 组件可触发的事件
+}
+```
+
+---
+
+## 坐标类型
+
+### 向量
+
+```typescript
+/**
+ * 3D 向量
  */
 export interface Vector3 {
     x: number;
@@ -35,7 +138,7 @@ export interface Vector3 {
 export type ReadonlyVector3 = Readonly<Vector3>;
 
 /**
- * 2D 向量坐标
+ * 2D 向量
  */
 export interface Vector2 {
     x: number;
@@ -43,148 +146,270 @@ export interface Vector2 {
 }
 ```
 
-### BlockRawData
+### 坐标系
 
 ```typescript
 /**
- * Block 原始数据（链上存储格式）
- * 索引:
- * 0: elevation - Block 标高
- * 1: status - Block 状态
- * 2: adjuncts - 附属物数组 [[short, [data]], ...]
- * 3: gameSetting - 游戏设置（可选）
+ * Septopus 坐标（世界空间）
+ * X: 东西 (+东, -西)
+ * Y: 南北 (+北, -南)
+ * Z: 高度 (+向上, -向下)
+ * 单位: 毫米（内部精度）
  */
-export type BlockRawData = [
-    number,              // elevation
-    number,              // status
-    [string, any[]][],   // adjuncts
-    any?                 // gameSetting
-];
+export interface SeptopusCoord {
+    x: number;
+    y: number;
+    z: number;
+}
+
+/**
+ * Three.js 坐标（渲染空间）
+ * X: 水平右
+ * Y: 垂直上
+ * Z: 水平前
+ */
+export interface ThreeCoord {
+    x: number;
+    y: number;
+    z: number;
+}
+
+/**
+ * Block 坐标（网格空间）
+ */
+export interface BlockCoord {
+    x: number;     // [1, 4096]
+    y: number;     // [1, 4096]
+    world: number; // 世界索引
+}
+
+/**
+ * 坐标配置
+ */
+export interface CoordinateConfig {
+    side: [number, number];         // Block 尺寸 [width, height]
+    accuracy: number;               // 精度系数（毫米/米）
+    blockLimit: [number, number];   // Block 坐标范围上限
+}
+
+/**
+ * 面方位定义
+ */
+export enum Face {
+    Top = 0,      // 上面：从Z轴向下看
+    Bottom = 1,   // 下面：从-Z轴向上看
+    Front = 2,    // 前面：从南向北看
+    Back = 3,     // 后面：从北向南看
+    Left = 4,     // 左面：从东向西看
+    Right = 5,    // 右面：从西向东看
+}
+```
+
+---
+
+## Block 类型
+
+### 链上原始数据（二进制格式）
+
+```typescript
+/**
+ * Block Raw 二进制格式（链上存储）
+ *
+ * ┌──────────────────────────────────────────────────┐
+ * │ Block Header                          8 bytes    │
+ * │   version:   u8                                  │
+ * │   elevation: u16                                 │
+ * │   status:    u8                                  │
+ * │   adjCount:  u8  (附属物类型数量)                   │
+ * │   flags:     u8  (gameSetting等标志位)              │
+ * │   reserved:  u16                                 │
+ * ├──────────────────────────────────────────────────┤
+ * │ Adjunct Chunk ×N                                 │
+ * │   type_id:   u8  (从 Registry 获取数字 ID)         │
+ * │   encoding:  u8  (0=raw, 1=rle, 2=delta)         │
+ * │   count:     u16 (该类型附属物数量)                  │
+ * │   data:      [u8 × binarySize × count]           │
+ * ├──────────────────────────────────────────────────┤
+ * │ Optional: gameSetting (仅 flags 标记有时)          │
+ * └──────────────────────────────────────────────────┘
+ */
+export type BlockRawBinary = Uint8Array;
+
+/**
+ * Block Header 布局
+ */
+export const BLOCK_HEADER = {
+    SIZE: 8,
+    VERSION_OFFSET: 0,      // u8
+    ELEVATION_OFFSET: 1,    // u16
+    STATUS_OFFSET: 3,       // u8
+    ADJ_COUNT_OFFSET: 4,    // u8
+    FLAGS_OFFSET: 5,        // u8
+    RESERVED_OFFSET: 6,     // u16
+} as const;
+
+/**
+ * Adjunct Chunk Header 布局
+ */
+export const CHUNK_HEADER = {
+    SIZE: 4,
+    TYPE_ID_OFFSET: 0,      // u8
+    ENCODING_OFFSET: 1,     // u8
+    COUNT_OFFSET: 2,        // u16
+} as const;
+
+/**
+ * 编码方式
+ */
+export enum ChunkEncoding {
+    Raw = 0,        // 无压缩，逐项定长
+    RLE = 1,        // 游程编码（用于弦粒子连续重复单元）
+    Delta = 2,      // 差分编码（用于位置接近的附属物）
+}
+
+/**
+ * 附属物二进制编解码器（每个组件类型注册一个）
+ */
+export interface BinaryCodec<T = any> {
+    /** 每项固定字节数 */
+    readonly itemSize: number;
+    /** STD → 二进制 */
+    encode(item: T, buf: Uint8Array, offset: number): void;
+    /** 二进制 → STD */
+    decode(buf: Uint8Array, offset: number): T;
+}
 
 /**
  * Block 占位数据
  */
-export const BLOCK_HOLDER_RAW: BlockRawData = [0.2, 1, []];
+export const BLOCK_HOLDER_RAW: BlockRawBinary = new Uint8Array([
+    1,          // version
+    0, 200,     // elevation = 200 (0.2m × 1000)
+    1,          // status
+    0,          // adjCount
+    0,          // flags
+    0, 0,       // reserved
+]);
 ```
 
-### BlockSTDData
+### 标准中间格式（STD）
 
 ```typescript
 /**
- * STD 格式附属物数据
+ * STD 对象基类 - 语义化的中间表示
+ * 所有附属物的 STD 格式都包含这些基础属性
  */
-export interface STDAdjunct {
-    x: number;
+export interface STDObject {
+    x: number;      // Septopus 坐标系尺寸
     y: number;
     z: number;
-    ox: number;
+    ox: number;     // Block 内偏移
     oy: number;
     oz: number;
-    rx: number;
+    rx: number;     // 旋转
     ry: number;
     rz: number;
     material?: MaterialConfig;
     stop?: boolean;
-    animate?: AnimationData;
+    animate?: AnimateRef;
     event?: Record<string, EventDefinition>;
 }
 
 /**
- * STD 格式 Block 数据
+ * STD Block 数据（继承 STDObject，额外属性）
  */
-export interface STDBlock {
-    x: number;
-    y: number;
-    z: number;
-    ox: number;
-    oy: number;
-    oz: number;
-    rx: number;
-    ry: number;
-    rz: number;
+export interface STDBlock extends STDObject {
     elevation: number;
     status: number;
-    material?: MaterialConfig;
     game?: any;
 }
 
 /**
- * STD 数据（标准中间格式）
+ * STD 数据集合 - 一个 Block 的完整 STD 数据
  */
 export interface STDData {
     block: STDBlock[];
-    [adjunctName: string]: STDAdjunct[];
+    [adjunctName: string]: STDObject[];
 }
 ```
 
-### ThreeData
+### Block 缓存数据
 
 ```typescript
 /**
- * Three.js 渲染数据
+ * Block 实体数据 - 在引擎内的完整数据表示
  */
-export interface ThreeObject {
-    type: 'box' | 'sphere' | 'cylinder' | 'plane';
-    params: RenderParams;
-    material?: MaterialConfig;
-    animate?: AnimationData;
-    stop?: StopConfig;
-    event?: Record<string, EventDefinition>;
-    index?: number;
-    module?: string;
-}
-
-/**
- * Three.js 数据映射
- */
-export interface ThreeDataMap {
-    [adjunctName: string]: ThreeObject[];
-}
-```
-
-## Block 类型
-
-```typescript
-/**
- * Block 坐标
- */
-export interface BlockCoord {
-    x: number;
-    y: number;
-    world: number;
-}
-
-/**
- * Block 数据
- */
-export interface BlockData {
-    x: number;
-    y: number;
-    world: number;
+export interface BlockEntityData {
+    readonly coord: BlockCoord;
     raw: BlockRawData;
-    recover: BlockRawData;
+    recover: BlockRawData;          // 恢复用副本
     std: STDData;
-    three: ThreeDataMap;
-    stop: StopData[];
-    trigger: TriggerData[];
+    renderData: RenderDataMap;
+    colliders: ColliderData[];      // 原 stop
+    triggers: TriggerData[];
     elevation: number;
-    animate: Record<string, THREE.Mesh[]>;
-}
-
-/**
- * Block 持有者数据
- */
-export interface BlockHolder {
-    x: number;
-    y: number;
-    world: number;
-    data: BlockRawData;
-    owner: string;
-    loading: boolean;
+    animatingMeshes: Record<string, any[]>;
 }
 ```
 
-## 附属物类型
+---
+
+## 组件类型
+
+### 内置组件
+
+```typescript
+/**
+ * Transform 组件 - 空间变换
+ */
+export interface TransformComponent extends Component {
+    type: 'transform';
+    position: Vector3;      // Septopus 坐标
+    rotation: Vector3;      // 弧度
+    scale: Vector3;
+}
+
+/**
+ * Renderable 组件 - 可渲染物体
+ */
+export interface RenderableComponent extends Component {
+    type: 'renderable';
+    meshType: MeshType;
+    material: MaterialConfig;
+    visible: boolean;
+    castShadow?: boolean;
+    receiveShadow?: boolean;
+}
+
+export type MeshType = 'box' | 'sphere' | 'cylinder' | 'cone' | 'plane' | 'module';
+
+/**
+ * Collider 组件 - 碰撞体（原 Stop）
+ */
+export interface ColliderComponent extends Component {
+    type: 'collider';
+    shape: ColliderShape;
+    size: Vector3;
+    offset: Vector3;
+    isTrigger: boolean;     // true=触发器，false=阻拦体
+}
+
+export type ColliderShape = 'box' | 'sphere' | 'cylinder';
+
+/**
+ * Light 组件 - 灯光
+ */
+export interface LightComponent extends Component {
+    type: 'light';
+    lightType: 'point' | 'spot' | 'directional' | 'ambient';
+    color: number;
+    intensity: number;
+    range?: number;
+    castShadow?: boolean;
+}
+```
+
+### 附属物组件
 
 ```typescript
 /**
@@ -198,39 +423,97 @@ export enum AdjunctType {
     Trigger = 'trigger',
     Stop = 'stop',
     Module = 'module',
+    Cone = 'cone',
+    Ball = 'ball',
 }
 
 /**
- * 附属物数据
+ * 附属物转换处理器 - 定义 Raw ↔ STD ↔ RenderData 转换
  */
-export interface AdjunctData {
-    type: AdjunctType;
-    name: string;
-    short: string;
-    desc: string;
-    version: string;
-    events: string[];
-    config?: AdjunctConfig;
-}
-
-/**
- * 附属物配置
- */
-export interface AdjunctConfig {
-    color?: number;
-    opacity?: number;
-    stop?: {
-        opacity: number;
-        color: number;
+export interface AdjunctTransform {
+    rawToStd?: (arr: any[], accuracy: number) => STDObject[];
+    stdToRenderData?: (stds: STDObject[], elevation: number) => RenderObject[];
+    stdToRaw?: (arr: any, accuracy: number) => any;
+    stdToActive?: (stds: STDObject[], elevation: number, accuracy: number) => {
+        colliders: ColliderData[];
+        helpers: RenderObject[];
     };
+    stdToBorder?: (obj: any, elevation: number, accuracy: number) => {
+        colliders: ColliderData[];
+        helpers: RenderObject[];
+    };
+    stdTo2D?: (stds: STDObject[], face: number, faces: any) => Render2DObject[];
+}
+
+/**
+ * 附属物属性操作器 - 定义增删改操作
+ */
+export interface AdjunctAttribute {
+    add?: (param: any, raw: any[]) => any[];
+    set?: (param: any, raw: any[], limit?: [number, number, number]) => any[];
+    remove?: (param: any, raw: any[]) => any[];
+    combine?: (param: any, row?: any) => any;
+    revise?: (param: any, row: any, limit: [number, number, number]) => any;
+}
+
+/**
+ * 附属物菜单处理器 - 编辑器 UI 菜单
+ */
+export interface AdjunctMenu {
+    pop?: (std: STDObject) => MenuItem[];
+    sidebar?: (std: STDObject) => Record<string, MenuItem[]>;
+}
+
+/**
+ * 完整附属物定义
+ */
+export interface AdjunctDefinition {
+    hooks: {
+        reg: () => ComponentMeta;
+        init?: () => { chain: string; value: any };
+        def?: (data: any) => void;
+        animate?: (effect: number, param: any) => AnimationData;
+    };
+    transform: AdjunctTransform;
+    attribute?: AdjunctAttribute;
+    menu?: AdjunctMenu;
+    task?: Record<string, Function>;
 }
 ```
 
-## 渲染类型
+---
+
+## 材质与渲染类型
+
+### 材质
 
 ```typescript
 /**
- * 渲染参数
+ * 材质配置
+ */
+export interface MaterialConfig {
+    texture?: number | number[];    // 纹理资源 ID
+    color?: number;                 // 颜色（十六进制）
+    repeat?: [number, number];      // 纹理重复
+    offset?: [number, number];      // 纹理偏移
+    rotation?: number;              // 纹理旋转
+    opacity?: number;               // 透明度 [0, 1]
+}
+
+/**
+ * 阻拦体材质（简化版）
+ */
+export interface ColliderMaterial {
+    opacity: number;
+    color: number;
+}
+```
+
+### 渲染数据
+
+```typescript
+/**
+ * 渲染参数（3D）
  */
 export interface RenderParams {
     size: [number, number, number];
@@ -239,37 +522,55 @@ export interface RenderParams {
 }
 
 /**
- * 材质配置
+ * 渲染对象 - Pipeline 最终输出，用于创建渲染器对象
  */
-export interface MaterialConfig {
-    texture?: number | number[];
-    color?: number;
-    repeat?: [number, number];
-    offset?: [number, number];
-    rotation?: number;
-    opacity?: number;
+export interface RenderObject {
+    type: MeshType;
+    index?: number;
+    params: RenderParams;
+    material?: MaterialConfig;
+    animate?: AnimateRef;
+    stop?: ColliderMaterial;
+    event?: Record<string, EventDefinition>;
+    audio?: AdjunctAudio;       // 可选音效
+    module?: string;            // 外部模型资源引用
 }
 
 /**
- * 阻拦体配置
+ * 附属物音效 - 可挂载在任何 Adjunct 上的 3D 空间音效
  */
-export interface StopConfig {
-    opacity: number;
-    color: number;
+export interface AdjunctAudio {
+    /** 音效资源 ID（IPFS CID 或本地资源 ID） */
+    asset: string;
+    /** 播放模式：loop=持续循环, oneshot=播一次, trigger=事件触发 */
+    mode: 'loop' | 'oneshot' | 'trigger';
+    /** 音量 0-1 */
+    volume: number;
+    /** 衰减半径（米），超出此距离不播放 */
+    range: number;
+    /** trigger 模式时，绑定的事件名 */
+    event?: string;
 }
 
 /**
- * 阻拦体数据
+ * 渲染数据集合
  */
-export interface StopData {
+export interface RenderDataMap {
+    [adjunctName: string]: RenderObject[];
+}
+
+/**
+ * 碰撞体数据（运行时）
+ */
+export interface ColliderData {
     size: [number, number, number];
     position: [number, number, number];
     rotation: [number, number, number];
-    material: StopConfig;
+    material: ColliderMaterial;
     block: BlockCoord;
     elevation: number;
     side: number;
-    orgin: {
+    origin: {
         type: string;
         index: number;
         adjunct: string;
@@ -277,20 +578,191 @@ export interface StopData {
 }
 
 /**
- * 触发器数据
+ * 触发器数据（运行时）
  */
 export interface TriggerData {
     size: [number, number, number];
     position: [number, number, number];
     rotation: [number, number, number];
     material: MaterialConfig;
-    orgin: {
+    origin: {
         type: string;
         index: number;
         adjunct: string;
     };
 }
+
+/**
+ * 2D 渲染对象
+ */
+export interface Render2DObject {
+    type: '  fill' | 'line' | 'sector' | 'text' | 'image';
+    index: number;
+    params: {
+        size: [number, number];
+        position: [number, number];
+        rotation: number;
+    };
+    style: {
+        color: number;
+        opacity?: number;
+        width?: number;
+    };
+}
 ```
+
+---
+
+## 事件类型
+
+```typescript
+/**
+ * 事件类别
+ */
+export enum EventCategory {
+    System = 'system',
+    Block = 'block',
+    Trigger = 'trigger',
+    Collider = 'collider',
+    Player = 'player',
+    Resource = 'resource',
+}
+
+/**
+ * 事件定义（链上数据中的事件描述）
+ */
+export interface EventDefinition {
+    condition: string;
+    todo: string;
+}
+
+/**
+ * 事件数据载荷
+ */
+export interface EventData {
+    stamp: number;              // 时间戳
+    [key: string]: any;
+}
+
+/**
+ * 事件目标 - 特定对象的事件绑定
+ */
+export interface EventTarget {
+    x: number;
+    y: number;
+    world: number;
+    adjunct: string;
+    index: number;
+}
+
+/**
+ * 事件回调
+ */
+export type EventCallback<T extends EventData = EventData> = (data: T) => void;
+
+/**
+ * 事件监听选项
+ */
+export interface EventListenerOptions {
+    priority?: number;          // 执行优先级，数字越大越先执行
+    once?: boolean;             // 是否只触发一次
+    filter?: (data: EventData) => boolean;  // 过滤条件
+    target?: EventTarget;       // 绑定到特定对象
+}
+
+/**
+ * 事件监听器
+ */
+export interface EventListener {
+    id: string;
+    category: EventCategory;
+    event: string;
+    callback: EventCallback;
+    options: EventListenerOptions;
+}
+```
+
+---
+
+## 管线类型
+
+```typescript
+/**
+ * 管线阶段接口
+ */
+export interface PipelineStage<TInput = any, TOutput = any> {
+    readonly name: string;
+    process(input: TInput, context: PipelineContext): TOutput;
+}
+
+/**
+ * 管线上下文 - 各阶段共享的运行时信息
+ */
+export interface PipelineContext {
+    readonly world: number;
+    readonly blockCoord: BlockCoord;
+    readonly accuracy: number;
+    readonly side: [number, number];
+    readonly elevation: number;
+    registry: RegistryInstance;
+    resources: ResourceManagerInstance;
+}
+
+/**
+ * 预加载需求 - Pipeline 阶段产出的资源需求
+ */
+export interface PreloadRequirement {
+    textures: number[];
+    modules: number[];
+}
+```
+
+---
+
+## 资源类型
+
+```typescript
+/**
+ * 资源类型
+ */
+export enum ResourceType {
+    Texture = 'texture',
+    Module = 'module',
+    Avatar = 'avatar',
+    Text = 'text',
+}
+
+/**
+ * 资源状态
+ */
+export enum ResourceStatus {
+    Pending = 'pending',
+    Loading = 'loading',
+    Loaded = 'loaded',
+    Failed = 'failed',
+}
+
+/**
+ * 资源引用
+ */
+export interface ResourceRef {
+    id: number;
+    type: ResourceType;
+    status: ResourceStatus;
+}
+
+/**
+ * 资源数据（IPFS 存储格式）
+ */
+export interface ResourceData {
+    type: ResourceType;
+    format: string;             // 文件格式：fbx, png, json ...
+    metadata: Record<string, any>;
+    data: string;               // Base64 编码
+}
+```
+
+---
 
 ## 玩家类型
 
@@ -299,25 +771,25 @@ export interface TriggerData {
  * 玩家位置
  */
 export interface PlayerLocation {
-    block: [number, number];
-    position: [number, number, number];
-    rotation: [number, number, number];
+    block: [number, number];            // 当前所在 Block
+    position: [number, number, number]; // Block 内位置
+    rotation: [number, number, number]; // 视角方向
     world: number;
-    extend: number;
-    stop: PlayerStop;
+    extend: number;                     // 可视范围（Block 数）
+    contact: PlayerContact;             // 接触状态
 }
 
 /**
- * 玩家阻拦状态
+ * 玩家接触状态（原 PlayerStop）
  */
-export interface PlayerStop {
-    on: boolean;
-    adjunct: string;
-    index: number;
+export interface PlayerContact {
+    grounded: boolean;          // 是否站在碰撞体上
+    adjunct: string;            // 接触的附属物名
+    index: number;              // 附属物索引
 }
 
 /**
- * 玩家身体
+ * 玩家身体参数
  */
 export interface PlayerBody {
     height: number;
@@ -330,25 +802,24 @@ export interface PlayerBody {
 }
 
 /**
- * 玩家能力
+ * 玩家能力值
  */
 export interface PlayerCapacity {
-    move: number;
-    rotate: number;
-    span: number;
-    squat: number;
-    jump: number;
-    death: number;
-    speed: number;
+    moveSpeed: number;
+    rotateSpeed: number;
+    jumpHeight: number;
+    fallSpeed: number;
+    deathHeight: number;
+    sprintMultiplier: number;
     strength: number;
 }
 
 /**
- * 玩家数据
+ * 玩家完整数据
  */
 export interface PlayerData {
     location: PlayerLocation;
-    address: string;
+    address: string;                // 钱包地址
     body: PlayerBody;
     capacity: PlayerCapacity;
     bag: { max: number };
@@ -356,116 +827,18 @@ export interface PlayerData {
 }
 ```
 
-## 事件类型
-
-```typescript
-/**
- * 事件类型枚举
- */
-export enum SystemMode {
-    Normal = 'normal',
-    Edit = 'edit',
-    Game = 'game',
-    Ghost = 'ghost',
-}
-
-/**
- * 资源类型
- */
-export enum ResourceType {
-    Texture = 'texture',
-    Module = 'module',
-}
-
-/**
- * 事件类别
- */
-export enum EventCategory {
-    System = 'system',
-    Block = 'block',
-    Trigger = 'trigger',
-    Stop = 'stop',
-    Player = 'player',
-    Module = 'module',
-}
-
-/**
- * 事件定义
- */
-export interface EventDefinition {
-    condition: string;
-    todo: string;
-}
-
-/**
- * 事件回调
- */
-export type EventCallback<T = any> = (data: T) => void;
-
-/**
- * 事件目标
- */
-export interface EventTarget {
-    x: number;
-    y: number;
-    world: number;
-    adjunct: string;
-    index: number;
-}
-
-/**
- * 事件数据
- */
-export interface EventData {
-    stamp: number;
-    [key: string]: any;
-}
-```
-
-## 坐标类型
-
-```typescript
-/**
- * Septopus 坐标
- */
-export interface SeptopusCoord {
-    x: number;  // 东西 (+东, -西)
-    y: number;  // 南北 (+北, -南)
-    z: number;  // 高度 (+向上, -向下)
-}
-
-/**
- * Three.js 坐标
- */
-export interface ThreeCoord {
-    x: number;  // 水平右
-    y: number;  // 垂直上
-    z: number;  // 水平前
-}
-
-/**
- * 坐标转换配置
- */
-export interface CoordinateConfig {
-    side: [number, number];
-    accuracy: number;
-    blockLimit: [number, number];
-}
-
-/**
- * 坐标变换结果
- */
-export interface CoordinateTransform {
-    position: SeptopusCoord;
-    threePosition: ThreeCoord;
-}
-```
+---
 
 ## 效果类型
 
 ```typescript
 /**
- * 动画时间线
+ * 动画引用（STD 数据中的引用方式）
+ */
+export type AnimateRef = number | string;
+
+/**
+ * 动画时间线步骤
  */
 export interface AnimationTimeline {
     type: 'rotate' | 'move' | 'scale' | 'color' | 'opacity';
@@ -480,8 +853,8 @@ export interface AnimationTimeline {
  */
 export interface AnimationData {
     name: string;
-    duration: number;  // 0 = 无限循环
-    loops: number;     // 0 = 无限循环
+    duration: number;       // 0 = 无限循环
+    loops: number;          // 0 = 无限循环
     category: 'mesh' | 'camera' | 'scene';
     pending?: number | [number, number];
     timeline: AnimationTimeline[];
@@ -502,103 +875,34 @@ export interface EffectParams {
 }
 ```
 
-## 组件接口
-
-```typescript
-/**
- * 组件注册信息
- */
-export interface ComponentRegistration {
-    name: string;
-    category: 'system' | 'render' | 'controller' | 'adjunct' | 'datasource' | 'plugin';
-    desc: string;
-    version: string;
-    short?: string;
-    events?: string[];
-}
-
-/**
- * 组件 Hooks
- */
-export interface ComponentHooks {
-    reg: () => ComponentRegistration;
-    init?: () => { chain: string; value: any };
-    def?: (data: any) => void;
-    animate?: (effect: number, param: any) => AnimationData;
-}
-
-/**
- * 转换处理器
- */
-export interface TransformHandlers {
-    raw_std?: (arr: any[], cvt: number) => any[];
-    std_3d?: (stds: any[], va: number) => any[];
-    std_active?: (stds: any[], va: number, cvt: number) => { stop: any[]; helper: any[] };
-    std_border?: (obj: any, va: number, cvt: number) => { stop: any[]; helper: any[] };
-    std_raw?: (arr: any, cvt: number) => any;
-    std_box?: (obj: any) => any;
-    std_2d?: (stds: any[], face: number, faces: any) => any[];
-}
-
-/**
- * 属性处理器
- */
-export interface AttributeHandlers {
-    add?: (param: any, raw: any[]) => any[];
-    set?: (param: any, raw: any[], limit?: [number, number, number]) => any[];
-    remove?: (param: any, raw: any[]) => any[];
-    combine?: (param: any, row?: any) => any;
-    revise?: (param: any, row: any, limit: [number, number, number]) => any;
-}
-
-/**
- * 菜单处理器
- */
-export interface MenuHandlers {
-    pop?: (std: any) => MenuItem[];
-    sidebar?: (std: any) => Record<string, MenuItem[]>;
-}
-
-/**
- * 组件接口
- */
-export interface IComponent {
-    hooks: ComponentHooks;
-    transform?: TransformHandlers;
-    attribute?: AttributeHandlers;
-    menu?: MenuHandlers;
-    task?: Record<string, Function>;
-}
-
-/**
- * 菜单项
- */
-export interface MenuItem {
-    type: 'button' | 'number' | 'string' | 'select';
-    label: string;
-    icon?: string;
-    key?: string;
-    value?: any;
-    desc?: string;
-    valid?: (val: any, cvt: number) => boolean;
-    action?: (ev: any) => void;
-}
-```
+---
 
 ## 配置类型
 
 ```typescript
 /**
+ * 引擎统一配置入口
+ */
+export interface EngineConfig {
+    block: BlockConfig;
+    camera: CameraConfig;
+    render: RenderConfig;
+    world: WorldConfig;
+    player: PlayerConfig;
+    system: SystemConfig;
+}
+
+/**
  * Block 配置
  */
 export interface BlockConfig {
-    size: [number, number];
-    accuracy: number;
-    limit: [number, number];
+    size: [number, number];         // Block 尺寸 [16000, 16000]
+    accuracy: number;               // 精度系数 1000
+    limit: [number, number];        // Block 坐标上限 [4096, 4096]
     opacity: number;
-    texture: number;
-    color: number;
-    repeat: [number, number];
+    texture: number;                // 默认纹理 ID
+    color: number;                  // 默认颜色
+    repeat: [number, number];       // 默认纹理重复
     active: {
         height: number;
         color: {
@@ -628,8 +932,8 @@ export interface CameraConfig {
  */
 export interface RenderConfig {
     fov: number;
-    color: number;
-    speed: number;
+    color: number;                  // 背景色
+    speed: number;                  // 目标帧率
     sun: {
         intensity: number;
         color: number;
@@ -665,110 +969,70 @@ export interface PlayerConfig {
  */
 export interface SystemConfig {
     autosave: {
-        interval: number;
-        key: string;
+        interval: number;          // 自动保存间隔（秒）
+        key: string;               // 存储键名
     };
     defaultWorld: number;
-    hold: number;
-    frame: number;
+    hold: number;                  // 占位符显示时长（ms）
+    frame: number;                 // 目标帧率
 }
 
 /**
- * 完整配置
+ * 系统模式
  */
-export interface SeptopusConfig {
-    block: BlockConfig;
-    camera: CameraConfig;
-    render: RenderConfig;
-    world: WorldConfig;
-    player: PlayerConfig;
-    system: SystemConfig;
+export enum SystemMode {
+    Normal = 'normal',
+    Edit = 'edit',
+    Game = 'game',
+    Ghost = 'ghost',
 }
 ```
 
-## 类型导出
+---
+
+## 菜单与 UI 类型
 
 ```typescript
 /**
- * 统一导出所有类型
+ * 菜单项
  */
-export * from './types';
+export interface MenuItem {
+    type: 'button' | 'number' | 'string' | 'select';
+    label: string;
+    icon?: string;
+    key?: string;
+    value?: any;
+    desc?: string;
+    valid?: (val: any, accuracy: number) => boolean;
+    action?: (ev: any) => void;
+}
+
+/**
+ * 修改任务（编辑模式）
+ */
+export interface ModifyTask {
+    block?: [number, number];
+    x?: number;
+    y?: number;
+    world?: number;
+    adjunct: string;
+    action: 'add' | 'set' | 'remove';
+    param?: any;
+    limit?: [number, number, number];
+}
+
+/**
+ * 任务执行结果
+ */
+export interface TaskResult {
+    success: boolean;
+    error?: string;
+}
 ```
 
-## 类型使用示例
+---
 
-### 定义 Block 数据
-
-```typescript
-import type { BlockData, BlockRawData, STDData, ThreeDataMap } from './types';
-
-const block: BlockData = {
-    x: 2025,
-    y: 619,
-    world: 0,
-    raw: [1.5, 1, []],
-    recover: [1.5, 1, []],
-    std: {
-        block: [{ x: 16000, y: 16000, z: 1500, ... }],
-    },
-    three: {
-        block: [{ type: 'box', params: { ... }, material: { ... } }],
-    },
-    stop: [],
-    trigger: [],
-    elevation: 1500,
-    animate: {},
-};
-```
-
-### 定义组件
-
-```typescript
-import type { IComponent, ComponentRegistration, TransformHandlers } from './types';
-
-const boxComponent: IComponent = {
-    hooks: {
-        reg: (): ComponentRegistration => ({
-            name: 'box',
-            category: 'adjunct',
-            desc: 'Basic box adjunct',
-            version: '1.0.0',
-            short: 'bx',
-            events: ['in', 'out', 'touch'],
-        }),
-    },
-    transform: {
-        raw_std: (arr: any[], cvt: number) => {
-            // 转换逻辑
-            return [];
-        },
-        std_3d: (stds: any[], va: number) => {
-            // 转换逻辑
-            return [];
-        },
-    },
-};
-```
-
-### 处理事件
-
-```typescript
-import type { EventCallback, EventData, EventTarget } from './types';
-
-const callback: EventCallback = (data: EventData) => {
-    console.log('Event triggered:', data.stamp);
-};
-
-const target: EventTarget = {
-    x: 2025,
-    y: 619,
-    world: 0,
-    adjunct: 'block',
-    index: 0,
-};
-```
-
-## 类型检查工具
+## 类型守卫
 
 ```typescript
 /**
@@ -776,9 +1040,9 @@ const target: EventTarget = {
  */
 export function isBlockCoord(coord: any): coord is BlockCoord {
     return (
-        typeof coord.x === 'number' &&
-        typeof coord.y === 'number' &&
-        typeof coord.world === 'number'
+        typeof coord?.x === 'number' &&
+        typeof coord?.y === 'number' &&
+        typeof coord?.world === 'number'
     );
 }
 
@@ -787,20 +1051,9 @@ export function isBlockCoord(coord: any): coord is BlockCoord {
  */
 export function isSeptopusCoord(coord: any): coord is SeptopusCoord {
     return (
-        typeof coord.x === 'number' &&
-        typeof coord.y === 'number' &&
-        typeof coord.z === 'number'
-    );
-}
-
-/**
- * 检查是否为 Three.js 坐标
- */
-export function isThreeCoord(coord: any): coord is ThreeCoord {
-    return (
-        typeof coord.x === 'number' &&
-        typeof coord.y === 'number' &&
-        typeof coord.z === 'number'
+        typeof coord?.x === 'number' &&
+        typeof coord?.y === 'number' &&
+        typeof coord?.z === 'number'
     );
 }
 
@@ -812,8 +1065,117 @@ export function createReadonlyVector(x: number, y: number, z: number): ReadonlyV
 }
 ```
 
+---
+
+## AI 集成类型
+
+```typescript
+/**
+ * AI 语义化输入格式 - 对 Raw 紧凑编码的友好封装
+ */
+export interface AIInput {
+    block: {
+        elevation: number;
+        status: number;
+    };
+    adjuncts: {
+        [adjunctName: string]: any[];
+    };
+    string_particle?: {
+        cellSize: { x: number; y: number; z: number };
+        theme: string | number;
+        cells: AIParticleCell[];
+    };
+}
+
+export interface AIParticleCell {
+    position: { x: number; y: number; z: number };
+    faces: {
+        top: AIFaceConfig;
+        bottom: AIFaceConfig;
+        front: AIFaceConfig;
+        back: AIFaceConfig;
+        left: AIFaceConfig;
+        right: AIFaceConfig;
+    };
+}
+
+export interface AIFaceConfig {
+    state: 'open' | 'closed';
+    variant?: string | number;
+}
+
+/**
+ * AI 输入适配器接口
+ */
+export interface AIInputAdapter {
+    toRaw(input: AIInput): BlockRawData;
+    fromRaw(raw: BlockRawData): AIInput;
+    getSchema(): JSONSchema;
+}
+
+/**
+ * AI 验证结果
+ */
+export interface ValidationResult {
+    valid: boolean;
+    errors: { code: string; message: string; path?: string }[];
+    warnings: { code: string; message: string }[];
+    suggestions: string[];
+}
+
+/**
+ * AI 验证器接口
+ */
+export interface AIValidator {
+    validateSchema(input: AIInput): ValidationResult;
+    validateConnectivity(cells: any[]): ValidationResult;
+    validatePhysics(adjuncts: STDData): ValidationResult;
+    validateTriggers(triggers: TriggerData[], adjuncts: STDData): ValidationResult;
+}
+
+/**
+ * AI 世界查询接口
+ */
+export interface AIWorldQuery {
+    describeBlock(coord: BlockCoord): BlockDescription;
+    describeRegion(from: BlockCoord, to: BlockCoord): RegionDescription;
+    listResources(type: ResourceType): ResourceCatalog[];
+    listVariants(theme?: number): VariantCatalog;
+    getInputSchema(): JSONSchema;
+}
+
+export interface BlockDescription {
+    coord: BlockCoord;
+    elevation: number;
+    adjuncts: { type: string; count: number; summary: string }[];
+}
+
+export interface RegionDescription {
+    blocks: BlockDescription[];
+    connectivity: string;
+}
+
+export interface ResourceCatalog {
+    id: number;
+    type: ResourceType;
+    name: string;
+    tags: string[];
+}
+
+export interface VariantCatalog {
+    theme: string;
+    faces: Record<string, { open: string[]; closed: string[] }>;
+}
+
+export type JSONSchema = Record<string, any>;
+```
+
+---
+
 ## 相关文档
 
 - [架构概述](./00-overview.md) - 系统总体架构
-- [框架核心](./02-framework.md) - Framework 详细说明
-- [Block 系统](./03-block.md) - Block 数据和转换
+- [框架核心](./02-framework.md) - 核心模块详细说明
+- [弦粒子系统](./03-string-particle.md) - 空间内容快速构建
+- [AI 集成](./04-ai-integration.md) - AI 驱动的 3D 游戏开发
