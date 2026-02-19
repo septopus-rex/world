@@ -35,3 +35,7 @@
 * King Center on chian.
 * AI Center on chain.
 * Selection of King start.
+## License
+
+* **Code**: Licensed under the [MIT License](LICENSE).
+* **Documentation**: Licensed under the [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](docs/LICENSE).
