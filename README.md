@@ -12,6 +12,12 @@
 * 3D Engine Demo: [https://world.septopus.xyz](https://world.septopus.xyz)
 * Contract: [https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet](https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet)
 
+## Core Protocol
+
+Septopus World is built upon the **String Particle Protocol (SPP)**, a semantic space protocol for AI-native 3D world generation and optimization.
+
+The core specification is maintained independently at [@ff13dfly/spp-protocol](https://github.com/ff13dfly/spp-protocol) and is formally licensed for use within the Septopus open-source project.
+
 ## Roadmap
 
 ### Step1 ( 6 month ): Devnet version Septopus World

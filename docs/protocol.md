@@ -1,5 +1,8 @@
 # SPP-Core v1.0（弦粒子极简协议·语义塌陷版）
 
+> [!NOTE]
+> **授权声明**：弦粒子协议（String Particle Protocol）由 [@ff13dfly](https://github.com/ff13dfly) 独立维护于 [spp-protocol](https://github.com/ff13dfly/spp-protocol) 仓库。该协议已正式授权 Septopus World 项目在开源实现及商业应用中使用。
+
 ---
 
 ## 一、协议目标

@@ -1,5 +1,8 @@
 # 弦粒子二进制协议（String Particle Binary Protocol）
 
+> [!NOTE]
+> **授权声明**：弦粒子协议（String Particle Protocol）由 [@ff13dfly](https://github.com/ff13dfly) 独立维护于 [spp-protocol](https://github.com/ff13dfly/spp-protocol) 仓库。该协议已正式授权 Septopus World 项目在开源实现及商业应用中使用。
+
 > 版本：1.1  
 > 状态：草案
 
