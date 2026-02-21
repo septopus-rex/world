@@ -35,11 +35,26 @@ function App() {
       loaderRef.current = new SandboxLoader();
       loaderRef.current.init('three_demo');
 
-      // Expose the internal 'menu' API mapping defined by the SPP basic_box.ts protocol
-      setMenu(loaderRef.current.getBoxMenu());
+      // Expose for verification/debugging
+      (window as any).loader = loaderRef.current;
+      (window as any).world = (loaderRef.current as any).world;
+
+      // Expose the internal 'menu' API mapping
+      setMenu(loaderRef.current.getSelectedMenu());
     }
 
   }, [wallet]);
+
+  const selectAdjunct = (type: string) => {
+    if (!loaderRef.current) return;
+    if (type === 'box') loaderRef.current.selectBox();
+    if (type === 'sphere') loaderRef.current.selectSphere();
+    if (type === 'cone') loaderRef.current.selectCone();
+    if (type === 'trigger') loaderRef.current.selectTrigger();
+    if (type === 'wall') loaderRef.current.selectWall();
+    if (type === 'water') loaderRef.current.selectWater();
+    setMenu(loaderRef.current.getSelectedMenu());
+  };
 
   return (
     <div className="p-10 flex gap-4 bg-gray-50 min-h-screen">
@@ -57,8 +72,19 @@ function App() {
       </div>
 
       {/* SPP Extracted Data UI Menu */}
-      <div className="w-80 shadow-lg bg-white p-4 rounded-xl flex flex-col gap-4">
+      <div className="w-80 shadow-lg bg-white p-4 rounded-xl flex flex-col gap-4 overflow-y-auto max-h-screen">
         <h2 className="text-xl font-bold border-b pb-2">Adjunct Editor</h2>
+
+        {/* Selection Buttons */}
+        <div className="flex flex-wrap gap-2">
+          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200" onClick={() => selectAdjunct('box')}>Box</button>
+          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200" onClick={() => selectAdjunct('sphere')}>Sphere</button>
+          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200" onClick={() => selectAdjunct('cone')}>Cone</button>
+          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-pink-100 text-pink-700 rounded hover:bg-pink-200" onClick={() => selectAdjunct('trigger')}>Trigger</button>
+          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200" onClick={() => selectAdjunct('wall')}>Wall</button>
+          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-cyan-100 text-cyan-700 rounded hover:bg-cyan-200" onClick={() => selectAdjunct('water')}>Water</button>
+        </div>
+
         {menu ? (
           <div className="flex flex-col gap-4">
             {/* Process dynamically generated UI groups from the adjunct 'menu' protocol */}
@@ -74,7 +100,7 @@ function App() {
                       defaultValue={item.value}
                       onChange={(e) => {
                         if (loaderRef.current) {
-                          loaderRef.current.updateBoxData(item.key, parseFloat(e.target.value));
+                          loaderRef.current.updateSelectedData(item.key, parseFloat(e.target.value));
                         }
                       }}
                     />

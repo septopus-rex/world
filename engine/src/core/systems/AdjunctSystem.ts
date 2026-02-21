@@ -3,13 +3,15 @@ import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
 import * as THREE from 'three';
 
-/**
- * AdjunctSystem
- *
- * This system brings SPP Adjuncts to life. It queries entities with an `AdjunctComponent` 
- * and actively manages their 3D Object representation and lifecycle standard actions 
- * (like initialization and timeline execution).
- */
+export interface IAdjunctLogic {
+    transform: {
+        std_3d: (stds: any[], va: number) => any[];
+    };
+    menu: {
+        sidebar: (params: any) => any;
+    };
+}
+
 export class AdjunctSystem implements ISystem {
 
     // Maintain a map to understand which entities have been initialized.
@@ -89,8 +91,54 @@ export class AdjunctSystem implements ISystem {
                         );
 
                         meshGroup.add(mesh);
+                    } else if (renderItem.type === 'sphere') {
+                        const radius = renderItem.params.size[0] / 2;
+                        const geo = new THREE.SphereGeometry(radius, 32, 32);
+                        const mat = new THREE.MeshStandardMaterial({
+                            color: renderItem.material?.color || 0xcccccc
+                        });
+                        const mesh = new THREE.Mesh(geo, mat);
+
+                        mesh.position.set(
+                            renderItem.params.position[0],
+                            renderItem.params.position[2],
+                            renderItem.params.position[1]
+                        );
+
+                        mesh.rotation.set(
+                            renderItem.params.rotation[0],
+                            renderItem.params.rotation[2],
+                            renderItem.params.rotation[1]
+                        );
+
+                        meshGroup.add(mesh);
+                    } else if (renderItem.type === 'cone') {
+                        // size: [radiusBottom, height, radiusTop]
+                        const geo = new THREE.CylinderGeometry(
+                            renderItem.params.size[2], // radiusTop
+                            renderItem.params.size[0], // radiusBottom
+                            renderItem.params.size[1], // height
+                            32
+                        );
+                        const mat = new THREE.MeshStandardMaterial({
+                            color: renderItem.material?.color || 0xcccccc
+                        });
+                        const mesh = new THREE.Mesh(geo, mat);
+
+                        mesh.position.set(
+                            renderItem.params.position[0],
+                            renderItem.params.position[2],
+                            renderItem.params.position[1]
+                        );
+
+                        mesh.rotation.set(
+                            renderItem.params.rotation[0],
+                            renderItem.params.rotation[2],
+                            renderItem.params.rotation[1]
+                        );
+
+                        meshGroup.add(mesh);
                     }
-                    // In the future: Add cylinder, cone, model loading here.
                 }
             } catch (error) {
                 console.error(`[AdjunctSystem] Failed to generate 3D mesh via logic module for ${adjunct.adjunctId}.`, error);

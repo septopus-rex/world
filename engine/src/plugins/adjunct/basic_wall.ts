@@ -1,22 +1,22 @@
 import { AdjunctStandardData } from '../../core/components/AdjunctComponents';
 
 /**
- * Adjunct - Box (Ported to TS/ECS)
+ * Adjunct - Wall (Ported to TS/ECS)
  *
- * Implements the SPP Adjunct Protocol for a basic 3D box.
+ * Implements the SPP Adjunct Protocol for a Wall, replacing legacy adjunct_wall.js
  */
 
 const reg = {
-    name: "box",
-    category: 'basic',
-    desc: "Basic adjunct of meta septopus.",
+    name: "wall",
+    category: 'adjunct',
+    desc: "Wall with texture. Hole on it will be supported soon.",
     version: "1.0.0",
-    events: ["in", "out", "touch"]
+    events: ["hide", "show", "crash"],
 };
 
 // Default styling
 const config = {
-    color: 0xf3f5f6,
+    color: 0xf8f8f8,
     stop: {
         offset: 0.05,
         color: 0xffffff,
@@ -24,37 +24,20 @@ const config = {
     }
 };
 
-const valid = {
-    x: (val: any, cvt: number) => {
-        const n = parseInt(val);
-        if (isNaN(n) || n <= 0) return false;
-        return parseFloat((n / cvt).toString());
-    },
-    y: (val: any, cvt: number) => {
-        const n = parseInt(val);
-        if (isNaN(n) || n <= 0) return false;
-        return parseFloat((n / cvt).toString());
-    },
-    z: (val: any, cvt: number) => {
-        const n = parseInt(val);
-        if (isNaN(n) || n <= 0) return false;
-        return parseFloat((n / cvt).toString());
-    }
-};
-
 const menu = {
     sidebar: (std: any) => {
         if (!std) return {};
+        // Note: keeping the same input keys (x/y/z) but modifying standard params
         return {
             size: [
-                { type: "number", key: "x", value: std.size[0], label: "X", desc: "X size of box" },
-                { type: "number", key: "y", value: std.size[1], label: "Y", desc: "Y size of box" },
-                { type: "number", key: "z", value: std.size[2], label: "Z", desc: "Z size of box" },
+                { type: "number", key: "x", value: std.size[0], label: "X Size", desc: "X size of wall" },
+                { type: "number", key: "y", value: std.size[1], label: "Y Size", desc: "Y size of wall" },
+                { type: "number", key: "z", value: std.size[2], label: "Z Size", desc: "Z size of wall" },
             ],
             position: [
-                { type: "number", key: "ox", value: std.position[0], label: "X offset" },
-                { type: "number", key: "oy", value: std.position[1], label: "Y offset" },
-                { type: "number", key: "oz", value: std.position[2], label: "Z offset" },
+                { type: "number", key: "ox", value: std.position[0], label: "X Pos offset" },
+                { type: "number", key: "oy", value: std.position[1], label: "Y Pos offset" },
+                { type: "number", key: "oz", value: std.position[2], label: "Z Pos offset" },
             ],
             rotation: [
                 { type: "number", key: "rx", value: std.rotation[0], label: "X rot" },
@@ -76,15 +59,16 @@ const transform = {
             const row = stds[i];
 
             const single: AdjunctStandardData = {
-                type: "box",
+                type: "box", // A wall renders as a box in Three.js terms
                 index: i,
                 params: {
                     size: [row.params.size[0], row.params.size[1], row.params.size[2]],
-                    // Append block elevation to the local Z-axis
+                    // Append block elevation. In legacy code Wall anchor shifted Z, but
+                    // handled upstream or here depending on protocol definitions.
                     position: [row.params.position[0], row.params.position[1], row.params.position[2] + elevation],
                     rotation: [row.params.rotation[0], row.params.rotation[1], row.params.rotation[2]],
                 },
-                material: row.material,
+                material: row.material || { color: config.color },
                 animate: row.animate,
             };
 
@@ -104,7 +88,7 @@ const transform = {
     }
 };
 
-export const BasicBoxAdjunct = {
+export const BasicWallAdjunct = {
     hooks: { reg: () => reg },
     transform,
     menu
