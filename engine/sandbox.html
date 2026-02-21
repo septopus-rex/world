@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Septopus ECS Sandbox</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #render-canvas {
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="render-canvas"></div>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./node_modules/three/build/three.module.js",
+                "three/addons/": "./node_modules/three/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import { World, MockWorldNormal, MockWorldGhostMoon } from './dist/index.js';
+
+        console.log("Starting Septopus Engine ECS...");
+        window.engineWorld = new World(MockWorldNormal);
+
+        // Load a mock floor
+        const cells = [];
+        for (let x = -5; x < 5; x++) {
+            for (let y = -5; y < 5; y++) {
+                cells.push({
+                    position: [x, y, 0],
+                    level: 0,
+                    rotation: [0, 0, 0],
+                    bitmask: 0b000000, // Solid block
+                    variants: [0, 0, 0, 0, 0, 0],
+                    triggerId: 0
+                });
+            }
+        }
+        window.engineWorld.loadCells(cells);
+        console.log("Cells Loaded!");
+
+        // Debug Controls for ECS Systems
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'p') {
+                // Drop an apple
+                window.engineWorld.emitSimple('spawn_drop', {
+                    itemId: 'apple',
+                    amount: 1,
+                    position: [
+                        window.engineWorld.camera.position.x,
+                        window.engineWorld.camera.position.y + 5,
+                        window.engineWorld.camera.position.z - 10
+                    ] // Drop in front of camera
+                });
+            } else if (e.key === 'o') {
+                // Fire an explosion
+                window.engineWorld.emitSimple('spawn_effect', {
+                    type: 'explosion',
+                    position: [
+                        window.engineWorld.camera.position.x,
+                        window.engineWorld.camera.position.y,
+                        window.engineWorld.camera.position.z - 20
+                    ]
+                });
+            }
+        });
+
+        // Listen for Inventory Updates
+        window.engineWorld.subscribe("inventory_updated", (event) => {
+            console.log("UI Update - Inventory:", event.payload.inventory.items);
+        });
+    </script>
+</body>
+
+</html>

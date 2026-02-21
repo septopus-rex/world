@@ -17,12 +17,6 @@ target/
 #.idea/
 
 **/.DS_Store
-
 **/node_modules
 
-test
-engine/chat
-
-document/backup
-sample/
-demo
+engine/dist

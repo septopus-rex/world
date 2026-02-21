@@ -3,13 +3,13 @@ import { PlayerControlSystem } from './systems/PlayerControlSystem';
 import { PhysicsSystem } from './systems/PhysicsSystem';
 import { TriggerSystem } from './systems/TriggerSystem';
 import { EnvironmentSystem } from './systems/EnvironmentSystem';
+import { RaycastInteractionSystem } from './systems/RaycastInteractionSystem';
+import { InventorySystem } from './systems/InventorySystem';
+import { ItemDropSystem } from './systems/ItemDropSystem';
+import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { RenderPipeline } from '../render/RenderPipeline.js';
 import { ParticleCell, ParticleFace } from './types/ParticleCell.js';
-
-export interface WorldConfig {
-    containerId: string;
-    blockSize: [number, number, number];
-}
+import { WorldConfig } from './types/WorldConfig';
 
 export type EntityId = number;
 
@@ -40,6 +40,10 @@ export class World {
     private physicsSystem!: PhysicsSystem;
     private triggerSystem!: TriggerSystem;
     private environmentSystem!: EnvironmentSystem;
+    private raycastSystem!: RaycastInteractionSystem;
+    private inventorySystem!: InventorySystem;
+    private itemDropSystem!: ItemDropSystem;
+    private particleEffectSystem!: ParticleEffectSystem;
     private container: HTMLElement;
     private animationFrameId: number = 0;
     private lastFrameTime: number = 0;
@@ -51,9 +55,9 @@ export class World {
     private listeners = new Map<string, EventCallback[]>();
 
     constructor(private config: WorldConfig) {
-        const domElement = document.getElementById(config.containerId);
+        const domElement = document.getElementById(config.world.containerId);
         if (!domElement) {
-            throw new Error(`Container with ID ${config.containerId} not found.`);
+            throw new Error(`Container with ID ${config.world.containerId} not found.`);
         }
         this.container = domElement;
 
@@ -77,11 +81,19 @@ export class World {
         this.physicsSystem = new PhysicsSystem();
         this.triggerSystem = new TriggerSystem();
         this.environmentSystem = new EnvironmentSystem(this);
+        this.raycastSystem = new RaycastInteractionSystem();
+        this.inventorySystem = new InventorySystem();
+        this.itemDropSystem = new ItemDropSystem();
+        this.particleEffectSystem = new ParticleEffectSystem();
 
         this.registerSystem(this.playerControlSystem);
         this.registerSystem(this.physicsSystem);
         this.registerSystem(this.triggerSystem);
         this.registerSystem(this.environmentSystem);
+        this.registerSystem(this.raycastSystem);
+        this.registerSystem(this.inventorySystem);
+        this.registerSystem(this.itemDropSystem);
+        this.registerSystem(this.particleEffectSystem);
 
         // 4.1 Initialize Default Player Entity
         this.initDefaultPlayer();
@@ -115,33 +127,44 @@ export class World {
         const playerId = this.createEntity();
 
         this.addComponent(playerId, "TransformComponent", {
-            position: [20, 20, 20],
-            rotation: [0, 0, 0],
-            scale: [1, 1, 1]
+            position: [
+                this.config.player.start.position[0],
+                this.config.player.start.position[1] + 20, // Start slightly airborne
+                this.config.player.start.position[2]
+            ],
+            rotation: this.config.player.start.rotation,
+            scale: this.config.player.avatar.scale
         });
 
         this.addComponent(playerId, "CameraComponent", {
-            offset: [0, 1.6, 0], // Eye height
+            offset: [0, 1.6 * this.config.player.avatar.scale[1], 0], // Eye height scaled
             fov: 45,
             active: true
         });
 
+        // The exact Physics Rules defined by the "King" of this world
         this.addComponent(playerId, "RigidBodyComponent", {
-            size: [1, 2, 1], // Width, Height, Depth
-            offset: [0, 1, 0],
+            size: [1, 2 * this.config.player.avatar.scale[1], 1], // Width, Height, Depth
+            offset: [0, 1 * this.config.player.avatar.scale[1], 0],
             velocity: [0, 0, 0],
             mass: 1,
-            maxSpeedWalk: 10,
-            maxSpeedRun: 20,
-            jumpForce: 15,
-            gravity: 9.81 * 2,
+            maxSpeedWalk: this.config.player.capacity.speed,
+            maxSpeedRun: this.config.player.capacity.speed * 2,
+            jumpForce: this.config.player.capacity.jumpForce,
+            gravity: (9.81 * 2) * this.config.player.capacity.gravityMultiplier,
             friction: 0.8,
             isGrounded: false
         });
 
         this.addComponent(playerId, "ColliderComponent", {
-            size: [1, 2, 1],
-            offset: [0, 1, 0]
+            size: [1, 2 * this.config.player.avatar.scale[1], 1],
+            offset: [0, 1 * this.config.player.avatar.scale[1], 0]
+        });
+
+        // Initialize Player Inventory using Config Authority limit
+        this.addComponent(playerId, "InventoryComponent", {
+            items: [],
+            maxCapacity: this.config.player.bag.max
         });
 
         this.playerControlSystem.attachToEntity(playerId);
@@ -214,6 +237,24 @@ export class World {
     }
 
     /**
+     * Get entities that possess ALL listed components
+     */
+    public getEntitiesWith(componentNames: string[]): EntityId[] {
+        if (componentNames.length === 0) return [];
+        let result = new Set<EntityId>(this.queryEntities(componentNames[0]));
+        for (let i = 1; i < componentNames.length; i++) {
+            const nextMap = this.components.get(componentNames[i]);
+            if (!nextMap) return [];
+            const temp = new Set<EntityId>();
+            for (const id of result) {
+                if (nextMap.has(id)) temp.add(id);
+            }
+            result = temp;
+        }
+        return Array.from(result);
+    }
+
+    /**
      * Register a new System to run every frame
      */
     public registerSystem(system: ISystem): void {
@@ -272,7 +313,30 @@ export class World {
      */
     public loadCells(cells: ParticleCell[]): void {
         // Here we pass the block physical size dimension down to the builder.
-        this.pipeline.renderChunk(cells, this.config.blockSize);
+        // Legacy: config.world.range is [4096, 4096], but renderer needs a 3D tuple. 
+        // We'll assume a standard 16x16x32 block size for rendering for now.
+        const blockSize: [number, number, number] = [16, 16, 32];
+
+        // Register each loaded cell as an ECS Entity
+        for (const cell of cells) {
+            const cellEntity = this.createEntity();
+            cell.entityId = cellEntity;
+
+            // Allow this structural cell to be interacted with
+            this.addComponent(cellEntity, "RaycastTargetComponent", {
+                type: "block",
+                metadata: {
+                    x: cell.position[0],
+                    y: cell.position[1]
+                },
+                isHovered: false,
+                distanceToCamera: Infinity
+            });
+
+            // In the future: Add ColliderComponent here as well if the cell bitmask indicates it is solid.
+        }
+
+        this.pipeline.renderChunk(cells, blockSize);
     }
 
     /**

@@ -6,7 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute,
     AdjunctMenu
-} from '../../core/types/index';
+} from '../../core/types/Adjunct.js';
 
 // -----------------------------------------------------------------------------
 // 0. EDITOR INTERFACES (Should ideally live in an editor-ui package later)

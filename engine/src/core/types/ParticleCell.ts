@@ -65,4 +65,9 @@ export interface ParticleCell {
      * Built-in trigger template ID (0 = none, 1-254 = Valid IDs).
      */
     triggerId: number;
+
+    /**
+     * ECS Entity ID mapping (Optional, injected at runtime).
+     */
+    entityId?: number;
 }

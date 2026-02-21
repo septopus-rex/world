@@ -5,7 +5,7 @@ import {
     AdjunctDefinition,
     AdjunctTransform,
     AdjunctMenu
-} from '../../core/types/index';
+} from '../../core/types/Adjunct.js';
 // Assume the new Trigger types are re-exported from index or imported directly:
 // import { TriggerVolumeComponent, TriggerLogicNode } from '../../core/types/Trigger';
 

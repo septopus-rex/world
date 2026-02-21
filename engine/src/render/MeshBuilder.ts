@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ParticleCell, ParticleFace, FaceState } from '../../core/types/ParticleCell.js';
+import { ParticleCell, ParticleFace, FaceState } from '../core/types/ParticleCell.js';
 
 export interface RenderContext {
     /** Target scene to add meshes */
@@ -68,12 +68,19 @@ export class MeshBuilder {
                 // It's a loaded module (GLTF, etc)
                 const clone = asset.clone();
                 clone.position.set(tx, ty, tz);
+                if (cell.entityId !== undefined) {
+                    clone.userData.entityId = cell.entityId;
+                }
                 // Note: Rotation application based on cell.rotation goes here
                 scene.add(clone);
             } else if (asset instanceof THREE.Material) {
                 // It's a material, apply it to a primitive plane/box representing the cell wall
                 const geometry = new THREE.PlaneGeometry(blockSize[0], blockSize[1]);
                 const mesh = new THREE.Mesh(geometry, asset);
+
+                if (cell.entityId !== undefined) {
+                    mesh.userData.entityId = cell.entityId;
+                }
 
                 mesh.position.set(tx, ty, tz);
                 this.alignFaceMesh(mesh, face, blockSize);

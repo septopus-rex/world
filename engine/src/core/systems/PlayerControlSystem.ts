@@ -68,6 +68,69 @@ export class PlayerControlSystem implements ISystem {
                 this.onMouseClick(true);
             }
         });
+
+        // Touch Listeners (Mobile compatibility)
+        domElement.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
+        domElement.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
+        domElement.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
+    }
+
+    private lastTouchX: number = 0;
+    private lastTouchY: number = 0;
+    private touchLookActive: boolean = false;
+
+    private onTouchStart(event: TouchEvent): void {
+        // Prevent default zoom/pan on mobile
+        if (event.cancelable) event.preventDefault();
+
+        // For simplicity, assigning the first touch to look control if it's on the right half of screen
+        const touch = event.touches[0];
+        if (touch.clientX > window.innerWidth / 2) {
+            this.touchLookActive = true;
+            this.lastTouchX = touch.clientX;
+            this.lastTouchY = touch.clientY;
+        } else {
+            // Very rudimentary: touching left side of screen moves forward
+            if (this.controlledEntity) {
+                const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
+                if (input) input.forward = true;
+            }
+        }
+    }
+
+    private onTouchMove(event: TouchEvent): void {
+        if (event.cancelable) event.preventDefault();
+        if (!this.touchLookActive || !this.controlledEntity) return;
+
+        const touch = Array.from(event.touches).find(t => t.clientX > window.innerWidth / 2) || event.touches[0];
+        if (!touch) return;
+
+        const dx = touch.clientX - this.lastTouchX;
+        const dy = touch.clientY - this.lastTouchY;
+
+        this.lastTouchX = touch.clientX;
+        this.lastTouchY = touch.clientY;
+
+        // Apply raw look deltas (tuning factor of 0.005)
+        const yawDelta = -dx * 0.005;
+        const pitchDelta = -dy * 0.005;
+
+        this.controls.getObject().rotation.y += yawDelta;
+        this.controls.getObject().children[0].rotation.x += pitchDelta;
+    }
+
+    private onTouchEnd(event: TouchEvent): void {
+        if (event.cancelable) event.preventDefault();
+
+        // Stop moving forward 
+        if (this.controlledEntity) {
+            const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
+            if (input) input.forward = false;
+        }
+
+        if (event.touches.length === 0) {
+            this.touchLookActive = false;
+        }
     }
 
     private onKeyDown(event: KeyboardEvent): void {
@@ -137,10 +200,42 @@ export class PlayerControlSystem implements ISystem {
         this._direction.set(0, 0, 0);
 
         Number(input.forward) - Number(input.backward);
-        Number(input.right) - Number(input.left);
-
         this._direction.z = Number(input.forward) - Number(input.backward);
         this._direction.x = Number(input.right) - Number(input.left);
+
+        // --- Gamepad Support ---
+        const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+        const pad = gamepads[0]; // Just use the first connected gamepad for now
+        if (pad && pad.connected) {
+            // Axis 0 = Left Stick X (Left/Right)
+            // Axis 1 = Left Stick Y (Up/Down)
+            // Axis 2 = Right Stick X (Look Yaw)
+            // Axis 3 = Right Stick Y (Look Pitch)
+
+            // Apply a small deadzone
+            const deadzone = 0.1;
+
+            if (Math.abs(pad.axes[1]) > deadzone) this._direction.z -= pad.axes[1] * 1.0; // Invert Y often needed
+            if (Math.abs(pad.axes[0]) > deadzone) this._direction.x += pad.axes[0] * 1.0;
+
+            // Map Buttons
+            input.jump = input.jump || pad.buttons[0].pressed; // A button / Cross
+            input.interactPrimary = input.interactPrimary || pad.buttons[2].pressed; // X button / Square
+            input.run = input.run || pad.buttons[6].pressed || pad.buttons[7].pressed; // Triggers
+
+            // Look controls via Right Stick (simulating mouse movement for PointerLock)
+            if (Math.abs(pad.axes[2]) > deadzone) {
+                const yawDelta = -pad.axes[2] * dt * 2.0;
+                this.controls.getObject().rotation.y += yawDelta;
+            }
+            if (Math.abs(pad.axes[3]) > deadzone) {
+                // Not ideal mutating Three camera directly here, but fits PointerLock
+                const pitchDelta = -pad.axes[3] * dt * 2.0;
+                // Pointer Lock uses a PitchObj inside a YawObj. We modify PitchObj.
+                this.controls.getObject().children[0].rotation.x += pitchDelta;
+            }
+        }
+
         this._direction.normalize(); // Ensure diagonal isn't faster
 
         // 2. Apply Speed rules
