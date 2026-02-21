@@ -1,0 +1,2264 @@
+{
+  "address": "6dmHubtdyReE6uLpSqbviJCt3hSaPxoYxexjkhA9Y9Az",
+  "metadata": {
+    "name": "luckysig",
+    "version": "0.1.1",
+    "spec": "0.1.0",
+    "description": "Distribute token by lucky signature"
+  },
+  "instructions": [
+    {
+      "name": "add",
+      "discriminator": [
+        41,
+        249,
+        249,
+        146,
+        197,
+        111,
+        56,
+        181
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101,
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  118,
+                  101,
+                  99
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "manager",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "approve",
+      "discriminator": [
+        69,
+        74,
+        217,
+        36,
+        115,
+        117,
+        97,
+        76
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "map_account",
+          "docs": [
+            "PDA accounts"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101,
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  118,
+                  101,
+                  99
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "luck_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "record_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "md5"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  112,
+                  112,
+                  114,
+                  111,
+                  118,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "md5",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "signature",
+          "type": "string"
+        },
+        {
+          "name": "owner",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "accounts from frontend"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "creator",
+          "writable": true
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "map_account",
+          "docs": [
+            "PDA accounts"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  115,
+                  116,
+                  111,
+                  114,
+                  97,
+                  103,
+                  101,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "luck_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "record_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "md5"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  112,
+                  112,
+                  114,
+                  111,
+                  118,
+                  101
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "claim_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "md5"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  108,
+                  97,
+                  105,
+                  109
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_account",
+          "docs": [
+            "token accounts"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  106,
+                  53,
+                  51,
+                  64,
+                  104,
+                  75,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "associated_creator_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "associated_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "md5",
+          "type": "string"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "signature",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "create",
+      "discriminator": [
+        24,
+        30,
+        200,
+        40,
+        5,
+        28,
+        7,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "map_account",
+          "docs": [
+            "PDA accounts"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101,
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  118,
+                  101,
+                  99
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter_luck",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  115,
+                  116,
+                  111,
+                  114,
+                  97,
+                  103,
+                  101,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_account",
+          "docs": [
+            "token accounts"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  106,
+                  53,
+                  51,
+                  64,
+                  104,
+                  75,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "associated_creator_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "gene",
+          "type": "string"
+        },
+        {
+          "name": "next",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "disable",
+      "docs": [
+        "TODO, remove the debug functions when deploy",
+        "THESE METHODS ARE USED TO TEST CONTRACT",
+        "WHEN DEPLOY ON MAINNET, PLEASE DELETE THEM"
+      ],
+      "discriminator": [
+        185,
+        173,
+        187,
+        90,
+        216,
+        15,
+        238,
+        233
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "map_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  115,
+                  116,
+                  111,
+                  114,
+                  97,
+                  103,
+                  101,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "enable",
+      "discriminator": [
+        159,
+        34,
+        127,
+        41,
+        193,
+        53,
+        124,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "map_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  115,
+                  116,
+                  111,
+                  114,
+                  97,
+                  103,
+                  101,
+                  95,
+                  97,
+                  99,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "init",
+      "discriminator": [
+        220,
+        59,
+        207,
+        236,
+        108,
+        250,
+        47,
+        100
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "map_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101,
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  118,
+                  101,
+                  99
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "counter_luck",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  106,
+                  53,
+                  51,
+                  64,
+                  104,
+                  75,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "metadata_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_metadata_program"
+              },
+              {
+                "kind": "account",
+                "path": "mint_account"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "token_metadata_program"
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "token_metadata_program",
+          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "recipient",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "limit",
+      "discriminator": [
+        201,
+        198,
+        124,
+        170,
+        50,
+        134,
+        27,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "map_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "luck_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "max",
+      "discriminator": [
+        16,
+        228,
+        247,
+        80,
+        182,
+        52,
+        97,
+        81
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "luck_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "migrate",
+      "discriminator": [
+        155,
+        234,
+        231,
+        146,
+        236,
+        158,
+        162,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101,
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  118,
+                  101,
+                  99
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "recipient",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "remove",
+      "discriminator": [
+        199,
+        186,
+        9,
+        79,
+        96,
+        129,
+        24,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "whitelist_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  104,
+                  105,
+                  116,
+                  101,
+                  108,
+                  105,
+                  115,
+                  116,
+                  95,
+                  118,
+                  101,
+                  99
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "manager",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "set",
+      "discriminator": [
+        198,
+        51,
+        53,
+        241,
+        116,
+        29,
+        126,
+        194
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "map_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "gene_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "luck_counter",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  99,
+                  111,
+                  117,
+                  110,
+                  116,
+                  101,
+                  114
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "gene",
+          "type": "u64"
+        },
+        {
+          "name": "luck",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "ticket",
+      "discriminator": [
+        57,
+        88,
+        188,
+        136,
+        197,
+        233,
+        13,
+        149
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "docs": [
+            "accounts from frontend"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "creator",
+          "writable": true
+        },
+        {
+          "name": "recipient",
+          "writable": true
+        },
+        {
+          "name": "map_account",
+          "docs": [
+            "PDA accounts"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  117,
+                  99,
+                  107,
+                  95,
+                  109,
+                  97,
+                  112,
+                  112,
+                  105,
+                  110,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "ticket_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "name"
+              },
+              {
+                "kind": "account",
+                "path": "payer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "mint_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  106,
+                  53,
+                  51,
+                  64,
+                  104,
+                  75,
+                  100
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "associated_creator_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "creator"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "associated_token_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "mint_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "ClaimRecord",
+      "discriminator": [
+        57,
+        229,
+        0,
+        9,
+        65,
+        62,
+        96,
+        7
+      ]
+    },
+    {
+      "name": "GeneCounter",
+      "discriminator": [
+        175,
+        12,
+        225,
+        27,
+        205,
+        224,
+        133,
+        100
+      ]
+    },
+    {
+      "name": "GeneData",
+      "discriminator": [
+        45,
+        98,
+        130,
+        74,
+        120,
+        35,
+        213,
+        211
+      ]
+    },
+    {
+      "name": "LuckCounter",
+      "discriminator": [
+        161,
+        210,
+        218,
+        81,
+        140,
+        75,
+        75,
+        131
+      ]
+    },
+    {
+      "name": "LuckyRecord",
+      "discriminator": [
+        207,
+        120,
+        233,
+        184,
+        15,
+        121,
+        23,
+        96
+      ]
+    },
+    {
+      "name": "RegistryName",
+      "discriminator": [
+        50,
+        1,
+        187,
+        178,
+        236,
+        184,
+        129,
+        218
+      ]
+    },
+    {
+      "name": "TicketRecord",
+      "discriminator": [
+        37,
+        215,
+        102,
+        48,
+        114,
+        66,
+        21,
+        87
+      ]
+    },
+    {
+      "name": "WhiteList",
+      "discriminator": [
+        77,
+        38,
+        70,
+        33,
+        93,
+        150,
+        136,
+        174
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "UnexceptError",
+      "msg": "Unexcept Error."
+    },
+    {
+      "code": 6001,
+      "name": "NotManager",
+      "msg": "Not the manage account."
+    },
+    {
+      "code": 6002,
+      "name": "AlreadyInited",
+      "msg": "Already inited."
+    }
+  ],
+  "types": [
+    {
+      "name": "ClaimRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "done",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GeneCounter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "GeneData",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": "string"
+          },
+          {
+            "name": "offset",
+            "type": "u32"
+          },
+          {
+            "name": "creator",
+            "type": "string"
+          },
+          {
+            "name": "close",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LuckCounter",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "value",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LuckyRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RegistryName",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "vec": "string"
+            }
+          },
+          {
+            "name": "initialized",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TicketRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bought",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WhiteList",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "data",
+            "type": {
+              "vec": "string"
+            }
+          },
+          {
+            "name": "recipient",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import { RaycastInteractionSystem } from './systems/RaycastInteractionSystem';
 import { InventorySystem } from './systems/InventorySystem';
 import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
+import { AdjunctSystem } from './systems/AdjunctSystem';
 import { RenderPipeline } from '../render/RenderPipeline.js';
 import { ParticleCell, ParticleFace } from './types/ParticleCell.js';
 import { WorldConfig } from './types/WorldConfig';
@@ -44,6 +45,7 @@ export class World {
     private inventorySystem!: InventorySystem;
     private itemDropSystem!: ItemDropSystem;
     private particleEffectSystem!: ParticleEffectSystem;
+    private adjunctSystem!: AdjunctSystem;
     private container: HTMLElement;
     private animationFrameId: number = 0;
     private lastFrameTime: number = 0;
@@ -85,6 +87,7 @@ export class World {
         this.inventorySystem = new InventorySystem();
         this.itemDropSystem = new ItemDropSystem();
         this.particleEffectSystem = new ParticleEffectSystem();
+        this.adjunctSystem = new AdjunctSystem();
 
         this.registerSystem(this.playerControlSystem);
         this.registerSystem(this.physicsSystem);
@@ -94,6 +97,7 @@ export class World {
         this.registerSystem(this.inventorySystem);
         this.registerSystem(this.itemDropSystem);
         this.registerSystem(this.particleEffectSystem);
+        this.registerSystem(this.adjunctSystem);
 
         // 4.1 Initialize Default Player Entity
         this.initDefaultPlayer();
