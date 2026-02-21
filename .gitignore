@@ -18,6 +18,8 @@ target/
 
 **/.DS_Store
 
+**/node_modules
+
 test
 engine/chat
 

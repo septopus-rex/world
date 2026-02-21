@@ -11,18 +11,18 @@
 本文档定义弦粒子在**链上存储的二进制格式**——即三层架构中的 **Layer 2（塌陷状态层）**。
 
 ```
-Layer 1: 全状态定义 (IPFS)     ← protocol.md
+Layer 1: 全状态定义 (链上直存 / IPFS)     ← protocol.md
 Layer 2: 塌陷状态 (链上)       ← 本文档
 Layer 3: 运行时 (引擎)         ← 03-string-particle.md
 ```
 
-弦粒子的完整定义（所有 cell、所有候选项、模型、材质）存储在 IPFS 上。链上只存储两样东西：
+弦粒子的完整逻辑定义（所有 cell、候选项）体积仅约 2-50KB，既可存入 IPFS，也可**直接上链**（推荐，实现纯链上空间逻辑）。链上只存储两样东西：
 
-1. **IPFS CID**：指向全状态定义（32 bytes，一次性）
+1. **Definition Reference**：指向全状态定义的哈希或链上地址（32 bytes，一次性）
 2. **塌陷选择**：每个 cell 每面选了候选集中的第几个（4 bytes/cell）
 
 > [!IMPORTANT]
-> 链上不存储 position / level / bitmask / faceOptions——这些全在 IPFS 的定义中。链上只记录"观测结果"（塌陷选择），引擎通过 CID 获取完整定义后，结合塌陷选择展开为具体空间。
+> 链上不存储重资产（模型、贴图），只记录空间逻辑（全状态定义）和观测结果（塌陷选择）。引擎读取链上的全结构定义和塌陷组合后，再通过外部 URL 或 IPFS 加载对应的 `glb/png` 展开为具体空间。
 
 ---
 
@@ -149,7 +149,7 @@ variant = 15 → 第 15 号构型（最多 16 种构型/面/状态）
 ```
 ┌──────────────────────────────────────────────────┐
 │ Header                            44 bytes        │
-│   definitionCID: bytes32  IPFS 全状态定义的哈希     │  32 bytes
+│   definitionRef: bytes32  全状态定义的链上地址/IPFS哈希 │  32 bytes
 │   cellCount:     u16      单元数量（大端序）        │   2 bytes
 │   encoding:      u8       编码方式 (0=raw, 1=rle) │   1 byte
 │   flags:         u8       标记位                  │   1 byte
@@ -198,7 +198,7 @@ const CollapseCodec = {
     // ── Header ──
 
     encodeHeader(h: CollapseHeader, buf: Uint8Array, offset: number): void {
-        buf.set(h.cid, offset);                             // 32 bytes CID
+        buf.set(h.definitionRef, offset);                             // 32 bytes Reference
         buf[offset + 32] = (h.cellCount >> 8) & 0xFF;
         buf[offset + 33] = h.cellCount & 0xFF;
         buf[offset + 34] = h.encoding;
@@ -213,7 +213,7 @@ const CollapseCodec = {
 
     decodeHeader(buf: Uint8Array, offset: number): CollapseHeader {
         return {
-            cid: buf.slice(offset, offset + 32),
+            definitionRef: buf.slice(offset, offset + 32),
             cellCount: (buf[offset + 32] << 8) | buf[offset + 33],
             encoding: buf[offset + 34],
             flags: buf[offset + 35],
@@ -247,7 +247,7 @@ const CollapseCodec = {
 };
 
 interface CollapseHeader {
-    cid: Uint8Array;
+    definitionRef: Uint8Array;
     cellCount: number;
     encoding: number;
     flags: number;
@@ -315,7 +315,7 @@ ID    说明
 
 | 字段 | 类型 | 范围 | 说明 |
 |------|------|------|------|
-| definitionCID | bytes32 | — | IPFS 全状态定义的内容哈希 |
+| definitionRef | bytes32 | — | 全状态定义的链上地址或 IPFS 哈希 |
 | cellCount | u16 | 0-65535 | 单元数量 |
 | encoding | u8 | 0-1 | 编码方式 |
 | collapseIndex | u4 | 0-15 | 每面的塌陷选择索引 |
@@ -323,10 +323,10 @@ ID    说明
 
 ### 6.2 语义约束
 
-1. **CID 有效性**：`definitionCID` 必须指向一个有效的 IPFS 全状态定义。
-2. **cell 数量一致**：`cellCount` 必须与 IPFS 定义中的 cell 数量一致。
-3. **索引范围**：每面的 `collapseIndex` 不得超出 IPFS 定义中对应 `faceOptions[i]` 数组的长度。超出时引擎回退到索引 `0`。
-4. **封闭面忽略**：当 IPFS 定义中某面的 `faceState = 0`（封闭）时，对应的 `collapseIndex` 应为 `0`，引擎忽略该值。
+1. **定义有效性**：`definitionRef` 必须指向一个有效的全状态定义。
+2. **cell 数量一致**：`cellCount` 必须与定义的 cell 数量一致。
+3. **索引范围**：每面的 `collapseIndex` 不得超出定义中对应 `faceOptions[i]` 数组的长度。超出时引擎回退到索引 `0`。
+4. **封闭面忽略**：当定义中某面的 `faceState = 0`（封闭）时，对应的 `collapseIndex` 应为 `0`，引擎忽略该值。
 
 ---
 
@@ -342,7 +342,7 @@ ID    说明
 
 1. **向后兼容**：通过 Header 的 `reserved` 字节标识扩展版本。
 2. **字段扩展**：在 cell 末尾追加字段，旧版引擎读到 4 bytes 即停止。
-3. **不破坏已有数据**：已上链的塌陷状态永远有效，IPFS 上的定义不可变（CID = 内容寻址）。
+3. **不破坏已有数据**：已上链的塌陷状态和底层定义永远有效。
 
 ---
 
@@ -355,7 +355,7 @@ IPFS 定义中的 cell[0]: 6 面各有 2 个候选项。
 
 ```
 Header (44 bytes):
-  <32 bytes CID>      definitionCID
+  <32 bytes Reference> definitionRef
   00 01               cellCount = 1
   00                   encoding = raw
   00                   flags = 0

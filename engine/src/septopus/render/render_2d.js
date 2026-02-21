@@ -1,0 +1,716 @@
+/**
+ * Render - 2D Render
+ *
+ * @fileoverview
+ *  1. 2D render from `STD` data
+ *  2. actions for controller
+ * 
+ * @author Fuu
+ * @date 2025-04-23
+ */
+
+import VBW from "../core/framework";
+import Toolbox from "../lib/toolbox";
+import TwoObject from "../lib/two";
+
+const reg = {
+    name: "rd_two",
+    type: 'render',
+}
+
+const config = {
+    background: "#eeeeee",
+    scale: {
+        limit: [10, 80],   //scale limit
+        range: 18,      //scale to show range
+        detail: 30,     //scale to show details
+        detailKey: "detail",
+    },
+    keys: {
+        view: "avatar",
+    },
+    canvas: {
+        id: "canvas_2d",
+    },
+    limit: {
+        max: 100,     //max scale
+        min: 1,      //min scale
+    },
+    fov: 50,        //3D fov setting
+}
+
+const env = {
+    pen: null,
+    scale: 45,          //scale, more big more details
+    offset: [0, 0],     //offset of whole world
+    size: [0, 0],       //canvas size as meter
+    side: [0, 0],       //block side
+    limit: null,        //block number limit
+    height: 100,        //canvas height
+    width: 100,         //canvas width
+    density: 0.00021,      // px/meter,
+    ratio: 1,           // for apple device, screen ratio
+    convert: 1,         //system convert 
+    player: null,       //link to player
+    selected: [0, 0],   //selected block
+    special: {           //special drawing area
+
+    },
+};
+
+const demo = {
+    line: (x, y, side) => {
+        const params = {
+            from: [(x - 1) * side[0], (y - 1) * side[1]],
+            to: [x * side[0], y * side[0]],
+        };
+        const style = {
+            width: 3,
+            color: 0xff0000,
+            opacity: 0.3,
+        };
+        const cfg = { anticlock: true };
+        const line = TwoObject.get("line", params, style, cfg);
+        return line;
+    },
+    sector: (x, y, side) => {
+        const params = {
+            radius: side[0] * 0.8,
+            radian: [0, 90],
+            position: [(x - 0.4) * side[0], (y - 0.4) * side[1]],
+        };
+        const style = {
+            width: 1,
+            color: 0xff0ff0,
+            opacity: 0.4,
+        };
+        const grad = [
+            [0.2, 0x666666],
+            [1, 0xffffff],
+        ];
+        const cfg = { anticlock: true, grad: grad };
+
+        const line = TwoObject.get("sector", params, style, cfg);
+        return line;
+    },
+    arc: (x, y, side) => {
+        const params = {
+            radius: side[0] * 0.8,
+            radian: [45, 135],
+            position: [(x - 0.4) * side[0], (y - 0.4) * side[1]],
+        };
+
+        const style = {
+            width: 1,
+            color: 0x000000,
+            opacity: 0.4,
+        };
+        const cfg = { anticlock: true };
+        return TwoObject.get("arc", params, style, cfg);
+    },
+    polygons:(x,y,side)=>{
+        const params = {
+            list:[
+                [(x - 0.9) * side[0], (y - 0.9) * side[1]],
+                [(x - 0.8) * side[0], (y - 0.9) * side[1]],
+                [(x - 0.7) * side[0], (y - 0.8) * side[1]],
+                [(x - 0.8) * side[0], (y - 0.7) * side[1]],
+            ],
+        };
+        const style = {
+            width: 1,
+            color: 0x0000ff,
+            fill:0xff00ff,
+            opacity: 1,
+        };
+        const cfg = { anticlock: true };
+        return TwoObject.get("polygons", params, style, cfg);
+    },
+    text: (x, y, side) => {
+        const params = {
+            text: JSON.stringify([x, y]),
+            size: 3000,                        //mm
+            position: [(x - 0.9) * side[0], (y - 0.9) * side[0]],
+        };
+        const style = {
+            width: 1,
+            color: 0xfad3f0,
+            opacity: 0.5,
+        };
+        //const cfg={anticlock:true,font:14,direct:true};
+        const cfg = { anticlock: true };
+        return TwoObject.get("text", params, style, cfg);
+    }
+}
+
+const self = {
+    hooks: {
+        reg: () => { return reg },
+    },
+    drawing: {
+        add: (name, arr) => {
+            if (env.special[name] === undefined) env.special[name] = {};
+            if (env.special[name].data === undefined) {
+                env.special[name].data = arr;
+            } else {
+                env.special[name].data = env.special[name].data.concat(arr);
+            }
+            env.special[name].show = true;
+        },
+        exsist: (name) => {
+            if (env.special[name] === undefined) return false;
+            return true;
+        },
+        remove: (name) => {
+            delete env.special[name];
+        },
+        hide: (name) => {
+            if (!env.special[name]) return false;
+            env.special[name].show = false;
+        },
+        show: (name) => {
+            if (!env.special[name]) return false;
+            env.special[name].show = true;
+        },
+    },
+    getDom: (data) => {
+        const parser = new DOMParser();
+        return parser.parseFromString(data, 'text/html');
+    },
+    getSide: () => {
+        return VBW.cache.get(["env", "world", "side"]);
+    },
+    getBlock: (pos) => {
+        const pCtoB = TwoObject.calculate.point.c2b;
+        const point = pCtoB(pos, env.scale, env.offset, env.density, env.ratio);
+        const x = Math.ceil(point[0] / env.side[0]);
+        const y = Math.ceil(point[1] / env.side[1]);
+        return [x, y];
+    },
+    construct: (dom_id) => {
+        let cvs = document.getElementById(config.canvas.id);
+        if (cvs === null) {
+            const el = document.getElementById(dom_id);
+            const width = el.clientWidth, height = el.clientHeight;
+            env.width = width;
+            env.height = height;
+            env.ratio = window.devicePixelRatio;
+
+            const ctx = `<canvas 
+                id="${config.canvas.id}" 
+                class="" 
+                width="${width * env.ratio}" height="${height * env.ratio}"
+                style="width:${width}px;height:${height}px"
+            ></canvas>`;
+            const doc = self.getDom(ctx);
+            el.appendChild(doc.body.firstChild);
+
+            cvs = document.getElementById(config.canvas.id);
+        }
+        //set pen, ready to render
+        env.pen = cvs.getContext("2d");
+        //test.rectangle(env.pen);
+    },
+    offset: (ax, ay, bx, by) => {
+        return [ax - 0.5 * bx, ay - 0.5 * by];
+    },
+    start: () => {
+        const [x, y] = env.player.location.block;
+        //console.log(`player block:`,JSON.stringify([x, y]),env.scale,env.density);
+        
+        const disCtoB = TwoObject.calculate.distance.c2b;
+        const rotation = 0;
+        const bx = disCtoB(env.width, rotation, env.scale, env.ratio, env.density);
+        const by = disCtoB(env.height, rotation, env.scale, env.ratio, env.density);
+        const ax = (x - 0.5) * env.side[0];
+        const ay = (y - 0.5) * env.side[1];
+        //console.log(`container size:`,JSON.stringify([env.width, env.height]));
+        //console.log(`more:`,JSON.stringify([ax,ay]));
+        env.offset = self.offset(ax, ay, bx, by);
+        env.size = [bx, by];
+        //console.log(`start offset:`,JSON.stringify(env.offset));
+        return true;
+    },
+    clean: () => {
+        TwoObject.clean(env, config.background);
+    },
+    // block: (x, y, cfg) => {
+    //     const s = env.side[0];
+    //     const ps = [[(x - 1) * s, (y - 1) * s], [(x - 1) * s, y * s], [x * s, y * s], [x * s, (y - 1) * s]];
+    //     TwoObject.drawing.fill(env, ps, cfg);
+    // },
+    active: () => {
+        // const [x, y] = env.selected;
+        // if (x > 0 && y > 0) {
+        //     self.block(x, y, { width: 1, color: '#00CCBB', anticlock: true });
+        // }
+        // const [px, py] = env.player.location.block;
+        // self.block(px, py, { width: 1, color: '#99CCBB', anticlock: true });
+    },
+
+    avatar: () => {
+        const key = "view";
+        self.drawing.remove(key);
+
+        const player = env.player.location;
+        const [x, y] = player.block;
+        const pos = player.position;
+        const ro = player.rotation;
+        const hf = Math.PI * config.fov / 360, rz = - ro[2];
+        const zj = Math.PI * 0.5;
+        const center = [(x - 1) * env.side[0] + pos[0] * env.convert, (y - 1) * env.side[1] + pos[1] * env.convert];
+        const anClear = TwoObject.calculate.angle.clean;
+        const start = 180 * (anClear(rz) - hf + zj) / Math.PI;
+        const end = 180 * (anClear(rz) + hf + zj) / Math.PI;
+
+        const radius = env.side[0];
+        const params = {
+            radius: radius,
+            radian: [start, end],
+            position: center,
+        };
+
+        const grad = [
+            [0.2, 0x666666],
+            [1, 0xffffff],
+        ];
+        const style = {
+            width: 1,
+            color: 0xff99cc,
+            opacity: 0.5,
+        }
+        const cfg = { anticlock: true, grad: grad };
+        const view = TwoObject.get("sector", params, style, cfg);
+
+        self.drawing.add(key, [view]);
+    },
+
+    special: () => {
+        const dwg = TwoObject.show;
+        const state_2d = {
+            scale: env.scale,
+            offset: env.offset,
+            height: env.height,
+            density: env.density,
+            ratio: env.ratio,
+        }
+        for (let name in env.special) {
+            const sp = env.special[name];
+            if (!sp.show) continue;
+            dwg(env.pen, state_2d, sp.data, (done) => {
+
+            });
+        }
+    },
+    render: (force) => {
+        if (force) self.start();
+        //console.log(JSON.stringify(env));
+        self.clean();               //clean canvas;
+        self.grid();                //drawing block grid;
+        self.active();              //fill active block;
+        self.ax();                  //XY ax;
+        self.avatar();              //drawing player;
+        self.special();             //drawing sepcial object;
+    },
+
+    cvsMove: (dx, dy) => {
+        env.offset[0] -= dx;
+        env.offset[1] += dy;
+    },
+    cvsScale: (dx, dy, ds) => {
+        //console.log(`Scale value: ${ds}`);
+
+        env.offset[0] -= dx;
+        env.offset[1] += dy;
+        env.scale += parseFloat(ds);
+
+        //2. reset size of drawing area
+        const disCtoB = TwoObject.calculate.distance.c2b;
+        const rotation = 0;
+        const bx = disCtoB(env.width, rotation, env.scale, env.ratio, env.density);
+        const by = disCtoB(env.height, rotation, env.scale, env.ratio, env.density);
+        env.size = [bx, by];
+
+        //3.check wether show details.
+        const key = config.scale.detailKey;
+        if (env.scale >= config.scale.detail) {
+            self.loadDetails(key, (errors) => {
+                //console.log(`Load errors:`,errors);
+                //if(errors.length!==0) console.log(errors);
+                self.drawing.show(key);
+                self.render();
+            });
+        } else {
+            self.drawing.hide(key);
+            self.render();
+        }
+        return env.scale;
+    },
+    structTop: (x, y, world, dom_id) => {
+        const key = `${x}_${y}`;
+        const two_chain = ["block", dom_id, world, key, "two"];
+        if (VBW.cache.exsist(two_chain)) return true;
+
+        const std_chain = ["block", dom_id, world, key, "std"];
+        const bk = VBW.cache.get(std_chain);
+        const def = VBW.cache.get(["def", "common"]);
+        const faces = {
+            TOP: def.FACE_TOP,
+            BOTTOM: def.FACE_BOTTOM,
+            FRONT: def.FACE_FRONT,
+            BACK: def.FACE_BACK,
+            LEFT: def.FACE_LEFT,
+            RIGHT: def.FACE_RIGHT,
+        }
+        const result = {}
+
+        //1. get the 2D STD data from adjunct
+        for (let adj in bk) {
+            const data = bk[adj];
+            if (!VBW[adj] || !VBW[adj].transform || !VBW[adj].transform.std_2d) continue;
+            if (!result[adj]) result[adj] = {};
+            const two = VBW[adj].transform.std_2d(data, faces.TOP, faces);
+            result[adj][`face_${faces.TOP}`] = two;
+        }
+        VBW.cache.set(two_chain, result);
+        return true;
+    },
+    loadDetails: (key, ck, force) => {
+        if (self.drawing.exsist(key)) return ck && ck();
+
+        self.drawing.remove(key);
+
+        const errors = [];
+        const dom_id = VBW.cache.get(["active", "current"]);
+        const { player, limit } = env;
+        const { block, extend, world } = player.location;
+        const [x, y] = block;
+        const def = VBW.cache.get(["def", "common"]);
+        const side = self.getSide();
+
+        const fun = self.structTop;
+        const get = TwoObject.get;
+
+        for (let i = - extend; i < extend + 1; i++) {
+            for (let j = - extend; j < extend + 1; j++) {
+                const cx = x + i, cy = y + j
+                if (cx < 1 || cy < 1) continue;
+                if (cx > limit[0] || cy > limit[1]) continue;
+
+                //1. construct 2D data and attach to "two" key
+                fun(cx, cy, world, dom_id);
+
+                //2. calculate the special objects
+                //2.1. check wether data structed.
+                const d_chain = ["block", dom_id, world, `${cx}_${cy}`, "two"];
+                const dt = VBW.cache.get(d_chain);
+                if (dt.error) continue;
+
+                const final = [];
+                for (let k in dt) {
+                    const list = dt[k][`face_${def.FACE_TOP}`];
+                    for (let i = 0; i < list.length; i++) {
+                        const row = list[i];
+                        const cfg = row.more === undefined ? {} : row.more;
+                        cfg.block = [cx, cy];
+                        cfg.world = world;
+                        cfg.anticlock = true;
+
+                        //console.log(`Before:`,JSON.stringify(row.params));
+                        if (row.params.position) {
+                            row.params.position[0] = (cx - 1) * side[0] + row.params.position[0];
+                            row.params.position[1] = (cy - 1) * side[1] + row.params.position[1];
+                        }
+
+                        const fmt = get(row.type, row.params, row.style, cfg);
+                        //console.log(`Final:`,JSON.stringify(fmt));
+                        if (fmt.error) {
+                            errors.push(fmt);
+                        } else {
+                            final.push(fmt);
+                        }
+                    }
+                }
+
+                //line test demo
+                if (cx === 2024 && cy === 620) {
+                    final.push(demo.line(cx, cy, side));
+                    final.push(demo.sector(cx, cy, side));
+                    final.push(demo.arc(cx, cy, side));
+                    final.push(demo.text(cx, cy, side));
+                    final.push(demo.polygons(cx, cy, side));
+                }
+                self.drawing.add(key, final);
+            }
+        }
+        return ck && ck(errors);
+    },
+    grid: () => {
+        const key = "grid";
+        self.drawing.remove(key);
+        self.drawing.remove("tag");
+        const get = TwoObject.get;
+
+        const s = env.side[0], mx = env.limit[0] * s, my = env.limit[1] * s;
+        const x = env.offset[0], y = env.offset[1], xw = env.size[0], yw = env.size[1];
+        const xs = x < 0 ? 0 : (x - x % s);
+        const ys = y < 0 ? 0 : (y - y % s);
+        const xe = x + xw > mx ? mx : x + xw;
+        const ye = y + yw > my ? my : y + yw;
+        const xn = (x + xw) > mx ? Math.ceil((mx - xs) / s + 1) : Math.ceil((x + xw - xs) / s);
+        const yn = (y + yw) > my ? Math.ceil((my - ys) / s + 1) : Math.ceil((y + yw - ys) / s);
+
+        const lines = [];
+        const tags = [];
+        const style = { width: 1, color: 0x888888 };
+        const cfg = { anticlock: true };
+        const x_style = {
+            width: 1,
+            fill: 0x7d0707,
+            opacity: 0.5,
+        };
+        const y_style = {
+            width: 1,
+            fill: 0x0a519d,
+            opacity: 0.5,
+        };
+        const tag_height = 4000;
+        //1. get horizontal lines
+        let ystep = ys
+        for (let i = 0; i < yn; i++) {
+            //1.1. add line
+            const pa = [xs, ystep], pb = [xe, ystep];
+            const line = get("line", { from: pa, to: pb }, style, cfg);
+            lines.push(line);
+
+            //1.2. add tag
+            const params = {
+                text: Math.floor(ystep / s),
+                size: tag_height,                        //mm
+                position: [xs + s + 1000, ystep - s * 0.5],
+            };
+            const tag = TwoObject.get("text", params, y_style, cfg);
+            tags.push(tag);
+
+            ystep += s;
+        }
+
+        //2. get vertical lines
+        let xstep = xs
+        for (let i = 0; i < xn; i++) {
+            //2.1. add line
+            const pa = [xstep, ys], pb = [xstep, ye];
+            const line = get("line", { from: pa, to: pb }, style, cfg);
+            lines.push(line);
+
+            //2.2. add tag
+            const params = {
+                text: Math.floor(xstep / s),
+                size: tag_height,                        //mm
+                position: [xstep - 0.66*s,  ys + s +  tag_height * 0.25 ],
+            };
+            const tag = TwoObject.get("text", params, x_style, cfg);
+            tags.push(tag);
+
+            xstep += s;
+        }
+
+        //3. set to special
+        self.drawing.add(key, lines);
+        self.drawing.add("tag", tags);
+    },
+    ax:()=>{
+        const key="ax";
+        self.drawing.remove(key);
+
+        const ax=[];
+        const cfg = { anticlock: true };
+        const side = env.side;
+        const arrow=1000;
+        //1. X ax
+        //1.1. Xline
+        const style_x={
+            width: 2,
+            color: 0xff8888,
+            fill:0xff8888,
+            opacity:1,
+        }
+        const line_x={
+            from:[env.offset[0]+side[0]*0.5,env.offset[1]+side[1]*0.5],
+            to:[env.offset[0]+side[0],env.offset[1]+side[1]*0.5],
+        }
+        const ax_x=TwoObject.get("line", line_x, style_x, cfg);
+        ax.push(ax_x);
+
+        //1.2. X arrow
+        const arrow_param_x = {
+            list:[
+                [env.offset[0]+side[0],env.offset[1]+side[1]*0.5],
+                [env.offset[0]+side[0]-arrow,env.offset[1]+side[1]*0.5+arrow],
+                [env.offset[0]+side[0]+arrow,env.offset[1]+side[1]*0.5],
+                [env.offset[0]+side[0]-arrow,env.offset[1]+side[1]*0.5-arrow],
+            ],
+        };
+        const arrow_x=TwoObject.get("polygons", arrow_param_x, style_x, cfg);
+        ax.push(arrow_x);
+        
+        //1.3. X tag
+        const params_x = {
+            text: "X",
+            size: 4000,
+            position: [env.offset[0]+side[0]+2000,env.offset[1]+side[1]*0.5-1000],
+        };
+        const tag_x = TwoObject.get("text", params_x, style_x, cfg);
+        ax.push(tag_x);
+
+        //2. Y ax
+        //2.1. Y line
+        const style_y={
+            width: 2,
+            color: 0x0a519d,
+            fill:0x0a519d,
+            opacity:1,
+        }
+        const line_y={
+            from:[env.offset[0]+side[0]*0.5,env.offset[1]+side[1]*0.5],
+            to:[env.offset[0]+side[0]*0.5,env.offset[1]+side[1]],
+        }
+        const ax_y=TwoObject.get("line", line_y, style_y, cfg);
+        ax.push(ax_y);
+
+        //1.2. Y arrow
+        const arrow_param_y = {
+            list:[
+                [env.offset[0]+side[0]*0.5,env.offset[1]+side[1]],
+                [env.offset[0]+side[0]*0.5-arrow,env.offset[1]+side[1]-arrow],
+                [env.offset[0]+side[0]*0.5,env.offset[1]+side[1]+arrow],
+                [env.offset[0]+side[0]*0.5+arrow,env.offset[1]+side[1]-arrow],
+            ],
+        };
+        const arrow_y=TwoObject.get("polygons", arrow_param_y, style_y, cfg);
+        ax.push(arrow_y);
+        
+        //1.3. Y tag
+        const params_y = {
+            text: "Y",
+            size: 4000,
+            position: [env.offset[0]+side[0]*0.5-800,env.offset[1]+side[1]+2000],
+        };
+        const tag_y = TwoObject.get("text", params_y, style_y, cfg);
+        ax.push(tag_y);
+
+        self.drawing.add(key, ax);
+    },
+};
+
+const renderer = {
+    hooks: self.hooks,
+
+    //function for more drawing
+    drawing: self.drawing,
+
+    //function for 2D controller
+    control: {
+        update: self.render,
+
+        status: () => {
+            return {
+                selected: Toolbox.clone(env.selected),
+                scale: env.scale,
+            }
+        },
+        limit: () => {
+            return Toolbox.clone(config.scale.limit);
+        },
+        scale: (cx, cy, rate) => {
+            //1.do scale
+            const pCtoB = TwoObject.calculate.distance.c2b;
+            const rotation = 0;
+            const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
+            const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
+            const cs = (rate - 1) * env.scale;
+            const n = self.cvsScale(dx, dy, cs);
+            return n;
+        },
+
+        target: (scale) => {
+            //console.log(scale,env.scale);
+            const rate = scale / env.scale;
+            const dx = -env.size[0] * (rate - 1) * 0.5;
+            const dy = env.size[1] * (rate - 1) * 0.5;
+            const cs = (rate - 1) * env.scale;
+            const n = self.cvsScale(dx, dy, cs);
+            return n;
+        },
+
+        rate: (rate) => {
+            const cs = (rate - 1) * env.scale;
+            const dx = -env.size[0] * (rate - 1) * 0.5;
+            const dy = env.size[1] * (rate - 1) * 0.5;
+            const n = self.cvsScale(dx, dy, cs);
+            return n;
+        },
+
+        move: (cx, cy) => {
+            const pCtoB = TwoObject.calculate.distance.c2b;
+            const rotation = 0;
+            const dx = pCtoB(cx, rotation, env.scale, env.ratio, env.density);
+            const dy = pCtoB(cy, rotation, env.scale, env.ratio, env.density);
+            self.cvsMove(dx, dy);
+            self.render();
+        },
+
+        select: (pos, cfg) => {
+            const block = self.getBlock(pos);
+            const [x, y] = block;
+            self.render();
+            //self.block(x, y, cfg);
+            env.selected = [x, y];
+            return block;
+        },
+    },
+
+    /** clean 2D DOMs and selected block
+     * @functions
+     * 1. remove DOM
+     * 2. clean selection of block
+     * @param {string}      dom_id  - container DOM id
+     * @return void
+     * */
+    clean: (dom_id) => {
+        //1.remove DOMs
+        const el = document.getElementById(dom_id);
+        el.innerHTML = "";
+        env.pen = null;
+
+        //2.clean selected
+        env.selected = [];
+    },
+
+    /** 2D renderer entry to fresh scene
+     * @functions
+     * 1. set env of 2D drawing.
+     * 2. start to render.
+     * @param   {string}    dom_id      - container DOM id
+     * */
+    show: (dom_id) => {
+        if (env.pen === null) {
+            env.player = VBW.cache.get(["env", "player"]);
+            const cvt = VBW.cache.get(["env", "world", "accuracy"]);
+            const side = VBW.cache.get(["env", "world", "side"]);
+
+            env.convert = cvt;
+            env.side = [side[0], side[1]];
+
+            self.construct(dom_id);
+            self.start();
+        }
+
+        if (env.limit === null) {
+            env.limit = VBW.cache.get(["env", "world", "common", "world", "range"]);
+        }
+        self.render();
+    },
+}
+
+export default renderer;

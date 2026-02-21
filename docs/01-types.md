@@ -492,7 +492,7 @@ export interface AdjunctDefinition {
  * 材质配置
  */
 export interface MaterialConfig {
-    texture?: number | number[];    // 纹理资源 ID
+    resource?: string | string[];   // 纹理资源引用（支持 onchain://, ipfs://, https://）
     color?: number;                 // 颜色（十六进制）
     repeat?: [number, number];      // 纹理重复
     offset?: [number, number];      // 纹理偏移
@@ -533,15 +533,15 @@ export interface RenderObject {
     stop?: ColliderMaterial;
     event?: Record<string, EventDefinition>;
     audio?: AdjunctAudio;       // 可选音效
-    module?: string;            // 外部模型资源引用
+    resource?: string;          // 外部资源引用 (原 module)
 }
 
 /**
  * 附属物音效 - 可挂载在任何 Adjunct 上的 3D 空间音效
  */
 export interface AdjunctAudio {
-    /** 音效资源 ID（IPFS CID 或本地资源 ID） */
-    asset: string;
+    /** 音效资源引用配置 */
+    resource: ResourceRefParams;
     /** 播放模式：loop=持续循环, oneshot=播一次, trigger=事件触发 */
     mode: 'loop' | 'oneshot' | 'trigger';
     /** 音量 0-1 */
@@ -550,6 +550,14 @@ export interface AdjunctAudio {
     range: number;
     /** trigger 模式时，绑定的事件名 */
     event?: string;
+}
+
+/**
+ * 资源引用参数（不仅用于材质，也可用于音效等）
+ */
+export interface ResourceRefParams {
+    /** 资源 ID（支持 IPFS CID、链上 Resource ID 或 URL） */
+    asset: string;
 }
 
 /**
@@ -712,8 +720,7 @@ export interface PipelineContext {
  * 预加载需求 - Pipeline 阶段产出的资源需求
  */
 export interface PreloadRequirement {
-    textures: number[];
-    modules: number[];
+    resources: string[];        // 统一资源引用 ID 数组
 }
 ```
 
@@ -730,6 +737,7 @@ export enum ResourceType {
     Module = 'module',
     Avatar = 'avatar',
     Text = 'text',
+    Audio = 'audio',
 }
 
 /**
@@ -752,13 +760,17 @@ export interface ResourceRef {
 }
 
 /**
- * 资源数据（IPFS 存储格式）
+ * 资源数据（链上/IPFS 存储格式）
  */
 export interface ResourceData {
     type: ResourceType;
     format: string;             // 文件格式：fbx, png, json ...
-    metadata: Record<string, any>;
-    data: string;               // Base64 编码
+    metadata?: Record<string, any>;
+    
+    // 对于 Text 类型，data 解析后为多语言台词字典，格式如：
+    // { "zh-CN": ["你好", "世界"], "en-US": ["Hello", "World"] }
+    // 触发器中可通过 system.ui.dialog(resource_id, lang, index) 索引调用
+    data: string | Record<string, string[]>;
 }
 ```
 

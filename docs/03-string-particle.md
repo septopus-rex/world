@@ -184,15 +184,16 @@ interface FaceVariant {
     /**
      * 构型内容来源（二选一）：
      * - 'primitives': 基础件组合（Box/Wall/Stop/Trigger 拼装）
-     * - 'model':      导入的 3D 模型（glb/gltf）
+     * - 'model':      导入的 3D 模型（glb/gltf等资源）
+     * - 'texture':    纯贴图平面（用于 2D 环境或广告牌贴花）
      */
-    source: 'primitives' | 'model';
+    source: 'primitives' | 'model' | 'texture';
     
     /** source='primitives' 时：基础件列表 */
     adjuncts?: FaceAdjunctDef[];    
     
-    /** source='model' 时：模型引用 */
-    model?: ModelRef;
+    /** source='model' 或 'texture' 时：资源引用 */
+    resource?: ResourceRef;
     
     // ===== AI 友好增强 =====
     description: string;            // 自然语言描述（AI 理解用途）
@@ -201,16 +202,18 @@ interface FaceVariant {
 }
 
 /**
- * 模型引用 - 引用一个外部 3D 模型作为构型内容
+ * 统一资源引用 - 引用一个外部 3D 模型或 2D 贴图作为构型内容
  */
-interface ModelRef {
-    /** 模型资源 ID（IPFS CID 或本地资源 ID） */
+interface ResourceRef {
+    /** 资源 ID（支持 IPFS CID、链上 Resource ID 或 URL） 
+     *  例如: 'ipfs://Qm...', 'onchain://[ProgramID]/[ResourceID]', 'https://...'
+     */
     asset: string;
-    /** 模型缩放比例（适配单元尺寸） */
+    /** 资源缩放比例（适配单元尺寸） */
     scale?: [number, number, number];
-    /** 模型偏移（相对于面中心） */
+    /** 资源偏移（相对于面中心） */
     offset?: [number, number, number];
-    /** 模型旋转 */
+    /** 资源旋转 */
     rotation?: [number, number, number];
     /** 是否生成碰撞体（默认 true） */
     collider?: boolean;
@@ -255,8 +258,9 @@ const solidWall: FaceVariant = {
 const gothicVaultRoof: FaceVariant = {
     id: 'c5', state: FaceState.Closed, face: ParticleFace.Top,
     name: '哥特拱顶', source: 'model',
-    model: {
-        asset: 'ipfs://Qm.../gothic_vault.glb',  // IPFS 上的 3D 模型
+    resource: {
+        // 可以是 IPFS 链接，也可以是链上资源 ID（类似旧版 engine 中的 RESOURCE_ID_ON_CHAIN）
+        asset: 'onchain://resource/19',  // 引擎解析到 ID=19，自动加载链上登记的 glb/fbx
         scale: [1, 1, 1],
         collider: true,
     },
@@ -793,7 +797,7 @@ const doorWallVariant: FaceVariant = {
             offset: [0, -0.2, 0],
             rotation: [0, 0, 0],
             audio: {
-                asset: 'sfx/door_creak.ogg',
+                resource: { asset: 'sfx/door_creak.ogg' },
                 mode: 'trigger',
                 volume: 0.7,
                 range: 8,

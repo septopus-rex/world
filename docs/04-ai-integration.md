@@ -97,7 +97,7 @@ AI 生成标准附属物数据，添加家具、灯光、装饰等：
                 "x": 1.0, "y": 0.5, "z": 1.2,
                 "ox": 3.0, "oy": 4.0, "oz": 0.6,
                 "rx": 0, "ry": 0, "rz": 0,
-                "material": { "texture": 105, "repeat": [1, 1] }
+                "material": { "resource": "onchain://resource/105", "repeat": [1, 1] }
             }
         },
         {
@@ -129,7 +129,7 @@ AI 生成触发器和游戏规则，定义交互行为：
             "event": "in",
             "actions": [
                 { "target": ["wall", 0, 2, 1], "method": "hide" },
-                { "target": ["player", "position", "z"], "method": "add", "value": 3.0 }
+                { "target": ["system", "ui", "dialog"], "method": "show", "value": { "resource": 18, "lang": "zh-CN", "index": 0 } }
             ],
             "onetime": false
         }
@@ -195,7 +195,7 @@ interface AIInputAdapter {
                 "size": { "x": 1.0, "y": 0.5, "z": 1.2 },
                 "position": { "x": 3.0, "y": 4.0, "z": 0.6 },
                 "rotation": { "x": 0, "y": 0, "z": 0 },
-                "material": { "texture": 105, "repeat": [1, 1] }
+                "material": { "resource": "ipfs://Qm.../wood_texture.png", "repeat": [1, 1] }
             }
         ],
         "wall": [],
@@ -216,7 +216,7 @@ interface AIInputAdapter {
 03E8 01F4 04B0                 size: 1000, 500, 1200
 0BB8 0FA0 0258                 position: 3000, 4000, 600
 00 00 00                       rotation: 0, 0, 0
-0069 01 01                     texture: 105, repeat: 1×1
+0069 01 01                     resourceId_or_index: 105, repeat: 1×1
 00                             flags: stop=0
 ```
 

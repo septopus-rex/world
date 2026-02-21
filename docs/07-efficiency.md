@@ -10,14 +10,14 @@
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Layer 1: 全状态定义（IPFS）                   │
+│  Layer 1: 全状态定义（链上 / IPFS）          │
 │  "这个空间可以是什么样"                         │
 │  包含所有 cell、候选项、模型引用、材质、bounds  │
 │  存储成本：免费 / 极低                          │
 ├─────────────────────────────────────────────┤
 │  Layer 2: 塌陷状态 + 放置信息（链上）            │
 │  "这个空间被确定成了什么样，放在哪里"             │
-│  IPFS CID + origin + layerId + 塌陷选择索引   │
+│  L1 Reference + origin + layerId + 塌陷选择索引  │
 │  存储成本：44B header + 4 bytes/cell           │
 ├─────────────────────────────────────────────┤
 │  Layer 3: 运行时（引擎）                        │
@@ -31,22 +31,23 @@
 
 ## 二、存储成本
 
-### Layer 1：IPFS
+### Layer 1：全状态定义
+
+> 弦粒子的逻辑描述（`cells`, `faceOptions`, `metadata`）脱离了三维资产（模型、贴图）后，仅为一个极限压缩的 JSON 或二进制。
 
 | 组件 | 典型大小 | 说明 |
 |------|---------|------|
-| ParticleDefinition JSON | 2-50 KB | cells + faceOptions + metadata |
-| 单个 Option 模型 (glb) | 10-500 KB | 简单构件 10KB，精细模型 500KB |
+| ParticleDefinition JSON | **2-50 KB** | 核心空间逻辑，**完全可直接全链上存储（如 Solana PDA 或 Ethereum Blob）** |
+| 单个 Option 模型 (glb) | 10-500 KB | 置于 IPFS / Arweave / CDN |
 | 一个主题的全部模型 | 1-10 MB | 约 20-50 个 Option |
 | 纹理贴图 | 50 KB - 2 MB | 按分辨率 |
 | 音效资源 | 10-100 KB | 短音效 |
-| **一套完整模板总计** | **2-15 MB** | |
+| **重资产存储总计** | **2-15 MB** | 链下存储 |
 
 ```
-IPFS 存储成本：
-  Pinata 免费额度：1 GB        → 可存 60-500 套模板
-  付费：$0.15/GB/月            → 1000 套 ≈ $1.5-2.25/月
-  去中心化 pin (Filecoin)：    近乎免费
+Layer 1 的存储成本：
+  纯链上 (Solana PDA)： ~0.005 SOL (约 $0.7) 存 50KB JSON。实现了极低成本的 100% 链上空间架构。
+  混合链 (重资产层)：IPFS 或 CDN (几乎免费)，仅在定义中包含 URI。
 ```
 
 ### Layer 2：链上
