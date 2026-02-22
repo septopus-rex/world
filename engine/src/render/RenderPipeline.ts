@@ -10,9 +10,29 @@ export class RenderPipeline {
     private scene: THREE.Scene;
     private assetResolver: RenderContext['resolveAsset'];
 
+    // Minimap Support
+    public minimapCamera: THREE.OrthographicCamera;
+    public isMinimapActive: boolean = false;
+
     constructor(scene: THREE.Scene, assetResolver: RenderContext['resolveAsset']) {
         this.scene = scene;
         this.assetResolver = assetResolver;
+
+        // Initialize Minimap secondary camera (Orthographic, looking completely down)
+        // Since PiP is a perfect square, aspect is 1
+        const aspect = 1;
+        const frustumSize = 120; // Zoomed in to clearly see blocks and player
+        this.minimapCamera = new THREE.OrthographicCamera(
+            frustumSize * aspect / - 2, frustumSize * aspect / 2,
+            frustumSize / 2, frustumSize / - 2,
+            0.1, 2000
+        );
+        this.minimapCamera.position.set(0, 500, 0); // High up
+        this.minimapCamera.up.set(0, 0, -1); // North (-Z) should be UP on the 2D map screen
+        this.minimapCamera.lookAt(0, 0, 0);
+
+        // Let the Minimap see everything except first-person specifics if we use Layers later
+        this.minimapCamera.layers.enableAll();
     }
 
     /**

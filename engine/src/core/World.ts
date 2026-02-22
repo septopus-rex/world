@@ -8,6 +8,7 @@ import { InventorySystem } from './systems/InventorySystem';
 import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { AdjunctSystem } from './systems/AdjunctSystem';
+import { MinimapSystem } from './systems/MinimapSystem';
 import { RenderPipeline } from '../render/RenderPipeline.js';
 import { ParticleCell, ParticleFace } from './types/ParticleCell.js';
 import { WorldConfig } from './types/WorldConfig';
@@ -46,7 +47,10 @@ export class World {
     private itemDropSystem!: ItemDropSystem;
     private particleEffectSystem!: ParticleEffectSystem;
     private adjunctSystem!: AdjunctSystem;
+    private minimapSystem!: MinimapSystem;
     private container: HTMLElement;
+
+    public get minimap(): MinimapSystem { return this.minimapSystem; }
     private animationFrameId: number = 0;
     private lastFrameTime: number = 0;
 
@@ -76,6 +80,8 @@ export class World {
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
+        // Important: allow auto-clearing but manual depth clearing for the PiP rendering
+        this.renderer.autoClear = true;
         this.container.appendChild(this.renderer.domElement);
 
         // 4. Initialize ECS Systems
@@ -88,6 +94,7 @@ export class World {
         this.itemDropSystem = new ItemDropSystem();
         this.particleEffectSystem = new ParticleEffectSystem();
         this.adjunctSystem = new AdjunctSystem();
+        this.minimapSystem = new MinimapSystem(this);
 
         this.registerSystem(this.playerControlSystem);
         this.registerSystem(this.physicsSystem);
@@ -98,17 +105,24 @@ export class World {
         this.registerSystem(this.itemDropSystem);
         this.registerSystem(this.particleEffectSystem);
         this.registerSystem(this.adjunctSystem);
+        this.registerSystem(this.minimapSystem);
 
         // 4.1 Initialize Default Player Entity
         this.initDefaultPlayer();
 
         // 5. Basic Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Lighten ambient shadows
         this.scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(10, 20, 10);
         this.scene.add(directionalLight);
+
+        // Add a straight-down light explicitly for the Minimap's top-down view to make flat surfaces pop
+        const topLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        topLight.position.set(0, 500, 0); // Directly above
+        topLight.lookAt(0, 0, 0);
+        this.scene.add(topLight);
 
         // Grid helper for reference
         const gridHelper = new THREE.GridHelper(50, 50, 0x888888, 0xcccccc);
@@ -191,7 +205,40 @@ export class World {
             }
 
             // 2. Render Loop
-            this.renderer.render(this.scene, this.camera);
+            if (!this.pipeline.isMinimapActive) {
+                // 2A. Standard FPV Full Screen Render
+                this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
+                this.renderer.setScissorTest(false);
+                this.renderer.render(this.scene, this.camera);
+            } else {
+                // 2B. Dual Camera PiP Render
+
+                // First pass: Normal Scene
+                this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
+                this.renderer.setScissorTest(false);
+                this.renderer.render(this.scene, this.camera);
+
+                // Clear Depth so the map draws ON TOP of the 3D scene
+                this.renderer.clearDepth();
+
+                // Calculate centered square map viewport (e.g. 600x600 px, or screen bounds if smaller)
+                const mapSize = Math.min(600, this.container.clientWidth * 0.9, this.container.clientHeight * 0.9);
+                const mapX = (this.container.clientWidth - mapSize) / 2;
+                const mapY = (this.container.clientHeight - mapSize) / 2;
+
+                this.renderer.setViewport(mapX, mapY, mapSize, mapSize);
+                this.renderer.setScissor(mapX, mapY, mapSize, mapSize);
+                this.renderer.setScissorTest(true);
+
+                // Optional: Render a dark backing plate behind the map to improve contrast
+                this.renderer.setClearColor(0x111111, 0.9);
+                this.renderer.clearColor();
+
+                this.renderer.render(this.scene, this.pipeline.minimapCamera);
+
+                // Restore clear color
+                this.renderer.setClearColor(0xf0f0f0, 0);
+            }
         };
         requestAnimationFrame(loop);
     }

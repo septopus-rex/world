@@ -203,4 +203,38 @@ export class SandboxLoader {
         return 0;
     }
 
+    public toggleMinimap(active: boolean) {
+        if (!this.world) return;
+        this.world.pipeline.isMinimapActive = active;
+        if (active) {
+            this.world.minimap.setFollow(true);
+        }
+    }
+
+    public applyMinimapZoom(delta: number) {
+        if (!this.world) return;
+        const currentZone = this.world.minimap.zoom;
+        const nextZoom = Math.max(0.2, Math.min(10, currentZone + delta));
+        this.world.minimap.zoom = nextZoom;
+    }
+
+    public panMinimap(dx: number, dy: number) {
+        if (!this.world) return;
+        // Convert screen pixels roughly to world units based on current zoom
+        // (Initial frustum is 120 units, map size in UI is approx 600px)
+        const scale = (120 / 600) / this.world.minimap.zoom;
+        this.world.minimap.applyPan(dx * scale, dy * scale);
+        // Once we pan, we stop following the player automatically
+        this.world.minimap.setFollow(false);
+    }
+
+    public pickMinimapBlock(ndcX: number, ndcY: number) {
+        if (!this.world) return null;
+        return this.world.minimap.pickBlockFromMinimap(ndcX, ndcY);
+    }
+
+    public resetMinimapFollow() {
+        if (this.world) this.world.minimap.setFollow(true);
+    }
+
 }
