@@ -1,27 +1,24 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+// @ts-ignore
 import SeptopusContract from "./lib/contract";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { SandboxLoader } from './SandboxLoader';
+import { useIsMobile } from './lib/useIsMobile';
+import { Joystick } from './components/Joystick';
 
 function App() {
   const wallet = useWallet();
   const loaderRef = useRef<SandboxLoader | null>(null);
-  const [menu, setMenu] = useState<any>(null);
+  const isMobile = useIsMobile();
+
+  // Refs for high-performance direct DOM manipulation to avoid React re-renders every 16ms
+  const compassNeedleRef = useRef<HTMLDivElement>(null);
+  const blockDisplayRef = useRef<HTMLSpanElement>(null);
 
   const self = {
-    clickInit: (ev: any) => {
-      const recipient = "G5YzePkbR7istighPC2xSjmGQh6SyVB1YcwYc5jVmvGN";
-      const root = "G5YzePkbR7istighPC2xSjmGQh6SyVB1YcwYc5jVmvGN";
-      SeptopusContract.call("init", (data: any) => {
-        console.log(data);
-      }, [root, recipient]);
-    },
-    getRenderClass: () => {
-      return "w-full h-[600px] border border-gray-300 rounded overflow-hidden";
-    },
     setWallet: async () => {
       await SeptopusContract.set(wallet);
     },
@@ -38,81 +35,116 @@ function App() {
       // Expose for verification/debugging
       (window as any).loader = loaderRef.current;
       (window as any).world = (loaderRef.current as any).world;
-
-      // Expose the internal 'menu' API mapping
-      setMenu(loaderRef.current.getSelectedMenu());
     }
-
   }, [wallet]);
 
-  const selectAdjunct = (type: string) => {
-    if (!loaderRef.current) return;
-    if (type === 'box') loaderRef.current.selectBox();
-    if (type === 'sphere') loaderRef.current.selectSphere();
-    if (type === 'cone') loaderRef.current.selectCone();
-    if (type === 'trigger') loaderRef.current.selectTrigger();
-    if (type === 'wall') loaderRef.current.selectWall();
-    if (type === 'water') loaderRef.current.selectWater();
-    setMenu(loaderRef.current.getSelectedMenu());
-  };
+  // High performance HUD animation loop
+  useEffect(() => {
+    let animationId: number;
+
+    const updateHUD = () => {
+      if (loaderRef.current) {
+        // Update Compass Needle (Engine returns Yaw in radians)
+        if (compassNeedleRef.current) {
+          const yawRad = loaderRef.current.getPlayerRotationY();
+          // Engine Y rotation is mathematically opposite to CSS 2D rotation 
+          // (ThreeJS CCW vs CSS CW depending on camera setup, usually multiply by -1)
+          const degrees = (yawRad * 180) / Math.PI;
+          compassNeedleRef.current.style.transform = `rotate(${-degrees}deg)`;
+        }
+
+        // Update Logical Block Coordinates
+        if (blockDisplayRef.current) {
+          const coords = loaderRef.current.currentBlockCoordinate;
+          blockDisplayRef.current.innerText = `Block [${coords.x}, ${coords.y}] | ${coords.world}`;
+        }
+      }
+      animationId = requestAnimationFrame(updateHUD);
+    };
+
+    animationId = requestAnimationFrame(updateHUD);
+    return () => cancelAnimationFrame(animationId);
+  }, []);
 
   return (
-    <div className="p-10 flex gap-4 bg-gray-50 min-h-screen">
-      {/* 3D Viewport */}
-      <div className="flex-1 shadow-lg bg-white p-4 rounded-xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">SPP Protocol Render Sandbox</h2>
-          <div className="flex gap-2">
-            <WalletMultiButton />
-            <button className="px-4 py-2 bg-blue-600 text-white rounded font-medium" onClick={self.clickInit}>Initialize Legacy Contract</button>
+    <div className="relative w-screen h-screen overflow-hidden bg-black text-white font-sans touch-none">
+
+      {/* 1. Underlying 3D Engine Canvas */}
+      {/* Must use explicit ID 'three_demo' so SandboxLoader knows where to mount */}
+      <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
+
+      {/* 2. Top Navigation / Status Overlay */}
+      <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-start pointer-events-none">
+
+        {/* Left: Branding & Status */}
+        <div className="pointer-events-auto bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-2xl">
+          <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300 tracking-tight">
+            Septopus World
+          </h1>
+          <p className="text-xs text-gray-300 mt-1 font-medium bg-black/30 px-2 py-1 rounded inline-block">
+            {isMobile ? "Touch right screen to Look • Joystick to Move" : "Click screen to lock/unlock • WASD to Move"}
+          </p>
+          <div className="mt-2 text-sm font-mono text-green-400 drop-shadow-md">
+            <span ref={blockDisplayRef}>Block [2026, 222] | main</span>
           </div>
         </div>
 
-        <div id="three_demo" className={self.getRenderClass()}></div>
-      </div>
+        {/* Right: Wallet & Compass */}
+        <div className="flex flex-col gap-4 items-end pointer-events-auto">
+          <WalletMultiButton style={{ backgroundColor: '#111827', border: '1px solid #374151' }} />
 
-      {/* SPP Extracted Data UI Menu */}
-      <div className="w-80 shadow-lg bg-white p-4 rounded-xl flex flex-col gap-4 overflow-y-auto max-h-screen">
-        <h2 className="text-xl font-bold border-b pb-2">Adjunct Editor</h2>
+          {/* Compass Dashboard */}
+          <div className="w-24 h-24 mt-2 bg-gray-900/60 backdrop-blur-xl border-2 border-white/20 rounded-full flex items-center justify-center relative shadow-2xl">
+            {/* Compass markings */}
+            <span className="absolute top-1 text-[10px] font-bold text-red-500">N</span>
+            <span className="absolute bottom-1 text-[10px] font-bold text-gray-500">S</span>
+            <span className="absolute right-2 text-[10px] font-bold text-gray-500">E</span>
+            <span className="absolute left-2 text-[10px] font-bold text-gray-500">W</span>
 
-        {/* Selection Buttons */}
-        <div className="flex flex-wrap gap-2">
-          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200" onClick={() => selectAdjunct('box')}>Box</button>
-          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200" onClick={() => selectAdjunct('sphere')}>Sphere</button>
-          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200" onClick={() => selectAdjunct('cone')}>Cone</button>
-          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-pink-100 text-pink-700 rounded hover:bg-pink-200" onClick={() => selectAdjunct('trigger')}>Trigger</button>
-          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200" onClick={() => selectAdjunct('wall')}>Wall</button>
-          <button className="flex-1 min-w-[30%] py-1 px-2 text-xs bg-cyan-100 text-cyan-700 rounded hover:bg-cyan-200" onClick={() => selectAdjunct('water')}>Water</button>
-        </div>
+            {/* The Rotating Needle */}
+            <div
+              ref={compassNeedleRef}
+              className="w-1 h-14 relative transition-transform duration-75 ease-linear pointer-events-none origin-center"
+            >
+              <div className="absolute top-0 left-0 w-full h-1/2 bg-red-500 rounded-t-full"></div>
+              <div className="absolute bottom-0 left-0 w-full h-1/2 bg-white rounded-b-full"></div>
+            </div>
 
-        {menu ? (
-          <div className="flex flex-col gap-4">
-            {/* Process dynamically generated UI groups from the adjunct 'menu' protocol */}
-            {Object.keys(menu).map(category => (
-              <div key={category} className="border p-2 rounded bg-gray-50">
-                <h3 className="font-semibold text-gray-700 capitalize mb-2">{category}</h3>
-                {menu[category].map((item: any) => (
-                  <div key={item.key} className="flex justify-between items-center mb-1 text-sm text-gray-600 line-clamp-1">
-                    <span>{item.label}</span>
-                    <input
-                      type={item.type}
-                      className="border rounded w-20 px-1 py-1"
-                      defaultValue={item.value}
-                      onChange={(e) => {
-                        if (loaderRef.current) {
-                          loaderRef.current.updateSelectedData(item.key, parseFloat(e.target.value));
-                        }
-                      }}
-                    />
-                  </div>
-                ))}
-              </div>
-            ))}
+            {/* Center dot */}
+            <div className="absolute w-2 h-2 bg-black rounded-full border border-white/50 z-10"></div>
           </div>
-        ) : (
-          <p className="text-gray-500 italic text-sm">Waiting for ECS engine...</p>
-        )}
+        </div>
       </div>
+
+      {/* 4. Mobile Overlay Controls (Virtual Joystick & Action Buttons) */}
+      {isMobile && (
+        <>
+          <div className="absolute bottom-8 left-8 z-20 pointer-events-none">
+            <Joystick
+              size={130}
+              onMove={(data) => {
+                loaderRef.current?.setPlayerMoveIntent(data.x, data.y);
+              }}
+              onStop={() => {
+                loaderRef.current?.setPlayerMoveIntent(0, 0);
+              }}
+            />
+          </div>
+
+          <div className="absolute bottom-8 right-8 z-20 pointer-events-auto">
+            <button
+              className="w-16 h-16 rounded-full bg-white/10 hover:bg-white/20 border-2 border-white/30 backdrop-blur-md flex items-center justify-center active:scale-95 transition-all shadow-xl"
+              onTouchStart={(e) => {
+                e.preventDefault(); // Prevent pointer lock/scroll
+                loaderRef.current?.triggerPlayerJump();
+              }}
+            >
+              <span className="font-extrabold text-white text-xs tracking-widest opacity-90">JUMP</span>
+            </button>
+          </div>
+        </>
+      )}
+
     </div>
   );
 }

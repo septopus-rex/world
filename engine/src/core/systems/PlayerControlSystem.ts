@@ -62,6 +62,14 @@ export class PlayerControlSystem implements ISystem {
         document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
 
         domElement.addEventListener('click', () => {
+            // Disable native PointerLock trap on mobile devices
+            if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) {
+                // We still want to allow clicking/interacting, so fire interaction 
+                // but don't trap the cursor.
+                this.onMouseClick(true);
+                return;
+            }
+
             if (!this.controls.isLocked) {
                 this.controls.lock();
             } else {
@@ -73,36 +81,38 @@ export class PlayerControlSystem implements ISystem {
         domElement.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
         domElement.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
         domElement.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
+        // Also handle touch cancel to prevent stuck looking
+        domElement.addEventListener('touchcancel', (e) => this.onTouchEnd(e), { passive: false });
     }
 
     private lastTouchX: number = 0;
     private lastTouchY: number = 0;
     private touchLookActive: boolean = false;
+    private activeLookTouchId: number | null = null;
 
     private onTouchStart(event: TouchEvent): void {
         // Prevent default zoom/pan on mobile
         if (event.cancelable) event.preventDefault();
 
-        // For simplicity, assigning the first touch to look control if it's on the right half of screen
-        const touch = event.touches[0];
-        if (touch.clientX > window.innerWidth / 2) {
-            this.touchLookActive = true;
-            this.lastTouchX = touch.clientX;
-            this.lastTouchY = touch.clientY;
-        } else {
-            // Very rudimentary: touching left side of screen moves forward
-            if (this.controlledEntity) {
-                const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
-                if (input) input.forward = true;
+        // Assign touch to look control if it's on the right half of the screen
+        for (let i = 0; i < event.changedTouches.length; i++) {
+            const touch = event.changedTouches[i];
+            if (touch.clientX > window.innerWidth / 2) {
+                this.touchLookActive = true;
+                this.activeLookTouchId = touch.identifier;
+                this.lastTouchX = touch.clientX;
+                this.lastTouchY = touch.clientY;
+                break; // Only track one looking finger
             }
         }
     }
 
     private onTouchMove(event: TouchEvent): void {
         if (event.cancelable) event.preventDefault();
-        if (!this.touchLookActive || !this.controlledEntity) return;
+        if (!this.touchLookActive || !this.controlledEntity || this.activeLookTouchId === null) return;
 
-        const touch = Array.from(event.touches).find(t => t.clientX > window.innerWidth / 2) || event.touches[0];
+        // Find the specific touch we are tracking for looking
+        const touch = Array.from(event.touches).find(t => t.identifier === this.activeLookTouchId);
         if (!touch) return;
 
         const dx = touch.clientX - this.lastTouchX;
@@ -116,20 +126,23 @@ export class PlayerControlSystem implements ISystem {
         const pitchDelta = -dy * 0.005;
 
         this.controls.getObject().rotation.y += yawDelta;
-        this.controls.getObject().children[0].rotation.x += pitchDelta;
+
+        // Clamp the vertical pitch to avoid flipping over backward/forward (approx +/- 90 degrees)
+        const pitchObj = this.controls.getObject().children[0];
+        pitchObj.rotation.x += pitchDelta;
+        pitchObj.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObj.rotation.x));
     }
 
     private onTouchEnd(event: TouchEvent): void {
         if (event.cancelable) event.preventDefault();
 
-        // Stop moving forward 
-        if (this.controlledEntity) {
-            const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
-            if (input) input.forward = false;
-        }
-
-        if (event.touches.length === 0) {
-            this.touchLookActive = false;
+        // Check if our tracked look-finger was lifted
+        for (let i = 0; i < event.changedTouches.length; i++) {
+            if (event.changedTouches[i].identifier === this.activeLookTouchId) {
+                this.touchLookActive = false;
+                this.activeLookTouchId = null;
+                break;
+            }
         }
     }
 
