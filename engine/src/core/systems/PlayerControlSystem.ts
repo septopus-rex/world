@@ -38,6 +38,7 @@ export class PlayerControlSystem implements ISystem {
             this.world.addComponent<InputStateComponent>(entity, "InputStateComponent", {
                 forward: false, backward: false, left: false, right: false, jump: false, run: false,
                 interactPrimary: false, interactSecondary: false,
+                lookUp: false, lookDown: false, lookLeft: false, lookRight: false,
                 movementIntent: [0, 0, 0],
                 lookPitchDelta: 0, lookYawDelta: 0
             });
@@ -62,20 +63,13 @@ export class PlayerControlSystem implements ISystem {
         document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
 
         domElement.addEventListener('click', () => {
-            // Disable native PointerLock trap on mobile devices
-            if (('ontouchstart' in window) || navigator.maxTouchPoints > 0) {
-                // We still want to allow clicking/interacting, so fire interaction 
-                // but don't trap the cursor.
-                this.onMouseClick(true);
-                return;
-            }
-
-            if (!this.controls.isLocked) {
-                this.controls.lock();
-            } else {
-                this.onMouseClick(true);
-            }
+            this.onMouseClick(true);
         });
+
+        // Mouse Drag to Look (Desktop)
+        domElement.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
+        document.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
+        document.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
 
         // Touch Listeners (Mobile compatibility)
         domElement.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
@@ -146,19 +140,52 @@ export class PlayerControlSystem implements ISystem {
         }
     }
 
+    private isMouseDown: boolean = false;
+    private lastMouseX: number = 0;
+    private lastMouseY: number = 0;
+
+    private onMouseDown(event: MouseEvent): void {
+        this.isMouseDown = true;
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+    }
+
+    private onMouseMove(event: MouseEvent): void {
+        if (!this.isMouseDown || !this.controlledEntity) return;
+
+        const dx = event.clientX - this.lastMouseX;
+        const dy = event.clientY - this.lastMouseY;
+
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+
+        const yawDelta = -dx * 0.005;
+        const pitchDelta = -dy * 0.005;
+
+        this.controls.getObject().rotation.y += yawDelta;
+
+        const pitchObj = this.controls.getObject().children[0];
+        pitchObj.rotation.x += pitchDelta;
+        pitchObj.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObj.rotation.x));
+    }
+
+    private onMouseUp(event: MouseEvent): void {
+        this.isMouseDown = false;
+    }
+
     private onKeyDown(event: KeyboardEvent): void {
         if (!this.controlledEntity) return;
         const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
         if (!input) return;
 
         switch (event.code) {
-            case 'ArrowUp':
+            case 'ArrowUp': input.lookUp = true; break;
+            case 'ArrowDown': input.lookDown = true; break;
+            case 'ArrowLeft': input.lookLeft = true; break;
+            case 'ArrowRight': input.lookRight = true; break;
             case 'KeyW': input.forward = true; break;
-            case 'ArrowLeft':
             case 'KeyA': input.left = true; break;
-            case 'ArrowDown':
             case 'KeyS': input.backward = true; break;
-            case 'ArrowRight':
             case 'KeyD': input.right = true; break;
             case 'Space': input.jump = true; break;
             case 'ShiftLeft': input.run = true; break;
@@ -172,13 +199,13 @@ export class PlayerControlSystem implements ISystem {
         if (!input) return;
 
         switch (event.code) {
-            case 'ArrowUp':
+            case 'ArrowUp': input.lookUp = false; break;
+            case 'ArrowDown': input.lookDown = false; break;
+            case 'ArrowLeft': input.lookLeft = false; break;
+            case 'ArrowRight': input.lookRight = false; break;
             case 'KeyW': input.forward = false; break;
-            case 'ArrowLeft':
             case 'KeyA': input.left = false; break;
-            case 'ArrowDown':
             case 'KeyS': input.backward = false; break;
-            case 'ArrowRight':
             case 'KeyD': input.right = false; break;
             case 'Space': input.jump = false; break;
             case 'ShiftLeft': input.run = false; break;
@@ -195,11 +222,8 @@ export class PlayerControlSystem implements ISystem {
         }
     }
 
-    /**
-     * The Frame Tick
-     */
     public update(world: World, dt: number): void {
-        if (!this.controlledEntity || !this.controls.isLocked) return;
+        if (!this.controlledEntity) return;
 
         const input = world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
         const body = world.getComponent<RigidBodyComponent>(this.controlledEntity, "RigidBodyComponent");
@@ -212,7 +236,6 @@ export class PlayerControlSystem implements ISystem {
         this._velocity.set(0, 0, 0);
         this._direction.set(0, 0, 0);
 
-        Number(input.forward) - Number(input.backward);
         this._direction.z = Number(input.forward) - Number(input.backward);
         this._direction.x = Number(input.right) - Number(input.left);
 
@@ -249,12 +272,29 @@ export class PlayerControlSystem implements ISystem {
             }
         }
 
+        // --- Keyboard Look Support ---
+        const turnSpeed = 2.0; // radians per second
+        if (input.lookLeft) this.controls.getObject().rotation.y += turnSpeed * dt;
+        if (input.lookRight) this.controls.getObject().rotation.y -= turnSpeed * dt;
+        if (input.lookUp || input.lookDown) {
+            const pitchObj = this.controls.getObject().children[0];
+            const pitchDelta = (Number(input.lookUp) - Number(input.lookDown)) * turnSpeed * dt;
+            pitchObj.rotation.x += pitchDelta;
+            pitchObj.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObj.rotation.x));
+        }
+
         this._direction.normalize(); // Ensure diagonal isn't faster
 
-        // 2. Apply Speed rules
+        // 2. Apply Speed rules & rotate into camera space
         const speed = input.run ? body.maxSpeedRun : body.maxSpeedWalk;
-        if (input.forward || input.backward) this._velocity.z -= this._direction.z * speed;
-        if (input.left || input.right) this._velocity.x -= this._direction.x * speed;
+
+        // Local movement vector: right is +X, forward is -Z
+        const localX = this._direction.x * speed;
+        const localZ = -this._direction.z * speed;
+
+        const yaw = this.controls.getObject().rotation.y;
+        this._velocity.x = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
+        this._velocity.z = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
 
         // 3. Set the intention in the Component for the Physics System to read
         // Notice: We don't apply delta time (dt) here to position. We just define the VELOCITY.

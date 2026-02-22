@@ -24,6 +24,12 @@ export interface InputStateComponent {
     interactPrimary: boolean;
     interactSecondary: boolean;
 
+    // View intent keys (for overriding mouse look with keyboard)
+    lookUp: boolean;
+    lookDown: boolean;
+    lookLeft: boolean;
+    lookRight: boolean;
+
     // Movement Intent vector calculated this frame (relative local space)
     movementIntent: [number, number, number];
 

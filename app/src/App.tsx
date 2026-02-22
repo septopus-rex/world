@@ -67,7 +67,10 @@ function App() {
   }, []);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black text-white font-sans touch-none">
+    <div
+      className="relative w-screen h-screen overflow-hidden bg-black text-white font-sans touch-none"
+      onContextMenu={(e) => e.preventDefault()}
+    >
 
       {/* 1. Underlying 3D Engine Canvas */}
       {/* Must use explicit ID 'three_demo' so SandboxLoader knows where to mount */}

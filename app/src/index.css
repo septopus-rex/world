@@ -1,6 +1,10 @@
 /* Tailwind CSS is injected via CDN in index.html */
+html,
 body {
   margin: 0;
+  overscroll-behavior: none;
+  /* Disable browser forward/back swipe navigation */
+  overscroll-behavior-x: none;
 }
 
 :root {
