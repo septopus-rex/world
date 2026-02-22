@@ -11,7 +11,18 @@ import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComp
 export class PlayerControlSystem implements ISystem {
     private controls: PointerLockControls;
     private world: World;
+    private camera: THREE.Camera;
     private controlledEntity: EntityId | null = null;
+
+    private keydownHandler!: (e: KeyboardEvent) => void;
+    private keyupHandler!: (e: KeyboardEvent) => void;
+    private mouseUpHandler!: (e: MouseEvent) => void;
+
+    private lastTouchX: number = 0;
+    private lastTouchY: number = 0;
+    private touchLookActive: boolean = false;
+    private activeLookTouchId: number | null = null;
+    private isMouseDown: boolean = false;
 
     // Internal state cache to prevent GC overhead
     private _velocity = new THREE.Vector3();
@@ -19,6 +30,7 @@ export class PlayerControlSystem implements ISystem {
 
     constructor(world: World, camera: THREE.Camera, domElement: HTMLElement) {
         this.world = world;
+        this.camera = camera;
 
         // Initialize the Three.js native FPS controller
         this.controls = new PointerLockControls(camera, domElement);
@@ -57,19 +69,40 @@ export class PlayerControlSystem implements ISystem {
         return this.controls.isLocked;
     }
 
+    /**
+     * Bridges external Virtual Joystick inputs directly to the ECS InputState
+     */
+    public setMoveIntent(x: number, y: number) {
+        if (!this.controlledEntity) return;
+        const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
+        if (input) {
+            const deadzone = 0.2;
+            input.right = x > deadzone;
+            input.left = x < -deadzone;
+            input.forward = y > deadzone;
+            input.backward = y < -deadzone;
+        }
+    }
+
+    public triggerJump() {
+        if (!this.controlledEntity) return;
+        const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
+        if (input) {
+            input.jump = true;
+        }
+    }
+
     private bindEvents(domElement: HTMLElement): void {
+        this.keydownHandler = (e: KeyboardEvent) => this.onKeyDown(e);
+        this.keyupHandler = (e: KeyboardEvent) => this.onKeyUp(e);
+        this.mouseUpHandler = (e: MouseEvent) => this.onMouseUp(e);
+
         // DOM Listeners convert real interactions intoECS Component states.
-        document.addEventListener('keydown', (e) => this.onKeyDown(e), false);
-        document.addEventListener('keyup', (e) => this.onKeyUp(e), false);
+        document.addEventListener('keydown', this.keydownHandler, false);
+        document.addEventListener('keyup', this.keyupHandler, false);
+        document.addEventListener('mouseup', this.mouseUpHandler, false);
 
-        domElement.addEventListener('click', () => {
-            this.onMouseClick(true);
-        });
-
-        // Mouse Drag to Look (Desktop)
-        domElement.addEventListener('mousedown', (e) => this.onMouseDown(e), false);
-        document.addEventListener('mousemove', (e) => this.onMouseMove(e), false);
-        document.addEventListener('mouseup', (e) => this.onMouseUp(e), false);
+        // PointerLock handles desktop look. No manual drag needed.
 
         // Touch Listeners (Mobile compatibility)
         domElement.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
@@ -79,10 +112,13 @@ export class PlayerControlSystem implements ISystem {
         domElement.addEventListener('touchcancel', (e) => this.onTouchEnd(e), { passive: false });
     }
 
-    private lastTouchX: number = 0;
-    private lastTouchY: number = 0;
-    private touchLookActive: boolean = false;
-    private activeLookTouchId: number | null = null;
+    public dispose(): void {
+        document.removeEventListener('keydown', this.keydownHandler);
+        document.removeEventListener('keyup', this.keyupHandler);
+        document.removeEventListener('mouseup', this.mouseUpHandler);
+        // Note: PointerLockControls internally should handle its own cleanup via its own dispose or unlock
+        this.controls.dispose();
+    }
 
     private onTouchStart(event: TouchEvent): void {
         // Prevent default zoom/pan on mobile
@@ -138,35 +174,6 @@ export class PlayerControlSystem implements ISystem {
                 break;
             }
         }
-    }
-
-    private isMouseDown: boolean = false;
-    private lastMouseX: number = 0;
-    private lastMouseY: number = 0;
-
-    private onMouseDown(event: MouseEvent): void {
-        this.isMouseDown = true;
-        this.lastMouseX = event.clientX;
-        this.lastMouseY = event.clientY;
-    }
-
-    private onMouseMove(event: MouseEvent): void {
-        if (!this.isMouseDown || !this.controlledEntity) return;
-
-        const dx = event.clientX - this.lastMouseX;
-        const dy = event.clientY - this.lastMouseY;
-
-        this.lastMouseX = event.clientX;
-        this.lastMouseY = event.clientY;
-
-        const yawDelta = -dx * 0.005;
-        const pitchDelta = -dy * 0.005;
-
-        this.controls.getObject().rotation.y += yawDelta;
-
-        const pitchObj = this.controls.getObject().children[0];
-        pitchObj.rotation.x += pitchDelta;
-        pitchObj.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObj.rotation.x));
     }
 
     private onMouseUp(event: MouseEvent): void {
@@ -262,25 +269,23 @@ export class PlayerControlSystem implements ISystem {
             // Look controls via Right Stick (simulating mouse movement for PointerLock)
             if (Math.abs(pad.axes[2]) > deadzone) {
                 const yawDelta = -pad.axes[2] * dt * 2.0;
-                this.controls.getObject().rotation.y += yawDelta;
+                this.camera.rotation.y += yawDelta;
             }
             if (Math.abs(pad.axes[3]) > deadzone) {
-                // Not ideal mutating Three camera directly here, but fits PointerLock
                 const pitchDelta = -pad.axes[3] * dt * 2.0;
-                // Pointer Lock uses a PitchObj inside a YawObj. We modify PitchObj.
-                this.controls.getObject().children[0].rotation.x += pitchDelta;
+                this.camera.rotation.x += pitchDelta;
+                this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
             }
         }
 
         // --- Keyboard Look Support ---
         const turnSpeed = 2.0; // radians per second
-        if (input.lookLeft) this.controls.getObject().rotation.y += turnSpeed * dt;
-        if (input.lookRight) this.controls.getObject().rotation.y -= turnSpeed * dt;
+        if (input.lookLeft) this.camera.rotation.y += turnSpeed * dt;
+        if (input.lookRight) this.camera.rotation.y -= turnSpeed * dt;
         if (input.lookUp || input.lookDown) {
-            const pitchObj = this.controls.getObject().children[0];
             const pitchDelta = (Number(input.lookUp) - Number(input.lookDown)) * turnSpeed * dt;
-            pitchObj.rotation.x += pitchDelta;
-            pitchObj.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObj.rotation.x));
+            this.camera.rotation.x += pitchDelta;
+            this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
         }
 
         this._direction.normalize(); // Ensure diagonal isn't faster
@@ -292,7 +297,7 @@ export class PlayerControlSystem implements ISystem {
         const localX = this._direction.x * speed;
         const localZ = -this._direction.z * speed;
 
-        const yaw = this.controls.getObject().rotation.y;
+        const yaw = this.camera.rotation.y;
         this._velocity.x = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
         this._velocity.z = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
 
@@ -310,20 +315,16 @@ export class PlayerControlSystem implements ISystem {
 
         // 5. Sync the PointerLock Camera position to the ECS Transform Position
         // The Physics System (running before or after) actually moves the Transform.
-        if (camComp) {
-            this.controls.getObject().position.set(
-                trans.position[0] + camComp.offset[0],
-                trans.position[1] + camComp.offset[1],
-                trans.position[2] + camComp.offset[2]
-            );
-        }
+        this.camera.position.set(
+            trans.position[0] + (camComp?.offset[0] || 0),
+            trans.position[1] + (camComp?.offset[1] || 0),
+            trans.position[2] + (camComp?.offset[2] || 0)
+        );
 
-        // 6. Sync Rotations
-        // PointerLock natively manages the Camera's Euler array (YXZ). We sync it back.
-        const euler = this.controls.getObject().rotation;
-        trans.rotation[0] = euler.x;
-        trans.rotation[1] = euler.y;
-        trans.rotation[2] = euler.z;
+        // 6. Sync Rotations back to ECS
+        trans.rotation[0] = this.camera.rotation.x;
+        trans.rotation[1] = this.camera.rotation.y;
+        trans.rotation[2] = 0; // FORCE HORIZON LEVEL (NO ROLL)
 
         // Clear one-frame interaction flags
         input.interactPrimary = false;

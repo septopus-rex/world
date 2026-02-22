@@ -9,6 +9,9 @@ import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { AdjunctSystem } from './systems/AdjunctSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
+import { BlockSystem } from './systems/BlockSystem';
+import { GridSystem } from './systems/GridSystem';
+import { TransformComponent, CameraComponent } from './components/PlayerComponents';
 import { RenderPipeline } from '../render/RenderPipeline.js';
 import { ParticleCell, ParticleFace } from './types/ParticleCell.js';
 import { WorldConfig } from './types/WorldConfig';
@@ -27,6 +30,7 @@ type EventCallback = (event: GameEvent) => void;
 
 export interface ISystem {
     update(world: World, dt: number): void;
+    dispose?(): void; // Optional cleanup for global listeners
 }
 
 /**
@@ -48,11 +52,15 @@ export class World {
     private particleEffectSystem!: ParticleEffectSystem;
     private adjunctSystem!: AdjunctSystem;
     private minimapSystem!: MinimapSystem;
+    private blockSystem!: BlockSystem;
     private container: HTMLElement;
 
     public get minimap(): MinimapSystem { return this.minimapSystem; }
+    public get blocks(): BlockSystem { return this.blockSystem; }
+    public get controls(): PlayerControlSystem { return this.playerControlSystem; }
     private animationFrameId: number = 0;
     private lastFrameTime: number = 0;
+    private isRunning: boolean = false;
 
     // --- ECS Storage ---
     private nextEntityId: EntityId = 1;
@@ -60,7 +68,7 @@ export class World {
     private systems: ISystem[] = [];
     private listeners = new Map<string, EventCallback[]>();
 
-    constructor(private config: WorldConfig) {
+    constructor(public config: WorldConfig) {
         const domElement = document.getElementById(config.world.containerId);
         if (!domElement) {
             throw new Error(`Container with ID ${config.world.containerId} not found.`);
@@ -69,7 +77,7 @@ export class World {
 
         // 1. Initialize Scene
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xf0f0f0);
+        this.scene.background = new THREE.Color(0x87ceeb); // Sky Blue
 
         // 2. Initialize Camera
         const aspect = this.container.clientWidth / this.container.clientHeight;
@@ -85,6 +93,7 @@ export class World {
         this.container.appendChild(this.renderer.domElement);
 
         // 4. Initialize ECS Systems
+        this.blockSystem = new BlockSystem();
         this.playerControlSystem = new PlayerControlSystem(this, this.camera, this.renderer.domElement);
         this.physicsSystem = new PhysicsSystem();
         this.triggerSystem = new TriggerSystem();
@@ -96,6 +105,8 @@ export class World {
         this.adjunctSystem = new AdjunctSystem();
         this.minimapSystem = new MinimapSystem(this);
 
+        this.registerSystem(this.blockSystem);
+        this.registerSystem(new GridSystem());
         this.registerSystem(this.playerControlSystem);
         this.registerSystem(this.physicsSystem);
         this.registerSystem(this.triggerSystem);
@@ -111,31 +122,41 @@ export class World {
         this.initDefaultPlayer();
 
         // 5. Basic Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Lighten ambient shadows
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambientLight);
 
+        // Hemisphere light provides better "outdoor" fill without extreme shadows in large coordinates
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
+        this.scene.add(hemiLight);
+
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 20, 10);
+        directionalLight.position.set(500, 1000, 500); // Higher and further away
         this.scene.add(directionalLight);
 
-        // Add a straight-down light explicitly for the Minimap's top-down view to make flat surfaces pop
-        const topLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        topLight.position.set(0, 500, 0); // Directly above
-        topLight.lookAt(0, 0, 0);
+        // Add a straight-down light explicitly for the Minimap's top-down view
+        const topLight = new THREE.DirectionalLight(0xffffff, 0.7);
+        topLight.position.set(0, 2000, 0);
         this.scene.add(topLight);
-
-        // Grid helper for reference
-        const gridHelper = new THREE.GridHelper(50, 50, 0x888888, 0xcccccc);
-        this.scene.add(gridHelper);
 
         // 6. Initialize RenderPipeline (SPP to Three.js mapping)
         this.pipeline = new RenderPipeline(this.scene, this.defaultAssetResolver.bind(this));
 
         // 7. Bind Events
         window.addEventListener('resize', this.onWindowResize.bind(this));
+    }
 
-        // 8. Start Loop
+    public start(): void {
+        if (this.isRunning) return;
+        this.isRunning = true;
+        this.lastFrameTime = performance.now();
         this.startLoop();
+    }
+
+    public stop(): void {
+        this.isRunning = false;
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
     }
 
     /**
@@ -147,7 +168,7 @@ export class World {
         this.addComponent(playerId, "TransformComponent", {
             position: [
                 this.config.player.start.position[0],
-                this.config.player.start.position[1] + 20, // Start slightly airborne
+                this.config.player.start.position[1], // Use exact altitude from config
                 this.config.player.start.position[2]
             ],
             rotation: this.config.player.start.rotation,
@@ -155,10 +176,33 @@ export class World {
         });
 
         this.addComponent(playerId, "CameraComponent", {
-            offset: [0, 1.6 * this.config.player.avatar.scale[1], 0], // Eye height scaled
-            fov: 45,
+            offset: [0, 1.6, 0], // Eye height
+            fov: 75,
             active: true
         });
+
+        // 4.1.5 Visual Avatar (Simple Box representation)
+        const avatarGeo = new THREE.BoxGeometry(0.6, 1.8, 0.6);
+        const avatarMat = new THREE.MeshStandardMaterial({
+            color: 0x3366ff,
+            transparent: true,
+            opacity: 0.8
+        });
+        const avatarMesh = new THREE.Mesh(avatarGeo, avatarMat);
+        // Position it so the feet are at [0,0,0] local
+        avatarMesh.position.set(0, 0.9, 0);
+        this.scene.add(avatarMesh);
+
+        // We need a way to sync this mesh to the transform. 
+        // For simplicity in this demo, I'll just add an 'onRender' hook or similar if it existed, 
+        // but since we don't have a dedicated RenderSystem for meshes yet (it's mostly adjuncts),
+        // I'll just make the avatarMesh a child of a group that we update, 
+        // or actually, the easiest way is to add it to the scene and let a system update it.
+        // Wait, I can just use a proxy or a simple component.
+
+        // Actually, let's just use the Three.js scene graph for the avatar since it's a singleton player.
+        // I'll store it in a private field and update it in the main loop.
+        (this as any)._avatarMesh = avatarMesh;
 
         // The exact Physics Rules defined by the "King" of this world
         this.addComponent(playerId, "RigidBodyComponent", {
@@ -195,6 +239,7 @@ export class World {
         this.lastFrameTime = performance.now();
         const loop = (now: number) => {
             this.animationFrameId = requestAnimationFrame(loop);
+            if (!this.isRunning) return;
 
             const dt = (now - this.lastFrameTime) / 1000.0;
             this.lastFrameTime = now;
@@ -202,6 +247,16 @@ export class World {
             // 1. Core ECS Loop
             for (const sys of this.systems) {
                 sys.update(this, dt);
+            }
+
+            // Sync visual avatar to its physical counterpart
+            if ((this as any)._avatarMesh) {
+                const players = this.getEntitiesWith(["TransformComponent", "InputStateComponent"]);
+                if (players.length > 0) {
+                    const t = this.getComponent<TransformComponent>(players[0], "TransformComponent")!;
+                    (this as any)._avatarMesh.position.set(t.position[0], t.position[1], t.position[2]);
+                    (this as any)._avatarMesh.rotation.set(t.rotation[0], t.rotation[1], t.rotation[2]);
+                }
             }
 
             // 2. Render Loop
@@ -401,9 +456,18 @@ export class World {
      * Dispose of WebGL contexts and events cleanly.
      */
     public dispose(): void {
+        this.isRunning = false;
         cancelAnimationFrame(this.animationFrameId);
         window.removeEventListener('resize', this.onWindowResize.bind(this));
 
+        // 1. Dispose all systems (specifically to remove global DOM listeners)
+        for (const sys of this.systems) {
+            if (sys.dispose) {
+                sys.dispose();
+            }
+        }
+
+        // 2. Cleanup Three.js
         if (this.container && this.renderer.domElement) {
             this.container.removeChild(this.renderer.domElement);
         }
@@ -423,8 +487,15 @@ export class World {
      * colored material for demoing purposes based on variant indices.
      */
     private defaultAssetResolver(face: ParticleFace, variantIndex: number, cell: ParticleCell): THREE.Material {
+        // Generate a stable color based on block coordinates (X, Y)
+        const x = cell.position[0];
+        const y = cell.position[1];
+
+        // Simple hash-like function to derive hue from coordinates
+        const hue = ((Math.abs(x) * 13 + Math.abs(y) * 37) % 100) / 100;
+
         const material = new THREE.MeshLambertMaterial({
-            color: new THREE.Color().setHSL(Math.random(), 0.7, 0.5),
+            color: new THREE.Color().setHSL(hue, 0.6, 0.4),
             side: THREE.FrontSide
         });
         return material;

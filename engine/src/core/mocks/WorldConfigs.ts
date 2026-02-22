@@ -33,7 +33,8 @@ export const MockWorldNormal: WorldConfig = {
             gravityMultiplier: 1.0 // Standard Gravity
         },
         bag: { max: 100 },
-        avatar: { max: 2097152, scale: [1, 1, 1] }
+        avatar: { max: 2097152, scale: [1, 1, 1] },
+        extend: 1 // 3x3 loading radius
     },
     blacklist: [] // Nothing blocked
 };
@@ -72,7 +73,8 @@ export const MockWorldGhostMoon: WorldConfig = {
             gravityMultiplier: 0.16 // Moon gravity (1/6th of normal)
         },
         bag: { max: 10 },    // King forces survival mode (tiny inventory)
-        avatar: { max: 512000, scale: [0.8, 1.2, 0.8] } // Everyone is stretched and thin
+        avatar: { max: 512000, scale: [0.8, 1.2, 0.8] }, // Everyone is stretched and thin
+        extend: 2 // Larger radius on the moon
     },
     blacklist: [0x00A1, 0x00B7] // E.g., No water (A1), No teleporters (B7)
 };

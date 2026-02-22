@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
+import { Coords } from '../utils/Coords';
 import * as THREE from 'three';
 
 export interface IAdjunctLogic {
@@ -53,106 +54,108 @@ export class AdjunctSystem implements ISystem {
         const logic = adjunct.logicModule;
         const std = adjunct.stdData;
 
+        // 1. Hierarchical Attachment
+        let targetGroup: THREE.Object3D = world.scene;
+        if (adjunct.parentBlockEntityId) {
+            const block = world.getComponent<any>(adjunct.parentBlockEntityId, "BlockComponent");
+            if (block && block.group) {
+                targetGroup = block.group;
+            }
+        }
+
         let meshGroup = new THREE.Group();
+        // Position is (0,0,0) relative to parent block group
+        meshGroup.position.set(0, 0, 0);
 
         // Check if the adjunct module has the standard transformation methods (defined in SPP protocol)
         if (logic.transform && typeof logic.transform.std_3d === 'function') {
-            const elevation = transform.position[1]; // The Z-axis mapping for the World Height. (ThreeJS Y)
+            const elevation = 0; // Elevation is handled by the parent block group
 
-            // Reconstruct the 3D data pipeline via the Adjunct standard API.
             try {
-                // std_3d expects an array of std objects.
                 const renderDataList = logic.transform.std_3d([std], elevation);
 
                 for (const renderItem of renderDataList) {
-                    // For 'box' type specific items
                     if (renderItem.type === 'box') {
                         const geo = new THREE.BoxGeometry(
                             renderItem.params.size[0],
                             renderItem.params.size[1],
                             renderItem.params.size[2]
                         );
-                        const mat = new THREE.MeshStandardMaterial({
-                            color: renderItem.material?.color || 0xcccccc
-                        });
+
+                        let itemColor = renderItem.material?.color || 0xcccccc;
+
+                        // Ground coloring logic
+                        if (renderItem.type === 'box' && renderItem.params.position[2] < 0) {
+                            // Extract coordinates from block if possible
+                            let bx = 0, by = 0;
+                            if (adjunct.parentBlockEntityId) {
+                                const b = world.getComponent<any>(adjunct.parentBlockEntityId, "BlockComponent");
+                                if (b) { bx = b.x; by = b.y; }
+                            }
+
+                            const hash = (bx * 71 + by * 131);
+                            const hue = ((hash % 100) + 100) % 100 / 100;
+                            const c = new THREE.Color().setHSL(hue, 0.5, 0.4);
+                            itemColor = c.getHex();
+                        }
+
+                        const mat = new THREE.MeshStandardMaterial({ color: itemColor });
                         const mesh = new THREE.Mesh(geo, mat);
 
-                        // SPP Z-Up differs from ThreeJS Y-Up. The protocol says we map them.
-                        mesh.position.set(
-                            renderItem.params.position[0],
-                            renderItem.params.position[2], // Mapping SPP Z to ThreeJS Y
-                            renderItem.params.position[1]
-                        );
+                        // Protocol [X=East, Y=North, Z=Alt] -> Engine [X, Y, -Z]
+                        // However, inside a block group, we use relative protocol coords.
+                        // Relative East -> Engine X
+                        // Relative Alt -> Engine Y
+                        // Relative North -> Engine -Z
+                        const lx = renderItem.params.position[0];
+                        const ly = renderItem.params.position[1];
+                        const lz = renderItem.params.position[2];
+
+                        mesh.position.set(lx, lz, -ly);
 
                         mesh.rotation.set(
                             renderItem.params.rotation[0],
-                            renderItem.params.rotation[2], // Mapping SPP rZ to ThreeJS rY
-                            renderItem.params.rotation[1]
+                            renderItem.params.rotation[1], // Yaw usually maps directly
+                            -renderItem.params.rotation[2] // Mirroring roll/pitch if needed, keep simple for now
                         );
+                        // Force roll to 0 for most objects to avoid "spinning/tilt" issues
+                        mesh.rotation.z = 0;
 
                         meshGroup.add(mesh);
                     } else if (renderItem.type === 'sphere') {
                         const radius = renderItem.params.size[0] / 2;
                         const geo = new THREE.SphereGeometry(radius, 32, 32);
-                        const mat = new THREE.MeshStandardMaterial({
-                            color: renderItem.material?.color || 0xcccccc
-                        });
+                        const mat = new THREE.MeshStandardMaterial({ color: renderItem.material?.color || 0xcccccc });
                         const mesh = new THREE.Mesh(geo, mat);
 
-                        mesh.position.set(
-                            renderItem.params.position[0],
-                            renderItem.params.position[2],
-                            renderItem.params.position[1]
-                        );
-
-                        mesh.rotation.set(
-                            renderItem.params.rotation[0],
-                            renderItem.params.rotation[2],
-                            renderItem.params.rotation[1]
-                        );
-
+                        mesh.position.set(renderItem.params.position[0], renderItem.params.position[2], -renderItem.params.position[1]);
+                        mesh.rotation.set(renderItem.params.rotation[0], renderItem.params.rotation[1], 0);
                         meshGroup.add(mesh);
                     } else if (renderItem.type === 'cone') {
-                        // size: [radiusBottom, height, radiusTop]
-                        const geo = new THREE.CylinderGeometry(
-                            renderItem.params.size[2], // radiusTop
-                            renderItem.params.size[0], // radiusBottom
-                            renderItem.params.size[1], // height
-                            32
-                        );
-                        const mat = new THREE.MeshStandardMaterial({
-                            color: renderItem.material?.color || 0xcccccc
-                        });
+                        const geo = new THREE.CylinderGeometry(renderItem.params.size[2], renderItem.params.size[0], renderItem.params.size[1], 32);
+                        const mat = new THREE.MeshStandardMaterial({ color: renderItem.material?.color || 0xcccccc });
                         const mesh = new THREE.Mesh(geo, mat);
 
-                        mesh.position.set(
-                            renderItem.params.position[0],
-                            renderItem.params.position[2],
-                            renderItem.params.position[1]
-                        );
-
-                        mesh.rotation.set(
-                            renderItem.params.rotation[0],
-                            renderItem.params.rotation[2],
-                            renderItem.params.rotation[1]
-                        );
-
+                        mesh.position.set(renderItem.params.position[0], renderItem.params.position[2], -renderItem.params.position[1]);
+                        mesh.rotation.set(renderItem.params.rotation[0], renderItem.params.rotation[1], 0);
                         meshGroup.add(mesh);
                     }
                 }
             } catch (error) {
-                console.error(`[AdjunctSystem] Failed to generate 3D mesh via logic module for ${adjunct.adjunctId}.`, error);
+                console.error(`[AdjunctSystem] Failed for ${adjunct.adjunctId}.`, error);
             }
-        } else {
-            console.warn(`[AdjunctSystem] Module for ${adjunct.adjunctId} does not implement 'transform.std_3d'.`);
         }
 
-        // Finalize initialization
-        world.scene.add(meshGroup);
-        // Track the mesh via a reference on the adjunct component since there's no Object3DComponent
+        // Attach to the determined parent
+        targetGroup.add(meshGroup);
         (adjunct as any)._mesh = meshGroup;
         adjunct.isInitialized = true;
         this.initializedAdjuncts.add(entityId);
+
+        // Notify if this was a critical block component
+        if (adjunct.parentBlockEntityId) {
+            world.emitSimple("world:block_ready", { blockId: adjunct.parentBlockEntityId });
+        }
     }
 
     /**

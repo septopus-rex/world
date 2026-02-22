@@ -1,4 +1,4 @@
-
+import { EntityId } from '../World';
 
 /**
  * Represents SPP Standard Data (std) for an Adjunct.
@@ -38,4 +38,5 @@ export interface AdjunctComponent {
     isInitialized: boolean;
     // We hold a reference to the specific Plugin module that handles the `transform` and `menu` logic for this adjunct type.
     logicModule: any | null;
+    parentBlockEntityId?: EntityId; // Reference to the block this adjunct belongs to
 }

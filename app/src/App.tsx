@@ -39,11 +39,21 @@ function App() {
     // Inject the ECS Sandbox Engine
     if (!loaderRef.current) {
       loaderRef.current = new SandboxLoader();
-      loaderRef.current.init('three_demo');
+
+      // Inject standard UI components (Bridge between React state and Engine)
+      const uiProvider = {
+        show: (type: string, content: any) => {
+          if (type === "toast") console.log("[HUD Toast]", content);
+          if (type === "dialog") console.log("[HUD Dialog]", content);
+        },
+        hide: (type: string) => console.log("[HUD Hide]", type)
+      };
+
+      loaderRef.current.init('three_demo', uiProvider);
 
       // Expose for verification/debugging
       (window as any).loader = loaderRef.current;
-      (window as any).world = (loaderRef.current as any).world;
+      (window as any).world = loaderRef.current.engine?.getWorld();
     }
   }, [wallet]);
 
@@ -71,12 +81,31 @@ function App() {
 
         // Update Logical Block Coordinates
         if (blockDisplayRef.current || compassBlockDisplayRef.current || minimapBlockDisplayRef.current) {
-          const coords = loaderRef.current.currentBlockCoordinate;
-          const text = `Block [${coords.x}, ${coords.y}] | ${coords.world}`;
+          const state = loaderRef.current.playerState;
+          const [bx, by] = state.block;
+          const [rx, ry, rz] = state.position;
+          const blockCount = loaderRef.current.getLoadedBlockCount();
 
-          if (blockDisplayRef.current) blockDisplayRef.current.innerText = text;
-          if (compassBlockDisplayRef.current) compassBlockDisplayRef.current.innerText = `[${coords.x}, ${coords.y}]`;
-          if (minimapBlockDisplayRef.current) minimapBlockDisplayRef.current.innerText = text;
+          const text = `BLOCK [${bx}, ${by}]`;
+          const subText = `REL X:${rx.toFixed(1)} Y:${ry.toFixed(1)} Z:${rz.toFixed(1)}`;
+
+          // Calculate Absolute World Coordinates (Global)
+          const blockSize = loaderRef.current.BLOCK_SIZE;
+          const gx = (bx - 1) * blockSize + rx;
+          const gy = (by - 1) * blockSize + ry;
+          const worldText = `WORLD X:${gx.toFixed(1)} Y:${gy.toFixed(1)}`;
+
+          if (compassBlockDisplayRef.current) {
+            compassBlockDisplayRef.current.innerHTML = `
+              <span class="text-[8px] text-cyan-500/50 font-bold uppercase tracking-[0.2em]">Live Telemetry</span>
+              <div class="flex flex-col items-center -space-y-0.5">
+                <span class="text-[13px] text-cyan-300 font-black tracking-wide">${text}</span>
+                <span class="text-[11px] text-white font-bold font-mono tracking-tight">${worldText}</span>
+                <span class="text-[10px] text-cyan-400/90 font-mono font-medium">${subText}</span>
+              </div>
+            `;
+          }
+          if (minimapBlockDisplayRef.current) minimapBlockDisplayRef.current.innerText = `${text} | world: ${state.world}`;
         }
       }
       animationId = requestAnimationFrame(updateHUD);
@@ -94,23 +123,21 @@ function App() {
 
       {/* 1. Underlying 3D Engine Canvas */}
       {/* Must use explicit ID 'three_demo' so SandboxLoader knows where to mount */}
-      <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
+      <div
+        id="three_demo"
+        className="absolute inset-0 z-0 w-full h-full cursor-crosshair"
+        onClick={() => {
+          if (!isMobile && loaderRef.current?.engine) {
+            loaderRef.current.engine.lock();
+          }
+        }}
+      ></div>
 
       {/* 2. Top Navigation / Status Overlay */}
       <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-start pointer-events-none">
 
-        {/* Left: Branding & Status */}
-        <div className="pointer-events-auto bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-2xl">
-          <h1 className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300 tracking-tight">
-            Septopus World
-          </h1>
-          <p className="text-xs text-gray-300 mt-1 font-medium bg-black/30 px-2 py-1 rounded inline-block">
-            {isMobile ? "Touch right screen to Look • Joystick to Move" : "Click screen to lock/unlock • WASD to Move"}
-          </p>
-          <div className="mt-2 text-sm font-mono text-green-400 drop-shadow-md">
-            <span ref={blockDisplayRef}>Block [2026, 222] | main</span>
-          </div>
-        </div>
+        {/* Left: Empty (Branding removed) */}
+        <div></div>
 
         {/* Right: Wallet & Compass */}
         <div className="flex flex-col gap-4 items-end pointer-events-auto">
@@ -162,10 +189,13 @@ function App() {
           <div
             onClick={() => setShowMinimap(!showMinimap)}
             ref={compassBlockDisplayRef}
-            className="text-[10px] font-mono font-bold text-cyan-300 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-cyan-500/30 mt-2 shadow-lg cursor-pointer hover:bg-cyan-500/20 hover:scale-105 active:scale-95 transition-all text-center flex flex-col items-center gap-1 group"
+            className="text-[10px] font-mono font-bold text-cyan-300 bg-black/60 border border-cyan-400/40 backdrop-blur-xl px-6 py-4 rounded-2xl mt-4 shadow-2xl cursor-pointer hover:border-cyan-400 transition-all text-center flex flex-col items-center gap-2 group min-w-[170px]"
           >
-            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-[0.2em] group-hover:text-cyan-400 transition-colors">Navigation Info</span>
-            <span>[2026, 222]</span>
+            {/* Initial placeholder content, will be overwritten by updateHUD */}
+            <span className="text-[8px] text-cyan-500/50 font-bold uppercase tracking-[0.2em]">Live Telemetry</span>
+            <span className="text-[13px] font-black tracking-wide">BLOCK [----, ----]</span>
+            <span className="text-[11px] text-white font-bold">WORLD X:0.0 Y:0.0</span>
+            <span className="text-[10px] text-cyan-400/90">REL X:0.0 Y:0.0 Z:0.0</span>
           </div>
 
         </div>

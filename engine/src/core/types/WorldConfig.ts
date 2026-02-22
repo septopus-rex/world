@@ -68,6 +68,7 @@ export interface WorldConfig {
         // Items & Size ceilings
         bag: { max: number };
         avatar: { max: number, scale: [number, number, number] };
+        extend: number; // Viewport loading radius
     };
 
     // Admin ban-list

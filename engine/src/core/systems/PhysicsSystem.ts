@@ -96,13 +96,6 @@ export class PhysicsSystem implements ISystem {
             trans.position[1] = nextY;
             trans.position[2] = nextZ;
 
-            // Ground floor bounds (Failsafe infinite fall)
-            if (trans.position[1] < 0) {
-                trans.position[1] = 0;
-                body.velocity[1] = 0;
-                body.isGrounded = true;
-            }
-
             // Friction (Deaccelerate XZ velocity smoothly if no input is holding it up)
             body.velocity[0] *= body.friction;
             body.velocity[2] *= body.friction;
