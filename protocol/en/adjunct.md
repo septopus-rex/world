@@ -18,53 +18,29 @@ Adjuncts are parsed and executed within an isolated environment (or sandbox) to 
 
 ## 2. Adjunct Interface Definition (API)
 
-Every Adjunct must export a standard JavaScript object containing specific functional domains: `hooks`, `transform`, `attribute`, `menu`, and `task`.
+Every Adjunct must export a standard object containing specific functional domains. In the modern TypeScript ECS implementation, this typically includes `hooks`, `transform`, and `menu`.
 
-```javascript
-const self = {
+```typescript
+export const CustomAdjunct = {
     hooks: {
-        reg: () => {},            // Provide adjunct metadata (name, version, events)
-        def: (data) => {},        // Cache initialization data/definitions
-        animate: (meshes, cfg) => {} // Handle custom animation loops
+        // Provide adjunct metadata (name, version, supported events like 'touch', 'in')
+        reg: () => {}            
     },
     transform: {
-        raw_std: (arr, cvt) => {},    // Raw on-chain data -> SPP Standard Data
-        std_raw: (arr) => {},         // SPP Standard Data -> Raw string data (for saving)
-        std_3d: (arr, elevation) => {}, // Standard Data -> Engine 3D Render Data
-        std_active: (arr, elevation, index) => {}, // Generate highlight/selection effects
-        std_2d: (stds, face, faces) => {} // Generate 2D map projections
-    },
-    attribute: {
-        add: (p, raw) => {},          // Add a new instance
-        set: (p, raw, limit) => {},   // Modify existing instance parameters
-        remove: (p, raw) => {},       // Remove an instance
-        combine: (p, row) => {},      // Merge properties
-        revise: (p, row, limit) => {} // Validate bounds (e.g., collision with terrain)
+        // Raw on-chain compressed array -> SPP Standard Data
+        raw_std: (arr: any[], cvt: number) => {},
+        // SPP Standard Data -> Raw compressed array (for saving to string)
+        std_raw: (arr: any[]) => {},
+        // Converts SPP Standard Data array into specific 3D render/engine parameters
+        std_3d: (stds: any[], elevation: number) => {} 
     },
     menu: {
-        pop: () => {},                // Return context menu configurations
-        sidebar: () => {}             // Return property editor form configurations
-    },
-    task: {
-        // Custom tasks callable by Triggers or Game Mode
-        hide: (meshes, cfg) => {},
-        show: (meshes, cfg) => {},
-        dance: (meshes, cfg) => {},
-        router: [
-            { method: "hide", gameonly: true },
-            { method: "show", gameonly: true }
-        ]
+        // Returns the sidebar property editor form configurations for the object
+        sidebar: (std: any) => {}             
     }
 };
-
-export default {
-    hooks: self.hooks,
-    transform: self.transform,
-    attribute: self.attribute,
-    menu: self.menu,
-    task: self.task
-};
 ```
+
 
 ---
 
