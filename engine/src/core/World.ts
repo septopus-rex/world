@@ -92,6 +92,29 @@ export class World {
         unlock: () => this.renderEngine.unlockControls?.()
     };
 
+    public minimap = {
+        setFollow: (follow: boolean) => {
+            const system = this.systems.find(s => s instanceof MinimapSystem) as MinimapSystem;
+            if (system) system.isFollowingPlayer = follow;
+        },
+        applyPan: (dx: number, dy: number) => {
+            const system = this.systems.find(s => s instanceof MinimapSystem) as MinimapSystem;
+            if (system) system.applyPan(dx, dy);
+        },
+        pickBlockFromMinimap: (ndcX: number, ndcY: number) => {
+            const system = this.systems.find(s => s instanceof MinimapSystem) as MinimapSystem;
+            return system ? system.pickBlockFromMinimap(ndcX, ndcY) : null;
+        },
+        get zoom() {
+            const system = (this as any).systems.find((s: any) => s instanceof MinimapSystem) as MinimapSystem;
+            return system ? system.zoom : 1.0;
+        },
+        set zoom(val: number) {
+            const system = (this as any).systems.find((s: any) => s instanceof MinimapSystem) as MinimapSystem;
+            if (system) system.zoom = val;
+        }
+    };
+
     // 5. Global Event Bus (Simplified)
     private listeners: Map<string, Function[]> = new Map();
 

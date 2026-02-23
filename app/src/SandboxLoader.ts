@@ -19,24 +19,18 @@ export interface SPPPlayerState {
 }
 
 
+import { DEFAULT_PLAYER_STATE, STORAGE_KEYS } from './Constants';
+
 export class SandboxLoader implements IDataSource {
     public engine: Engine | null = null;
-    private readonly STORAGE_KEY = "spp_player_state";
+    private readonly STORAGE_KEY = STORAGE_KEYS.PLAYER_STATE;
 
     // Registry of loaded block keys for tracking
     private loadedBlockKeys: Set<string> = new Set();
     private fetchingBlockKeys: Set<string> = new Set();
 
     // The player's full SPP state (Z-Up coordinate convention)
-    public playerState: SPPPlayerState = {
-        block: [2048, 2048],
-        world: 'main',
-        position: [8, 8, 0.5], // [X, Y, Z] -> [East, North, Altitude]
-        rotation: [0, 0, 0],
-        stop: { on: false, adjunct: "", index: 0 },
-        extend: 1, // Default loading radius (3x3)
-        posture: 0 // Standing
-    };
+    public playerState: SPPPlayerState = { ...DEFAULT_PLAYER_STATE };
 
     // Tracker for previously computed block to detect crossing
     private lastBlockKey: string = "";
@@ -76,8 +70,7 @@ export class SandboxLoader implements IDataSource {
         });
 
         this.engine.on("player:state", (state) => {
-            this.playerState = { ...this.playerState, ...state };
-            localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.playerState));
+            this._saveState(state);
         });
 
         // 3. Load persistence
@@ -147,7 +140,7 @@ export class SandboxLoader implements IDataSource {
         }
 
         // Logical culling in Engine
-        this.engine.getWorld()?.blocks.syncVisibility(requiredKeys);
+        (this.engine.getWorld() as any)?.blocks.syncVisibility(requiredKeys);
 
         // Fetch and inject missing blocks
         const missing = requiredKeys.filter(k => !this.loadedBlockKeys.has(k) && !this.fetchingBlockKeys.has(k));
@@ -199,9 +192,9 @@ export class SandboxLoader implements IDataSource {
         if (!this.engine) return;
         const world = this.engine.getWorld();
         if (!world) return;
-        world.pipeline.isMinimapActive = active;
+        (world as any).pipeline.isMinimapActive = active;
         if (active) {
-            world.minimap.setFollow(true);
+            (world as any).minimap.setFollow(true);
         }
     }
 
@@ -209,27 +202,39 @@ export class SandboxLoader implements IDataSource {
         if (!this.engine) return;
         const world = this.engine.getWorld();
         if (!world) return;
-        const currentZone = world.minimap.zoom;
+        const currentZone = (world as any).minimap.zoom;
         const nextZoom = Math.max(0.2, Math.min(10, currentZone + delta));
-        world.minimap.zoom = nextZoom;
+        (world as any).minimap.zoom = nextZoom;
     }
 
     public panMinimap(dx: number, dy: number) {
         if (!this.engine) return;
         const world = this.engine.getWorld();
         if (!world) return;
-        const scale = (120 / 600) / world.minimap.zoom;
-        world.minimap.applyPan(dx * scale, dy * scale);
-        world.minimap.setFollow(false);
+        const scale = (120 / 600) / (world as any).minimap.zoom;
+        (world as any).minimap.applyPan(dx * scale, dy * scale);
+        (world as any).minimap.setFollow(false);
     }
 
     public pickMinimapBlock(ndcX: number, ndcY: number) {
         if (!this.engine) return null;
-        return this.engine.getWorld()?.minimap.pickBlockFromMinimap(ndcX, ndcY);
+        return (this.engine.getWorld() as any)?.minimap.pickBlockFromMinimap(ndcX, ndcY);
     }
 
     public resetMinimapFollow() {
-        if (this.engine) this.engine.getWorld()?.minimap.setFollow(true);
+        if (this.engine) (this.engine.getWorld() as any)?.minimap.setFollow(true);
+    }
+
+    private _saveState(partial: Partial<SPPPlayerState>) {
+        this.playerState = { ...this.playerState, ...partial };
+
+        // Force Guard: Never allow extend to be less than 2
+        if (!this.playerState.extend || this.playerState.extend < 2) {
+            this.playerState.extend = 2;
+        }
+
+        console.log(`[Storage] Syncing player state (extend: ${this.playerState.extend})`, this.playerState);
+        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.playerState));
     }
 }
 

@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { TransformComponent, RigidBodyComponent, SolidComponent } from '../components/PlayerComponents';
 import { Vector3, Box3 } from '../utils/Math';
+import { ENGINE_CONSTANTS, PHYSICS_CONSTANTS } from '../Constants';
 
 /**
  * Basic Physics Collision System.
@@ -17,7 +18,7 @@ export class PhysicsSystem implements ISystem {
     private _wallBox = new Box3();
 
     // Constant parameters
-    public globalGravity = -9.81 * 2; // Doubled for game feel
+    public globalGravity = ENGINE_CONSTANTS.GRAVITY;
 
     public update(world: World, dt: number): void {
         const bodies = world.queryEntities("RigidBodyComponent");
@@ -67,8 +68,8 @@ export class PhysicsSystem implements ISystem {
             }
 
             // --- X-Axis pass ---
-            const epsilon = 0.05;
-            const margin = 0.01;
+            const epsilon = PHYSICS_CONSTANTS.EPSILON;
+            const margin = PHYSICS_CONSTANTS.MARGIN;
             this._playerPos.set(nextX + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
             this._playerBox.setFromCenterAndSize(this._playerPos, {
                 x: body.size[0] - margin * 2,

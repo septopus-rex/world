@@ -34,7 +34,7 @@ export const MockWorldNormal: WorldConfig = {
         },
         bag: { max: 100 },
         avatar: { max: 2097152, scale: [1, 1, 1] },
-        extend: 1 // 3x3 loading radius
+        extend: 2 // 5x5 loading radius
     },
     blacklist: [] // Nothing blocked
 };
