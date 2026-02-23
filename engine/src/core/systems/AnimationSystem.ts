@@ -17,7 +17,23 @@ export class AnimationSystem implements ISystem {
             const anim = world.getComponent<AnimationComponent>(entityId, "AnimationComponent");
             const transform = world.getComponent<TransformComponent>(entityId, "TransformComponent");
 
-            if (!anim || !transform || anim.isPaused) continue;
+            if (!anim || !transform) continue;
+
+            if (world.isEditMode && world.activeEditBlockId !== null) {
+                // Check if this entity is an adjunct in the active edit block
+                const adj = world.getComponent<any>(entityId, "AdjunctComponent");
+                if (adj && adj.parentBlockEntityId === world.activeEditBlockId) {
+                    // In edit mode, animations of the active block are paused and reset to initial state
+                    if (anim.initialValues) {
+                        if (anim.initialValues.position) transform.position = [anim.initialValues.position[0], anim.initialValues.position[1], anim.initialValues.position[2]];
+                        if (anim.initialValues.rotation) transform.rotation = [anim.initialValues.rotation[0], anim.initialValues.rotation[1], anim.initialValues.rotation[2]];
+                        if (anim.initialValues.scale) transform.scale = [anim.initialValues.scale[0], anim.initialValues.scale[1], anim.initialValues.scale[2]];
+                    }
+                    continue;
+                }
+            }
+
+            if (anim.isPaused) continue;
 
             this.processAnimation(world, entityId, anim, transform, deltaTime);
         }

@@ -170,6 +170,10 @@ export class SandboxLoader implements IDataSource {
         this.engine?.setMoveIntent(x, y);
     }
 
+    public toggleEditMode(active: boolean) {
+        this.engine?.setEditMode(active);
+    }
+
     public triggerPlayerJump() {
         this.engine?.jump();
     }
@@ -233,7 +237,7 @@ export class SandboxLoader implements IDataSource {
             this.playerState.extend = 2;
         }
 
-        console.log(`[Storage] Syncing player state (extend: ${this.playerState.extend})`, this.playerState);
+        // console.log(`[Storage] Syncing player state (extend: ${this.playerState.extend})`, this.playerState);
         localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.playerState));
     }
 }

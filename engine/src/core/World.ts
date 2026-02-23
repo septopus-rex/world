@@ -18,6 +18,7 @@ import { TriggerSystem } from './systems/TriggerSystem';
 import { InventorySystem } from './systems/InventorySystem';
 import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
+import { EditSystem } from './systems/EditSystem';
 
 // --- ECS CORE DEFINITIONS ---
 export type EntityId = number;
@@ -64,6 +65,8 @@ export class World {
     private isRunning: boolean = false;
     public time: number = 0.5; // normalized 0-1
     public weather: string = 'clear';
+    public isEditMode: boolean = false;
+    public activeEditBlockId: EntityId | null = null;
 
     // Legacy Bridge for SandboxLoader compatibility
     public blocks = {
@@ -129,8 +132,8 @@ export class World {
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 
         // Register Core Systems
+        this.addSystem(new RaycastInteractionSystem()); // Process raycasts before input flags are cleared
         this.addSystem(new PlayerControlSystem(this, this.renderEngine.getDomElement()));
-        this.addSystem(new RaycastInteractionSystem());
         this.addSystem(new TriggerSystem());
         this.addSystem(new InventorySystem());
         this.addSystem(new PhysicsSystem());
@@ -142,6 +145,7 @@ export class World {
         this.addSystem(new ParticleEffectSystem());
         this.addSystem(new MinimapSystem());
         this.addSystem(new ItemDropSystem());
+        this.addSystem(new EditSystem(this));
 
         // Start Loop automatically
         this.start();
@@ -218,6 +222,11 @@ export class World {
         this.isRunning = false;
     }
 
+    public setEditMode(active: boolean): void {
+        this.isEditMode = active;
+        this.emitSimple("world:edit_mode_changed", { active });
+    }
+
     private runLoop(): void {
         const loop = (now: number) => {
             if (!this.isRunning) return;
@@ -270,12 +279,12 @@ export class World {
     /**
      * High Level Player Setup
      */
-    public setupPlayer(position: [number, number, number]): EntityId {
+    public setupPlayer(position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]): EntityId {
         const player = this.createEntity();
 
         this.addComponent<TransformComponent>(player, "TransformComponent", {
             position: [...position],
-            rotation: [0, 0, 0],
+            rotation: [...rotation],
             scale: [1, 1, 1]
         });
 
@@ -297,7 +306,8 @@ export class World {
             interactPrimary: false, interactSecondary: false,
             lookUp: false, lookDown: false, lookLeft: false, lookRight: false,
             movementIntent: [0, 0, 0],
-            lookPitchDelta: 0, lookYawDelta: 0
+            lookPitchDelta: 0, lookYawDelta: 0,
+            mouseNDC: [0, 0]
         });
 
         this.addComponent<CameraComponent>(player, "CameraComponent", {
@@ -313,6 +323,10 @@ export class World {
             handle: avatarHandle,
             visible: true
         });
+
+        // Initial Camera Sync
+        this.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
+        this.renderEngine.setMainCameraPosition(position[0], position[1] + 1.7, position[2]);
 
         return player;
     }

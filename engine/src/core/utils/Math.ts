@@ -50,6 +50,13 @@ export class Vector3 implements IVector3 {
         return this.x * this.x + this.y * this.y + this.z * this.z;
     }
 
+    distanceToSquared(v: IVector3): number {
+        const dx = this.x - v.x;
+        const dy = this.y - v.y;
+        const dz = this.z - v.z;
+        return dx * dx + dy * dy + dz * dz;
+    }
+
     normalize(): this {
         const len = Math.sqrt(this.lengthSq());
         if (len > 0) this.multiplyScalar(1 / len);

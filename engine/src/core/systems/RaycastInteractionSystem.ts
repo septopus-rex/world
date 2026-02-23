@@ -20,8 +20,9 @@ export class RaycastInteractionSystem implements ISystem {
 
         if (!cameraComp || !cameraComp.active || !inputComp) return;
 
-        // Perform Raycast via RenderEngine (0,0 is center of screen)
-        const hit = world.renderEngine.castRayFromCamera(0, 0);
+        // Perform Raycast via RenderEngine
+        // Use mouseNDC (mapping mouse clicks to world objects)
+        const hit = world.renderEngine.castRayFromCamera(inputComp.mouseNDC[0], inputComp.mouseNDC[1]);
 
         // 3. Clear Hover states globally
         const targets = world.getEntitiesWith(["RaycastTargetComponent"]);
@@ -42,9 +43,8 @@ export class RaycastInteractionSystem implements ISystem {
                 hitTargetComp.isHovered = true;
                 hitTargetComp.distanceToCamera = hit.distance;
 
-                // 5. Fire interaction events based on player input 
                 if (inputComp.interactPrimary) {
-                    console.log(`[Raycast ECS] Interacted with Entity ${hitEntityId}`, hitTargetComp.metadata);
+                    console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);
                     world.emitSimple("interact", {
                         entityId: hitEntityId,
                         metadata: hitTargetComp.metadata,

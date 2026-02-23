@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent, SolidComponent } from '../components/PlayerComponents';
+import { RaycastTargetComponent } from '../components/InteractionComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
@@ -45,9 +46,18 @@ export class BlockSystem implements ISystem {
         // CRITICAL: Block group is placed at the origin of the block.
         const group = world.renderEngine.createGroup();
         world.renderEngine.setObjectPosition(group, minX, block.elevation || 0, minZ);
+        world.renderEngine.setObjectUserData(group, "entityId", eid);
 
         block.group = group;
         this.blockGroups.set(bKey, group);
+
+        // Add Raycast Target
+        world.addComponent<RaycastTargetComponent>(eid, "RaycastTargetComponent", {
+            type: "block",
+            metadata: { x: block.x, y: block.y },
+            isHovered: false,
+            distanceToCamera: Infinity
+        });
 
         // 1. Process Adjuncts
         const adjunctsToInit: any[] = [];

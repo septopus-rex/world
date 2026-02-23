@@ -26,15 +26,16 @@ export class Engine {
         const config = await this.services.api.world(worldIndex);
         const start = playerStart || config.player.start;
         const enginePos = Coords.sppToEngine(start.position, start.block);
+        const engineRot = Coords.sppRotationToEngine(start.rotation || [0, 0, 0]);
 
-        config.player.start = { ...start, position: enginePos };
+        config.player.start = { ...start, position: enginePos, rotation: engineRot };
         config.world = config.world || {};
         config.world.containerId = this.containerId;
 
         this.world = new World(config);
 
         // 4. Initialize Player
-        const player = this.world.setupPlayer(config.player.start.position);
+        const player = this.world.setupPlayer(config.player.start.position, config.player.start.rotation);
 
         // Find PlayerControlSystem and attach
         const controlSystem = (this.world as any).systems.find((s: any) => s instanceof PlayerControlSystem) as PlayerControlSystem;
@@ -108,6 +109,10 @@ export class Engine {
 
     public unlock() {
         this.world?.controls.unlock();
+    }
+
+    public setEditMode(active: boolean) {
+        this.world?.setEditMode(active);
     }
 
     public dispose() {

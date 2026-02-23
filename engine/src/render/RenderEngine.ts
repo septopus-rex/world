@@ -141,6 +141,10 @@ export class RenderEngine {
         (group as THREE.Group).add(object as THREE.Object3D);
     }
 
+    public setObjectUserData(handle: RenderHandle, key: string, value: any): void {
+        (handle as THREE.Object3D).userData[key] = value;
+    }
+
     public updateObjectAppearance(handle: RenderHandle, color?: number, opacity?: number): void {
         (handle as THREE.Object3D).traverse((child) => {
             if (child instanceof THREE.Mesh && child.material) {
@@ -277,6 +281,7 @@ export class RenderEngine {
         });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(0, 0.9, 0); // Position it so feet are at origin
+        mesh.raycast = () => { }; // Ignore for raycasting
         this.scene.add(mesh);
         return mesh;
     }
@@ -295,6 +300,60 @@ export class RenderEngine {
         return mesh;
     }
 
+    public createSelectionHighlight(target: RenderHandle, color: number = 0x00ffff): RenderHandle {
+        const helper = new THREE.BoxHelper(target as THREE.Object3D, new THREE.Color(color));
+        helper.scale.set(1.1, 1.1, 1.1);
+        helper.raycast = () => { }; // Ignore selection rays
+        this.scene.add(helper);
+        return helper;
+    }
+
+    /**
+     * Helper Visualization
+     */
+    public createBlockHighlight(parent: RenderHandle, size: number): RenderHandle {
+        const group = new THREE.Group();
+        const height = 1.0;
+        const opacity = 0.5;
+
+        const planes = [
+            { dir: 'north', color: 0xffff00, pos: [0, height / 2, -size / 2], rot: [0, 0, 0] },
+            { dir: 'south', color: 0xff0000, pos: [0, height / 2, size / 2], rot: [0, Math.PI, 0] },
+            { dir: 'east', color: 0x0000ff, pos: [size / 2, height / 2, 0], rot: [0, -Math.PI / 2, 0] },
+            { dir: 'west', color: 0x00ff00, pos: [-size / 2, height / 2, 0], rot: [0, Math.PI / 2, 0] }
+        ];
+
+        planes.forEach(p => {
+            const geo = new THREE.PlaneGeometry(size, height);
+            const mat = new THREE.MeshBasicMaterial({
+                color: p.color,
+                transparent: true,
+                opacity: opacity,
+                side: THREE.DoubleSide
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(p.pos[0], p.pos[1], p.pos[2]);
+            mesh.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
+            // Ensure visual helpers don't block selection rays
+            mesh.raycast = () => { };
+            group.add(mesh);
+        });
+
+        if (parent) {
+            (parent as THREE.Object3D).add(group);
+        } else {
+            this.scene.add(group);
+        }
+        return group;
+    }
+
+    public createGridHelper(size: number, divisions: number, color1: number = 0x444444, color2: number = 0x888888): RenderHandle {
+        const grid = new THREE.GridHelper(size, divisions, color1, color2);
+        grid.raycast = () => { };
+        this.scene.add(grid);
+        return grid;
+    }
+
     /**
      * Interaction API
      */
@@ -304,12 +363,16 @@ export class RenderEngine {
 
         const intersects = raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
-            if (hit.object && hit.object.userData && hit.object.userData.entityId !== undefined) {
-                return {
-                    entityId: hit.object.userData.entityId,
-                    distance: hit.distance,
-                    point: [hit.point.x, hit.point.y, hit.point.z]
-                };
+            let current: THREE.Object3D | null = hit.object;
+            while (current) {
+                if (current.userData && current.userData.entityId !== undefined) {
+                    return {
+                        entityId: current.userData.entityId,
+                        distance: hit.distance,
+                        point: [hit.point.x, hit.point.y, hit.point.z]
+                    };
+                }
+                current = current.parent;
             }
         }
         return null;
@@ -321,12 +384,16 @@ export class RenderEngine {
 
         const intersects = raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
-            if (hit.object && hit.object.userData && hit.object.userData.entityId !== undefined) {
-                return {
-                    entityId: hit.object.userData.entityId,
-                    distance: hit.distance,
-                    point: [hit.point.x, hit.point.y, hit.point.z]
-                };
+            let current: THREE.Object3D | null = hit.object;
+            while (current) {
+                if (current.userData && current.userData.entityId !== undefined) {
+                    return {
+                        entityId: current.userData.entityId,
+                        distance: hit.distance,
+                        point: [hit.point.x, hit.point.y, hit.point.z]
+                    };
+                }
+                current = current.parent;
             }
         }
         return null;
@@ -410,6 +477,17 @@ export class RenderEngine {
 
         points.geometry.attributes.position.needsUpdate = true;
         (points.material as THREE.PointsMaterial).opacity = opacity;
+    }
+
+    public getObjectByEntityId(id: string | number): RenderHandle | null {
+        let found: THREE.Object3D | null = null;
+        this.scene.traverse((obj) => {
+            if (found) return;
+            if (obj.userData && obj.userData.entityId === id) {
+                found = obj;
+            }
+        });
+        return found;
     }
 
     public lockControls(): void {

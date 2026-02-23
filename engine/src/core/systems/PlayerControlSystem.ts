@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComponent, AvatarComponent } from '../components/PlayerComponents';
 import { Vector3 } from '../utils/Math';
+import { Coords } from '../utils/Coords';
 
 /**
  * ECS System for Player Control
@@ -27,6 +28,9 @@ export class PlayerControlSystem implements ISystem {
     // Internal state cache to prevent GC overhead
     private _velocity = new Vector3();
     private _direction = new Vector3();
+    private _lastPos = new Vector3();
+    private _lastRot = [0, 0, 0];
+    private _stateEmitThreshold = 0.5; // Update every 0.5m or roughly 0.1rad
 
     constructor(world: World, domElement: HTMLElement) {
         this.world = world;
@@ -53,7 +57,8 @@ export class PlayerControlSystem implements ISystem {
                 interactPrimary: false, interactSecondary: false,
                 lookUp: false, lookDown: false, lookLeft: false, lookRight: false,
                 movementIntent: [0, 0, 0],
-                lookPitchDelta: 0, lookYawDelta: 0
+                lookPitchDelta: 0, lookYawDelta: 0,
+                mouseNDC: [0, 0]
             });
         }
     }
@@ -191,9 +196,25 @@ export class PlayerControlSystem implements ISystem {
         this.isMouseDown = true;
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
+
+        // Trigger interaction on click
+        if (this.controlledEntity) {
+            const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
+            if (input) input.interactPrimary = true;
+        }
     }
 
     private onMouseMove(event: MouseEvent): void {
+        // Update Mouse NDC for picking
+        if (this.controlledEntity) {
+            const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
+            if (input) {
+                const rect = this.domElement.getBoundingClientRect();
+                input.mouseNDC[0] = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                input.mouseNDC[1] = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            }
+        }
+
         if (!this.isMouseDown) return;
 
         const dx = event.clientX - this.lastMouseX;
@@ -371,6 +392,26 @@ export class PlayerControlSystem implements ISystem {
             this.world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], trans.position[1], trans.position[2]);
             this.world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1], 0); // Avatar only follows yaw
             this.world.renderEngine.setObjectVisible(avatar.handle, avatar.visible);
+        }
+
+        // 8. Emit Player State for Persistence if significantly changed
+        const distSq = this._lastPos.distanceToSquared(new Vector3(trans.position[0], trans.position[1], trans.position[2]));
+        const rotDist = Math.abs(trans.rotation[0] - this._lastRot[0]) +
+            Math.abs(trans.rotation[1] - this._lastRot[1]) +
+            Math.abs(trans.rotation[2] - this._lastRot[2]);
+
+        if (distSq > this._stateEmitThreshold * this._stateEmitThreshold || rotDist > 0.05) {
+            const spp = Coords.engineToSpp(trans.position);
+            const sppRot = Coords.engineRotationToSpp(trans.rotation);
+
+            world.emitSimple("player:state", {
+                block: spp.block,
+                position: spp.pos,
+                rotation: sppRot
+            });
+
+            this._lastPos.set(trans.position[0], trans.position[1], trans.position[2]);
+            this._lastRot = [...trans.rotation];
         }
 
         // Clear one-frame interaction flags

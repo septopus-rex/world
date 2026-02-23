@@ -74,7 +74,7 @@ const transform: AdjunctTransform = {
             const resId = (row.material?.resource as any) || 0;
             let color = 0x888888; // Default Gray
 
-            if (resId === 10) color = 0x228b22; // Forest Green (Ground)
+            if (resId === 10) color = 0xeeeeee; // Grey-White (Ground)
             if (resId === 1) color = 0x555555; // Dark Gray (Pillar)
             if (resId === 2) color = 0x3366ff; // Blue (Avatar/Float)
             if (resId === 3) color = 0xff0000; // Red (Flash)

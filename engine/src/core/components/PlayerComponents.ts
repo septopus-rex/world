@@ -36,6 +36,9 @@ export interface InputStateComponent {
     // Looking Intent (Pitch & Yaw changes requested by mouse)
     lookYawDelta: number;
     lookPitchDelta: number;
+
+    // Mouse Screen Position for picking (-1 to 1)
+    mouseNDC: [number, number];
 }
 
 // -----------------------------------------------------------------------------

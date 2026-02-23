@@ -61,4 +61,26 @@ export class Coords {
             sppSize[1]  // depth (North)
         ];
     }
+
+    /**
+     * SPP Rotation [X=Pitch, Y=Yaw, Z=Roll] -> Engine [X=Pitch, Y=Yaw, Z=Roll]
+     */
+    public static sppRotationToEngine(sppRot: [number, number, number]): [number, number, number] {
+        return [
+            sppRot[0], // Pitch
+            sppRot[1], // Yaw
+            sppRot[2]  // Roll
+        ];
+    }
+
+    /**
+     * Engine Rotation [X=Pitch, Y=Yaw, Z=Roll] -> SPP [X=Pitch, Y=Yaw, Z=Roll]
+     */
+    public static engineRotationToSpp(engineRot: [number, number, number]): [number, number, number] {
+        return [
+            engineRot[0], // Pitch
+            engineRot[1], // Yaw
+            engineRot[2]  // Roll
+        ];
+    }
 }

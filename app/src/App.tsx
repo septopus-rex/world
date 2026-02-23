@@ -17,6 +17,7 @@ function App() {
   const [showMinimap, setShowMinimap] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Minimap Drag State
   const isDraggingMap = useRef(false);
@@ -64,6 +65,13 @@ function App() {
       loaderRef.current.toggleMinimap(showMinimap);
     }
   }, [showMinimap]);
+
+  // Sync Edit Mode
+  useEffect(() => {
+    if (loaderRef.current) {
+      loaderRef.current.toggleEditMode(isEditMode);
+    }
+  }, [isEditMode]);
 
   // High performance HUD animation loop
   useEffect(() => {
@@ -334,6 +342,17 @@ function App() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 group-hover:animate-pulse"></span>
           Reset State
+        </button>
+
+        <button
+          onClick={() => setIsEditMode(!isEditMode)}
+          className={`px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl ${isEditMode
+              ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300'
+              : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
+            }`}
+        >
+          <div className={`w-2 h-2 rounded-full ${isEditMode ? 'bg-yellow-400 animate-pulse' : 'bg-cyan-500'}`}></div>
+          {isEditMode ? 'EXIT EDIT' : 'ENTER EDIT'}
         </button>
       </div>
 

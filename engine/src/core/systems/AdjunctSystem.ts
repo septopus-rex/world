@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
+import { RaycastTargetComponent } from '../components/InteractionComponents';
 import { Coords } from '../utils/Coords';
 import { MeshFactory } from '../../render/MeshFactory';
 import { RenderHandle } from '../types/Adjunct';
@@ -67,6 +68,7 @@ export class AdjunctSystem implements ISystem {
         // 1. Create Handle
         const block = adjunct.parentBlockEntityId ? world.getComponent<any>(adjunct.parentBlockEntityId, "BlockComponent") : null;
         const meshGroup = world.renderEngine.createGroup(block?.group);
+        world.renderEngine.setObjectUserData(meshGroup, "entityId", entityId);
 
         // Position relative to parent block group
         const localPos = Coords.localSppToEngine([std.ox, std.oy, std.oz]);
@@ -143,6 +145,17 @@ export class AdjunctSystem implements ISystem {
                         });
                     }
                 }
+
+                // Add Raycast Target for selection
+                world.addComponent<RaycastTargetComponent>(entityId, "RaycastTargetComponent", {
+                    type: "adjunct",
+                    metadata: {
+                        index: adjunct.stdData.index,
+                        name: adjunct.adjunctId
+                    },
+                    isHovered: false,
+                    distanceToCamera: Infinity
+                });
             } catch (error) {
                 console.error(`[AdjunctSystem] Failed for ${adjunct.adjunctId}.`, error);
             }
