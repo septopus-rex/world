@@ -49,8 +49,10 @@ export class BlockSystem implements ISystem {
         if (!hasGround) {
             const groundId = world.createEntity();
             // Center of the 16x16 area
+            // Engine Z = -SPP Y. So if block represents Y in [minY, maxY], its Engine Z is [-maxY, -minY].
+            // Center of block is (minX + 8, elevation, minZ - 8)
             world.addComponent<TransformComponent>(groundId, "TransformComponent", {
-                position: [minX + 8, block.elevation || 0, minZ + 8],
+                position: [minX + 8, block.elevation || 0, minZ - 8],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1]
             });
@@ -83,11 +85,12 @@ export class BlockSystem implements ISystem {
             const adjId = world.createEntity();
 
             const localPos = data.params.position || [0, 0, 0];
-            // Protocol Pos [X, Y, Z] -> Engine Pos [X, Z, Y]
+            // Protocol Pos [X(East), Y(North), Z(Alt)] -> Engine Pos [X, Y, -Z]
+            // Relative North (+Y) -> Engine -Z
             const finalWorldPos: [number, number, number] = [
                 localPos[0] + minX,
-                (localPos[2] || 0) + (block.elevation || 0), // Z(Height) -> Y + Block Elevation
-                localPos[1] + minZ  // Y(North) -> Z
+                (localPos[2] || 0) + (block.elevation || 0) + 0.05, // Small offset above ground
+                minZ - localPos[1] // Y(North) -> -Z
             ];
 
             world.addComponent<TransformComponent>(adjId, "TransformComponent", {

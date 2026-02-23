@@ -6,6 +6,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import SeptopusContract from "./lib/contract";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { SandboxLoader } from './SandboxLoader';
+import { Coords } from '../../engine/src/core/utils/Coords';
 import { useIsMobile } from './lib/useIsMobile';
 import { Joystick } from './components/Joystick';
 
@@ -90,7 +91,7 @@ function App() {
           const subText = `REL X:${rx.toFixed(1)} Y:${ry.toFixed(1)} Z:${rz.toFixed(1)}`;
 
           // Calculate Absolute World Coordinates (Global)
-          const blockSize = loaderRef.current.BLOCK_SIZE;
+          const blockSize = Coords.BLOCK_SIZE;
           const gx = (bx - 1) * blockSize + rx;
           const gy = (by - 1) * blockSize + ry;
           const worldText = `WORLD X:${gx.toFixed(1)} Y:${gy.toFixed(1)}`;
@@ -125,12 +126,7 @@ function App() {
       {/* Must use explicit ID 'three_demo' so SandboxLoader knows where to mount */}
       <div
         id="three_demo"
-        className="absolute inset-0 z-0 w-full h-full cursor-crosshair"
-        onClick={() => {
-          if (!isMobile && loaderRef.current?.engine) {
-            loaderRef.current.engine.lock();
-          }
-        }}
+        className="absolute inset-0 z-0 w-full h-full"
       ></div>
 
       {/* 2. Top Navigation / Status Overlay */}

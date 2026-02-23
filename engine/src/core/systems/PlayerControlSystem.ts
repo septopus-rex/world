@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { PointerLockControls } from 'three/examples/jsm/controls/PointerLockControls.js';
 import { World, ISystem, EntityId } from '../World';
 import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComponent } from '../components/PlayerComponents';
 
@@ -9,7 +8,7 @@ import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComp
  * DOES NOT APPLY COLLISION. PhysicsSystem handles application.
  */
 export class PlayerControlSystem implements ISystem {
-    private controls: PointerLockControls;
+    private domElement: HTMLElement;
     private world: World;
     private camera: THREE.Camera;
     private controlledEntity: EntityId | null = null;
@@ -23,6 +22,8 @@ export class PlayerControlSystem implements ISystem {
     private touchLookActive: boolean = false;
     private activeLookTouchId: number | null = null;
     private isMouseDown: boolean = false;
+    private lastMouseX: number = 0;
+    private lastMouseY: number = 0;
 
     // Internal state cache to prevent GC overhead
     private _velocity = new THREE.Vector3();
@@ -31,9 +32,10 @@ export class PlayerControlSystem implements ISystem {
     constructor(world: World, camera: THREE.Camera, domElement: HTMLElement) {
         this.world = world;
         this.camera = camera;
+        this.domElement = domElement;
 
-        // Initialize the Three.js native FPS controller
-        this.controls = new PointerLockControls(camera, domElement);
+        // Force 'YXZ' rotation order to prevent Gimbal Lock and tilting/roll issues
+        this.camera.rotation.order = 'YXZ';
 
         // Bind raw DOM events
         this.bindEvents(domElement);
@@ -58,15 +60,15 @@ export class PlayerControlSystem implements ISystem {
     }
 
     public lock(): void {
-        this.controls.lock();
+        // No longer using internal PointerLockControls.lock()
     }
 
     public unlock(): void {
-        this.controls.unlock();
+        // No longer using internal PointerLockControls.unlock()
     }
 
     public isLocked(): boolean {
-        return this.controls.isLocked;
+        return false;
     }
 
     /**
@@ -76,11 +78,8 @@ export class PlayerControlSystem implements ISystem {
         if (!this.controlledEntity) return;
         const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
         if (input) {
-            const deadzone = 0.2;
-            input.right = x > deadzone;
-            input.left = x < -deadzone;
-            input.forward = y > deadzone;
-            input.backward = y < -deadzone;
+            input.movementIntent[0] = x;
+            input.movementIntent[2] = y;
         }
     }
 
@@ -102,22 +101,36 @@ export class PlayerControlSystem implements ISystem {
         document.addEventListener('keyup', this.keyupHandler, false);
         document.addEventListener('mouseup', this.mouseUpHandler, false);
 
-        // PointerLock handles desktop look. No manual drag needed.
+        // Desktop Drag-to-Look
+        domElement.addEventListener('mousedown', this._onMouseDown, false);
+        domElement.addEventListener('mousemove', this._onMouseMove, false);
 
         // Touch Listeners (Mobile compatibility)
-        domElement.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
-        domElement.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
-        domElement.addEventListener('touchend', (e) => this.onTouchEnd(e), { passive: false });
-        // Also handle touch cancel to prevent stuck looking
-        domElement.addEventListener('touchcancel', (e) => this.onTouchEnd(e), { passive: false });
+        domElement.addEventListener('touchstart', this._onTouchStart, { passive: false });
+        domElement.addEventListener('touchmove', this._onTouchMove, { passive: false });
+        domElement.addEventListener('touchend', this._onTouchEnd, { passive: false });
+        domElement.addEventListener('touchcancel', this._onTouchEnd, { passive: false });
     }
+
+    // Bind methods to maintain 'this' context for cleaner removal
+    private _onMouseDown = (e: MouseEvent) => this.onMouseDown(e);
+    private _onMouseMove = (e: MouseEvent) => this.onMouseMove(e);
+    private _onTouchStart = (e: TouchEvent) => this.onTouchStart(e);
+    private _onTouchMove = (e: TouchEvent) => this.onTouchMove(e);
+    private _onTouchEnd = (e: TouchEvent) => this.onTouchEnd(e);
 
     public dispose(): void {
         document.removeEventListener('keydown', this.keydownHandler);
         document.removeEventListener('keyup', this.keyupHandler);
         document.removeEventListener('mouseup', this.mouseUpHandler);
-        // Note: PointerLockControls internally should handle its own cleanup via its own dispose or unlock
-        this.controls.dispose();
+
+        // Remove element-level listeners
+        this.domElement.removeEventListener('mousedown', this._onMouseDown);
+        this.domElement.removeEventListener('mousemove', this._onMouseMove);
+        this.domElement.removeEventListener('touchstart', this._onTouchStart);
+        this.domElement.removeEventListener('touchmove', this._onTouchMove);
+        this.domElement.removeEventListener('touchend', this._onTouchEnd);
+        this.domElement.removeEventListener('touchcancel', this._onTouchEnd);
     }
 
     private onTouchStart(event: TouchEvent): void {
@@ -155,12 +168,9 @@ export class PlayerControlSystem implements ISystem {
         const yawDelta = -dx * 0.005;
         const pitchDelta = -dy * 0.005;
 
-        this.controls.getObject().rotation.y += yawDelta;
-
-        // Clamp the vertical pitch to avoid flipping over backward/forward (approx +/- 90 degrees)
-        const pitchObj = this.controls.getObject().children[0];
-        pitchObj.rotation.x += pitchDelta;
-        pitchObj.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, pitchObj.rotation.x));
+        this.camera.rotation.y += yawDelta;
+        this.camera.rotation.x += pitchDelta;
+        this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
     }
 
     private onTouchEnd(event: TouchEvent): void {
@@ -174,6 +184,29 @@ export class PlayerControlSystem implements ISystem {
                 break;
             }
         }
+    }
+
+    private onMouseDown(event: MouseEvent): void {
+        this.isMouseDown = true;
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+    }
+
+    private onMouseMove(event: MouseEvent): void {
+        if (!this.isMouseDown) return;
+
+        const dx = event.clientX - this.lastMouseX;
+        const dy = event.clientY - this.lastMouseY;
+
+        this.lastMouseX = event.clientX;
+        this.lastMouseY = event.clientY;
+
+        const yawDelta = -dx * 0.005;
+        const pitchDelta = -dy * 0.005;
+
+        this.camera.rotation.y += yawDelta;
+        this.camera.rotation.x += pitchDelta;
+        this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
     }
 
     private onMouseUp(event: MouseEvent): void {
@@ -239,12 +272,21 @@ export class PlayerControlSystem implements ISystem {
 
         if (!input || !body || !trans) return;
 
-        // 1. Calculate the intended velocity vector based on keys
+        // 1. Calculate the intended velocity vector based on keys & joystick
         this._velocity.set(0, 0, 0);
         this._direction.set(0, 0, 0);
 
-        this._direction.z = Number(input.forward) - Number(input.backward);
-        this._direction.x = Number(input.right) - Number(input.left);
+        // A. Keyboard Intent
+        let kbZ = Number(input.forward) - Number(input.backward);
+        let kbX = Number(input.right) - Number(input.left);
+
+        // B. Joystick Intent (API driven)
+        let joyX = input.movementIntent[0];
+        let joyZ = input.movementIntent[2];
+
+        // Combine inputs (Keyboard usually takes precedence or they add up)
+        this._direction.z = kbZ !== 0 ? kbZ : joyZ;
+        this._direction.x = kbX !== 0 ? kbX : joyX;
 
         // --- Gamepad Support ---
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -288,7 +330,9 @@ export class PlayerControlSystem implements ISystem {
             this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
         }
 
-        this._direction.normalize(); // Ensure diagonal isn't faster
+        if (this._direction.lengthSq() > 0) {
+            this._direction.normalize(); // Ensure diagonal isn't faster
+        }
 
         // 2. Apply Speed rules & rotate into camera space
         const speed = input.run ? body.maxSpeedRun : body.maxSpeedWalk;

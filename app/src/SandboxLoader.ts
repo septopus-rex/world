@@ -31,6 +31,7 @@ export class SandboxLoader implements IDataSource {
 
     // Registry of loaded block keys for tracking
     private loadedBlockKeys: Set<string> = new Set();
+    private fetchingBlockKeys: Set<string> = new Set();
 
     // The player's full SPP state (Z-Up coordinate convention)
     public playerState: SPPPlayerState = {
@@ -101,16 +102,11 @@ export class SandboxLoader implements IDataSource {
 
         const world = this.engine.getWorld();
 
-        // 5. Wait for first block to be VISUALLY ready
-
-        // 6. Force initial neighborhood request and WAIT for first block to be VISUALLY ready
+        // 5. Setup "Block Ready" Promise
         const initialBKey = `${this.playerState.block[0]}_${this.playerState.block[1]}`;
-
-        console.log(`[Loader] Waiting for initial block ${initialBKey}...`);
-
         const blockReadyPromise = new Promise<void>((resolve) => {
             const onBlockReady = (event: any) => {
-                const blockEntityId = event.payload.blockId;
+                const blockEntityId = event.blockId;
                 const block = world?.getComponent<any>(blockEntityId, "BlockComponent");
                 if (block && block.x === this.playerState.block[0] && block.y === this.playerState.block[1]) {
                     this.engine?.off("world:block_ready", onBlockReady);
@@ -123,12 +119,17 @@ export class SandboxLoader implements IDataSource {
             setTimeout(resolve, 3000);
         });
 
+        // 6. Manual Initial Fetch (Inject entities BEFORE starting physics to prevent falling)
+        console.log(`[Loader] Pre-loading initial neighborhood for ${initialBKey}...`);
         await this.handleGridRequest(this.playerState.block);
-        await blockReadyPromise;
 
-        // 7. Finally start the physics simulation
-        console.log("[Loader] World Ready. Starting Engine.");
+        // 7. Start the engine loop so ECS systems can process injection & render
+        console.log("[Loader] Systems ready. Starting Engine loop.");
         this.engine.start();
+
+        // 8. Wait for the visual signal that the primary block is rendered
+        await blockReadyPromise;
+        console.log("[Loader] World Ready.");
     }
 
     private async handleGridRequest(center: [number, number]) {
@@ -149,7 +150,12 @@ export class SandboxLoader implements IDataSource {
         this.engine.getWorld()?.blocks.syncVisibility(requiredKeys);
 
         // Fetch and inject missing blocks
-        const missing = requiredKeys.filter(k => !this.loadedBlockKeys.has(k));
+        const missing = requiredKeys.filter(k => !this.loadedBlockKeys.has(k) && !this.fetchingBlockKeys.has(k));
+        if (missing.length === 0) return;
+
+        // Lock these keys so parallel requests (e.g. from event + init) don't duplicate
+        missing.forEach(k => this.fetchingBlockKeys.add(k));
+
         const results = await Promise.all(missing.map(k => {
             const [cx, cy] = k.split('_').map(Number);
             return fetchMockBlock(cx, cy);
@@ -157,7 +163,9 @@ export class SandboxLoader implements IDataSource {
 
         results.forEach(data => {
             this.engine?.injectBlock(data);
-            this.loadedBlockKeys.add(`${data.x}_${data.y}`);
+            const key = `${data.x}_${data.y}`;
+            this.loadedBlockKeys.add(key);
+            this.fetchingBlockKeys.delete(key);
         });
     }
 

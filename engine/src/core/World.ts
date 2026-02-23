@@ -254,7 +254,7 @@ export class World {
                 const players = this.getEntitiesWith(["TransformComponent", "InputStateComponent"]);
                 if (players.length > 0) {
                     const t = this.getComponent<TransformComponent>(players[0], "TransformComponent")!;
-                    (this as any)._avatarMesh.position.set(t.position[0], t.position[1], t.position[2]);
+                    (this as any)._avatarMesh.position.set(t.position[0], t.position[1] + 0.9, t.position[2]);
                     (this as any)._avatarMesh.rotation.set(t.rotation[0], t.rotation[1], t.rotation[2]);
                 }
             }

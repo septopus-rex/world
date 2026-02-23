@@ -9,10 +9,12 @@ import { TransformComponent, RigidBodyComponent, SolidComponent } from '../compo
  */
 export class PhysicsSystem implements ISystem {
     // Math cache to prevent GC
+    private _playerPos = new THREE.Vector3();
+    private _playerHalfSize = new THREE.Vector3();
+    private _wallPos = new THREE.Vector3();
+    private _wallHalfSize = new THREE.Vector3();
     private _playerBox = new THREE.Box3();
     private _wallBox = new THREE.Box3();
-    private _vecA = new THREE.Vector3();
-    private _vecB = new THREE.Vector3();
 
     // Constant parameters
     public globalGravity = -9.81 * 2; // Doubled for game feel
@@ -40,53 +42,69 @@ export class PhysicsSystem implements ISystem {
             let nextY = trans.position[1] + dy;
             let nextZ = trans.position[2] + dz;
 
-            // Define the player's predicted AABB for collision sweep
-            this._vecB.set(body.size[0] / 2, body.size[1] / 2, body.size[2] / 2);
-
             // Assume we hit nothing
             body.isGrounded = false;
 
-            // Extremely basic collision resolution loop
-            // Professional engines would sweep each axis independently.
-            // For now, we do a basic X, Y, Z discrete test.
-
-            // Y-Axis pass (Gravity / Jumping against ceilings/floors)
-            this._vecA.set(trans.position[0] + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
-            this._playerBox.setFromCenterAndSize(this._vecA, this._vecB.clone().multiplyScalar(2));
+            // --- Y-Axis pass ---
+            this._playerPos.set(trans.position[0] + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
+            this._playerHalfSize.set(body.size[0] / 2, body.size[1] / 2, body.size[2] / 2);
+            this._playerBox.setFromCenterAndSize(this._playerPos, this._playerHalfSize.clone().multiplyScalar(2));
 
             for (const sid of solids) {
                 if (sid === bid) continue;
                 this.updateWallBox(world, sid);
+
                 if (this._playerBox.intersectsBox(this._wallBox)) {
-                    if (dy < 0) body.isGrounded = true; // Hit floor!
-                    body.velocity[1] = 0; // Stop Y movement
-                    nextY = trans.position[1]; // Revert to safe position
+                    if (dy < 0) { // Falling onto surface
+                        nextY = (this._wallPos.y + this._wallHalfSize.y) + (body.size[1] / 2) - body.offset[1];
+                        body.velocity[1] = 0;
+                        body.isGrounded = true;
+                    } else if (dy > 0) { // Hitting ceiling
+                        nextY = (this._wallPos.y - this._wallHalfSize.y) - (body.size[1] / 2) - body.offset[1];
+                        body.velocity[1] = 0;
+                    }
                     break;
                 }
             }
 
-            // X-Axis pass
-            this._vecA.set(nextX + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
-            this._playerBox.setFromCenterAndSize(this._vecA, this._vecB.clone().multiplyScalar(2));
+            // --- X-Axis pass ---
+            const epsilon = 0.05;
+            const margin = 0.01;
+            this._playerPos.set(nextX + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
+            this._playerHalfSize.set((body.size[0] / 2) - margin, (body.size[1] / 2) - epsilon, (body.size[2] / 2) - margin);
+            this._playerBox.setFromCenterAndSize(this._playerPos, this._playerHalfSize.clone().multiplyScalar(2));
+
             for (const sid of solids) {
                 if (sid === bid) continue;
                 this.updateWallBox(world, sid);
+
                 if (this._playerBox.intersectsBox(this._wallBox)) {
-                    body.velocity[0] = 0; // Stop X movement (Slide)
-                    nextX = trans.position[0];
+                    if (dx > 0) { // Moving right
+                        nextX = (this._wallPos.x - this._wallHalfSize.x) - (body.size[0] / 2) - body.offset[0];
+                    } else if (dx < 0) { // Moving left
+                        nextX = (this._wallPos.x + this._wallHalfSize.x) + (body.size[0] / 2) - body.offset[0];
+                    }
+                    body.velocity[0] = 0;
                     break;
                 }
             }
 
-            // Z-Axis pass
-            this._vecA.set(nextX + body.offset[0], nextY + body.offset[1], nextZ + body.offset[2]);
-            this._playerBox.setFromCenterAndSize(this._vecA, this._vecB.clone().multiplyScalar(2));
+            // --- Z-Axis pass ---
+            this._playerPos.set(nextX + body.offset[0], nextY + body.offset[1], nextZ + body.offset[2]);
+            this._playerBox.setFromCenterAndSize(this._playerPos, this._playerHalfSize.clone().multiplyScalar(2));
+
             for (const sid of solids) {
                 if (sid === bid) continue;
                 this.updateWallBox(world, sid);
+
                 if (this._playerBox.intersectsBox(this._wallBox)) {
-                    body.velocity[2] = 0; // Stop Z movement (Slide)
-                    nextZ = trans.position[2];
+                    if (dz > 0) { // Moving forward (Wait, Protocol Y is Forward -> Engine -Z)
+                        // Actually, purely based on Engine Z
+                        nextZ = (this._wallPos.z - this._wallHalfSize.z) - (body.size[2] / 2) - body.offset[2];
+                    } else if (dz < 0) { // Moving backward
+                        nextZ = (this._wallPos.z + this._wallHalfSize.z) + (body.size[2] / 2) - body.offset[2];
+                    }
+                    body.velocity[2] = 0;
                     break;
                 }
             }
@@ -108,12 +126,12 @@ export class PhysicsSystem implements ISystem {
 
         const pos = trans?.position || [0, 0, 0];
 
-        this._vecB.set(solid.size[0] / 2, solid.size[1] / 2, solid.size[2] / 2);
-        this._vecA.set(
+        this._wallHalfSize.set(solid.size[0] / 2, solid.size[1] / 2, solid.size[2] / 2);
+        this._wallPos.set(
             pos[0] + solid.offset[0],
             pos[1] + solid.offset[1],
             pos[2] + solid.offset[2]
         );
-        this._wallBox.setFromCenterAndSize(this._vecA, this._vecB.clone().multiplyScalar(2));
+        this._wallBox.setFromCenterAndSize(this._wallPos, this._wallHalfSize.clone().multiplyScalar(2));
     }
 }
