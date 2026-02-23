@@ -50,6 +50,30 @@ export class Coords {
         return [sppRot[0], sppRot[1], sppRot[2]];
     }
 
+    /**
+     * Local SPP (Z-Up) -> Local Engine (Y-Up)
+     * [East, North, Alt] -> [X, Y, Z] (Engine)
+     */
+    public static localSppToEngine(localSpp: [number, number, number]): [number, number, number] {
+        return [
+            localSpp[0],  // Engine X (East)
+            localSpp[2],  // Engine Y (Alt)
+            -localSpp[1] // Engine Z (North is -)
+        ];
+    }
+
+    /**
+     * SPP Size [East, North, Alt] -> Engine Box Dimensions [width, height, depth]
+     * In Engine (Y-Up), width is East, height is Alt, depth is North.
+     */
+    public static getBoxDimensions(sppSize: [number, number, number]): [number, number, number] {
+        return [
+            sppSize[0], // width (East)
+            sppSize[2], // height (Alt)
+            sppSize[1]  // depth (North)
+        ];
+    }
+
     public static engineRotationToSpp(engineRot: [number, number, number]): [number, number, number] {
         return [engineRot[0], engineRot[1], engineRot[2]];
     }

@@ -6,7 +6,7 @@ import { MockWorldNormal } from '../../engine/src/core/mocks/WorldConfigs';
 import { IDataSource } from '../../engine/src/core/services/DataSource';
 
 import { fetchEmptyBlock } from './lib/api';
-// Using local MockBlockData definition
+import { fetchMockBlock, MockBlockData } from '../../engine/src/core/mocks/BlockMocks';
 
 export interface SPPPlayerState {
     block: [number, number];
@@ -18,12 +18,6 @@ export interface SPPPlayerState {
     posture: number;
 }
 
-export interface MockBlockData {
-    x: number;
-    y: number;
-    elevation: number;
-    adjuncts: any[];
-}
 
 export class SandboxLoader implements IDataSource {
     public engine: Engine | null = null;
@@ -230,33 +224,3 @@ export class SandboxLoader implements IDataSource {
     }
 }
 
-/**
- * Mocking a dynamic world service that returns varying elevations and adjuncts.
- */
-async function fetchMockBlock(x: number, y: number): Promise<MockBlockData> {
-    // Flatten world for dynamic loading tests (Zero elevation)
-    const hash = (x * 71 + y * 131);
-    const elevation = 0;
-
-    const adjuncts: any[] = [];
-
-    // Add a random pillar in the center
-    if (hash % 2 === 0) {
-        adjuncts.push({
-            id: `pillar_${x}_${y}`,
-            type: "box",
-            params: {
-                size: [2, 10, 2],
-                position: [8, 8, 5], // Center [X, Y], Height [Z]
-                rotation: [0, 0, 0]
-            }
-        });
-    }
-
-    return {
-        x,
-        y,
-        elevation,
-        adjuncts
-    };
-}

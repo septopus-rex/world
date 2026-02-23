@@ -1,111 +1,94 @@
-import { AdjunctStandardData } from '../../core/components/AdjunctComponents';
+import {
+    ComponentMeta,
+    STDObject,
+    RenderObject,
+    AdjunctDefinition,
+    AdjunctTransform,
+    AdjunctAttribute
+} from '../../core/types/Adjunct';
 
 /**
- * Adjunct - Box (Ported to TS/ECS)
- *
- * Implements the SPP Adjunct Protocol for a basic 3D box.
+ * Box Component Metadata
  */
-
-const reg = {
+export const BoxMeta: ComponentMeta = {
     name: "box",
-    category: 'basic',
-    desc: "Basic adjunct of meta septopus.",
-    version: "1.0.0",
-    events: ["in", "out", "touch"]
-};
-
-// Default styling
-const config = {
-    color: 0xf3f5f6,
-    stop: {
-        offset: 0.05,
-        color: 0xffffff,
-        opacity: 0.5,
-    }
-};
-
-const valid = {
-    x: (val: any, cvt: number) => {
-        const n = parseInt(val);
-        if (isNaN(n) || n <= 0) return false;
-        return parseFloat((n / cvt).toString());
-    },
-    y: (val: any, cvt: number) => {
-        const n = parseInt(val);
-        if (isNaN(n) || n <= 0) return false;
-        return parseFloat((n / cvt).toString());
-    },
-    z: (val: any, cvt: number) => {
-        const n = parseInt(val);
-        if (isNaN(n) || n <= 0) return false;
-        return parseFloat((n / cvt).toString());
-    }
+    short: "BX",
+    typeId: 0x00a2,
+    desc: "Basic 3D box primitive",
+    version: "1.0.0"
 };
 
 const menu = {
-    sidebar: (std: any) => {
-        if (!std) return {};
+    sidebar: (std: STDObject) => {
         return {
             size: [
-                { type: "number", key: "x", value: std.size[0], label: "X", desc: "X size of box" },
-                { type: "number", key: "y", value: std.size[1], label: "Y", desc: "Y size of box" },
-                { type: "number", key: "z", value: std.size[2], label: "Z", desc: "Z size of box" },
+                { type: "number", key: "x", value: std.x, label: "X" },
+                { type: "number", key: "y", value: std.y, label: "Y" },
+                { type: "number", key: "z", value: std.z, label: "Z" },
             ],
             position: [
-                { type: "number", key: "ox", value: std.position[0], label: "X offset" },
-                { type: "number", key: "oy", value: std.position[1], label: "Y offset" },
-                { type: "number", key: "oz", value: std.position[2], label: "Z offset" },
-            ],
-            rotation: [
-                { type: "number", key: "rx", value: std.rotation[0], label: "X rot" },
-                { type: "number", key: "ry", value: std.rotation[1], label: "Y rot" },
-                { type: "number", key: "rz", value: std.rotation[2], label: "Z rot" },
+                { type: "number", key: "ox", value: std.ox, label: "X Offset" },
+                { type: "number", key: "oy", value: std.oy, label: "Y Offset" },
+                { type: "number", key: "oz", value: std.oz, label: "Z Offset" },
             ],
         };
     }
 };
 
-const transform = {
+const attribute: AdjunctAttribute = {
     /**
-     * Converts SPP stdData into 3D rendering parameters.
-     * Maps the SPP Standard Z-Up coordinate system to the Three.js render pipeline.
+     * Map Septopus Native Array indices to STDObject
+     * [size, pos, rot, texture, repeat, animation, stop]
      */
-    std_3d: (stds: any[], elevation: number) => {
-        const arr = [];
-        for (let i = 0; i < stds.length; i++) {
-            const row = stds[i];
-
-            const single: AdjunctStandardData = {
-                type: "box",
-                index: i,
-                params: {
-                    size: [row.params.size[0], row.params.size[1], row.params.size[2]],
-                    // Append block elevation to the local Z-axis
-                    position: [row.params.position[0], row.params.position[1], row.params.position[2] + elevation],
-                    rotation: [row.params.rotation[0], row.params.rotation[1], row.params.rotation[2]],
-                },
-                material: row.material,
-                animate: row.animate,
-            };
-
-            if (row.stop) {
-                single.stop = {
-                    opacity: config.stop.opacity,
-                    color: config.stop.color
-                };
-            }
-
-            if (row.event) {
-                single.event = row.event;
-            }
-            arr.push(single);
-        }
-        return arr;
+    deserialize: (data: any[]): STDObject => {
+        return {
+            x: data[0][0] ?? 1, y: data[0][1] ?? 1, z: data[0][2] ?? 1,
+            ox: data[1][0] ?? 0, oy: data[1][1] ?? 0, oz: data[1][2] ?? 0,
+            rx: data[2][0] ?? 0, ry: data[2][1] ?? 0, rz: data[2][2] ?? 0,
+            material: {
+                texture: data[3] ?? 0,
+                repeat: data[4] ?? [1, 1]
+            },
+            animate: data[5] ?? null,
+            stop: data[6] ?? null
+        };
+    },
+    serialize: (std: STDObject) => {
+        return [
+            [std.x, std.y, std.z],
+            [std.ox, std.oy, std.oz],
+            [std.rx, std.ry, std.rz],
+            std.material?.texture,
+            std.material?.repeat,
+            std.animate,
+            std.stop
+        ];
     }
 };
 
-export const BasicBoxAdjunct = {
-    hooks: { reg: () => reg },
+const transform: AdjunctTransform = {
+    stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
+        return stds.map((row, index) => ({
+            type: "box",
+            index: index,
+            params: {
+                size: [row.x, row.y, row.z],
+                position: [row.ox, row.oy, row.oz + elevation],
+                rotation: [row.rx, row.ry, row.rz],
+            },
+            material: row.material,
+            animate: row.animate,
+            stop: row.stop ? { opacity: 0.5, color: 0xffffff } : undefined
+        }));
+    }
+};
+
+export const AdjunctBox: AdjunctDefinition = {
+    hooks: {
+        reg: () => BoxMeta,
+        init: () => ({ chain: "", value: null })
+    },
     transform,
-    menu
+    attribute,
+    menu: menu as any
 };

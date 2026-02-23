@@ -4,15 +4,23 @@ import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent, SolidComponent } from '../components/PlayerComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { Coords } from '../utils/Coords';
-import { BasicBoxAdjunct } from '../../plugins/adjunct/basic_box';
+import { AdjunctBox } from '../../plugins/adjunct/basic_box';
+import { AdjunctDefinition } from '../types/Adjunct';
 
 /**
  * BlockSystem handles the transition from standard Block data (std) 
  * to Engine instances (3d). It manages block Groups and ground generation.
+ * Now supports native Septopus raw data parsing.
  */
 export class BlockSystem implements ISystem {
     private blockGroups: Map<string, THREE.Group> = new Map();
+    private adjunctRegistry: Map<number, AdjunctDefinition> = new Map();
     private readonly BLOCK_SIZE = 16;
+
+    constructor() {
+        // Register native Septopus adjuncts
+        this.adjunctRegistry.set(0x00a2, AdjunctBox);
+    }
 
     public update(world: World, dt: number): void {
         const blockEntities = world.queryEntities("BlockComponent");
@@ -43,75 +51,98 @@ export class BlockSystem implements ISystem {
         block.group = group;
         this.blockGroups.set(bKey, group);
 
-        // 1. Ensure ground exists (Protocol requirement)
-        const hasGround = block.adjuncts.some(a => a.id?.startsWith('ground'));
+        // 1. Process Adjuncts (Support for both SPP Object and Septopus Array formats)
+        const adjunctsToInit: any[] = [];
+
+        block.adjuncts.forEach((adjData) => {
+            // Detect Septopus Raw Array format: [hexId, [instances]]
+            if (Array.isArray(adjData) && typeof adjData[0] === 'number') {
+                const typeId = adjData[0];
+                const instances = adjData[1];
+                const definition = this.adjunctRegistry.get(typeId);
+
+                if (definition) {
+                    instances.forEach((rawInst: any[], idx: number) => {
+                        const std = definition.attribute?.deserialize(rawInst);
+                        if (std) {
+                            adjunctsToInit.push({
+                                ...std,
+                                type: definition.hooks.reg().name,
+                                id: `adj_${bKey}_${typeId}_${idx}`,
+                                logicModule: definition
+                            });
+                        }
+                    });
+                }
+            } else {
+                // Legacy/SPP Fallback (already in std format)
+                adjunctsToInit.push({ ...adjData, logicModule: AdjunctBox });
+            }
+        });
+
+        // 2. Ensure ground exists (Protocol requirement)
+        const hasGround = adjunctsToInit.some(a => a.id?.startsWith('ground'));
 
         if (!hasGround) {
             const groundId = world.createEntity();
-            // Center of the 16x16 area
-            // Engine Z = -SPP Y. So if block represents Y in [minY, maxY], its Engine Z is [-maxY, -minY].
-            // Center of block is (minX + 8, elevation, minZ - 8)
+            const groundStd = {
+                type: "box",
+                x: this.BLOCK_SIZE, y: this.BLOCK_SIZE, z: 0.1,
+                ox: 8, oy: 8, oz: -0.05,
+                rx: 0, ry: 0, rz: 0
+            };
+
             world.addComponent<TransformComponent>(groundId, "TransformComponent", {
-                position: [minX + 8, block.elevation || 0, minZ - 8],
+                position: [minX + 8, (block.elevation || 0) - 0.05, minZ - 8],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1]
             });
 
             world.addComponent<AdjunctComponent>(groundId, "AdjunctComponent", {
-                adjunctId: `ground_${block.x}_${block.y}`,
+                adjunctId: `ground_${bKey}`,
                 isInitialized: false,
-                logicModule: BasicBoxAdjunct,
+                logicModule: AdjunctBox,
                 parentBlockEntityId: eid,
-                stdData: {
-                    type: "box",
-                    params: {
-                        size: [this.BLOCK_SIZE, 2.0, this.BLOCK_SIZE],
-                        position: [8, 8, -1.0], // Relative to block corner (8, 8) is center
-                        rotation: [0, 0, 0]
-                    }
-                }
+                stdData: groundStd as any
             });
 
-            // Add SolidComponent for physics
             world.addComponent<SolidComponent>(groundId, "SolidComponent", {
                 shape: "box",
-                size: [this.BLOCK_SIZE, 2.0, this.BLOCK_SIZE],
-                offset: [0, -1.0, 0]
+                size: [this.BLOCK_SIZE, 0.1, this.BLOCK_SIZE],
+                offset: [0, 0, 0]
             });
         }
 
-        // 2. Instantiate actual adjuncts from intermediate data (std)
-        block.adjuncts.forEach((data: any) => {
+        // 3. Instantiate adjunct entities
+        adjunctsToInit.forEach((data) => {
             const adjId = world.createEntity();
 
-            const localPos = data.params.position || [0, 0, 0];
-            // Protocol Pos [X(East), Y(North), Z(Alt)] -> Engine Pos [X, Y, -Z]
-            // Relative North (+Y) -> Engine -Z
-            const finalWorldPos: [number, number, number] = [
-                localPos[0] + minX,
-                (localPos[2] || 0) + (block.elevation || 0) + 0.05, // Small offset above ground
-                minZ - localPos[1] // Y(North) -> -Z
-            ];
+            // Use centralized Coords utility for absolute world position
+            const sppPos: [number, number, number] = [data.ox, data.oy, data.oz];
+            const sppBlock: [number, number] = [block.x, block.y];
+            const enginePos = Coords.sppToEngine(sppPos, sppBlock);
+
+            // Add vertical offset to prevent Z-fighting
+            enginePos[1] += 0.05;
 
             world.addComponent<TransformComponent>(adjId, "TransformComponent", {
-                position: finalWorldPos,
-                rotation: (data.params.rotation || [0, 0, 0]) as [number, number, number],
+                position: enginePos,
+                rotation: [data.rx || 0, data.ry || 0, data.rz || 0],
                 scale: [1, 1, 1]
             });
 
             world.addComponent<AdjunctComponent>(adjId, "AdjunctComponent", {
-                adjunctId: data.id || `adj_${block.x}_${block.y}`,
+                adjunctId: data.id,
                 isInitialized: false,
-                logicModule: BasicBoxAdjunct,
+                logicModule: data.logicModule,
                 parentBlockEntityId: eid,
                 stdData: data
             });
 
-            // Add SolidComponent if it's a box (for physics)
-            if (data.type === 'box') {
+            if (data.type === 'box' || data.stop) {
                 world.addComponent<SolidComponent>(adjId, "SolidComponent", {
                     shape: "box",
-                    size: (data.params.size || [1, 1, 1]) as [number, number, number],
+                    size: [data.x, data.z, data.y], // Size mapping adjustment if needed
                     offset: [0, 0, 0]
                 });
             }

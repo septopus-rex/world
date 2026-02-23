@@ -67,59 +67,49 @@ export class AdjunctSystem implements ISystem {
         // Position is (0,0,0) relative to parent block group
         meshGroup.position.set(0, 0, 0);
 
-        // Check if the adjunct module has the standard transformation methods (defined in SPP protocol)
-        if (logic.transform && typeof logic.transform.std_3d === 'function') {
-            const elevation = 0; // Elevation is handled by the parent block group
+        // Check if the adjunct module has the standard transformation methods
+        if (logic.transform) {
+            const elevation = 0; // Elevation handled by parent block group
+            let renderDataList: any[] = [];
 
             try {
-                const renderDataList = logic.transform.std_3d([std], elevation);
+                if (typeof logic.transform.stdToRenderData === 'function') {
+                    renderDataList = logic.transform.stdToRenderData([std], elevation);
+                } else if (typeof logic.transform.std_3d === 'function') {
+                    renderDataList = logic.transform.std_3d([std], elevation);
+                }
 
                 for (const renderItem of renderDataList) {
                     if (renderItem.type === 'box') {
-                        const geo = new THREE.BoxGeometry(
-                            renderItem.params.size[0],
-                            renderItem.params.size[1],
-                            renderItem.params.size[2]
-                        );
+                        // Use centralized Coords utility for dimension mapping
+                        const dims = Coords.getBoxDimensions(renderItem.params.size);
+                        const geo = new THREE.BoxGeometry(dims[0], dims[1], dims[2]);
 
                         let itemColor = renderItem.material?.color || 0xcccccc;
 
                         // Ground coloring logic
-                        if (renderItem.type === 'box' && renderItem.params.position[2] < 0) {
-                            // Extract coordinates from block if possible
+                        if (renderItem.params.position[2] < 0) {
                             let bx = 0, by = 0;
                             if (adjunct.parentBlockEntityId) {
                                 const b = world.getComponent<any>(adjunct.parentBlockEntityId, "BlockComponent");
                                 if (b) { bx = b.x; by = b.y; }
                             }
-
                             const hash = (bx * 71 + by * 131);
-                            const hue = ((hash % 100) + 100) % 100 / 100;
-                            const c = new THREE.Color().setHSL(hue, 0.5, 0.4);
-                            itemColor = c.getHex();
+                            itemColor = new THREE.Color().setHSL(((hash % 100) + 100) % 100 / 100, 0.5, 0.4).getHex();
                         }
 
                         const mat = new THREE.MeshStandardMaterial({ color: itemColor });
                         const mesh = new THREE.Mesh(geo, mat);
 
-                        // Protocol [X=East, Y=North, Z=Alt] -> Engine [X, Y, -Z]
-                        // However, inside a block group, we use relative protocol coords.
-                        // Relative East -> Engine X
-                        // Relative Alt -> Engine Y
-                        // Relative North -> Engine -Z
-                        const lx = renderItem.params.position[0];
-                        const ly = renderItem.params.position[1];
-                        const lz = renderItem.params.position[2];
-
-                        mesh.position.set(lx, lz, -ly);
+                        // Use centralized Coords utility for relative mesh position within block group
+                        const engineLocalPos = Coords.localSppToEngine(renderItem.params.position);
+                        mesh.position.set(engineLocalPos[0], engineLocalPos[1], engineLocalPos[2]);
 
                         mesh.rotation.set(
-                            renderItem.params.rotation[0],
-                            renderItem.params.rotation[1], // Yaw usually maps directly
-                            -renderItem.params.rotation[2] // Mirroring roll/pitch if needed, keep simple for now
+                            renderItem.params.rotation[0] || 0,
+                            renderItem.params.rotation[1] || 0,
+                            renderItem.params.rotation[2] || 0
                         );
-                        // Force roll to 0 for most objects to avoid "spinning/tilt" issues
-                        mesh.rotation.z = 0;
 
                         meshGroup.add(mesh);
                     } else if (renderItem.type === 'sphere') {
@@ -127,17 +117,7 @@ export class AdjunctSystem implements ISystem {
                         const geo = new THREE.SphereGeometry(radius, 32, 32);
                         const mat = new THREE.MeshStandardMaterial({ color: renderItem.material?.color || 0xcccccc });
                         const mesh = new THREE.Mesh(geo, mat);
-
                         mesh.position.set(renderItem.params.position[0], renderItem.params.position[2], -renderItem.params.position[1]);
-                        mesh.rotation.set(renderItem.params.rotation[0], renderItem.params.rotation[1], 0);
-                        meshGroup.add(mesh);
-                    } else if (renderItem.type === 'cone') {
-                        const geo = new THREE.CylinderGeometry(renderItem.params.size[2], renderItem.params.size[0], renderItem.params.size[1], 32);
-                        const mat = new THREE.MeshStandardMaterial({ color: renderItem.material?.color || 0xcccccc });
-                        const mesh = new THREE.Mesh(geo, mat);
-
-                        mesh.position.set(renderItem.params.position[0], renderItem.params.position[2], -renderItem.params.position[1]);
-                        mesh.rotation.set(renderItem.params.rotation[0], renderItem.params.rotation[1], 0);
                         meshGroup.add(mesh);
                     }
                 }
