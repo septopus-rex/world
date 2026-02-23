@@ -4,8 +4,10 @@ import {
     RenderObject,
     AdjunctDefinition,
     AdjunctTransform,
-    AdjunctMenu
+    AdjunctMenu,
+    AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { Coords } from '../../core/utils/Coords.js';
 // Assume the new Trigger types are re-exported from index or imported directly:
 // import { TriggerVolumeComponent, TriggerLogicNode } from '../../core/types/Trigger';
 
@@ -52,36 +54,28 @@ export const TriggerTransform: AdjunctTransform = {
             // use the Scene Graph for spatial queries, we can emit a 'box' type 
             // but explicitly mark it hidden.
 
-            const renderObj: RenderObject & { triggerVolume?: any, hidden?: boolean } = {
-                type: "box",
+            const renderObj: RenderObject & { triggerVolume?: any, hidden?: boolean, event?: any } = {
+                type: "box", // Always emit a box for consistency, actual shape handled by triggerVolume
                 index: index,
+                hidden: true, // Crucial: Do not draw this!
                 params: {
-                    size: [row.x, row.y, row.z],
-                    position: [row.ox, row.oy, row.oz + elevation],
+                    size: Coords.getBoxDimensions([row.x, row.y, row.z]),
+                    position: [row.ox, row.oy, row.oz],
                     rotation: [row.rx, row.ry, row.rz],
                 },
-                hidden: true, // Crucial: Do not draw this!
+                // Crucial for AdjunctSystem to attach TriggerComponent
+                event: row.event,
             };
 
-            // Parse the raw JSON logic definition from the STD Object
-            // The AI or Editor will inject a JSON string or object into `row.event.rawLogic`
-            let parsedLogic = [];
-            if (row.event && row.event.rawLogic) {
-                try {
-                    parsedLogic = typeof row.event.rawLogic === 'string'
-                        ? JSON.parse(row.event.rawLogic)
-                        : row.event.rawLogic;
-                } catch (e) {
-                    console.warn(`Failed to parse AI Trigger Logic for trigger index ${index}`, e);
-                }
-            }
-
-            // Attach the pure data payload for the upcoming TriggerSystem ECS
+            // Attach the pure data payload for the TriggerSystem ECS
             renderObj.triggerVolume = {
-                shape: "box",
+                shape: row.shape === 2 ? "sphere" : "box",
+                type: row.triggerType, // 1: in, 2: out, 3: hold
                 size: [row.x, row.y, row.z],
-                offset: [0, 0, 0], // Anchor is strictly the position above
-                logic: parsedLogic
+                offset: [0, 0, 0],
+                logic: row.logic,
+                runOnce: row.runOnce === 1,
+                gameOnly: row.gameOnly === 1
             };
 
             return renderObj;
@@ -119,7 +113,44 @@ export const TriggerMenu: AdjunctMenu = {
 };
 
 // -----------------------------------------------------------------------------
-// 3. ECS COMPONENT REGISTRATION
+// 3. ATTRIBUTE LAYER (RAW DATA MAPPING)
+// -----------------------------------------------------------------------------
+export const TriggerAttribute: AdjunctAttribute = {
+    /**
+     * Map Septopus Native Array indices to STDObject
+     * [size, pos, rot, shape, type, logic, run_once, game_only]
+     */
+    deserialize: (data: any[]): STDObject => {
+        return {
+            x: data[0][0] ?? 1, y: data[0][1] ?? 1, z: data[0][2] ?? 1,
+            ox: data[1][0] ?? 0, oy: data[1][1] ?? 0, oz: data[1][2] ?? 0,
+            rx: data[2][0] ?? 0, ry: data[2][1] ?? 0, rz: data[2][2] ?? 0,
+            shape: data[3] ?? 1,      // 1: box, 2: ball
+            triggerType: data[4] ?? 1, // 1: in, 2: out, 3: hold
+            logic: data[5] ?? [],
+            runOnce: data[6] ?? 0,
+            gameOnly: data[7] ?? 1,
+            event: {
+                rawLogic: data[5] ?? []
+            }
+        };
+    },
+    serialize: (std: STDObject) => {
+        return [
+            [std.x, std.y, std.z],
+            [std.ox, std.oy, std.oz],
+            [std.rx, std.ry, std.rz],
+            std.shape,
+            std.triggerType,
+            std.logic,
+            std.runOnce,
+            std.gameOnly
+        ];
+    }
+};
+
+// -----------------------------------------------------------------------------
+// 4. ECS COMPONENT REGISTRATION
 // -----------------------------------------------------------------------------
 export const AdjunctTrigger: AdjunctDefinition = {
     hooks: {
@@ -127,6 +158,6 @@ export const AdjunctTrigger: AdjunctDefinition = {
         init: () => ({ chain: "", value: null })
     },
     transform: TriggerTransform,
+    attribute: TriggerAttribute,
     menu: TriggerMenu as any,
-    // Note: Removed the old complex JS closure attribute parsers.
 };

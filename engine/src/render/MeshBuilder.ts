@@ -1,10 +1,13 @@
 import * as THREE from 'three';
-import { ParticleCell, ParticleFace, FaceState } from '../core/types/ParticleCell.js';
+import { ParticleCell, ParticleFace } from '../core/types/ParticleCell.js';
+import { MeshFactory } from './MeshFactory.js';
+import { RenderObject, MaterialConfig } from '../core/types/Adjunct.js';
+import { RenderEngine } from './RenderEngine';
 
 export interface RenderContext {
-    /** Target scene to add meshes */
-    scene: THREE.Scene;
-    /** The actual physical size of a base block in Three units (usually side length) */
+    /** Target engine to add meshes */
+    engine: RenderEngine;
+    /** The actual physical size of a base block in Three units (usually side length) [East, North, Alt] */
     blockSize: [number, number, number];
     /** Material or module registry resolver */
     resolveAsset: (face: ParticleFace, variantIndex: number, cell: ParticleCell) => THREE.Material | THREE.Object3D | null;
@@ -19,8 +22,6 @@ export class MeshBuilder {
      * Extracts the Boolean state of a specific face from the cell's bitmask
      */
     public static isFaceOpen(bitmask: number, face: ParticleFace): boolean {
-        // bit layout: [Right, Left, Back, Front, Bottom, Top]
-        // face enum: Top=0, Bottom=1, Front=2, Back=3, Left=4, Right=5
         const mask = 1 << face;
         return (bitmask & mask) !== 0; // 1 = Open, 0 = Closed
     }
@@ -37,27 +38,19 @@ export class MeshBuilder {
      * Builds and attaches Three.js objects for a single ParticleCell Based on SPP Logic.
      */
     public static buildCell(cell: ParticleCell, context: RenderContext): void {
-        const { scene, blockSize, resolveAsset } = context;
+        const { engine, blockSize, resolveAsset } = context;
 
-        // Calculate world position of the cell center
-        // Cell position is 0-255 inside a chunk.
+        // Calculate world position of the cell center (SPP space)
         const px = cell.position[0] * blockSize[0];
         const py = cell.position[1] * blockSize[1];
         const pz = cell.position[2] * blockSize[2];
 
+        // Base center in Three.js space
         const [tx, ty, tz] = this.transformPosition([px, py, pz]);
 
-        // SPP generates structure primarily on CLOSED faces (FaceState.Closed = 0).
-        // Iterate through all 6 faces.
         for (let i = 0; i < 6; i++) {
             const face = i as ParticleFace;
-            const isOpen = this.isFaceOpen(cell.bitmask, face);
-
-            // Only generate structural meshes for closed faces, unless 
-            // the system specifically requires an open-face trigger/portal mesh.
-            if (isOpen) {
-                continue;
-            }
+            if (this.isFaceOpen(cell.bitmask, face)) continue;
 
             const variantIndex = cell.variants[face];
             const asset = resolveAsset(face, variantIndex, cell);
@@ -65,63 +58,83 @@ export class MeshBuilder {
             if (!asset) continue;
 
             if (asset instanceof THREE.Object3D) {
-                // It's a loaded module (GLTF, etc)
                 const clone = asset.clone();
                 clone.position.set(tx, ty, tz);
-                if (cell.entityId !== undefined) {
-                    clone.userData.entityId = cell.entityId;
-                }
-                // Note: Rotation application based on cell.rotation goes here
-                scene.add(clone);
+                if (cell.entityId !== undefined) clone.userData.entityId = cell.entityId;
+                engine.add(clone);
             } else if (asset instanceof THREE.Material) {
-                // It's a material, apply it to a primitive plane/box representing the cell wall
-                const geometry = new THREE.PlaneGeometry(blockSize[0], blockSize[1]);
-                const mesh = new THREE.Mesh(geometry, asset);
+                // Generate unified RenderObject for the face
+                const renderObject = this.generateFaceRenderObject(face, [tx, ty, tz], blockSize, asset as THREE.MeshStandardMaterial);
 
                 if (cell.entityId !== undefined) {
-                    mesh.userData.entityId = cell.entityId;
+                    (renderObject as any).entityId = cell.entityId;
                 }
 
-                mesh.position.set(tx, ty, tz);
-                this.alignFaceMesh(mesh, face, blockSize);
+                const mesh = MeshFactory.create(renderObject);
+                if (cell.entityId !== undefined) mesh.userData.entityId = cell.entityId;
 
-                scene.add(mesh);
+                engine.add(mesh);
             }
         }
     }
 
     /**
-     * Aligns a flat plane mesh to represent the appropriate bounding face.
+     * Internal helper to generate a RenderObject for a specific block face.
      */
-    private static alignFaceMesh(mesh: THREE.Mesh, face: ParticleFace, size: [number, number, number]) {
-        const halfX = size[0] / 2;
-        const halfY = size[1] / 2;
-        const halfZ = size[2] / 2;
+    private static generateFaceRenderObject(face: ParticleFace, center: [number, number, number], blockSize: [number, number, number], material: THREE.MeshStandardMaterial): RenderObject {
+        const halfX = blockSize[0] / 2;
+        const halfY = blockSize[1] / 2;
+        const halfZ = blockSize[2] / 2;
+
+        let pos: [number, number, number] = [...center];
+        let rot: [number, number, number] = [0, 0, 0];
+        let size: [number, number, number] = [blockSize[0], blockSize[1], blockSize[2]];
 
         switch (face) {
-            case ParticleFace.Top: // Z+ -> Three Y+
-                mesh.position.y += halfZ;
-                mesh.rotation.x = -Math.PI / 2;
+            case ParticleFace.Top: // SPP Z+ -> Three Y+
+                pos[1] += halfZ;
+                rot[0] = -Math.PI / 2;
+                size = [blockSize[0], blockSize[1], 0]; // Plane WxH
                 break;
-            case ParticleFace.Bottom: // Z- -> Three Y-
-                mesh.position.y -= halfZ;
-                mesh.rotation.x = Math.PI / 2;
+            case ParticleFace.Bottom: // SPP Z- -> Three Y-
+                pos[1] -= halfZ;
+                rot[0] = Math.PI / 2;
+                size = [blockSize[0], blockSize[1], 0];
                 break;
-            case ParticleFace.Front: // Y- -> Three Z+
-                mesh.position.z += halfY;
+            case ParticleFace.Front: // SPP Y- -> Three Z+
+                pos[2] += halfY;
+                size = [blockSize[0], blockSize[2], 0]; // Plane WxD
                 break;
-            case ParticleFace.Back: // Y+ -> Three Z-
-                mesh.position.z -= halfY;
-                mesh.rotation.x = Math.PI;
+            case ParticleFace.Back: // SPP Y+ -> Three Z-
+                pos[2] -= halfY;
+                rot[0] = Math.PI;
+                size = [blockSize[0], blockSize[2], 0];
                 break;
-            case ParticleFace.Left: // X- -> Three X-
-                mesh.position.x -= halfX;
-                mesh.rotation.y = -Math.PI / 2;
+            case ParticleFace.Left: // SPP X- -> Three X-
+                pos[0] -= halfX;
+                rot[1] = -Math.PI / 2;
+                size = [blockSize[1], blockSize[2], 0]; // Plane HxD
                 break;
-            case ParticleFace.Right: // X+ -> Three X+
-                mesh.position.x += halfX;
-                mesh.rotation.y = Math.PI / 2;
+            case ParticleFace.Right: // SPP X+ -> Three X+
+                pos[0] += halfX;
+                rot[1] = Math.PI / 2;
+                size = [blockSize[1], blockSize[2], 0];
                 break;
         }
+
+        const matConfig: MaterialConfig = {
+            color: material.color.getHex(),
+            opacity: material.opacity,
+        };
+
+        return {
+            type: 'plane',
+            params: {
+                position: pos,
+                rotation: rot,
+                size: size
+            },
+            material: matConfig
+        };
     }
 }

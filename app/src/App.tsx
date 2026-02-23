@@ -320,6 +320,22 @@ function App() {
           </div>
         </div>
       )}
+      {/* 6. Debug / Utility Tools */}
+      <div className="absolute bottom-4 right-4 z-40 p-2 flex flex-col gap-2 pointer-events-auto">
+        <button
+          onClick={() => {
+            if (confirm("Reset player position and state?")) {
+              localStorage.removeItem("spp_player_state");
+              window.location.reload();
+            }
+          }}
+          className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 backdrop-blur-md rounded-lg text-[10px] font-bold text-red-400 tracking-widest uppercase transition-all flex items-center gap-2 group"
+          title="Reset Saved State"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 group-hover:animate-pulse"></span>
+          Reset State
+        </button>
+      </div>
 
     </div>
   );

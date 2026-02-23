@@ -79,3 +79,10 @@ export interface CameraComponent {
     fov: number;
     active: boolean;                  // is this the currently rendering camera?
 }
+// -----------------------------------------------------------------------------
+// 6. Visual Avatar (Third-person view or shadow)
+// -----------------------------------------------------------------------------
+export interface AvatarComponent {
+    handle: any;
+    visible: boolean;
+}

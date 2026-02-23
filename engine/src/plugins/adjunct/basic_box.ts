@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct';
+import { Coords } from '../../core/utils/Coords';
 
 /**
  * Box Component Metadata
@@ -42,11 +43,11 @@ const attribute: AdjunctAttribute = {
      */
     deserialize: (data: any[]): STDObject => {
         return {
-            x: data[0][0] ?? 1, y: data[0][1] ?? 1, z: data[0][2] ?? 1,
+            x: data[0][0] ?? 1, y: data[0][1] ?? 1, z: data[0][2] ?? 1, // [E, N, Alt]
             ox: data[1][0] ?? 0, oy: data[1][1] ?? 0, oz: data[1][2] ?? 0,
             rx: data[2][0] ?? 0, ry: data[2][1] ?? 0, rz: data[2][2] ?? 0,
             material: {
-                texture: data[3] ?? 0,
+                resource: data[3] ?? 0,
                 repeat: data[4] ?? [1, 1]
             },
             animate: data[5] ?? null,
@@ -58,7 +59,7 @@ const attribute: AdjunctAttribute = {
             [std.x, std.y, std.z],
             [std.ox, std.oy, std.oz],
             [std.rx, std.ry, std.rz],
-            std.material?.texture,
+            std.material?.resource,
             std.material?.repeat,
             std.animate,
             std.stop
@@ -68,18 +69,32 @@ const attribute: AdjunctAttribute = {
 
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
-        return stds.map((row, index) => ({
-            type: "box",
-            index: index,
-            params: {
-                size: [row.x, row.y, row.z],
-                position: [row.ox, row.oy, row.oz + elevation],
-                rotation: [row.rx, row.ry, row.rz],
-            },
-            material: row.material,
-            animate: row.animate,
-            stop: row.stop ? { opacity: 0.5, color: 0xffffff } : undefined
-        }));
+        return stds.map((row, index) => {
+            // Color Mapping based on resource index
+            const resId = (row.material?.resource as any) || 0;
+            let color = 0x888888; // Default Gray
+
+            if (resId === 10) color = 0x228b22; // Forest Green (Ground)
+            if (resId === 1) color = 0x555555; // Dark Gray (Pillar)
+            if (resId === 2) color = 0x3366ff; // Blue (Avatar/Float)
+            if (resId === 3) color = 0xff0000; // Red (Flash)
+
+            return {
+                type: "box",
+                index: index,
+                params: {
+                    size: Coords.getBoxDimensions([row.x, row.y, row.z]),
+                    position: [row.ox, row.oy, row.oz],
+                    rotation: [row.rx, row.ry, row.rz],
+                },
+                material: {
+                    ...row.material,
+                    color: color
+                },
+                animate: row.animate,
+                stop: row.stop ? { opacity: 0.5, color: 0xffffff } : undefined
+            };
+        });
     }
 };
 

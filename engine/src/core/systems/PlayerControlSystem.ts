@@ -1,6 +1,6 @@
-import * as THREE from 'three';
 import { World, ISystem, EntityId } from '../World';
-import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComponent } from '../components/PlayerComponents';
+import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComponent, AvatarComponent } from '../components/PlayerComponents';
+import { Vector3 } from '../utils/Math';
 
 /**
  * ECS System for Player Control
@@ -10,7 +10,6 @@ import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComp
 export class PlayerControlSystem implements ISystem {
     private domElement: HTMLElement;
     private world: World;
-    private camera: THREE.Camera;
     private controlledEntity: EntityId | null = null;
 
     private keydownHandler!: (e: KeyboardEvent) => void;
@@ -26,16 +25,16 @@ export class PlayerControlSystem implements ISystem {
     private lastMouseY: number = 0;
 
     // Internal state cache to prevent GC overhead
-    private _velocity = new THREE.Vector3();
-    private _direction = new THREE.Vector3();
+    private _velocity = new Vector3();
+    private _direction = new Vector3();
 
-    constructor(world: World, camera: THREE.Camera, domElement: HTMLElement) {
+    constructor(world: World, domElement: HTMLElement) {
         this.world = world;
-        this.camera = camera;
         this.domElement = domElement;
 
         // Force 'YXZ' rotation order to prevent Gimbal Lock and tilting/roll issues
-        this.camera.rotation.order = 'YXZ';
+        // This is now handled within the RenderEngine initialization or via an engine API if needed.
+        // For now, we assume the engine manages its own rotation orders.
 
         // Bind raw DOM events
         this.bindEvents(domElement);
@@ -168,9 +167,11 @@ export class PlayerControlSystem implements ISystem {
         const yawDelta = -dx * 0.005;
         const pitchDelta = -dy * 0.005;
 
-        this.camera.rotation.y += yawDelta;
-        this.camera.rotation.x += pitchDelta;
-        this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+        const rotation = this.world.renderEngine.getMainCameraRotation();
+        rotation[1] += yawDelta;
+        rotation[0] += pitchDelta;
+        rotation[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation[0]));
+        this.world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
     }
 
     private onTouchEnd(event: TouchEvent): void {
@@ -204,9 +205,11 @@ export class PlayerControlSystem implements ISystem {
         const yawDelta = -dx * 0.005;
         const pitchDelta = -dy * 0.005;
 
-        this.camera.rotation.y += yawDelta;
-        this.camera.rotation.x += pitchDelta;
-        this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+        const rotation = this.world.renderEngine.getMainCameraRotation();
+        rotation[1] += yawDelta;
+        rotation[0] += pitchDelta;
+        rotation[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation[0]));
+        this.world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
     }
 
     private onMouseUp(event: MouseEvent): void {
@@ -292,61 +295,53 @@ export class PlayerControlSystem implements ISystem {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         const pad = gamepads[0]; // Just use the first connected gamepad for now
         if (pad && pad.connected) {
-            // Axis 0 = Left Stick X (Left/Right)
-            // Axis 1 = Left Stick Y (Up/Down)
-            // Axis 2 = Right Stick X (Look Yaw)
-            // Axis 3 = Right Stick Y (Look Pitch)
-
-            // Apply a small deadzone
             const deadzone = 0.1;
-
-            if (Math.abs(pad.axes[1]) > deadzone) this._direction.z -= pad.axes[1] * 1.0; // Invert Y often needed
+            if (Math.abs(pad.axes[1]) > deadzone) this._direction.z -= pad.axes[1] * 1.0;
             if (Math.abs(pad.axes[0]) > deadzone) this._direction.x += pad.axes[0] * 1.0;
 
-            // Map Buttons
-            input.jump = input.jump || pad.buttons[0].pressed; // A button / Cross
-            input.interactPrimary = input.interactPrimary || pad.buttons[2].pressed; // X button / Square
-            input.run = input.run || pad.buttons[6].pressed || pad.buttons[7].pressed; // Triggers
+            input.jump = input.jump || pad.buttons[0].pressed;
+            input.interactPrimary = input.interactPrimary || pad.buttons[2].pressed;
+            input.run = input.run || pad.buttons[6].pressed || pad.buttons[7].pressed;
 
-            // Look controls via Right Stick (simulating mouse movement for PointerLock)
             if (Math.abs(pad.axes[2]) > deadzone) {
-                const yawDelta = -pad.axes[2] * dt * 2.0;
-                this.camera.rotation.y += yawDelta;
+                const rotation = this.world.renderEngine.getMainCameraRotation();
+                rotation[1] -= pad.axes[2] * dt * 2.0;
+                this.world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
             }
             if (Math.abs(pad.axes[3]) > deadzone) {
-                const pitchDelta = -pad.axes[3] * dt * 2.0;
-                this.camera.rotation.x += pitchDelta;
-                this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+                const rotation = this.world.renderEngine.getMainCameraRotation();
+                rotation[0] -= pad.axes[3] * dt * 2.0;
+                rotation[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, rotation[0]));
+                this.world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
             }
         }
 
         // --- Keyboard Look Support ---
-        const turnSpeed = 2.0; // radians per second
-        if (input.lookLeft) this.camera.rotation.y += turnSpeed * dt;
-        if (input.lookRight) this.camera.rotation.y -= turnSpeed * dt;
+        const turnSpeed = 2.0;
+        const camRot = this.world.renderEngine.getMainCameraRotation();
+        if (input.lookLeft) camRot[1] += turnSpeed * dt;
+        if (input.lookRight) camRot[1] -= turnSpeed * dt;
         if (input.lookUp || input.lookDown) {
             const pitchDelta = (Number(input.lookUp) - Number(input.lookDown)) * turnSpeed * dt;
-            this.camera.rotation.x += pitchDelta;
-            this.camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.camera.rotation.x));
+            camRot[0] += pitchDelta;
+            camRot[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camRot[0]));
         }
+        this.world.renderEngine.setMainCameraRotation(camRot[0], camRot[1], camRot[2]);
 
         if (this._direction.lengthSq() > 0) {
-            this._direction.normalize(); // Ensure diagonal isn't faster
+            this._direction.normalize();
         }
 
         // 2. Apply Speed rules & rotate into camera space
         const speed = input.run ? body.maxSpeedRun : body.maxSpeedWalk;
-
-        // Local movement vector: right is +X, forward is -Z
         const localX = this._direction.x * speed;
         const localZ = -this._direction.z * speed;
 
-        const yaw = this.camera.rotation.y;
+        const yaw = camRot[1];
         this._velocity.x = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
         this._velocity.z = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
 
         // 3. Set the intention in the Component for the Physics System to read
-        // Notice: We don't apply delta time (dt) here to position. We just define the VELOCITY.
         body.velocity[0] = this._velocity.x;
         body.velocity[2] = this._velocity.z;
 
@@ -354,21 +349,29 @@ export class PlayerControlSystem implements ISystem {
         if (input.jump && body.isGrounded) {
             body.velocity[1] = body.jumpForce;
             body.isGrounded = false;
-            input.jump = false; // Consume jump
+            input.jump = false;
         }
 
-        // 5. Sync the PointerLock Camera position to the ECS Transform Position
-        // The Physics System (running before or after) actually moves the Transform.
-        this.camera.position.set(
+        // 5. Sync the Camera position to the ECS Transform Position
+        this.world.renderEngine.setMainCameraPosition(
             trans.position[0] + (camComp?.offset[0] || 0),
             trans.position[1] + (camComp?.offset[1] || 0),
             trans.position[2] + (camComp?.offset[2] || 0)
         );
 
         // 6. Sync Rotations back to ECS
-        trans.rotation[0] = this.camera.rotation.x;
-        trans.rotation[1] = this.camera.rotation.y;
-        trans.rotation[2] = 0; // FORCE HORIZON LEVEL (NO ROLL)
+        const finalCamRot = this.world.renderEngine.getMainCameraRotation();
+        trans.rotation[0] = finalCamRot[0];
+        trans.rotation[1] = finalCamRot[1];
+        trans.rotation[2] = 0;
+
+        // 7. Sync Avatar Mesh (Third Person / Shadows)
+        const avatar = this.world.getComponent<AvatarComponent>(this.controlledEntity, "AvatarComponent");
+        if (avatar && avatar.handle) {
+            this.world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], trans.position[1], trans.position[2]);
+            this.world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1], 0); // Avatar only follows yaw
+            this.world.renderEngine.setObjectVisible(avatar.handle, avatar.visible);
+        }
 
         // Clear one-frame interaction flags
         input.interactPrimary = false;

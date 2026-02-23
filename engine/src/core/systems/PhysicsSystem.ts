@@ -1,6 +1,6 @@
-import * as THREE from 'three';
 import { World, ISystem, EntityId } from '../World';
 import { TransformComponent, RigidBodyComponent, SolidComponent } from '../components/PlayerComponents';
+import { Vector3, Box3 } from '../utils/Math';
 
 /**
  * Basic Physics Collision System.
@@ -9,12 +9,12 @@ import { TransformComponent, RigidBodyComponent, SolidComponent } from '../compo
  */
 export class PhysicsSystem implements ISystem {
     // Math cache to prevent GC
-    private _playerPos = new THREE.Vector3();
-    private _playerHalfSize = new THREE.Vector3();
-    private _wallPos = new THREE.Vector3();
-    private _wallHalfSize = new THREE.Vector3();
-    private _playerBox = new THREE.Box3();
-    private _wallBox = new THREE.Box3();
+    private _playerPos = new Vector3();
+    private _playerHalfSize = new Vector3();
+    private _wallPos = new Vector3();
+    private _wallHalfSize = new Vector3();
+    private _playerBox = new Box3();
+    private _wallBox = new Box3();
 
     // Constant parameters
     public globalGravity = -9.81 * 2; // Doubled for game feel
@@ -47,8 +47,7 @@ export class PhysicsSystem implements ISystem {
 
             // --- Y-Axis pass ---
             this._playerPos.set(trans.position[0] + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
-            this._playerHalfSize.set(body.size[0] / 2, body.size[1] / 2, body.size[2] / 2);
-            this._playerBox.setFromCenterAndSize(this._playerPos, this._playerHalfSize.clone().multiplyScalar(2));
+            this._playerBox.setFromCenterAndSize(this._playerPos, { x: body.size[0], y: body.size[1], z: body.size[2] });
 
             for (const sid of solids) {
                 if (sid === bid) continue;
@@ -71,8 +70,11 @@ export class PhysicsSystem implements ISystem {
             const epsilon = 0.05;
             const margin = 0.01;
             this._playerPos.set(nextX + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
-            this._playerHalfSize.set((body.size[0] / 2) - margin, (body.size[1] / 2) - epsilon, (body.size[2] / 2) - margin);
-            this._playerBox.setFromCenterAndSize(this._playerPos, this._playerHalfSize.clone().multiplyScalar(2));
+            this._playerBox.setFromCenterAndSize(this._playerPos, {
+                x: body.size[0] - margin * 2,
+                y: body.size[1] - epsilon * 2,
+                z: body.size[2] - margin * 2
+            });
 
             for (const sid of solids) {
                 if (sid === bid) continue;
@@ -91,7 +93,11 @@ export class PhysicsSystem implements ISystem {
 
             // --- Z-Axis pass ---
             this._playerPos.set(nextX + body.offset[0], nextY + body.offset[1], nextZ + body.offset[2]);
-            this._playerBox.setFromCenterAndSize(this._playerPos, this._playerHalfSize.clone().multiplyScalar(2));
+            this._playerBox.setFromCenterAndSize(this._playerPos, {
+                x: body.size[0] - margin * 2,
+                y: body.size[1] - epsilon * 2,
+                z: body.size[2] - margin * 2
+            });
 
             for (const sid of solids) {
                 if (sid === bid) continue;
@@ -132,6 +138,6 @@ export class PhysicsSystem implements ISystem {
             pos[1] + solid.offset[1],
             pos[2] + solid.offset[2]
         );
-        this._wallBox.setFromCenterAndSize(this._wallPos, this._wallHalfSize.clone().multiplyScalar(2));
+        this._wallBox.setFromCenterAndSize(this._wallPos, { x: solid.size[0], y: solid.size[1], z: solid.size[2] });
     }
 }

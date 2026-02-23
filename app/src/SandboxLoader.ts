@@ -86,6 +86,12 @@ export class SandboxLoader implements IDataSource {
             try {
                 const parsed = JSON.parse(saved);
                 this.playerState = { ...this.playerState, ...parsed };
+
+                // Failsafe: Reset altitude if player is way below ground level (prevents stuck-in-void after refactors)
+                if (this.playerState.position[2] < -100) {
+                    console.log("[Failsafe] Resetting player altitude from void...");
+                    this.playerState.position[2] = 1.0;
+                }
             } catch (e) {
                 console.error("[SandboxLoader] Failed to parse saved player state", e);
             }
@@ -156,7 +162,10 @@ export class SandboxLoader implements IDataSource {
         }));
 
         results.forEach(data => {
-            this.engine?.injectBlock(data);
+            this.engine?.injectBlock({
+                ...data,
+                adjuncts: data.raw // Use complete raw array [elev, status, adj, anim]
+            });
             const key = `${data.x}_${data.y}`;
             this.loadedBlockKeys.add(key);
             this.fetchingBlockKeys.delete(key);

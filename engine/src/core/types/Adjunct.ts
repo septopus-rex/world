@@ -21,19 +21,44 @@ export interface STDObject {
     [key: string]: any;
 }
 
+export type MeshType = 'box' | 'sphere' | 'cylinder' | 'cone' | 'plane' | 'module';
+
+export interface RenderParams {
+    size: [number, number, number];
+    position: [number, number, number];
+    rotation: [number, number, number];
+}
+
+/** 
+ * Handle to a rendering instance (e.g. THREE.Object3D).
+ * The core engine should treat this as an opaque reference.
+ */
+export type RenderHandle = any;
+
+export interface MaterialConfig {
+    resource?: string | string[];   // 纹理资源引用
+    color?: number;                 // 颜色（十六进制）
+    repeat?: [number, number];      // 纹理重复
+    offset?: [number, number];      // 纹理偏移
+    rotation?: number;              // 纹理旋转
+    opacity?: number;               // 透明度 [0, 1]
+}
+
 export interface RenderObject {
-    type: string;
-    index: number;
-    params: any;
+    type: string; // Keep as string for now to support custom types, but MeshType is preferred
+    index?: number;
+    params: RenderParams;
     hidden?: boolean;
-    material?: any;
-    stop?: any;
-    animate?: any;
+    material?: MaterialConfig;
+    stop?: any; // ColliderMaterial
+    animate?: any; // AnimateRef
     event?: any;
+    resource?: string; // For modules
 }
 
 export interface AdjunctTransform {
     stdToRenderData(stds: STDObject[], elevation: number): RenderObject[];
+    createMesh?(data: RenderObject): RenderHandle;
 }
 
 export interface AdjunctMenu {

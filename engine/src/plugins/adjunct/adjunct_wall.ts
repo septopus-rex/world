@@ -7,6 +7,7 @@ import {
     AdjunctAttribute,
     AdjunctMenu
 } from '../../core/types/Adjunct.js';
+import { Coords } from '../../core/utils/Coords.js';
 
 // -----------------------------------------------------------------------------
 // 0. EDITOR INTERFACES (Should ideally live in an editor-ui package later)
@@ -183,8 +184,8 @@ export const WallTransform: AdjunctTransform = {
                 type: "box",
                 index: index,
                 params: {
-                    size: [row.x, row.y, row.z],
-                    // Apply base elevation calculation to Z-axis position
+                    size: Coords.getBoxDimensions([row.x, row.y, row.z]),
+                    // Apply base elevation calculation. Position mapping: [East, North, Alt]
                     position: [row.ox, row.oy, row.oz + elevation],
                     rotation: [row.rx, row.ry, row.rz],
                 },
