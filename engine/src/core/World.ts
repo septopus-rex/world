@@ -4,6 +4,7 @@ import { RenderHandle } from './types/Adjunct';
 import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent } from './components/PlayerComponents';
 import { Coords } from './utils/Coords';
 import { ParticleCell, ParticleFace } from './types/ParticleCell';
+import { ECSRegistry } from './ECSRegistry';
 
 // Systems
 import { PhysicsSystem } from './systems/PhysicsSystem';
@@ -47,11 +48,9 @@ export interface GameEvent {
  * DESIGN: WORLD IS NOW RENDER-AGNOSTIC.
  */
 export class World {
-    // 1. ECS State
-    private entities: Set<EntityId> = new Set();
-    private components: Map<ComponentType, Map<EntityId, ComponentData>> = new Map();
+    // 1. ECS State (Delegated to Registry)
+    private registry: ECSRegistry = new ECSRegistry();
     private systems: ISystem[] = [];
-    private entityCounter: number = 0;
 
     // 2. Rendering (Abstracted)
     public renderEngine: RenderEngine;
@@ -70,7 +69,6 @@ export class World {
     // Legacy Bridge for SandboxLoader compatibility
     public blocks = {
         syncVisibility: (requiredKeys: string[]) => {
-            // Find the BlockSystem in our systems registration
             const blockSystem = this.systems.find(s => (s as any).syncVisibility) as any;
             if (blockSystem) {
                 blockSystem.syncVisibility(this, requiredKeys);
@@ -136,7 +134,7 @@ export class World {
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 
         // Register Core Systems
-        this.addSystem(new RaycastInteractionSystem()); // Process raycasts before input flags are cleared
+        this.addSystem(new RaycastInteractionSystem());
         this.addSystem(new PlayerControlSystem(this, this.renderEngine.getDomElement()));
         this.addSystem(new TriggerSystem());
         this.addSystem(new InventorySystem());
@@ -162,45 +160,30 @@ export class World {
      * Entity Management
      */
     public createEntity(): EntityId {
-        const id = this.entityCounter++;
-        this.entities.add(id);
-        return id;
+        return this.registry.createEntity();
     }
 
     public destroyEntity(id: EntityId): void {
-        this.entities.delete(id);
-        this.components.forEach(compMap => compMap.delete(id));
+        this.registry.removeEntity(id);
     }
 
     /**
      * Component Management
      */
     public addComponent<T>(entity: EntityId, type: ComponentType, data: T): void {
-        if (!this.components.has(type)) {
-            this.components.set(type, new Map());
-        }
-        this.components.get(type)!.set(entity, data);
+        this.registry.addComponent(entity, type, data);
     }
 
     public getComponent<T>(entity: EntityId, type: ComponentType): T | undefined {
-        return this.components.get(type)?.get(entity);
+        return this.registry.getComponent<T>(entity, type);
     }
 
     public queryEntities(...types: ComponentType[]): EntityId[] {
-        if (types.length === 0) return Array.from(this.entities);
-
-        // Simple intersection
-        let results = Array.from(this.components.get(types[0])?.keys() || []);
-        for (let i = 1; i < types.length; i++) {
-            const nextSet = this.components.get(types[i]);
-            if (!nextSet) return [];
-            results = results.filter(id => nextSet.has(id));
-        }
-        return results;
+        return this.registry.getEntitiesWith(types);
     }
 
     public getEntitiesWith(types: ComponentType[]): EntityId[] {
-        return this.queryEntities(...types);
+        return this.registry.getEntitiesWith(types);
     }
 
     /**
