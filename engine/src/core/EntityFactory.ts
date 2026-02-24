@@ -1,5 +1,6 @@
 import { World, EntityId } from './World';
 import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent } from './components/PlayerComponents';
+import { PlayerIntentSystem } from './systems/PlayerIntentSystem';
 
 /**
  * EntityFactory: Centralized assembler for complex entities.
@@ -55,6 +56,12 @@ export class EntityFactory {
         // Initial Camera Sync
         world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
         world.renderEngine.setMainCameraPosition(position[0], position[1] + 1.7, position[2]);
+
+        // Attach Controls
+        const intentSystem = world.systems.findSystem(PlayerIntentSystem);
+        if (intentSystem) {
+            (intentSystem as PlayerIntentSystem).attachToEntity(player);
+        }
 
         return player;
     }

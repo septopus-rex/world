@@ -52,6 +52,9 @@ export class RenderEngine {
         this.minimapCamera.lookAt(0, 0, 0);
         this.minimapCamera.layers.enableAll();
 
+        // Enable Layer 1 for Selection in Main Camera
+        this.mainCamera.layers.enable(1);
+
         // 4. Initialize Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         this.renderer.setSize(Math.max(1, this.container.clientWidth), Math.max(1, this.container.clientHeight));
@@ -134,6 +137,14 @@ export class RenderEngine {
         const size = new THREE.Vector3();
         box.getSize(size);
         return [size.x, size.y, size.z];
+    }
+
+    public setRaycastable(handle: RenderHandle, state: boolean): void {
+        const obj = handle as THREE.Object3D;
+        const layer = state ? 1 : 0;
+        obj.traverse((child) => {
+            child.layers.set(layer);
+        });
     }
 
     public createGroup(parent?: RenderHandle): RenderHandle {
@@ -407,6 +418,7 @@ export class RenderEngine {
      */
     public castRayFromCamera(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
         const raycaster = new THREE.Raycaster();
+        raycaster.layers.set(1); // ONLY intersect with objects on Layer 1
         raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
 
         const intersects = raycaster.intersectObjects(this.scene.children, true);
@@ -428,6 +440,7 @@ export class RenderEngine {
 
     public castRayFromMinimap(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
         const raycaster = new THREE.Raycaster();
+        raycaster.layers.set(1); // Minimap should also respect layers if we allow picking there
         raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.minimapCamera);
 
         const intersects = raycaster.intersectObjects(this.scene.children, true);

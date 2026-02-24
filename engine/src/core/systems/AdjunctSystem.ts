@@ -162,6 +162,7 @@ export class AdjunctSystem implements ISystem {
         }
 
         (adjunct as any)._mesh = meshGroup;
+        world.renderEngine.setRaycastable(meshGroup, true);
         adjunct.isInitialized = true;
         this.initializedAdjuncts.add(entityId);
 

@@ -47,6 +47,7 @@ export class BlockSystem implements ISystem {
         const group = world.renderEngine.createGroup();
         world.renderEngine.setObjectPosition(group, minX, block.elevation || 0, minZ);
         world.renderEngine.setObjectUserData(group, "entityId", eid);
+        world.renderEngine.setRaycastable(group, true);
 
         block.group = group;
         this.blockGroups.set(bKey, group);

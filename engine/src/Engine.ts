@@ -3,7 +3,8 @@ import { IDataSource } from './core/services/DataSource';
 import { IUIProvider } from './core/services/UIProvider';
 import { DefaultUIProvider } from './core/services/DefaultUIProvider';
 import { Coords } from './core/utils/Coords';
-import { PlayerControlSystem } from './core/systems/PlayerControlSystem';
+import { PlayerIntentSystem } from './core/systems/PlayerIntentSystem';
+import { InputProvider } from './core/systems/InputProvider';
 import { GlobalConfig } from './core/GlobalConfig';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
 
@@ -63,11 +64,6 @@ export class Engine {
         // 4. Initialize Player
         const player = this.world.setupPlayer(fullConfig.player.start.position, fullConfig.player.start.rotation);
 
-        // Find PlayerControlSystem and attach
-        const controlSystem = this.world.systems.findSystem(PlayerControlSystem);
-        if (controlSystem) {
-            controlSystem.attachToEntity(player);
-        }
 
         this.eventQueue.forEach(sub => this.on(sub.type, sub.callback));
         this.eventQueue = [];
