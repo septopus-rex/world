@@ -1,10 +1,10 @@
-# SPP World Protocol
+# Septopus World Protocol
 
-The **String Particle Protocol (SPP)** defines a "World" (`world`) as the highest-level administrative and physical bounding box within the ecosystem. An SPP World consists of a finite, continuous grid of Blocks (地块) and enforces global physics, atmospheric conditions, and access rules.
+Within the **Septopus Engine**, a "World" (`world`) is the highest-level administrative and physical bounding box. A Septopus World consists of a continuous grid of Blocks, and is governed by global physics, atmospheric conditions, and access rules enforced by the engine. Content organization within these blocks (e.g., via the SPP protocol) is a specific implementation layer within this management framework.
 
 ## 1. World Architecture & Layout
 
-The SPP metaverse is composed of a fixed number of overarching Worlds.
+The Septopus metaverse is composed of a fixed number of overarching Worlds.
 *   **Total Worlds**: 96 individual Worlds.
 *   **Macro Structure**: The 96 worlds are mathematically mapped onto the 6 faces of a massive cosmic cube (4x4 worlds per face).
 *   **World Dimensions**: A single World is a bounded grid of `4096 x 4096` Blocks.
@@ -24,7 +24,7 @@ Each World is a distinct sovereign territory owned by a "Lord." The Lord holds a
 Worlds share a foundational set of physical laws (Immutable Data) but allow the Lord to tweak specific atmospheric dials (Mutable Data).
 
 ### Immutable Configuration (System Level)
-Set upon the genesis of the SPP Engine and cannot be altered by individual Lords.
+Set upon the genesis of the Septopus Engine and cannot be altered by individual Lords.
 - **Time Dilation**: E.g., The ratio of Septopus Time to Real-World Time (default 20x faster).
 - **Celestial Bodies**: Standardized skybox configurations (1 Sun, 3 Moons).
 - **Maximum Block Expansion**: The hard limit of `4096 x 4096`.
@@ -55,6 +55,6 @@ Stored in a smart contract and configurable by the World's Lord.
 ```
 
 ### Configuration Hierarchy
-1.  **SPP Core Config**: The immutable laws of the engine.
+1.  **Septopus Engine Core Config**: The immutable laws of the engine.
 2.  **World Config**: The Lord's customized environment.
-3.  **Avatar/Block Config**: The individual Player's or Landowner's localized data overrides.
+3.  **Avatar/Block Config**: Individual Player or Landowner localized data overrides.

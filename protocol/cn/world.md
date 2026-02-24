@@ -1,10 +1,10 @@
-# SPP 世界协议 (World Protocol)
+# Septopus World (世界) 协议
 
-**String Particle Protocol (SPP)** 将“世界 (`world`)”定义为生态系统内最高级别的管理和物理边界框。一个 SPP 世界由一个有限且连续的地块 (Blocks) 网格组成，并强制执行全局物理、大气条件和访问规则。
+在 **Septopus 引擎** 中，“世界 (`world`)”是最高级别的管理和物理边界框。一个 Septopus 世界由若干连续的地块 (Blocks) 网格组成，并由引擎强制执行全局物理、大气条件和访问规则。地块内的内容组织（如通过 SPP 协议）则是该管理框架下的具体实现。
 
 ## 1. 世界架构与布局 (World Architecture & Layout)
 
-SPP 元宇宙由固定数量的顶层世界组成。
+Septopus 元宇宙由固定数量的顶层世界组成。
 *   **世界总数**: 96 个独立的世界。
 *   **宏观结构**: 这 96 个世界在数学上被映射到一个巨大宇宙立方体的 6 个面上（每个面 4x4 个世界）。
 *   **世界尺寸**: 单个世界是一个 `4096 x 4096` 地块的有界网格。
@@ -24,7 +24,7 @@ SPP 元宇宙由固定数量的顶层世界组成。
 各个世界共享一组基础物理定律（不可变数据 / Immutable Data），但允许领主调整特定的大气表盘（可变数据 / Mutable Data）。
 
 ### 不可变配置 (系统级 / System Level)
-在 SPP 引擎初始创世时设定，无法由个别领主更改。
+在 Septopus 引擎初始创世时设定，无法由个别领主更改。
 - **时间膨胀 (Time Dilation)**: 例如，Septopus 时间与现实世界时间的比率（默认为快 20 倍）。
 - **天体系统 (Celestial Bodies)**: 标准化的天空盒配置（1 个太阳，3 个月亮）。
 - **最大地块扩展 (Maximum Block Expansion)**: 硬性限制为 `4096 x 4096`。
@@ -55,6 +55,6 @@ SPP 元宇宙由固定数量的顶层世界组成。
 ```
 
 ### 配置层级 (Configuration Hierarchy)
-1.  **SPP 核心配置 (SPP Core Config)**: 引擎不可变的基石铁律。
-2.  **世界配置 (World Config)**: 领主自定义的统一环境。
-3.  **Avatar/地块配置 (Avatar/Block Config)**: 个体玩家或地主本地化的数据覆盖。
+1.  **Septopus 引擎核心配置 (Engine Core Config)**: 引擎不可变的基石铁律。
+2.  **世界配置**: 领主自定义的统一环境。
+3.  **Avatar/地块配置**: 个体玩家或地主本地化的数据覆盖。

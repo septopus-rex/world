@@ -1,6 +1,6 @@
-# SPP 触发器协议 (Trigger Protocol)
+# Septopus 触发器协议 (Trigger Protocol)
 
-**String Particle Protocol (SPP)** 通过数据驱动的触发器 (Trigger) 系统创造交互性。创作者无需为每个对象编写自定义逻辑脚本，而是定义条件数组，引擎会在运行时实时进行计算评估。
+**Septopus 引擎** 通过数据驱动的触发器 (Trigger) system 实现交互逻辑。这种机制允许创作者无需编写复杂脚本，而是通过定义事件与条件的组合，由引擎在运行时自动评估并修改世界状态。
 
 触发器是实现游戏玩法逻辑、环境危险因素和状态变化的主要机制。
 

@@ -1,6 +1,6 @@
-# SPP Trigger Protocol
+# Septopus Trigger Protocol
 
-The **String Particle Protocol (SPP)** creates interactivity through a data-driven Trigger system. Instead of writing custom logic scripts for every object, creators define conditional arrays that the engine evaluates in real-time. 
+The **Septopus Engine** implements interactive logic through a data-driven Trigger system. This mechanism allows creators to define combinations of events and conditions without writing complex scripts, which the engine then evaluates at runtime to modify the world state.
 
 Triggers are the primary mechanism for implementing gameplay logic, environment hazards, and state changes.
 

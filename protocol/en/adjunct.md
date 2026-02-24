@@ -1,6 +1,8 @@
-# SPP Adjunct Protocol
+# Septopus Adjunct Protocol
 
-The **String Particle Protocol (SPP)** defines "Adjuncts" (附属物) as the primary mechanism for extending the engine's capabilities and rendering dynamic, interactive 3D objects beyond static spatial blocks.
+Within the **Septopus Engine**, "Adjuncts" (附属物) are the fundamental atoms for building physical content, rendering 3D objects, and implementing dynamic interactivity. The engine runs the world by managing the lifecycle of these adjuncts.
+
+Within this system, there exists a special class of **Meta-Adjuncts**. For example, the **`spp` adjunct** does not directly represent a visual object, but instead acts as an "announcer" responsible for parsing string particle data and deriving other adjuncts.
 
 Adjuncts are designed to be completely decoupled from the core engine. They can be dynamically loaded from IPFS, blockchain smart contracts, or local servers. Once loaded, they operate within the ECS (Entity-Component-System) structure to map standard data parameters into rich 3D visuals and programmable behaviors.
 
@@ -12,7 +14,7 @@ Adjuncts are parsed and executed within an isolated environment (or sandbox) to 
 
 - **Coordinate System**: Adjuncts operate within the standard SPP Block Coordinate System.
 - **Data Flow**: The engine feeds raw block data into the Adjunct. The Adjunct transforms this raw data into standard 3D parameters (`position`, `scale`, `rotation`, `material`), which the engine's rendering pipeline then converts into Three.js object meshes.
-- **Extensibility**: Different SPP "Worlds" can whitelist specific Adjuncts to create distinct visual styles and gameplay mechanics (e.g., a whitelist allowing "Laser Door" and "Jump Pad" adjuncts).
+- **Extensibility**: Different Septopus "Worlds" can whitelist specific Adjuncts to create distinct visual styles and gameplay mechanics (e.g., a whitelist allowing "Laser Door" and "Jump Pad" adjuncts).
 
 ---
 

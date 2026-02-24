@@ -1,6 +1,8 @@
-# SPP Block Protocol
+# Septopus Block Protocol
 
-The **String Particle Protocol (SPP)** defines a "Block" (地块) as the fundamental, atomic spatial data unit of an SPP World. By composing individual Blocks together, a complete, continuous virtual environment is constructed.
+The **Septopus Engine** defines a "Block" (地块) as the most fundamental, indivisible **atomic spatial container** within a world. It is essentially a geographic slot for housing various types of content from different sources.
+
+A Block has no inherent or necessary tie to a specific organization protocol like SPP. It can accommodate adjuncts deployed through standard methods, as well as complex string particle structures deployed through a special **`spp` adjunct** (acting as a parsing agent).
 
 ## 1. Core Properties
 
@@ -23,4 +25,4 @@ While Blocks define the stable ground and absolute coordinates of the world, **A
 
 ## 3. Storage and Scaling
 
-Each Block is serialized into the SPP string format. Because of its atomic nature, worlds can be dynamically loaded or unloaded (sharded) on a per-Block basis by the engine, allowing for infinitely scaling environments without overwhelming client memory.
+Each Block can be serialized into a specific data format (such as SPP string) as needed. Because of its atomic nature, worlds can be dynamically loaded or unloaded (sharded) on a per-Block basis by the engine, allowing for infinitely scaling environments without overwhelming client memory.

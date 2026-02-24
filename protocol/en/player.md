@@ -1,10 +1,10 @@
-# SPP Player Protocol
+# Septopus Player Protocol
 
-The **String Particle Protocol (SPP)** conceptualizes the "Player" (玩家) not just as a floating camera, but as a physical entity within the world whose state, movement, and visual representation (Avatar) adhere to strict standards.
+Within the **Septopus Engine**, the "Player" is not just a viewpoint, but an interactive unit that follows physical rules and has a visual representation (Avatar) within the world. Their position and state are tracked in real-time by the engine and can deeply interact with content organized via SPP.
 
 ## 1. Player Spatial State
 
-Unlike static blocks, the Player's state is hyper-dynamic. The SPP engine must continuously track the player's world positioning and posture to calculate physics and rendering bounds.
+Unlike static blocks, the Player's state is hyper-dynamic. The Septopus engine must continuously track the player's world positioning and posture to calculate physics and rendering bounds.
 
 A Player's core persistent state format:
 ```json
@@ -25,7 +25,7 @@ A Player's core persistent state format:
 
 ### State Properties
 *   `block`: The `[X, Y]` coordinates of the Block the player currently occupies.
-*   `world`: The ID of the current SPP virtual world.
+*   `world`: The ID of the current Septopus virtual world.
 *   `position`: The `[X, Y, Z]` precise coordinates *relative to the current Block*.
 *   `rotation`: The Euler Euler rotation array `[X, Y, Z]` of the player's viewing angle.
 *   `stop`: Defines vertical collision grounding. If the player is standing on an elevated object (an Adjunct like a bridge or table), the engine must know which object to calculate absolute falling equations correctly.
