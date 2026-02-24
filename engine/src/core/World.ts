@@ -1,12 +1,13 @@
 import { RenderEngine } from '../render/RenderEngine';
 import { RenderPipeline } from '../render/RenderPipeline';
-import { RenderHandle } from './types/Adjunct';
-import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent } from './components/PlayerComponents';
 import { Coords } from './utils/Coords';
 import { ParticleCell, ParticleFace } from './types/ParticleCell';
 import { ECSRegistry } from './ECSRegistry';
+import { SystemManager } from './SystemManager';
+import { WorldBridge } from './WorldBridge';
+import { EntityFactory } from './EntityFactory';
 
-// Systems
+// Systems (Imported only for registration in constructor or specialized logic)
 import { PhysicsSystem } from './systems/PhysicsSystem';
 import { PlayerControlSystem } from './systems/PlayerControlSystem';
 import { BlockSystem } from './systems/BlockSystem';
@@ -21,11 +22,11 @@ import { InventorySystem } from './systems/InventorySystem';
 import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { EditSystem } from './systems/EditSystem';
+
 import { FullWorldConfig } from './types/WorldConfig';
 import { SystemMode } from './types/SystemMode';
 import { IUIProvider } from './services/UIProvider';
 
-// --- ECS CORE DEFINITIONS ---
 export type EntityId = number;
 export type ComponentType = string;
 export type ComponentData = any;
@@ -40,17 +41,17 @@ export interface GameEvent {
     source?: EntityId;
 }
 
-
 /**
  * World: The Single Source of Truth & Main Orchestrator.
  * Handles ECS registry, Game Loop, and Integration of Systems.
  * 
- * DESIGN: WORLD IS NOW RENDER-AGNOSTIC.
+ * DESIGN: WORLD IS NOW A MINIMAL ORCHESTRATOR.
  */
 export class World {
-    // 1. ECS State (Delegated to Registry)
+    // 1. Core State & Managers
     private registry: ECSRegistry = new ECSRegistry();
-    private systems: ISystem[] = [];
+    public systems: SystemManager = new SystemManager();
+    private bridge: WorldBridge;
 
     // 2. Rendering (Abstracted)
     public renderEngine: RenderEngine;
@@ -59,142 +60,76 @@ export class World {
     // 3. Simulation State
     private lastTime: number = 0;
     private isRunning: boolean = false;
-    public time: number = 0.5; // normalized 0-1
+    public time: number = 0.5;
     public weather: string = 'clear';
     public mode: SystemMode = SystemMode.Normal;
     public isMovingObject: boolean = false;
     public activeEditBlockId: EntityId | null = null;
     public ui: IUIProvider | null = null;
-
-    // Legacy Bridge for SandboxLoader compatibility
-    public blocks = {
-        syncVisibility: (requiredKeys: string[]) => {
-            const blockSystem = this.systems.find(s => (s as any).syncVisibility) as any;
-            if (blockSystem) {
-                blockSystem.syncVisibility(this, requiredKeys);
-            }
-        }
-    };
-
-    // 4. Control Bridge (For high-level API compatibility)
-    public controls = {
-        setMoveIntent: (x: number, y: number) => {
-            const player = this.queryEntities("InputStateComponent")[0];
-            const input = this.getComponent<InputStateComponent>(player, "InputStateComponent");
-            if (input) input.movementIntent = [x, 0, y];
-        },
-        triggerJump: () => {
-            const player = this.queryEntities("InputStateComponent")[0];
-            const input = this.getComponent<InputStateComponent>(player, "InputStateComponent");
-            if (input) input.jump = true;
-        },
-        lock: () => this.renderEngine.lockControls?.(),
-        unlock: () => this.renderEngine.unlockControls?.()
-    };
-
-    public minimap = {
-        setFollow: (follow: boolean) => {
-            const system = this.systems.find(s => s instanceof MinimapSystem) as MinimapSystem;
-            if (system) system.isFollowingPlayer = follow;
-        },
-        applyPan: (dx: number, dy: number) => {
-            const system = this.systems.find(s => s instanceof MinimapSystem) as MinimapSystem;
-            if (system) system.applyPan(dx, dy);
-        },
-        pickBlockFromMinimap: (ndcX: number, ndcY: number) => {
-            const system = this.systems.find(s => s instanceof MinimapSystem) as MinimapSystem;
-            return system ? system.pickBlockFromMinimap(ndcX, ndcY) : null;
-        },
-        get zoom() {
-            const system = (this as any).systems.find((s: any) => s instanceof MinimapSystem) as MinimapSystem;
-            return system ? system.zoom : 1.0;
-        },
-        set zoom(val: number) {
-            const system = (this as any).systems.find((s: any) => s instanceof MinimapSystem) as MinimapSystem;
-            if (system) system.zoom = val;
-        }
-    };
-
-    // 5. Global Event Bus (Simplified)
-    private listeners: Map<string, Function[]> = new Map();
     public config: FullWorldConfig;
+
+    // 4. Events
+    private listeners: Map<string, Function[]> = new Map();
+
+    /**
+     * Facades for external UI/Loader compatibility
+     * Maintains functional parity with existing App.tsx and SandboxLoader
+     */
+    public get controls() { return this.bridge.controls; }
+    public get minimap() { return this.bridge.minimap; }
+    public get blocks() { return this.bridge.blocks; }
 
     constructor(config: FullWorldConfig) {
         this.config = config;
-        // Global Logic Sync: Ensure coordinate math uses current world dimensions
+        this.bridge = new WorldBridge(this);
         Coords.BLOCK_SIZE = config.world.block[0];
 
-        // Initialize Rendering Engine (Three.js Wrapper)
+        // 1. Rendering Setup
         this.renderEngine = new RenderEngine({
             containerId: config.world.containerId,
             clearColor: 0x87ceeb
         });
-
-        // Initialize Render Pipeline (SPP to Rendering)
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 
-        // Register Core Systems
-        this.addSystem(new RaycastInteractionSystem());
-        this.addSystem(new PlayerControlSystem(this, this.renderEngine.getDomElement()));
-        this.addSystem(new TriggerSystem());
-        this.addSystem(new InventorySystem());
-        this.addSystem(new PhysicsSystem());
-        this.addSystem(new GridSystem());
-        this.addSystem(new BlockSystem());
-        this.addSystem(new AdjunctSystem());
-        this.addSystem(new EnvironmentSystem(this));
-        this.addSystem(new AnimationSystem());
-        this.addSystem(new ParticleEffectSystem());
-        this.addSystem(new MinimapSystem());
-        this.addSystem(new ItemDropSystem());
-        this.addSystem(new EditSystem(this));
+        // 2. System Bootstrap (Extractable to configuration in future)
+        this.systems.addSystem(new RaycastInteractionSystem());
+        this.systems.addSystem(new PlayerControlSystem(this, this.renderEngine.getDomElement()));
+        this.systems.addSystem(new TriggerSystem());
+        this.systems.addSystem(new InventorySystem());
+        this.systems.addSystem(new PhysicsSystem());
+        this.systems.addSystem(new GridSystem());
+        this.systems.addSystem(new BlockSystem());
+        this.systems.addSystem(new AdjunctSystem());
+        this.systems.addSystem(new EnvironmentSystem(this));
+        this.systems.addSystem(new AnimationSystem());
+        this.systems.addSystem(new ParticleEffectSystem());
+        this.systems.addSystem(new MinimapSystem());
+        this.systems.addSystem(new ItemDropSystem());
+        this.systems.addSystem(new EditSystem(this));
 
-        // Start Loop automatically
         this.start();
-
-        // Listen for Window Resize
         window.addEventListener('resize', () => this.renderEngine.resize(), false);
     }
 
     /**
-     * Entity Management
+     * Delegate ECS operations to Registry
      */
-    public createEntity(): EntityId {
-        return this.registry.createEntity();
-    }
+    public createEntity(): EntityId { return this.registry.createEntity(); }
+    public destroyEntity(id: EntityId): void { this.registry.removeEntity(id); }
+    public addComponent<T>(entity: EntityId, type: ComponentType, data: T): void { this.registry.addComponent(entity, type, data); }
+    public getComponent<T>(entity: EntityId, type: ComponentType): T | undefined { return this.registry.getComponent<T>(entity, type); }
+    public queryEntities(...types: ComponentType[]): EntityId[] { return this.registry.getEntitiesWith(types); }
+    public getEntitiesWith(types: ComponentType[]): EntityId[] { return this.registry.getEntitiesWith(types); }
 
-    public destroyEntity(id: EntityId): void {
-        this.registry.removeEntity(id);
+    /**
+     * Delegate Player Setup to Factory
+     */
+    public setupPlayer(position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]): EntityId {
+        return EntityFactory.setupPlayer(this, position, rotation);
     }
 
     /**
-     * Component Management
-     */
-    public addComponent<T>(entity: EntityId, type: ComponentType, data: T): void {
-        this.registry.addComponent(entity, type, data);
-    }
-
-    public getComponent<T>(entity: EntityId, type: ComponentType): T | undefined {
-        return this.registry.getComponent<T>(entity, type);
-    }
-
-    public queryEntities(...types: ComponentType[]): EntityId[] {
-        return this.registry.getEntitiesWith(types);
-    }
-
-    public getEntitiesWith(types: ComponentType[]): EntityId[] {
-        return this.registry.getEntitiesWith(types);
-    }
-
-    /**
-     * System Management
-     */
-    public addSystem(system: ISystem): void {
-        this.systems.push(system);
-    }
-
-    /**
-     * Lifecycle Control
+     * Game Loop Orchestration
      */
     public start(): void {
         if (!this.isRunning) {
@@ -205,23 +140,29 @@ export class World {
         }
     }
 
-    public stop(): void {
-        this.isRunning = false;
+    private runLoop(): void {
+        const loop = (now: number) => {
+            if (!this.isRunning) return;
+            const dt = Math.min((now - this.lastTime) / 1000, 0.1);
+            this.lastTime = now;
+
+            this.systems.update(this, dt);
+            this.renderEngine.render(this.pipeline.isMinimapActive);
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
     }
+
+    public stop(): void { this.isRunning = false; }
 
     public setMode(mode: SystemMode): void {
         const oldMode = this.mode;
         if (oldMode === mode) return;
-
         this.mode = mode;
         this.emitSimple("world:mode_changed", { mode, oldMode });
-
-        // Save on Exit Edit
         if (oldMode === SystemMode.Edit && mode !== SystemMode.Edit) {
             this.emitSimple("world:save_request", { reason: 'exit_edit_mode' });
         }
-
-        // Preload on Enter Game
         if (mode === SystemMode.Game) {
             this.emitSimple("world:preload_request", { scope: 'all' });
         }
@@ -231,30 +172,10 @@ export class World {
         this.setMode(active ? SystemMode.Edit : SystemMode.Normal);
     }
 
-    public setUIProvider(ui: any): void {
-        this.ui = ui;
-    }
-
-    private runLoop(): void {
-        const loop = (now: number) => {
-            if (!this.isRunning) return;
-
-            const dt = Math.min((now - this.lastTime) / 1000, 0.1);
-            this.lastTime = now;
-
-            for (const system of this.systems) {
-                system.update(this, dt);
-            }
-
-            this.renderEngine.render(this.pipeline.isMinimapActive);
-            requestAnimationFrame(loop);
-        };
-
-        requestAnimationFrame(loop);
-    }
+    public setUIProvider(ui: any): void { this.ui = ui; }
 
     /**
-     * Event Handling
+     * Event Bus
      */
     public on(event: string, callback: Function): void {
         if (!this.listeners.has(event)) this.listeners.set(event, []);
@@ -277,68 +198,7 @@ export class World {
         }
     }
 
-    /**
-     * Asset Management
-     */
-    private resolveAsset(face: ParticleFace, variantIndex: number, cell: ParticleCell): any {
-        return null; // Implementation deferred to external asset system
-    }
-
-    /**
-     * High Level Player Setup
-     */
-    public setupPlayer(position: [number, number, number], rotation: [number, number, number] = [0, 0, 0]): EntityId {
-        const player = this.createEntity();
-
-        this.addComponent<TransformComponent>(player, "TransformComponent", {
-            position: [...position],
-            rotation: [...rotation],
-            scale: [1, 1, 1]
-        });
-
-        this.addComponent<RigidBodyComponent>(player, "RigidBodyComponent", {
-            size: [0.6, 1.8, 0.6],
-            offset: [0, 0, 0],
-            velocity: [0, 0, 0],
-            mass: 1,
-            maxSpeedWalk: 5,
-            maxSpeedRun: 10,
-            jumpForce: 8,
-            gravity: 1,
-            friction: 0.9,
-            isGrounded: false
-        });
-
-        this.addComponent<InputStateComponent>(player, "InputStateComponent", {
-            forward: false, backward: false, left: false, right: false, jump: false, run: false,
-            interactPrimary: false, interactSecondary: false,
-            lookUp: false, lookDown: false, lookLeft: false, lookRight: false,
-            movementIntent: [0, 0, 0],
-            lookPitchDelta: 0, lookYawDelta: 0,
-            mouseNDC: [0, 0],
-            modifierAlt: false
-        });
-
-        this.addComponent<CameraComponent>(player, "CameraComponent", {
-            offset: [0, 1.7, 0],
-            fov: 75,
-            active: true
-        });
-
-        const avatarHandle = this.renderEngine.createAvatarMesh();
-        this.renderEngine.setObjectPosition(avatarHandle, position[0], position[1], position[2]);
-
-        this.addComponent<AvatarComponent>(player, "AvatarComponent", {
-            handle: avatarHandle,
-            visible: true
-        });
-
-        // Initial Camera Sync
-        this.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
-        this.renderEngine.setMainCameraPosition(position[0], position[1] + 1.7, position[2]);
-
-        return player;
-    }
+    private resolveAsset(face: ParticleFace, variantIndex: number, cell: ParticleCell): any { return null; }
 
     public dispose(): void {
         this.isRunning = false;
