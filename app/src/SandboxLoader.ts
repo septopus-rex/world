@@ -59,8 +59,13 @@ export class SandboxLoader implements IDataSource {
         this.engine = new Engine(containerId, {
             api: this,
             ui: ui || {
-                show: (type: string, content: any) => console.log(`[UI SHOW] ${type}:`, content),
-                hide: (type: string) => console.log(`[UI HIDE] ${type}`)
+                showGroup: (id: string, items: any[], pos: string) => console.log(`[HUD Group] ${id} at ${pos}`, items),
+                showButton: (id: string, config: any) => console.log(`[HUD Button] ${id}`, config),
+                showModal: (id: string, config: any) => console.log(`[HUD Modal] ${id}`, config),
+                showToast: (msg: string) => console.log(`[HUD Toast] ${msg}`),
+                hide: (id: string) => console.log(`[HUD Hide] ${id}`),
+                updateCompass: (yaw: number) => console.log(`[HUD Compass] ${yaw}`),
+                updateWidget: (id: string, data: any) => console.log(`[HUD Widget] ${id}`, data)
             }
         });
 

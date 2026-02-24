@@ -402,6 +402,11 @@ export class PlayerControlSystem implements ISystem {
 
         this.world.renderEngine.setMainCameraRotation(camRot[0], camRot[1], camRot[2]);
 
+        // --- UI Compass Update ---
+        if (this.world.ui) {
+            this.world.ui.updateCompass(camRot[1]);
+        }
+
         if (this._direction.lengthSq() > 0) {
             this._direction.normalize();
         }

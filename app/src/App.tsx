@@ -44,11 +44,13 @@ function App() {
 
       // Inject standard UI components (Bridge between React state and Engine)
       const uiProvider = {
-        show: (type: string, content: any) => {
-          if (type === "toast") console.log("[HUD Toast]", content);
-          if (type === "dialog") console.log("[HUD Dialog]", content);
-        },
-        hide: (type: string) => console.log("[HUD Hide]", type)
+        showGroup: (id: string, items: any[], pos: string) => console.log(`[HUD Group] ${id} at ${pos}`, items),
+        showButton: (id: string, config: any) => console.log(`[HUD Button] ${id}`, config),
+        showModal: (id: string, config: any) => console.log(`[HUD Modal] ${id}`, config),
+        showToast: (msg: string) => console.log(`[HUD Toast] ${msg}`),
+        hide: (id: string) => console.log(`[HUD Hide] ${id}`),
+        updateCompass: (yaw: number) => console.log(`[HUD Compass] ${yaw}`),
+        updateWidget: (id: string, data: any) => console.log(`[HUD Widget] ${id}`, data)
       };
 
       loaderRef.current.init('three_demo', uiProvider);
@@ -347,8 +349,8 @@ function App() {
         <button
           onClick={() => setIsEditMode(!isEditMode)}
           className={`px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl ${isEditMode
-              ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300'
-              : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
+            ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300'
+            : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'
             }`}
         >
           <div className={`w-2 h-2 rounded-full ${isEditMode ? 'bg-yellow-400 animate-pulse' : 'bg-cyan-500'}`}></div>

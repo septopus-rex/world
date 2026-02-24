@@ -1,16 +1,61 @@
+export interface UIButtonConfig {
+    label: string;
+    icon?: string;
+    onClick: () => void;
+    active?: boolean;
+    disabled?: boolean;
+    tooltip?: string;
+    variant?: 'primary' | 'secondary' | 'danger';
+}
+
+export interface UIModalConfig {
+    title: string;
+    body: string;
+    buttons: UIButtonConfig[];
+    onClose?: () => void;
+}
+
 export interface IUIProvider {
     /**
-     * Show a standardized UI component
+     * Show a group of buttons. 
+     * If position is a string, it uses fixed corners.
+     * If position is an object {x, y}, it uses absolute screen coordinates (0-1 range).
      */
-    show(type: string, content: any, cfg?: any): void;
+    showGroup(id: string, items: UIButtonConfig[], position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | { x: number, y: number }): void;
 
     /**
-     * Hide a specific UI component
+     * Show a standardized Button
      */
-    hide(type: string): void;
+    showButton(id: string, config: UIButtonConfig, position?: { x: number, y: number }): void;
 
     /**
-     * Update an existing UI component
+     * Show a Modal dialog
      */
-    update?(type: string, content: any, cfg?: any): void;
+    showModal(id: string, config: UIModalConfig): void;
+
+    /**
+     * Show a Toast message
+     */
+    showToast(message: string, duration?: number): void;
+
+    /**
+     * Update the rotation/angle of the Compass widget
+     * @param yaw Radians
+     */
+    updateCompass(yaw: number): void;
+
+    /**
+     * Generic method to update complex persistent widgets (Minimap, Health, etc.)
+     */
+    updateWidget(id: string, data: any): void;
+
+    /**
+     * Hide or Close a UI element by ID
+     */
+    hide(id: string): void;
+
+    /**
+     * Inject custom CSS variables (Design Tokens)
+     */
+    injectStyle?(tokens: Record<string, string>): void;
 }

@@ -1,0 +1,208 @@
+:root {
+    --sept-color-primary: #00ffff;
+    --sept-color-bg: rgba(20, 20, 25, 0.85);
+    --sept-color-text: #ffffff;
+    --sept-color-danger: #ff4444;
+    --sept-radius-sm: 4px;
+    --sept-radius-md: 8px;
+    --sept-font-main: 'Inter', system-ui, -apple-system, sans-serif;
+    --sept-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.sept-ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    font-family: var(--sept-font-main);
+}
+
+.sept-ui-overlay * {
+    pointer-events: auto;
+}
+
+/* Button Group */
+.sept-ui-group {
+    position: absolute;
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+}
+
+.sept-ui-group.bottom-right {
+    bottom: 0;
+    right: 0;
+    flex-direction: row;
+}
+
+.sept-ui-group.bottom-left {
+    bottom: 0;
+    left: 0;
+    flex-direction: row;
+}
+
+.sept-ui-group.top-right {
+    top: 0;
+    right: 0;
+    flex-direction: row;
+}
+
+.sept-ui-group.top-left {
+    top: 0;
+    left: 0;
+    flex-direction: row;
+}
+
+/* Buttons */
+.sept-ui-btn {
+    background: var(--sept-color-bg);
+    color: var(--sept-color-text);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 8px 16px;
+    border-radius: var(--sept-radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.sept-ui-btn:hover {
+    border-color: var(--sept-color-primary);
+    box-shadow: 0 0 12px rgba(0, 255, 255, 0.3);
+}
+
+.sept-ui-btn.active {
+    background: var(--sept-color-primary);
+    color: #000;
+    border-color: var(--sept-color-primary);
+    font-weight: 600;
+}
+
+.sept-ui-btn.variant-danger:hover {
+    border-color: var(--sept-color-danger);
+    box-shadow: 0 0 12px rgba(255, 68, 68, 0.3);
+}
+
+/* Toast */
+.sept-ui-toast-container {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+.sept-ui-toast {
+    background: var(--sept-color-bg);
+    color: var(--sept-color-text);
+    padding: 10px 20px;
+    border-radius: var(--sept-radius-md);
+    border-left: 4px solid var(--sept-color-primary);
+    box-shadow: var(--sept-shadow-lg);
+    font-size: 14px;
+    animation: sept-slide-down 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+}
+
+@keyframes sept-slide-down {
+    from {
+        transform: translateY(-40px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Modal */
+.sept-ui-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+
+.sept-ui-modal {
+    background: #1a1a1f;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--sept-radius-md);
+    width: 320px;
+    box-shadow: var(--sept-shadow-lg);
+    color: var(--sept-color-text);
+    overflow: hidden;
+}
+
+.sept-ui-modal-header {
+    padding: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sept-ui-modal-body {
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.sept-ui-modal-footer {
+    padding: 12px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* Compass */
+.sept-ui-compass {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 64px;
+    height: 64px;
+    background: var(--sept-color-bg);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(8px);
+    box-shadow: var(--sept-shadow-lg);
+    z-index: 1001;
+}
+
+.sept-ui-compass-needle {
+    width: 4px;
+    height: 48px;
+    background: linear-gradient(to bottom, var(--sept-color-primary) 50%, #fff 50%);
+    border-radius: 2px;
+    transition: transform 0.1s ease-out;
+}
+
+.sept-ui-compass::after {
+    content: 'N';
+    position: absolute;
+    top: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--sept-color-primary);
+}

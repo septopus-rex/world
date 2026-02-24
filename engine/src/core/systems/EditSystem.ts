@@ -7,6 +7,7 @@ import { RenderHandle } from '../types/Adjunct';
 import { GlobalConfig } from '../GlobalConfig';
 import { CONTROL_CONSTANTS } from '../Constants';
 import { SystemMode } from '../types/SystemMode';
+import { UIButtonConfig } from '../services/UIProvider';
 
 /**
  * EditSystem
@@ -17,10 +18,16 @@ export class EditSystem implements ISystem {
     private selectedEntityId: EntityId | null = null;
     private movingEntityId: EntityId | null = null;
 
+    // UI state tracking to prevent redundant updates
+    private lastUISelection: EntityId | null = null;
+    private lastUIPlane: string = '';
+    private lastUIActiveBlock: EntityId | null = null;
+
     private blockHelper: RenderHandle | null = null;
     private gridHelper: RenderHandle | null = null;
     private selectionHighlight: RenderHandle | null = null; // 1.1x BoxHelper
     private gridPlane: 'XZ' | 'XY' | 'YZ' = 'XZ';
+    private hasBeenCleared: boolean = false;
 
     private lastClickTime: number = 0;
     private readonly DOUBLE_CLICK_DELAY = 300;
@@ -34,9 +41,15 @@ export class EditSystem implements ISystem {
 
     public update(world: World, dt: number): void {
         if (world.mode !== SystemMode.Edit) {
-            this.clearHelpers(world);
+            if (!this.hasBeenCleared) {
+                this.clearHelpers(world);
+                this.hasBeenCleared = true;
+            }
             return;
         }
+
+        // Re-entering Edit mode: reset clear flag
+        this.hasBeenCleared = false;
 
         // 1. Maintain Active Block (the one player is standing on)
         this.maintainActiveBlock(world);
@@ -128,6 +141,7 @@ export class EditSystem implements ISystem {
             if (bComp && bComp.x === block[0] && bComp.y === block[1]) {
                 this.activeBlockId = eid;
                 world.activeEditBlockId = eid; // Sync with world for other systems
+                this.syncUI(world);
                 break;
             }
         }
@@ -180,6 +194,7 @@ export class EditSystem implements ISystem {
             this.movingEntityId = null;
             world.isMovingObject = false;
             this.createOrUpdateGridHelper(world);
+            this.syncUI(world);
             return;
         }
 
@@ -196,6 +211,7 @@ export class EditSystem implements ISystem {
         }
 
         this.createOrUpdateGridHelper(world);
+        this.syncUI(world);
     }
 
     private createOrUpdateGridHelper(world: World) {
@@ -272,12 +288,84 @@ export class EditSystem implements ISystem {
         // Redundant - removed in favor of block-absolute positioning
     }
 
-    private cycleGridPlane(world: World) {
-        if (this.gridPlane === 'XZ') this.gridPlane = 'XY';
-        else if (this.gridPlane === 'XY') this.gridPlane = 'YZ';
-        else this.gridPlane = 'XZ';
+    private cycleGridPlane(world: World, forcedPlane?: 'XZ' | 'XY' | 'YZ') {
+        if (forcedPlane) {
+            this.gridPlane = forcedPlane;
+        } else {
+            if (this.gridPlane === 'XZ') this.gridPlane = 'XY';
+            else if (this.gridPlane === 'XY') this.gridPlane = 'YZ';
+            else this.gridPlane = 'XZ';
+        }
 
         this.applyGridRotation();
+        this.syncUI(world);
+    }
+
+    private syncUI(world: World) {
+        if (!world.ui) return;
+
+        // Diff check to avoid DOM flooding
+        if (this.selectedEntityId === this.lastUISelection &&
+            this.gridPlane === this.lastUIPlane &&
+            this.activeBlockId === this.lastUIActiveBlock) {
+            return;
+        }
+
+        this.lastUISelection = this.selectedEntityId;
+        this.lastUIPlane = this.gridPlane;
+        this.lastUIActiveBlock = this.activeBlockId;
+
+        if (this.selectedEntityId === null) {
+            world.ui.hide("edit-controls");
+            return;
+        }
+
+        // Contextual Positioning: Calculate screen position for the UI group
+        let position: any = 'bottom-right'; // Default fallback
+        const transform = world.getComponent<TransformComponent>(this.selectedEntityId, 'TransformComponent');
+        if (transform) {
+            // Get screen coordinates of the adjunct
+            const screenPos = world.renderEngine.worldToScreen(
+                transform.position[0],
+                transform.position[1] + 1.5, // Slightly above center
+                transform.position[2]
+            );
+            position = screenPos;
+        }
+
+        const buttons: UIButtonConfig[] = [
+            {
+                label: "XZ",
+                active: this.gridPlane === 'XZ',
+                onClick: () => this.cycleGridPlane(world, 'XZ'),
+                tooltip: "Horizontal Plane (Ground)"
+            },
+            {
+                label: "XY",
+                active: this.gridPlane === 'XY',
+                onClick: () => this.cycleGridPlane(world, 'XY'),
+                tooltip: "Vertical Plane (Front/Back)"
+            },
+            {
+                label: "YZ",
+                active: this.gridPlane === 'YZ',
+                onClick: () => this.cycleGridPlane(world, 'YZ'),
+                tooltip: "Vertical Plane (Side)"
+            },
+            {
+                label: "Done",
+                variant: 'primary',
+                onClick: () => {
+                    this.selectedEntityId = null;
+                    this.movingEntityId = null;
+                    world.isMovingObject = false;
+                    this.syncUI(world); // Ensure UI hides
+                    this.createOrUpdateGridHelper(world);
+                }
+            }
+        ];
+
+        world.ui.showGroup("edit-controls", buttons, position);
     }
 
     private applyGridRotation() {
@@ -311,5 +399,8 @@ export class EditSystem implements ISystem {
         this.selectedEntityId = null;
         this.movingEntityId = null;
         world.isMovingObject = false;
+
+        this.lastUISelection = -1; // Force re-sync if re-entered
+        this.syncUI(world);
     }
 }

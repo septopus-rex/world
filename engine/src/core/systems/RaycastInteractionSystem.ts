@@ -22,6 +22,11 @@ export class RaycastInteractionSystem implements ISystem {
 
         if (!cameraComp || !cameraComp.active || !inputComp) return;
 
+        const isEdit = world.mode === SystemMode.Edit;
+        const shouldRaycast = isEdit || inputComp.interactPrimary;
+
+        if (!shouldRaycast) return;
+
         // Perform Raycast via RenderEngine
         // Use mouseNDC (mapping mouse clicks to world objects)
         const hit = world.renderEngine.castRayFromCamera(inputComp.mouseNDC[0], inputComp.mouseNDC[1]);

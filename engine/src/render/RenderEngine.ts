@@ -449,6 +449,20 @@ export class RenderEngine {
         return result ? [result.x, result.y, result.z] : null;
     }
 
+    /**
+     * Projects a 3D world point to 2D screen coordinates (Normalized 0-1 range)
+     */
+    public worldToScreen(x: number, y: number, z: number): { x: number, y: number } {
+        const vector = new THREE.Vector3(x, y, z);
+        vector.project(this.mainCamera);
+
+        // Convert -1..1 to 0..1
+        return {
+            x: (vector.x + 1) / 2,
+            y: (-vector.y + 1) / 2
+        };
+    }
+
     public createWeatherParticles(): RenderHandle {
         const particleCount = 2000;
         const geometry = new THREE.BufferGeometry();

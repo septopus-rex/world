@@ -21,6 +21,7 @@ import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { EditSystem } from './systems/EditSystem';
 import { FullWorldConfig } from './types/WorldConfig';
 import { SystemMode } from './types/SystemMode';
+import { IUIProvider } from './services/UIProvider';
 
 // --- ECS CORE DEFINITIONS ---
 export type EntityId = number;
@@ -63,6 +64,7 @@ export class World {
     public mode: SystemMode = SystemMode.Normal;
     public isMovingObject: boolean = false;
     public activeEditBlockId: EntityId | null = null;
+    public ui: IUIProvider | null = null;
 
     // Legacy Bridge for SandboxLoader compatibility
     public blocks = {
@@ -240,6 +242,10 @@ export class World {
 
     public setEditMode(active: boolean): void {
         this.setMode(active ? SystemMode.Edit : SystemMode.Normal);
+    }
+
+    public setUIProvider(ui: any): void {
+        this.ui = ui;
     }
 
     private runLoop(): void {

@@ -23,12 +23,23 @@ export class AnimationSystem implements ISystem {
 
             if (!anim || !transform) continue;
 
-            // Optimization: Only check AdjunctComponent in Edit Mode for the active block
+            // Capture initial values if missing, even in Edit mode
+            if (!anim.initialValues) {
+                anim.initialValues = {
+                    position: [...transform.position],
+                    rotation: [...transform.rotation],
+                    scale: [...transform.scale],
+                    opacity: 1.0,
+                    color: 0xffffff
+                };
+            }
+
+            // In Edit Mode, pause and reset animations for adjuncts in the active block
             if (isEdit && activeBlockId !== null) {
                 const adj = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
                 if (adj && adj.parentBlockEntityId === activeBlockId) {
                     this.resetToInitial(anim, transform);
-                    continue;
+                    continue; // Skip processing to "freeze" it
                 }
             }
 
@@ -49,17 +60,6 @@ export class AnimationSystem implements ISystem {
     private processAnimation(world: World, entityId: EntityId, anim: AnimationComponent, transform: TransformComponent, deltaTime: number) {
         const config = anim.config;
         if (!config.timeline) return;
-
-        // Capture initial values for absolute/multi modes
-        if (!anim.initialValues) {
-            anim.initialValues = {
-                position: [...transform.position],
-                rotation: [...transform.rotation],
-                scale: [...transform.scale],
-                opacity: 1.0,
-                color: 0xffffff
-            };
-        }
 
         // 1. Advance Time
         anim.elapsedTime += (deltaTime * 1000); // ms

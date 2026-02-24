@@ -1,6 +1,7 @@
 import { World } from './core/World';
 import { IDataSource } from './core/services/DataSource';
 import { IUIProvider } from './core/services/UIProvider';
+import { DefaultUIProvider } from './core/services/DefaultUIProvider';
 import { Coords } from './core/utils/Coords';
 import { PlayerControlSystem } from './core/systems/PlayerControlSystem';
 import { GlobalConfig } from './core/GlobalConfig';
@@ -53,6 +54,12 @@ export class Engine {
 
         this.world = new World(fullConfig);
 
+        // 3.5 UI Orchestration
+        if (!this.services.ui) {
+            this.services.ui = new DefaultUIProvider(this.containerId);
+        }
+        this.world.setUIProvider(this.services.ui);
+
         // 4. Initialize Player
         const player = this.world.setupPlayer(fullConfig.player.start.position, fullConfig.player.start.rotation);
 
@@ -65,7 +72,9 @@ export class Engine {
         this.eventQueue.forEach(sub => this.on(sub.type, sub.callback));
         this.eventQueue = [];
 
-        if (this.services.ui) this.services.ui.show("toast", "Environment Ready");
+        if (this.services.ui && typeof (this.services.ui as any).showToast === 'function') {
+            (this.services.ui as any).showToast("Environment Ready");
+        }
     }
 
     public start() {
@@ -132,6 +141,14 @@ export class Engine {
 
     public setEditMode(active: boolean) {
         this.world?.setEditMode(active);
+    }
+
+    public injectStyle(tokens: Record<string, string>) {
+        this.services.ui?.injectStyle?.(tokens);
+    }
+
+    public ui(): IUIProvider | undefined {
+        return this.services.ui;
     }
 
     public dispose() {
