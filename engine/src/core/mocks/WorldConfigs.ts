@@ -13,6 +13,7 @@ export const MockWorldNormal: WorldConfig = {
         index: 0,
         containerId: "render-canvas"
     },
+    assetBaseUrl: "/assets",
     block: {
         elevation: 0,
         max: 30,
@@ -53,6 +54,7 @@ export const MockWorldGhostMoon: WorldConfig = {
         index: 13,
         containerId: "render-canvas"
     },
+    assetBaseUrl: "/assets",
     block: {
         elevation: 50, // Started high
         max: 10,       // Very sparse! King limits adjuncts heavily.

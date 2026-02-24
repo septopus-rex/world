@@ -1,10 +1,7 @@
-/**
- * Engine Core Technical Constants
- * These define the "laws of physics" and technical baselines for the world.
- */
+import { GlobalConfig } from './GlobalConfig';
 
 export const ENGINE_CONSTANTS = {
-    BLOCK_SIZE: 16,
+    BLOCK_SIZE: GlobalConfig.world.block[0],
     GRAVITY: -9.81 * 2, // Doubled for game feel
     TICK_RATE: 0.1,    // 10Hz for grid/state sync
     DEFAULT_EXTEND: 2, // 5x5 block loading radius
@@ -20,6 +17,9 @@ export const CONTROL_CONSTANTS = {
     TOUCH_SENSITIVITY: 0.005,
     TURN_SPEED: 2.0,
     DEADZONE: 0.1,
+    AUTO_LEVEL_SPEED: 4.0,
+    STATE_EMIT_THRESHOLD: 0.5,
+    ROT_EMIT_THRESHOLD: 0.05,
 };
 
 export const RENDER_CONSTANTS = {

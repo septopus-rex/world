@@ -19,6 +19,7 @@ import { InventorySystem } from './systems/InventorySystem';
 import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { EditSystem } from './systems/EditSystem';
+import { FullWorldConfig } from './types/WorldConfig';
 
 // --- ECS CORE DEFINITIONS ---
 export type EntityId = number;
@@ -35,13 +36,6 @@ export interface GameEvent {
     source?: EntityId;
 }
 
-export interface WorldConfig {
-    world: {
-        containerId: string;
-    };
-    assetBaseUrl: string;
-    [key: string]: any;
-}
 
 /**
  * World: The Single Source of Truth & Main Orchestrator.
@@ -120,8 +114,10 @@ export class World {
 
     // 5. Global Event Bus (Simplified)
     private listeners: Map<string, Function[]> = new Map();
+    public config: FullWorldConfig;
 
-    constructor(config: WorldConfig) {
+    constructor(config: FullWorldConfig) {
+        this.config = config;
         // Initialize Rendering Engine (Three.js Wrapper)
         this.renderEngine = new RenderEngine({
             containerId: config.world.containerId,

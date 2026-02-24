@@ -3,6 +3,8 @@ import { IDataSource } from './core/services/DataSource';
 import { IUIProvider } from './core/services/UIProvider';
 import { Coords } from './core/utils/Coords';
 import { PlayerControlSystem } from './core/systems/PlayerControlSystem';
+import { GlobalConfig } from './core/GlobalConfig';
+import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
 
 export interface EngineServices {
     api: IDataSource;
@@ -23,19 +25,36 @@ export class Engine {
     }
 
     public async bootWorld(worldIndex: number, playerStart?: any) {
-        const config = await this.services.api.world(worldIndex);
-        const start = playerStart || config.player.start;
+        // 1. Fetch the specific World Config (King's Config)
+        const kingConfig: WorldConfig = await this.services.api.world(worldIndex);
+
+        // 2. Merge with Global Constants (Hierarchical Merging)
+        const fullConfig: FullWorldConfig = {
+            ...GlobalConfig,
+            ...kingConfig,
+            world: {
+                ...GlobalConfig.world,
+                ...kingConfig.world,
+                containerId: this.containerId // Inject runtime container
+            },
+            time: {
+                ...GlobalConfig.time,
+                // Individual worlds currently don't override global time epoch/speed in this implementation
+                // but could be expanded here if needed.
+            }
+        };
+
+        // 3. Coordinate conversion for player start
+        const start = playerStart || fullConfig.player.start;
         const enginePos = Coords.sppToEngine(start.position, start.block);
         const engineRot = Coords.sppRotationToEngine(start.rotation || [0, 0, 0]);
 
-        config.player.start = { ...start, position: enginePos, rotation: engineRot };
-        config.world = config.world || {};
-        config.world.containerId = this.containerId;
+        fullConfig.player.start = { ...start, position: enginePos, rotation: engineRot };
 
-        this.world = new World(config);
+        this.world = new World(fullConfig);
 
         // 4. Initialize Player
-        const player = this.world.setupPlayer(config.player.start.position, config.player.start.rotation);
+        const player = this.world.setupPlayer(fullConfig.player.start.position, fullConfig.player.start.rotation);
 
         // Find PlayerControlSystem and attach
         const controlSystem = (this.world as any).systems.find((s: any) => s instanceof PlayerControlSystem) as PlayerControlSystem;

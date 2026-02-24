@@ -2,6 +2,8 @@ import { World, ISystem, EntityId } from '../World';
 import { RenderHandle } from '../types/Adjunct';
 import { EnvironmentStateComponent } from '../components/EnvironmentComponents';
 
+import { GlobalConfig } from '../GlobalConfig';
+
 /**
  * Procedural Environmental Data derived from Blockchain hashes.
  */
@@ -13,15 +15,15 @@ export class EnvironmentSystem implements ISystem {
     private ambientLight: RenderHandle | null = null;
     private particleSystem: RenderHandle | null = null;
 
-    // Legacy Time Config (Speed multipliers)
+    // Time Config (Synced with GlobalConfig)
     private timeConfig = {
-        speed: 1, // Global simulation speed
+        speed: GlobalConfig.time.speed,
         minute: 60,
         hour: 60 * 60,
         day: 60 * 60 * 24,
         month: 60 * 60 * 24 * 30,
         year: 60 * 60 * 24 * 30 * 12,
-        startHeight: 0 // Baseline block
+        startHeight: GlobalConfig.time.epoch
     };
 
     // Legacy Weather Mapping (Deterministic categories)

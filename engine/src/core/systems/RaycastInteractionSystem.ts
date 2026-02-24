@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { CameraComponent, InputStateComponent } from '../components/PlayerComponents';
 import { RaycastTargetComponent } from '../components/InteractionComponents';
+import { AdjunctComponent } from '../components/AdjunctComponents';
 
 /**
  * ECS System for Raycast Selection
@@ -40,6 +41,18 @@ export class RaycastInteractionSystem implements ISystem {
             const hitTargetComp = world.getComponent<RaycastTargetComponent>(hitEntityId, "RaycastTargetComponent");
 
             if (hitTargetComp) {
+                // Restriction: During Edit Mode, only allow focus on the active block or its adjuncts
+                if (world.isEditMode && world.activeEditBlockId !== null) {
+                    let isAllowed = hitEntityId === world.activeEditBlockId;
+                    if (!isAllowed) {
+                        const adj = world.getComponent<AdjunctComponent>(hitEntityId, "AdjunctComponent");
+                        if (adj && adj.parentBlockEntityId === world.activeEditBlockId) {
+                            isAllowed = true;
+                        }
+                    }
+                    if (!isAllowed) return; // Discard hit
+                }
+
                 hitTargetComp.isHovered = true;
                 hitTargetComp.distanceToCamera = hit.distance;
 

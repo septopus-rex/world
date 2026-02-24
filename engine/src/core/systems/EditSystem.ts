@@ -4,6 +4,7 @@ import { BlockComponent } from '../components/BlockComponent';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { Coords } from '../utils/Coords';
 import { RenderHandle } from '../types/Adjunct';
+import { GlobalConfig } from '../GlobalConfig';
 
 /**
  * EditSystem
@@ -67,10 +68,11 @@ export class EditSystem implements ISystem {
         if (this.activeBlockId !== null && !this.blockHelper) {
             const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
             if (bComp && bComp.group) {
-                this.blockHelper = world.renderEngine.createBlockHighlight(bComp.group, 16);
-                // Center the highlight on the 16x16 block (Group is at SPP [0,0], block goes to [16,16])
-                // SPP [8,8,0] -> Engine [8,0,-8]
-                world.renderEngine.setObjectPosition(this.blockHelper, 8, 0, -8);
+                const [bw, bl, bh] = GlobalConfig.world.block;
+                this.blockHelper = world.renderEngine.createBlockHighlight(bComp.group, bw, bh);
+                // Center the highlight on the block (Group is at SPP [0,0], block goes to [bw,bl])
+                // Centering offset: [bw/2, 0, -bl/2]
+                world.renderEngine.setObjectPosition(this.blockHelper, bw / 2, 0, -bl / 2);
             }
         }
 

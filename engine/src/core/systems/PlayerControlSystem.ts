@@ -2,6 +2,7 @@ import { World, ISystem, EntityId } from '../World';
 import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComponent, AvatarComponent } from '../components/PlayerComponents';
 import { Vector3 } from '../utils/Math';
 import { Coords } from '../utils/Coords';
+import { CONTROL_CONSTANTS } from '../Constants';
 
 /**
  * ECS System for Player Control
@@ -30,7 +31,7 @@ export class PlayerControlSystem implements ISystem {
     private _direction = new Vector3();
     private _lastPos = new Vector3();
     private _lastRot = [0, 0, 0];
-    private _stateEmitThreshold = 0.5; // Update every 0.5m or roughly 0.1rad
+    private _isPitchLocked = false;
 
     constructor(world: World, domElement: HTMLElement) {
         this.world = world;
@@ -58,7 +59,8 @@ export class PlayerControlSystem implements ISystem {
                 lookUp: false, lookDown: false, lookLeft: false, lookRight: false,
                 movementIntent: [0, 0, 0],
                 lookPitchDelta: 0, lookYawDelta: 0,
-                mouseNDC: [0, 0]
+                mouseNDC: [0, 0],
+                modifierAlt: false
             });
         }
     }
@@ -168,9 +170,9 @@ export class PlayerControlSystem implements ISystem {
         this.lastTouchX = touch.clientX;
         this.lastTouchY = touch.clientY;
 
-        // Apply raw look deltas (tuning factor of 0.005)
-        const yawDelta = -dx * 0.005;
-        const pitchDelta = -dy * 0.005;
+        // Apply raw look deltas
+        const yawDelta = -dx * CONTROL_CONSTANTS.TOUCH_SENSITIVITY;
+        const pitchDelta = -dy * CONTROL_CONSTANTS.TOUCH_SENSITIVITY;
 
         const rotation = this.world.renderEngine.getMainCameraRotation();
         rotation[1] += yawDelta;
@@ -223,8 +225,8 @@ export class PlayerControlSystem implements ISystem {
         this.lastMouseX = event.clientX;
         this.lastMouseY = event.clientY;
 
-        const yawDelta = -dx * 0.005;
-        const pitchDelta = -dy * 0.005;
+        const yawDelta = -dx * CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
+        const pitchDelta = -dy * CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
 
         const rotation = this.world.renderEngine.getMainCameraRotation();
         rotation[1] += yawDelta;
@@ -242,11 +244,23 @@ export class PlayerControlSystem implements ISystem {
         const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
         if (!input) return;
 
+        input.modifierAlt = event.altKey;
+
         switch (event.code) {
-            case 'ArrowUp': input.lookUp = true; break;
-            case 'ArrowDown': input.lookDown = true; break;
-            case 'ArrowLeft': input.lookLeft = true; break;
-            case 'ArrowRight': input.lookRight = true; break;
+            case 'ArrowUp':
+                input.lookUp = true;
+                if (event.altKey) event.preventDefault();
+                break;
+            case 'ArrowDown':
+                input.lookDown = true;
+                if (event.altKey) event.preventDefault();
+                break;
+            case 'ArrowLeft':
+                input.lookLeft = true;
+                break;
+            case 'ArrowRight':
+                input.lookRight = true;
+                break;
             case 'KeyW': input.forward = true; break;
             case 'KeyA': input.left = true; break;
             case 'KeyS': input.backward = true; break;
@@ -262,11 +276,21 @@ export class PlayerControlSystem implements ISystem {
         const input = this.world.getComponent<InputStateComponent>(this.controlledEntity, "InputStateComponent");
         if (!input) return;
 
+        input.modifierAlt = event.altKey;
+
         switch (event.code) {
-            case 'ArrowUp': input.lookUp = false; break;
-            case 'ArrowDown': input.lookDown = false; break;
-            case 'ArrowLeft': input.lookLeft = false; break;
-            case 'ArrowRight': input.lookRight = false; break;
+            case 'ArrowUp':
+                input.lookUp = false;
+                break;
+            case 'ArrowDown':
+                input.lookDown = false;
+                break;
+            case 'ArrowLeft':
+                input.lookLeft = false;
+                break;
+            case 'ArrowRight':
+                input.lookRight = false;
+                break;
             case 'KeyW': input.forward = false; break;
             case 'KeyA': input.left = false; break;
             case 'KeyS': input.backward = false; break;
@@ -316,7 +340,7 @@ export class PlayerControlSystem implements ISystem {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         const pad = gamepads[0]; // Just use the first connected gamepad for now
         if (pad && pad.connected) {
-            const deadzone = 0.1;
+            const deadzone = CONTROL_CONSTANTS.DEADZONE;
             if (Math.abs(pad.axes[1]) > deadzone) this._direction.z -= pad.axes[1] * 1.0;
             if (Math.abs(pad.axes[0]) > deadzone) this._direction.x += pad.axes[0] * 1.0;
 
@@ -338,15 +362,34 @@ export class PlayerControlSystem implements ISystem {
         }
 
         // --- Keyboard Look Support ---
-        const turnSpeed = 2.0;
         const camRot = this.world.renderEngine.getMainCameraRotation();
-        if (input.lookLeft) camRot[1] += turnSpeed * dt;
-        if (input.lookRight) camRot[1] -= turnSpeed * dt;
+        if (input.lookLeft) camRot[1] += CONTROL_CONSTANTS.TURN_SPEED * dt;
+        if (input.lookRight) camRot[1] -= CONTROL_CONSTANTS.TURN_SPEED * dt;
         if (input.lookUp || input.lookDown) {
-            const pitchDelta = (Number(input.lookUp) - Number(input.lookDown)) * turnSpeed * dt;
+            const pitchDelta = (Number(input.lookUp) - Number(input.lookDown)) * CONTROL_CONSTANTS.TURN_SPEED * dt;
             camRot[0] += pitchDelta;
             camRot[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camRot[0]));
         }
+
+        // --- Camera Auto-Leveling ---
+        // Check if any vertical look input is active
+        const hasGamepadPitch = pad && pad.connected && Math.abs(pad.axes[3]) > CONTROL_CONSTANTS.DEADZONE;
+        const keyboardPitchActive = input.lookUp || input.lookDown;
+        const isPitchActive = keyboardPitchActive || this.isMouseDown || this.touchLookActive || hasGamepadPitch;
+
+        // Sticky Logic: If Alt is held while moving via keyboard, lock it.
+        // If moved via mouse/touch/gamepad or keyboard WITHOUT Alt, unlock it.
+        if (keyboardPitchActive && input.modifierAlt) {
+            this._isPitchLocked = true;
+        } else if (isPitchActive) {
+            this._isPitchLocked = false;
+        }
+
+        if (!isPitchActive && !this._isPitchLocked && Math.abs(camRot[0]) > 0.001) {
+            camRot[0] -= camRot[0] * CONTROL_CONSTANTS.AUTO_LEVEL_SPEED * dt;
+            if (Math.abs(camRot[0]) < 0.001) camRot[0] = 0;
+        }
+
         this.world.renderEngine.setMainCameraRotation(camRot[0], camRot[1], camRot[2]);
 
         if (this._direction.lengthSq() > 0) {
@@ -400,7 +443,7 @@ export class PlayerControlSystem implements ISystem {
             Math.abs(trans.rotation[1] - this._lastRot[1]) +
             Math.abs(trans.rotation[2] - this._lastRot[2]);
 
-        if (distSq > this._stateEmitThreshold * this._stateEmitThreshold || rotDist > 0.05) {
+        if (distSq > CONTROL_CONSTANTS.STATE_EMIT_THRESHOLD * CONTROL_CONSTANTS.STATE_EMIT_THRESHOLD || rotDist > CONTROL_CONSTANTS.ROT_EMIT_THRESHOLD) {
             const spp = Coords.engineToSpp(trans.position);
             const sppRot = Coords.engineRotationToSpp(trans.rotation);
 

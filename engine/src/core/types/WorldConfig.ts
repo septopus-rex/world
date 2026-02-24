@@ -12,11 +12,12 @@ export interface SeptopusGlobalConstants {
         name: string;
         desc: string;
         range: [number, number];   // Dimensions limit per face, e.g., 4096x4096
-        block: [number, number, number]; // Sub-block structure sizes
+        block: [number, number, number]; // Standard [Width, Length, Height], e.g. [16, 16, 16]
         diff: number;              // Terrain elevation diff baseline
-        max: number;               // 99 Worlds total
+        max: number;               // 96 Worlds total (0-95)
     };
     time: {
+        epoch: number;             // Genesis block height
         year: number; month: number; day: number;
         hour: number; minute: number; second: number;
         speed: number;             // Ratio of Septopus time vs Reality
@@ -33,8 +34,9 @@ export interface WorldConfig {
         mode: ("ghost" | "normal" | "game")[];
         accuracy: number;          // Typically 1000 (mm to meters conversion)
         index: number;             // World Index [0 - 95]
-        containerId: string;       // Canvas HTML DOM mount ID 
+        containerId: string;       // Canvas HTML DOM mount ID
     };
+    assetBaseUrl: string;          // Global asset path
 
     // Default appearance of land
     block: {
@@ -74,3 +76,9 @@ export interface WorldConfig {
     // Admin ban-list
     blacklist: number[]; // Blocked adjunct types (E.g. no teleportation pads allowed)
 }
+
+/**
+ * The final runtime configuration used by the Engine/World.
+ * Combines Global Constants (Protocol) and Individual World Config (King).
+ */
+export type FullWorldConfig = WorldConfig & SeptopusGlobalConstants;

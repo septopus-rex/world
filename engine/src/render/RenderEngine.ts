@@ -311,20 +311,20 @@ export class RenderEngine {
     /**
      * Helper Visualization
      */
-    public createBlockHighlight(parent: RenderHandle, size: number): RenderHandle {
+    public createBlockHighlight(parent: RenderHandle, size: number, height: number): RenderHandle {
         const group = new THREE.Group();
-        const height = 1.0;
-        const opacity = 0.5;
+        const planeHeight = 0.2; // Low wall height
+        const opacity = 0.3; // Slightly more visible for the low wall
 
         const planes = [
-            { dir: 'north', color: 0xffff00, pos: [0, height / 2, -size / 2], rot: [0, 0, 0] },
-            { dir: 'south', color: 0xff0000, pos: [0, height / 2, size / 2], rot: [0, Math.PI, 0] },
-            { dir: 'east', color: 0x0000ff, pos: [size / 2, height / 2, 0], rot: [0, -Math.PI / 2, 0] },
-            { dir: 'west', color: 0x00ff00, pos: [-size / 2, height / 2, 0], rot: [0, Math.PI / 2, 0] }
+            { dir: 'north', color: 0xffff00, pos: [0, planeHeight / 2, -size / 2], rot: [0, 0, 0] },
+            { dir: 'south', color: 0xff0000, pos: [0, planeHeight / 2, size / 2], rot: [0, Math.PI, 0] },
+            { dir: 'east', color: 0x0000ff, pos: [size / 2, planeHeight / 2, 0], rot: [0, -Math.PI / 2, 0] },
+            { dir: 'west', color: 0x00ff00, pos: [-size / 2, planeHeight / 2, 0], rot: [0, Math.PI / 2, 0] }
         ];
 
         planes.forEach(p => {
-            const geo = new THREE.PlaneGeometry(size, height);
+            const geo = new THREE.PlaneGeometry(size, planeHeight);
             const mat = new THREE.MeshBasicMaterial({
                 color: p.color,
                 transparent: true,
@@ -334,10 +334,20 @@ export class RenderEngine {
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(p.pos[0], p.pos[1], p.pos[2]);
             mesh.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
-            // Ensure visual helpers don't block selection rays
             mesh.raycast = () => { };
             group.add(mesh);
         });
+
+        // Add a BoxHelper representation (Clean Wireframe Volume)
+        const boxGeo = new THREE.BoxGeometry(size, height, size);
+        const boxMesh = new THREE.Mesh(boxGeo); // Dummy mesh for helper
+        boxMesh.position.set(0, height / 2, 0);
+
+        const helper = new THREE.BoxHelper(boxMesh, 0xffffff);
+        (helper.material as THREE.LineBasicMaterial).transparent = true;
+        (helper.material as THREE.LineBasicMaterial).opacity = 0.5;
+        helper.raycast = () => { };
+        group.add(helper);
 
         if (parent) {
             (parent as THREE.Object3D).add(group);

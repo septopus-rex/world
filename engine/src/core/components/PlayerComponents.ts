@@ -29,6 +29,7 @@ export interface InputStateComponent {
     lookDown: boolean;
     lookLeft: boolean;
     lookRight: boolean;
+    modifierAlt: boolean;
 
     // Movement Intent vector calculated this frame (relative local space)
     movementIntent: [number, number, number];
