@@ -3,6 +3,7 @@ import { InputStateComponent, TransformComponent, RigidBodyComponent, CameraComp
 import { Vector3 } from '../utils/Math';
 import { Coords } from '../utils/Coords';
 import { CONTROL_CONSTANTS } from '../Constants';
+import { SystemMode } from '../types/SystemMode';
 
 /**
  * ECS System for Player Control
@@ -228,6 +229,11 @@ export class PlayerControlSystem implements ISystem {
         const yawDelta = -dx * CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
         const pitchDelta = -dy * CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
 
+        // Suppress rotation in Edit Mode if moving an object
+        if (this.world.mode === SystemMode.Edit && this.world.isMovingObject) {
+            return;
+        }
+
         const rotation = this.world.renderEngine.getMainCameraRotation();
         rotation[1] += yawDelta;
         rotation[0] += pitchDelta;
@@ -363,12 +369,16 @@ export class PlayerControlSystem implements ISystem {
 
         // --- Keyboard Look Support ---
         const camRot = this.world.renderEngine.getMainCameraRotation();
-        if (input.lookLeft) camRot[1] += CONTROL_CONSTANTS.TURN_SPEED * dt;
-        if (input.lookRight) camRot[1] -= CONTROL_CONSTANTS.TURN_SPEED * dt;
-        if (input.lookUp || input.lookDown) {
-            const pitchDelta = (Number(input.lookUp) - Number(input.lookDown)) * CONTROL_CONSTANTS.TURN_SPEED * dt;
-            camRot[0] += pitchDelta;
-            camRot[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camRot[0]));
+        const canRotate = !(world.mode === SystemMode.Edit && world.isMovingObject);
+
+        if (canRotate) {
+            if (input.lookLeft) camRot[1] += CONTROL_CONSTANTS.TURN_SPEED * dt;
+            if (input.lookRight) camRot[1] -= CONTROL_CONSTANTS.TURN_SPEED * dt;
+            if (input.lookUp || input.lookDown) {
+                const pitchDelta = (Number(input.lookUp) - Number(input.lookDown)) * CONTROL_CONSTANTS.TURN_SPEED * dt;
+                camRot[0] += pitchDelta;
+                camRot[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camRot[0]));
+            }
         }
 
         // --- Camera Auto-Leveling ---
@@ -402,6 +412,12 @@ export class PlayerControlSystem implements ISystem {
         const localZ = -this._direction.z * speed;
 
         const yaw = camRot[1];
+
+        // Suppress WASD movement in Edit Mode? 
+        // User said: "左右移动是在调整位置，而不是控制player摇头"
+        // If we still want player to move but NOT rotate, we keep this.
+        // However, if we want WASD to ALSO move the object, we'd need another change.
+        // For now, let's keep WASD player movement but ensure rotation is isolated.
         this._velocity.x = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
         this._velocity.z = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
 

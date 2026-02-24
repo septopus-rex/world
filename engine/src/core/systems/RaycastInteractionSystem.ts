@@ -2,6 +2,7 @@ import { World, ISystem, EntityId } from '../World';
 import { CameraComponent, InputStateComponent } from '../components/PlayerComponents';
 import { RaycastTargetComponent } from '../components/InteractionComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
+import { SystemMode } from '../types/SystemMode';
 
 /**
  * ECS System for Raycast Selection
@@ -42,11 +43,14 @@ export class RaycastInteractionSystem implements ISystem {
 
             if (hitTargetComp) {
                 // Restriction: During Edit Mode, only allow focus on the active block or its adjuncts
-                if (world.isEditMode && world.activeEditBlockId !== null) {
-                    let isAllowed = hitEntityId === world.activeEditBlockId;
+                const isEdit = world.mode === SystemMode.Edit;
+                const activeBlockId = world.activeEditBlockId;
+
+                if (isEdit && activeBlockId !== null) {
+                    let isAllowed = hitEntityId === activeBlockId;
                     if (!isAllowed) {
                         const adj = world.getComponent<AdjunctComponent>(hitEntityId, "AdjunctComponent");
-                        if (adj && adj.parentBlockEntityId === world.activeEditBlockId) {
+                        if (adj && adj.parentBlockEntityId === activeBlockId) {
                             isAllowed = true;
                         }
                     }
@@ -66,6 +70,14 @@ export class RaycastInteractionSystem implements ISystem {
                     });
                 }
             }
+        } else if (inputComp.interactPrimary) {
+            // Hit nothing - emit null event for deselection
+            world.emitSimple("interact", {
+                entityId: null,
+                metadata: null,
+                distance: Infinity,
+                point: [0, 0, 0]
+            });
         }
     }
 }

@@ -13,34 +13,47 @@ export class MeshFactory {
         const { type, params, material } = data;
         const [w, h, d] = params.size;
 
-        let geometry: THREE.BufferGeometry;
+        let object: THREE.Object3D;
         switch (type) {
+            case 'grid':
+                // For grid, params.size[0] is size, params.size[1] is divisions
+                object = new THREE.GridHelper(params.size[0], params.size[1], material?.color ?? 0x444444, material?.color ?? 0x888888);
+                break;
+            case 'wirebox':
+                const boxGeoWire = new THREE.BoxGeometry(w, h, d);
+                const boxMeshWire = new THREE.Mesh(boxGeoWire);
+                const helper = new THREE.BoxHelper(boxMeshWire, material?.color ?? 0xffffff);
+                if (material?.opacity !== undefined) {
+                    (helper.material as THREE.LineBasicMaterial).transparent = true;
+                    (helper.material as THREE.LineBasicMaterial).opacity = material.opacity;
+                }
+                object = helper;
+                break;
             case 'sphere':
-                geometry = new THREE.SphereGeometry(w / 2, 32, 32);
+                const sphereGeo = new THREE.SphereGeometry(w / 2, 32, 32);
+                object = new THREE.Mesh(sphereGeo, this.createMaterial(material));
                 break;
             case 'plane':
-                geometry = new THREE.PlaneGeometry(w, h);
+                const planeGeo = new THREE.PlaneGeometry(w, h);
+                object = new THREE.Mesh(planeGeo, this.createMaterial(material));
                 break;
             case 'cylinder':
             case 'cone':
-                // For cylinder/cone, we interpret size as [radiusTop, radiusBottom, height]
-                // Note: THREE.CylinderGeometry(radiusTop, radiusBottom, height, radialSegments)
-                geometry = new THREE.CylinderGeometry(w, h, d, 32);
+                const cylGeo = new THREE.CylinderGeometry(w, h, d, 32);
+                object = new THREE.Mesh(cylGeo, this.createMaterial(material));
                 break;
             case 'box':
             default:
-                geometry = new THREE.BoxGeometry(w, h, d);
+                const boxGeoBase = new THREE.BoxGeometry(w, h, d);
+                object = new THREE.Mesh(boxGeoBase, this.createMaterial(material));
                 break;
         }
 
-        const meshMaterial = this.createMaterial(material);
-        const mesh = new THREE.Mesh(geometry, meshMaterial);
-
         // Apply Transform
-        mesh.position.set(params.position[0], params.position[1], params.position[2]);
-        mesh.rotation.set(params.rotation[0], params.rotation[1], params.rotation[2]);
+        object.position.set(params.position[0], params.position[1], params.position[2]);
+        object.rotation.set(params.rotation[0], params.rotation[1], params.rotation[2]);
 
-        return mesh;
+        return object;
     }
 
     /**

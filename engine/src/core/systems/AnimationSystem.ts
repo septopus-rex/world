@@ -2,6 +2,8 @@ import { World, EntityId, ISystem } from '../World';
 import { TransformComponent } from '../components/PlayerComponents';
 import { AnimationComponent } from '../components/AnimationComponent';
 import { Color } from '../utils/Math';
+import { SystemMode } from '../types/SystemMode';
+import { AdjunctComponent } from '../components/AdjunctComponents';
 
 /**
  * AnimationSystem
@@ -12,6 +14,8 @@ import { Color } from '../utils/Math';
 export class AnimationSystem implements ISystem {
     public update(world: World, deltaTime: number): void {
         const entities = world.getEntitiesWith(["AnimationComponent", "TransformComponent"]);
+        const isEdit = world.mode === SystemMode.Edit;
+        const activeBlockId = world.activeEditBlockId;
 
         for (const entityId of entities) {
             const anim = world.getComponent<AnimationComponent>(entityId, "AnimationComponent");
@@ -19,16 +23,11 @@ export class AnimationSystem implements ISystem {
 
             if (!anim || !transform) continue;
 
-            if (world.isEditMode && world.activeEditBlockId !== null) {
-                // Check if this entity is an adjunct in the active edit block
-                const adj = world.getComponent<any>(entityId, "AdjunctComponent");
-                if (adj && adj.parentBlockEntityId === world.activeEditBlockId) {
-                    // In edit mode, animations of the active block are paused and reset to initial state
-                    if (anim.initialValues) {
-                        if (anim.initialValues.position) transform.position = [anim.initialValues.position[0], anim.initialValues.position[1], anim.initialValues.position[2]];
-                        if (anim.initialValues.rotation) transform.rotation = [anim.initialValues.rotation[0], anim.initialValues.rotation[1], anim.initialValues.rotation[2]];
-                        if (anim.initialValues.scale) transform.scale = [anim.initialValues.scale[0], anim.initialValues.scale[1], anim.initialValues.scale[2]];
-                    }
+            // Optimization: Only check AdjunctComponent in Edit Mode for the active block
+            if (isEdit && activeBlockId !== null) {
+                const adj = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
+                if (adj && adj.parentBlockEntityId === activeBlockId) {
+                    this.resetToInitial(anim, transform);
                     continue;
                 }
             }
@@ -37,6 +36,14 @@ export class AnimationSystem implements ISystem {
 
             this.processAnimation(world, entityId, anim, transform, deltaTime);
         }
+    }
+
+    private resetToInitial(anim: AnimationComponent, transform: TransformComponent) {
+        if (!anim.initialValues) return;
+        const iv = anim.initialValues;
+        if (iv.position) transform.position = [iv.position[0], iv.position[1], iv.position[2]];
+        if (iv.rotation) transform.rotation = [iv.rotation[0], iv.rotation[1], iv.rotation[2]];
+        if (iv.scale) transform.scale = [iv.scale[0], iv.scale[1], iv.scale[2]];
     }
 
     private processAnimation(world: World, entityId: EntityId, anim: AnimationComponent, transform: TransformComponent, deltaTime: number) {

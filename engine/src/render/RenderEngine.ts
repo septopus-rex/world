@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RenderHandle } from '../core/types/Adjunct';
+import { MeshFactory } from './MeshFactory';
 
 export interface RenderEngineConfig {
     containerId: string;
@@ -125,6 +126,14 @@ export class RenderEngine {
 
     public setObjectVisible(handle: RenderHandle, visible: boolean): void {
         (handle as THREE.Object3D).visible = visible;
+    }
+
+    public getObjectSize(handle: RenderHandle): [number, number, number] {
+        const obj = handle as THREE.Object3D;
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        return [size.x, size.y, size.z];
     }
 
     public createGroup(parent?: RenderHandle): RenderHandle {
@@ -301,8 +310,16 @@ export class RenderEngine {
     }
 
     public createSelectionHighlight(target: RenderHandle, color: number = 0x00ffff): RenderHandle {
-        const helper = new THREE.BoxHelper(target as THREE.Object3D, new THREE.Color(color));
-        helper.scale.set(1.1, 1.1, 1.1);
+        const size = this.getObjectSize(target);
+        const helper = MeshFactory.create({
+            type: 'wirebox',
+            params: {
+                size: [size[0] * 1.05, size[1] * 1.05, size[2] * 1.05],
+                position: [0, 0, 0],
+                rotation: [0, 0, 0]
+            },
+            material: { color: color, opacity: 1.0 }
+        });
         helper.raycast = () => { }; // Ignore selection rays
         this.scene.add(helper);
         return helper;
@@ -311,54 +328,61 @@ export class RenderEngine {
     /**
      * Helper Visualization
      */
-    public createBlockHighlight(parent: RenderHandle, size: number, height: number): RenderHandle {
-        const group = new THREE.Group();
-        const planeHeight = 0.2; // Low wall height
-        const opacity = 0.3; // Slightly more visible for the low wall
+    public createBlockHighlight(parent: RenderHandle, size: number, height: number, offset: [number, number, number] = [size / 2, 0, -size / 2]): RenderHandle {
+        const group = this.createGroup(parent) as THREE.Group;
+        const planeHeight = 0.2;
+        const opacity = 0.3;
 
-        const planes = [
-            { dir: 'north', color: 0xffff00, pos: [0, planeHeight / 2, -size / 2], rot: [0, 0, 0] },
-            { dir: 'south', color: 0xff0000, pos: [0, planeHeight / 2, size / 2], rot: [0, Math.PI, 0] },
-            { dir: 'east', color: 0x0000ff, pos: [size / 2, planeHeight / 2, 0], rot: [0, -Math.PI / 2, 0] },
-            { dir: 'west', color: 0x00ff00, pos: [-size / 2, planeHeight / 2, 0], rot: [0, Math.PI / 2, 0] }
+        // Position the group itself so children are local
+        group.position.set(offset[0], offset[1], offset[2]);
+
+        const planeConfigs = [
+            { pos: [0, planeHeight / 2, -size / 2], rot: [0, 0, 0], color: 0xffff00 },
+            { pos: [0, planeHeight / 2, size / 2], rot: [0, Math.PI, 0], color: 0xff0000 },
+            { pos: [size / 2, planeHeight / 2, 0], rot: [0, -Math.PI / 2, 0], color: 0x0000ff },
+            { pos: [-size / 2, planeHeight / 2, 0], rot: [0, Math.PI / 2, 0], color: 0x00ff00 }
         ];
 
-        planes.forEach(p => {
-            const geo = new THREE.PlaneGeometry(size, planeHeight);
-            const mat = new THREE.MeshBasicMaterial({
-                color: p.color,
-                transparent: true,
-                opacity: opacity,
-                side: THREE.DoubleSide
+        planeConfigs.forEach(p => {
+            const mesh = MeshFactory.create({
+                type: 'plane',
+                params: {
+                    size: [size, planeHeight, 0],
+                    position: p.pos as [number, number, number],
+                    rotation: p.rot as [number, number, number]
+                },
+                material: { color: p.color, opacity: opacity }
             });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(p.pos[0], p.pos[1], p.pos[2]);
-            mesh.rotation.set(p.rot[0], p.rot[1], p.rot[2]);
             mesh.raycast = () => { };
             group.add(mesh);
         });
 
-        // Add a BoxHelper representation (Clean Wireframe Volume)
-        const boxGeo = new THREE.BoxGeometry(size, height, size);
-        const boxMesh = new THREE.Mesh(boxGeo); // Dummy mesh for helper
-        boxMesh.position.set(0, height / 2, 0);
-
-        const helper = new THREE.BoxHelper(boxMesh, 0xffffff);
-        (helper.material as THREE.LineBasicMaterial).transparent = true;
-        (helper.material as THREE.LineBasicMaterial).opacity = 0.5;
+        // Add a BoxHelper representation (Wireframe Volume)
+        const helper = MeshFactory.create({
+            type: 'wirebox',
+            params: {
+                size: [size, height, size],
+                position: [0, height / 2, 0],
+                rotation: [0, 0, 0]
+            },
+            material: { color: 0xffffff, opacity: 0.5 }
+        });
         helper.raycast = () => { };
         group.add(helper);
 
-        if (parent) {
-            (parent as THREE.Object3D).add(group);
-        } else {
-            this.scene.add(group);
-        }
         return group;
     }
 
     public createGridHelper(size: number, divisions: number, color1: number = 0x444444, color2: number = 0x888888): RenderHandle {
-        const grid = new THREE.GridHelper(size, divisions, color1, color2);
+        const grid = MeshFactory.create({
+            type: 'grid',
+            params: {
+                size: [size, divisions, 0],
+                position: [0, 0, 0],
+                rotation: [0, 0, 0]
+            },
+            material: { color: color2 } // Using color2 as primary for factory logic simplicity
+        });
         grid.raycast = () => { };
         this.scene.add(grid);
         return grid;
@@ -407,6 +431,22 @@ export class RenderEngine {
             }
         }
         return null;
+    }
+
+    /**
+     * Projects a ray from the camera and intersects it with a mathematical plane.
+     */
+    public intersectRayWithPlane(ndcX: number, ndcY: number, planeNormal: [number, number, number], planePoint: [number, number, number]): [number, number, number] | null {
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
+
+        const plane = new THREE.Plane(new THREE.Vector3(...planeNormal), 0);
+        // Plane offset from origin: dot(normal, point)
+        plane.constant = -plane.normal.dot(new THREE.Vector3(...planePoint));
+
+        const target = new THREE.Vector3();
+        const result = raycaster.ray.intersectPlane(plane, target);
+        return result ? [result.x, result.y, result.z] : null;
     }
 
     public createWeatherParticles(): RenderHandle {
@@ -510,15 +550,23 @@ export class RenderEngine {
 
     public removeHandle(handle: RenderHandle): void {
         const obj = handle as THREE.Object3D;
-        this.scene.remove(obj);
-        if (obj instanceof THREE.Mesh || obj instanceof THREE.Points) {
-            obj.geometry.dispose();
-            if (Array.isArray(obj.material)) {
-                obj.material.forEach(m => m.dispose());
-            } else {
-                obj.material.dispose();
-            }
+
+        // Correctly remove from whatever parent it has (Scene or Group)
+        if (obj.parent) {
+            obj.parent.remove(obj);
         }
+
+        // Recursive disposal
+        obj.traverse((child) => {
+            if (child instanceof THREE.Mesh || child instanceof THREE.Points) {
+                child.geometry.dispose();
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.dispose());
+                } else {
+                    child.material.dispose();
+                }
+            }
+        });
     }
 
     public dispose(): void {

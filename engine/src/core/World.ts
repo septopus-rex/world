@@ -20,6 +20,7 @@ import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { EditSystem } from './systems/EditSystem';
 import { FullWorldConfig } from './types/WorldConfig';
+import { SystemMode } from './types/SystemMode';
 
 // --- ECS CORE DEFINITIONS ---
 export type EntityId = number;
@@ -59,7 +60,8 @@ export class World {
     private isRunning: boolean = false;
     public time: number = 0.5; // normalized 0-1
     public weather: string = 'clear';
-    public isEditMode: boolean = false;
+    public mode: SystemMode = SystemMode.Normal;
+    public isMovingObject: boolean = false;
     public activeEditBlockId: EntityId | null = null;
 
     // Legacy Bridge for SandboxLoader compatibility
@@ -218,9 +220,26 @@ export class World {
         this.isRunning = false;
     }
 
+    public setMode(mode: SystemMode): void {
+        const oldMode = this.mode;
+        if (oldMode === mode) return;
+
+        this.mode = mode;
+        this.emitSimple("world:mode_changed", { mode, oldMode });
+
+        // Save on Exit Edit
+        if (oldMode === SystemMode.Edit && mode !== SystemMode.Edit) {
+            this.emitSimple("world:save_request", { reason: 'exit_edit_mode' });
+        }
+
+        // Preload on Enter Game
+        if (mode === SystemMode.Game) {
+            this.emitSimple("world:preload_request", { scope: 'all' });
+        }
+    }
+
     public setEditMode(active: boolean): void {
-        this.isEditMode = active;
-        this.emitSimple("world:edit_mode_changed", { active });
+        this.setMode(active ? SystemMode.Edit : SystemMode.Normal);
     }
 
     private runLoop(): void {
@@ -303,7 +322,8 @@ export class World {
             lookUp: false, lookDown: false, lookLeft: false, lookRight: false,
             movementIntent: [0, 0, 0],
             lookPitchDelta: 0, lookYawDelta: 0,
-            mouseNDC: [0, 0]
+            mouseNDC: [0, 0],
+            modifierAlt: false
         });
 
         this.addComponent<CameraComponent>(player, "CameraComponent", {

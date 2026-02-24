@@ -85,4 +85,10 @@ export class Coords {
             engineRot[2]  // Roll
         ];
     }
+    /**
+     * Snap a value to the nearest grid step.
+     */
+    public static snapToGrid(value: number, resolution: number): number {
+        return Math.round(value / resolution) * resolution;
+    }
 }
