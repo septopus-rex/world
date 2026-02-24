@@ -2,6 +2,7 @@ import { RenderEngine } from '../render/RenderEngine';
 import { RenderPipeline } from '../render/RenderPipeline';
 import { RenderHandle } from './types/Adjunct';
 import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent } from './components/PlayerComponents';
+import { Coords } from './utils/Coords';
 import { ParticleCell, ParticleFace } from './types/ParticleCell';
 
 // Systems
@@ -122,6 +123,9 @@ export class World {
 
     constructor(config: FullWorldConfig) {
         this.config = config;
+        // Global Logic Sync: Ensure coordinate math uses current world dimensions
+        Coords.BLOCK_SIZE = config.world.block[0];
+
         // Initialize Rendering Engine (Three.js Wrapper)
         this.renderEngine = new RenderEngine({
             containerId: config.world.containerId,

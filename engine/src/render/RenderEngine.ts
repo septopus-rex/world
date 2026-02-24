@@ -328,26 +328,26 @@ export class RenderEngine {
     /**
      * Helper Visualization
      */
-    public createBlockHighlight(parent: RenderHandle, size: number, height: number, offset: [number, number, number] = [size / 2, 0, -size / 2]): RenderHandle {
+    public createBlockHighlight(parent: RenderHandle, bw: number, bl: number, bh: number): RenderHandle {
         const group = this.createGroup(parent) as THREE.Group;
         const planeHeight = 0.2;
         const opacity = 0.3;
 
-        // Position the group itself so children are local
-        group.position.set(offset[0], offset[1], offset[2]);
+        // Position the group at the center of the block's floor volume
+        group.position.set(bw / 2, 0, -bl / 2);
 
         const planeConfigs = [
-            { pos: [0, planeHeight / 2, -size / 2], rot: [0, 0, 0], color: 0xffff00 },
-            { pos: [0, planeHeight / 2, size / 2], rot: [0, Math.PI, 0], color: 0xff0000 },
-            { pos: [size / 2, planeHeight / 2, 0], rot: [0, -Math.PI / 2, 0], color: 0x0000ff },
-            { pos: [-size / 2, planeHeight / 2, 0], rot: [0, Math.PI / 2, 0], color: 0x00ff00 }
+            { pos: [0, planeHeight / 2, -bl / 2], rot: [0, 0, 0], color: 0xffff00, size: bw },
+            { pos: [0, planeHeight / 2, bl / 2], rot: [0, Math.PI, 0], color: 0xff0000, size: bw },
+            { pos: [bw / 2, planeHeight / 2, 0], rot: [0, -Math.PI / 2, 0], color: 0x0000ff, size: bl },
+            { pos: [-bw / 2, planeHeight / 2, 0], rot: [0, Math.PI / 2, 0], color: 0x00ff00, size: bl }
         ];
 
         planeConfigs.forEach(p => {
             const mesh = MeshFactory.create({
                 type: 'plane',
                 params: {
-                    size: [size, planeHeight, 0],
+                    size: [p.size, planeHeight, 0],
                     position: p.pos as [number, number, number],
                     rotation: p.rot as [number, number, number]
                 },
@@ -357,12 +357,12 @@ export class RenderEngine {
             group.add(mesh);
         });
 
-        // Add a BoxHelper representation (Wireframe Volume)
+        // Add a Wireframe Volume Box
         const helper = MeshFactory.create({
             type: 'wirebox',
             params: {
-                size: [size, height, size],
-                position: [0, height / 2, 0],
+                size: [bw, bh, bl],
+                position: [0, bh / 2, 0],
                 rotation: [0, 0, 0]
             },
             material: { color: 0xffffff, opacity: 0.5 }
@@ -386,6 +386,20 @@ export class RenderEngine {
         grid.raycast = () => { };
         this.scene.add(grid);
         return grid;
+    }
+
+    /**
+     * Helper API
+     */
+    public updateBlockHighlight(handle: RenderHandle, bx: number, by: number, bw: number, bl: number, bh: number, elevation: number = 0) {
+        // BX/BY are SPP 1-based coordinates. 
+        // worldX = (bx - 1) * bw
+        // worldZ = -(by - 1) * bl
+        // Highlighting is centered in the block volume
+        const x = (bx - 1) * bw + bw / 2;
+        const z = -((by - 1) * bl + bl / 2);
+        const y = elevation + bh / 2;
+        this.setObjectPosition(handle, x, y, z);
     }
 
     /**

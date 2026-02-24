@@ -1,7 +1,7 @@
 import { GlobalConfig } from '../GlobalConfig';
 
 export class Coords {
-    public static readonly BLOCK_SIZE = GlobalConfig.world.block[0];
+    public static BLOCK_SIZE = 16;
 
     /**
      * SPP Protocol (Z-Up) -> Engine (Y-Up Right-Handed)

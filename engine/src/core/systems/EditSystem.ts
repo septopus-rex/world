@@ -4,7 +4,6 @@ import { BlockComponent } from '../components/BlockComponent';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { Coords } from '../utils/Coords';
 import { RenderHandle } from '../types/Adjunct';
-import { GlobalConfig } from '../GlobalConfig';
 import { CONTROL_CONSTANTS } from '../Constants';
 import { SystemMode } from '../types/SystemMode';
 import { UIButtonConfig } from '../services/UIProvider';
@@ -104,19 +103,26 @@ export class EditSystem implements ISystem {
             const res = CONTROL_CONSTANTS.GRID_SNAP_RESOLUTION;
             const bId = this.activeBlockId;
             const bComp = world.getComponent<BlockComponent>(bId, "BlockComponent")!;
-            const [bw, bl] = GlobalConfig.world.block;
+            const [bw, bl, bh] = world.config.world.block;
             const bWorldPos = Coords.sppToEngine([0, 0, 0], [bComp.x, bComp.y]);
+            const elevation = bComp.elevation || 0;
 
             // Snap the hit point
             let newX = Coords.snapToGrid(hit[0], res);
             let newY = Coords.snapToGrid(hit[1], res);
             let newZ = Coords.snapToGrid(hit[2], res);
 
-            // Constrain to block boundaries (X and Z) if on XZ plane
+            // Constrain to block boundaries (X, Z and Y height)
+            newX = Math.max(bWorldPos[0], Math.min(bWorldPos[0] + bw, newX));
+            newZ = Math.min(bWorldPos[2], Math.max(bWorldPos[2] - bl, newZ));
+            newY = Math.max(elevation, Math.min(elevation + bh, newY));
+
             if (this.gridPlane === 'XZ') {
-                newX = Math.max(bWorldPos[0], Math.min(bWorldPos[0] + bw, newX));
-                newZ = Math.min(bWorldPos[2], Math.max(bWorldPos[2] - bl, newZ));
-                newY = planePoint[1]; // Keep on ground
+                newY = planePoint[1];
+            } else if (this.gridPlane === 'XY') {
+                newZ = planePoint[2];
+            } else if (this.gridPlane === 'YZ') {
+                newX = planePoint[0];
             }
 
             trans.position[0] = newX;
@@ -126,7 +132,8 @@ export class EditSystem implements ISystem {
     }
 
     private maintainActiveBlock(world: World) {
-        // If we already have an active block, don't change it during Edit Mode!
+        // EXCLUSIVE SESSION: If we already have an active block, lock it!
+        // This prevents the editing context from changing as the player moves.
         if (this.activeBlockId !== null) return;
 
         const playerEntities = world.getEntitiesWith(["InputStateComponent", "TransformComponent"]);
@@ -139,8 +146,9 @@ export class EditSystem implements ISystem {
         for (const eid of blockEntities) {
             const bComp = world.getComponent<BlockComponent>(eid, "BlockComponent");
             if (bComp && bComp.x === block[0] && bComp.y === block[1]) {
+                console.log(`[EditSystem] Session Locked to Block: ${eid} at [${block[0]}, ${block[1]}]`);
                 this.activeBlockId = eid;
-                world.activeEditBlockId = eid; // Sync with world for other systems
+                world.activeEditBlockId = eid;
                 this.syncUI(world);
                 break;
             }
@@ -152,9 +160,9 @@ export class EditSystem implements ISystem {
         if (this.activeBlockId !== null && !this.blockHelper) {
             const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
             if (bComp && bComp.group) {
-                const [bw, bl, bh] = GlobalConfig.world.block;
+                const [bw, bl, bh] = world.config.world.block;
                 // Standard 3D Protocol: createBlockHighlight now handles centering internally
-                this.blockHelper = world.renderEngine.createBlockHighlight(bComp.group, bw, bh);
+                this.blockHelper = world.renderEngine.createBlockHighlight(bComp.group, bw, bl, bh);
             }
         }
 
@@ -188,7 +196,7 @@ export class EditSystem implements ISystem {
             return;
         }
 
-        // Deselection: If clicked nothing or something that isn't a valid selection
+        // 2. Strict Interaction Filtering
         if (data.entityId === null) {
             this.selectedEntityId = null;
             this.movingEntityId = null;
@@ -198,9 +206,31 @@ export class EditSystem implements ISystem {
             return;
         }
 
-        // Action Mapping:
-        // 1. If not selected -> Select
-        // 2. If already selected -> Toggle movement (Pick up/Drop)
+        const isBlock = world.getComponent(data.entityId, "BlockComponent") !== undefined;
+        const adjunct = world.getComponent<AdjunctComponent>(data.entityId, "AdjunctComponent");
+
+        // Rule: Only allow interactions within the locked activeBlockId
+        if (isBlock) {
+            if (data.entityId !== this.activeBlockId) {
+                console.log(`[EditSystem] Clicked non-active block ${data.entityId}. Deselecting current.`);
+                this.selectedEntityId = null;
+                this.movingEntityId = null;
+                world.isMovingObject = false;
+                this.createOrUpdateGridHelper(world);
+                this.syncUI(world);
+                return;
+            }
+        } else if (adjunct) {
+            if (adjunct.parentBlockEntityId !== this.activeBlockId) {
+                console.warn(`[EditSystem] Interaction ignored: Target belongs to block ${adjunct.parentBlockEntityId}, expected ${this.activeBlockId}`);
+                return;
+            }
+        } else {
+            // Unrecognized entity - ignore
+            return;
+        }
+
+        // 3. Action Mapping: Selection / Movement Toggle
         if (this.selectedEntityId !== data.entityId) {
             this.selectedEntityId = data.entityId;
             this.movingEntityId = null;
@@ -226,7 +256,7 @@ export class EditSystem implements ISystem {
 
         if (this.activeBlockId === null) return;
         const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent")!;
-        const [bw, bl, bh] = GlobalConfig.world.block;
+        const [bw, bl, bh] = world.config.world.block;
 
         // 1. Grid Helper
         if (this.gridHelper === null) {
@@ -252,7 +282,7 @@ export class EditSystem implements ISystem {
     private positionGridAtBlock(world: World) {
         if (!this.gridHelper || this.activeBlockId === null) return;
         const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent")!;
-        const [bw, bl, bh] = GlobalConfig.world.block;
+        const [bw, bl, bh] = world.config.world.block;
         const bWorldPos = Coords.sppToEngine([0, 0, 0], [bComp.x, bComp.y]);
         const elevation = bComp.elevation || 0;
         const offset = 0.01;

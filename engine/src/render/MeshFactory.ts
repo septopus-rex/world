@@ -21,13 +21,13 @@ export class MeshFactory {
                 break;
             case 'wirebox':
                 const boxGeoWire = new THREE.BoxGeometry(w, h, d);
-                const boxMeshWire = new THREE.Mesh(boxGeoWire);
-                const helper = new THREE.BoxHelper(boxMeshWire, material?.color ?? 0xffffff);
-                if (material?.opacity !== undefined) {
-                    (helper.material as THREE.LineBasicMaterial).transparent = true;
-                    (helper.material as THREE.LineBasicMaterial).opacity = material.opacity;
-                }
-                object = helper;
+                const edges = new THREE.EdgesGeometry(boxGeoWire);
+                const lineMaterial = new THREE.LineBasicMaterial({
+                    color: material?.color ?? 0xffffff,
+                    transparent: (material?.opacity !== undefined && material.opacity < 1),
+                    opacity: material?.opacity ?? 1
+                });
+                object = new THREE.LineSegments(edges, lineMaterial);
                 break;
             case 'sphere':
                 const sphereGeo = new THREE.SphereGeometry(w / 2, 32, 32);

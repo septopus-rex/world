@@ -15,7 +15,6 @@ import { AdjunctDefinition, RenderHandle } from '../types/Adjunct';
 export class BlockSystem implements ISystem {
     private blockGroups: Map<string, RenderHandle> = new Map();
     private adjunctRegistry: Map<number, AdjunctDefinition> = new Map();
-    private readonly BLOCK_SIZE = 16;
 
     constructor() {
         // Register native Septopus adjuncts
@@ -39,6 +38,7 @@ export class BlockSystem implements ISystem {
         const bKey = `${block.x}_${block.y}`;
         if (this.blockGroups.has(bKey)) return;
 
+        const [bw, bl] = world.config.world.block;
         const worldPos = Coords.sppToEngine([0, 0, 0], [block.x, block.y]);
         const minX = worldPos[0];
         const minZ = worldPos[2];
@@ -117,11 +117,12 @@ export class BlockSystem implements ISystem {
         const hasGround = adjunctsToInit.some(a => a.id?.startsWith('ground') || (a.typeId === 0x00a2 && a.oz < 0));
 
         if (!hasGround) {
+            const [bw, bl] = world.config.world.block;
             const groundId = world.createEntity();
             const groundStd = {
                 type: "box",
-                x: this.BLOCK_SIZE, y: this.BLOCK_SIZE, z: 0.1,
-                ox: 8, oy: 8, oz: -0.05,
+                x: bw, y: bl, z: 0.1,
+                ox: bw / 2, oy: bl / 2, oz: -0.05,
                 rx: 0, ry: 0, rz: 0
             };
             this.attachAdjunctComponents(world, eid, groundId, groundStd, AdjunctBox, `ground_${bKey}`);
