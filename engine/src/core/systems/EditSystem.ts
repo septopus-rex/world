@@ -10,11 +10,13 @@ import { EditHelperManager } from './EditHelperManager';
 import { EditSessionManager } from './EditSessionManager';
 import { EditTaskExecutor } from '../EditTaskExecutor';
 import { EditTask, ContextMenuItem } from '../types/EditTask';
+import { EditHistory } from '../EditHistory';
+import { DraftStorage } from '../services/DraftStorage';
+import { InputProvider } from './InputProvider';
 
 /**
  * EditSystem
- * Coordinates the visual helpers and selection logic during Edit Mode.
- * Refactored to delegate rendering and session concerns to smaller managers.
+ * Coordinates editing lifecycle: selection, movement, undo/redo, draft persistence.
  */
 export class EditSystem implements ISystem {
     private activeBlockId: EntityId | null = null;
@@ -34,13 +36,18 @@ export class EditSystem implements ISystem {
     private helpers: EditHelperManager;
     private session: EditSessionManager;
     private executor: EditTaskExecutor;
+    private history: EditHistory;
+    private draftStorage: DraftStorage;
     private interactHandler: (event: GameEvent) => void;
     private contextHandler: (event: GameEvent) => void;
+    private dirty: boolean = false;  // tracks if any edits were made this session
 
     constructor(world: World) {
         this.helpers = new EditHelperManager(world);
         this.session = new EditSessionManager(world);
         this.executor = new EditTaskExecutor();
+        this.history = new EditHistory();
+        this.draftStorage = new DraftStorage();
         this.interactHandler = (e) => this.onInteract(world, e.payload);
         this.contextHandler = (e) => this.onContextInteract(world, e.payload);
         world.on("interact", this.interactHandler);
@@ -59,16 +66,72 @@ export class EditSystem implements ISystem {
         this.hasBeenCleared = false;
 
         // 1. Maintain Session (Active Block locking)
+        const prevBlockId = this.activeBlockId;
         this.activeBlockId = this.session.maintain(this.activeBlockId);
         world.activeEditBlockId = this.activeBlockId;
 
-        // 2. Handle Movement
+        // Start new history session if block changed
+        if (this.activeBlockId !== prevBlockId && this.activeBlockId !== null) {
+            const block = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
+            if (block) {
+                this.history.startSession(`${block.x}_${block.y}`);
+                this.dirty = false;
+            }
+        }
+
+        // 2. Undo/Redo keyboard shortcuts
+        this.handleUndoRedo(world);
+
+        // 3. Handle Movement
         if (this.movingEntityId !== null) {
             this.handleMovement(world);
         }
 
-        // 3. Sync Visuals/UI
+        // 4. Sync Visuals/UI
         this.helpers.sync(this.activeBlockId, this.selectedEntityId, this.gridPlane);
+        this.syncUI(world);
+    }
+
+    private handleUndoRedo(world: World): void {
+        // Read from InputProvider for Ctrl+Z / Ctrl+Shift+Z
+        const players = world.getEntitiesWith(["InputStateComponent"]);
+        if (players.length === 0) return;
+        const input = world.getComponent<InputStateComponent>(players[0], "InputStateComponent");
+        if (!input) return;
+
+        // Ctrl+Z = undo, Ctrl+Shift+Z = redo
+        // We use the world's inputProvider via the system manager
+        const sys = world.systems.findSystemByName("PlayerIntentSystem") as any;
+        const ip: InputProvider | null = sys?.inputProvider || null;
+        if (!ip) return;
+
+        const ctrlHeld = ip.isKeyPressed('ControlLeft') || ip.isKeyPressed('ControlRight') ||
+            ip.isKeyPressed('MetaLeft') || ip.isKeyPressed('MetaRight');
+        const shiftHeld = ip.isKeyPressed('ShiftLeft') || ip.isKeyPressed('ShiftRight');
+
+        if (ctrlHeld && shiftHeld && ip.isKeyJustPressed('KeyZ')) {
+            this.redo(world);
+        } else if (ctrlHeld && ip.isKeyJustPressed('KeyZ')) {
+            this.undo(world);
+        }
+    }
+
+    private undo(world: World): void {
+        const entry = this.history.popUndo();
+        if (!entry) return;
+        this.executor.restore(world, entry.task.entityId, entry.snapshot);
+        world.ui?.showToast(`Undo (${this.history.undoCount} remaining)`);
+        this.lastUISelection = null;
+        this.syncUI(world);
+    }
+
+    private redo(world: World): void {
+        const entry = this.history.popRedo();
+        if (!entry) return;
+        // Re-execute the task
+        this.executor.execute(world, entry.task);
+        world.ui?.showToast(`Redo (${this.history.redoCount} remaining)`);
+        this.lastUISelection = null;
         this.syncUI(world);
     }
 
@@ -233,17 +296,86 @@ export class EditSystem implements ISystem {
     }
 
     private clearHelpers(world: World) {
+        // Save draft to localStorage before clearing
+        if (this.dirty && this.activeBlockId !== null) {
+            this.saveDraft(world, this.activeBlockId);
+        }
+
         this.helpers.clearAll();
         this.session.clear();
+        this.history.clear();
         this.activeBlockId = null;
         world.activeEditBlockId = null;
         this.selectedEntityId = null;
         this.movingEntityId = null;
         world.isMovingObject = false;
+        this.dirty = false;
         this.lastUISelection = null;
         world.ui?.hide("context-menu");
         world.ui?.hide("edit-form");
-        this.syncUI(world);
+        world.ui?.hide("edit-controls");
+
+        // Check if any drafts exist — show upload button
+        this.showUploadButtonIfNeeded(world);
+    }
+
+    /**
+     * Serialize the active block's adjuncts back to raw format and save to localStorage.
+     */
+    private saveDraft(world: World, blockEntityId: EntityId): void {
+        const block = world.getComponent<BlockComponent>(blockEntityId, "BlockComponent");
+        if (!block) return;
+
+        const worldId = typeof block.world === 'number' ? block.world : 0;
+        const adjunctEntities = world.getEntitiesWith(["AdjunctComponent"]);
+
+        // Group adjuncts by typeId
+        const grouped = new Map<number, any[]>();
+
+        for (const eid of adjunctEntities) {
+            const adj = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
+            if (!adj || adj.parentBlockEntityId !== blockEntityId) continue;
+
+            const typeId = adj.stdData.typeId ?? 0x00a2;
+            const logic = adj.logicModule;
+            if (!logic?.attribute?.serialize) continue;
+
+            const rawInst = logic.attribute.serialize(adj.stdData);
+            if (!grouped.has(typeId)) grouped.set(typeId, []);
+            grouped.get(typeId)!.push(rawInst);
+        }
+
+        // Rebuild raw format: [elevation, status, adjunctsRaw, animations]
+        const adjunctsRaw: any[] = [];
+        grouped.forEach((instances, typeId) => {
+            adjunctsRaw.push([typeId, instances]);
+        });
+
+        const raw = [
+            block.elevation || 0,
+            1,  // status: active
+            adjunctsRaw,
+            block.animations || []
+        ];
+
+        this.draftStorage.save(worldId, block.x, block.y, raw);
+        block.isDraft = true;
+        world.emitSimple("world:draft_saved", { blockKey: `${block.x}_${block.y}` });
+    }
+
+    private showUploadButtonIfNeeded(world: World): void {
+        const drafts = this.draftStorage.list(0);
+        if (drafts.length > 0 && world.ui) {
+            world.ui.showButton("upload-drafts", {
+                label: `⬆️ Upload (${drafts.length})`,
+                variant: 'primary',
+                onClick: () => {
+                    world.emitSimple("world:upload_request", { drafts });
+                    world.ui?.showToast("Upload requested — awaiting chain connection.");
+                    world.ui?.hide("upload-drafts");
+                }
+            });
+        }
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -305,7 +437,11 @@ export class EditSystem implements ISystem {
                     action: 'delete',
                     param: {}
                 };
-                this.executor.execute(world, task);
+                const result = this.executor.execute(world, task);
+                if (result.success && result.snapshot) {
+                    this.history.push({ task, snapshot: result.snapshot });
+                    this.dirty = true;
+                }
                 this.selectedEntityId = null;
                 this.syncUI(world);
                 break;
@@ -340,8 +476,12 @@ export class EditSystem implements ISystem {
                     param
                 };
 
-                const ok = this.executor.execute(world, task);
-                if (ok) {
+                const result = this.executor.execute(world, task);
+                if (result.success) {
+                    if (result.snapshot) {
+                        this.history.push({ task, snapshot: result.snapshot });
+                    }
+                    this.dirty = true;
                     world.ui?.showToast(`Updated ${adjComp.adjunctId}`);
                     // Force UI refresh
                     this.lastUISelection = null;

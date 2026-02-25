@@ -8,6 +8,7 @@ import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctTrigger } from '../../plugins/adjunct/adjunct_trigger';
 import { AdjunctDefinition, RenderHandle } from '../types/Adjunct';
+import { DraftStorage } from '../services/DraftStorage';
 
 /**
  * BlockSystem handles the transition from standard Block data (std) 
@@ -16,6 +17,7 @@ import { AdjunctDefinition, RenderHandle } from '../types/Adjunct';
 export class BlockSystem implements ISystem {
     private blockGroups: Map<string, RenderHandle> = new Map();
     private adjunctRegistry: Map<number, AdjunctDefinition> = new Map();
+    private draftStorage: DraftStorage = new DraftStorage();
 
     constructor() {
         // Register native Septopus adjuncts
@@ -38,6 +40,15 @@ export class BlockSystem implements ISystem {
     private initializeBlock(world: World, eid: EntityId, block: BlockComponent) {
         const bKey = `${block.x}_${block.y}`;
         if (this.blockGroups.has(bKey)) return;
+
+        // Check for localStorage draft — if exists, use draft data instead of chain data
+        const worldId = typeof block.world === 'number' ? block.world : 0;
+        const draft = this.draftStorage.load(worldId, block.x, block.y);
+        if (draft) {
+            console.log(`[BlockSystem] Loading draft for block ${bKey}`);
+            block.adjuncts = draft.raw;
+            block.isDraft = true;
+        }
 
         const [bw, bl] = world.config.world.block;
         const worldPos = Coords.sppToEngine([0, 0, 0], [block.x, block.y]);

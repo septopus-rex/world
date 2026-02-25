@@ -8,4 +8,5 @@ export interface BlockComponent {
     adjuncts: any[]; // Intermediate format (std)
     animations?: any[]; // Block-scoped animation library
     isInitialized: boolean;
+    isDraft?: boolean;  // True if loaded from localStorage draft instead of chain data
 }

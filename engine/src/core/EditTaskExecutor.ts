@@ -11,28 +11,61 @@ import { STDObject } from './types/Adjunct';
  * Consumes EditTask commands and applies them to the ECS world.
  * This is the single entry point for all adjunct modifications in Edit Mode.
  */
+export interface ExecuteResult {
+    success: boolean;
+    snapshot?: Record<string, any>;  // stdData clone BEFORE execution (for undo)
+}
+
 export class EditTaskExecutor {
     /**
      * Execute a single EditTask.
-     * "set" → merge param into stdData, rebuild mesh
-     * "delete" → remove entity entirely
+     * Returns result with pre-execution snapshot for undo support.
      */
-    public execute(world: World, task: EditTask): boolean {
+    public execute(world: World, task: EditTask): ExecuteResult {
         const adjComp = world.getComponent<AdjunctComponent>(task.entityId, "AdjunctComponent");
         if (!adjComp) {
             console.warn(`[EditTaskExecutor] Entity ${task.entityId} has no AdjunctComponent`);
-            return false;
+            return { success: false };
         }
+
+        // Snapshot stdData BEFORE mutation
+        const snapshot = JSON.parse(JSON.stringify(adjComp.stdData));
 
         switch (task.action) {
             case 'set':
-                return this.executeSet(world, task.entityId, adjComp, task.param);
+                return { success: this.executeSet(world, task.entityId, adjComp, task.param), snapshot };
             case 'delete':
-                return this.executeDelete(world, task.entityId);
+                return { success: this.executeDelete(world, task.entityId), snapshot };
             default:
                 console.warn(`[EditTaskExecutor] Unknown action: ${task.action}`);
-                return false;
+                return { success: false };
         }
+    }
+
+    /**
+     * Restore an entity's stdData from a snapshot (for undo).
+     */
+    public restore(world: World, entityId: EntityId, snapshot: Record<string, any>): boolean {
+        const adjComp = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
+        if (!adjComp) return false;
+
+        // Overwrite stdData with snapshot
+        Object.assign(adjComp.stdData, snapshot);
+
+        // Rebuild mesh
+        const meshComp = world.getComponent<MeshComponent>(entityId, "MeshComponent");
+        if (meshComp?.handle) {
+            world.renderEngine.removeHandle(meshComp.handle);
+        }
+        const logic = adjComp.logicModule;
+        if (!logic) return false;
+
+        const result = AdjunctFactory.createMesh(world, adjComp.parentBlockEntityId, adjComp.stdData, logic);
+        world.renderEngine.setObjectUserData(result.handle, "entityId", entityId);
+        world.renderEngine.setRaycastable(result.handle, true);
+        if (meshComp) meshComp.handle = result.handle;
+
+        return true;
     }
 
     /**

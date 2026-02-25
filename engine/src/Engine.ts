@@ -3,6 +3,7 @@ import { IDataSource } from './core/services/DataSource';
 import { IUIProvider } from './core/services/UIProvider';
 import { DefaultUIProvider } from './core/services/DefaultUIProvider';
 import { EventUIProxy } from './core/services/EventUIProxy';
+import { IChainPublisher } from './core/services/IChainPublisher';
 import { Coords } from './core/utils/Coords';
 import { PlayerIntentSystem } from './core/systems/PlayerIntentSystem';
 import { InputProvider } from './core/systems/InputProvider';
@@ -18,6 +19,8 @@ export interface EngineServices {
      *   'events'  — emit ui:* events ONLY, no built-in DOM rendering
      */
     uiMode?: 'default' | 'events';
+    /** Optional chain publisher for uploading edits to blockchain */
+    publisher?: IChainPublisher;
     config?: any;
 }
 
