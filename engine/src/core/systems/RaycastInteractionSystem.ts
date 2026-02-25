@@ -8,8 +8,15 @@ import { SystemMode } from '../types/SystemMode';
  * ECS System for Raycast Selection
  * Replaces the legacy `detect.js` & `control_fpv.js` selecting functionality.
  * Shoots a ray from the active Camera Component center frame every tick.
+ *
+ * OPTIMIZATION: In Edit Mode, the raycast is skipped when mouseNDC hasn't changed
+ * since the last frame (cursor is stationary). This eliminates dozens of unnecessary
+ * raycasts per second during idle edit-mode interaction.
  */
 export class RaycastInteractionSystem implements ISystem {
+    // NDC throttle: skip Edit Mode raycast when cursor hasn't moved
+    private _lastNDC: [number, number] = [Infinity, Infinity];
+
     public update(world: World, dt: number): void {
         // Find the active camera entity
         const viewEntities = world.getEntitiesWith(["CameraComponent", "TransformComponent", "InputStateComponent"]);
@@ -23,15 +30,31 @@ export class RaycastInteractionSystem implements ISystem {
         if (!cameraComp || !cameraComp.active || !inputComp) return;
 
         const isEdit = world.mode === SystemMode.Edit;
-        const shouldRaycast = isEdit || inputComp.interactPrimary;
+        const isPrimary = inputComp.interactPrimary;
+        const shouldRaycast = isEdit || isPrimary;
 
-        if (!shouldRaycast) return;
+        if (!shouldRaycast) {
+            // Reset throttle so the first frame entering Edit Mode always raycasts
+            this._lastNDC[0] = Infinity;
+            this._lastNDC[1] = Infinity;
+            return;
+        }
 
-        // Perform Raycast via RenderEngine
-        // Use mouseNDC (mapping mouse clicks to world objects)
-        const hit = world.renderEngine.castRayFromCamera(inputComp.mouseNDC[0], inputComp.mouseNDC[1]);
+        // In Edit Mode, skip the expensive raycast if the cursor hasn't moved
+        const ndcX = inputComp.mouseNDC[0];
+        const ndcY = inputComp.mouseNDC[1];
+        const ndcUnchanged = isEdit && !isPrimary &&
+            ndcX === this._lastNDC[0] && ndcY === this._lastNDC[1];
 
-        // 3. Clear Hover states globally
+        if (ndcUnchanged) return;
+
+        this._lastNDC[0] = ndcX;
+        this._lastNDC[1] = ndcY;
+
+        // Perform Raycast via RenderEngine (reuses shared Raycaster instance)
+        const hit = world.renderEngine.castRayFromCamera(ndcX, ndcY);
+
+        // Clear Hover states globally
         const targets = world.getEntitiesWith(["RaycastTargetComponent"]);
         targets.forEach((tId: EntityId) => {
             const tComp = world.getComponent<RaycastTargetComponent>(tId, "RaycastTargetComponent");
@@ -41,14 +64,13 @@ export class RaycastInteractionSystem implements ISystem {
             }
         });
 
-        // 4. Update Hover State of the hitting object
+        // Update Hover State of the hitting object
         if (hit) {
             const hitEntityId = hit.entityId as EntityId;
             const hitTargetComp = world.getComponent<RaycastTargetComponent>(hitEntityId, "RaycastTargetComponent");
 
             if (hitTargetComp) {
                 // Restriction: During Edit Mode, only allow focus on the active block or its adjuncts
-                const isEdit = world.mode === SystemMode.Edit;
                 const activeBlockId = world.activeEditBlockId;
 
                 if (isEdit && activeBlockId !== null) {
@@ -65,7 +87,7 @@ export class RaycastInteractionSystem implements ISystem {
                 hitTargetComp.isHovered = true;
                 hitTargetComp.distanceToCamera = hit.distance;
 
-                if (inputComp.interactPrimary) {
+                if (isPrimary) {
                     console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);
                     world.emitSimple("interact", {
                         entityId: hitEntityId,
@@ -75,7 +97,7 @@ export class RaycastInteractionSystem implements ISystem {
                     });
                 }
             }
-        } else if (inputComp.interactPrimary) {
+        } else if (isPrimary) {
             // Hit nothing - emit null event for deselection
             world.emitSimple("interact", {
                 entityId: null,

@@ -1,6 +1,7 @@
 import { World, EntityId } from '../World';
 import { TransformComponent } from '../components/PlayerComponents';
 import { BlockComponent } from '../components/BlockComponent';
+import { MeshComponent } from '../components/VisualizationComponents';
 import { RenderHandle } from '../types/Adjunct';
 import { Coords } from '../utils/Coords';
 
@@ -17,10 +18,10 @@ export class EditHelperManager {
     public sync(activeBlockId: EntityId | null, selectedEntityId: EntityId | null, gridPlane: string) {
         // 1. Block Highlight
         if (activeBlockId !== null && !this.blockHelper) {
-            const bComp = this.world.getComponent<BlockComponent>(activeBlockId, "BlockComponent");
-            if (bComp && bComp.group) {
+            const meshComp = this.world.getComponent<MeshComponent>(activeBlockId, "MeshComponent");
+            if (meshComp?.handle) {
                 const [bw, bl, bh] = this.world.config.world.block;
-                this.blockHelper = this.world.renderEngine.createBlockHighlight(bComp.group, bw, bl, bh);
+                this.blockHelper = this.world.renderEngine.createBlockHighlight(meshComp.handle, bw, bl, bh);
             }
         }
 

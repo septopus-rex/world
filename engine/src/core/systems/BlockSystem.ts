@@ -3,6 +3,7 @@ import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent, SolidComponent } from '../components/PlayerComponents';
 import { RaycastTargetComponent } from '../components/InteractionComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
+import { MeshComponent } from '../components/VisualizationComponents';
 import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctTrigger } from '../../plugins/adjunct/adjunct_trigger';
@@ -49,8 +50,10 @@ export class BlockSystem implements ISystem {
         world.renderEngine.setObjectUserData(group, "entityId", eid);
         world.renderEngine.setRaycastable(group, true);
 
-        block.group = group;
-        this.blockGroups.set(bKey, group);
+        // Attach MeshComponent
+        world.addComponent<MeshComponent>(eid, "MeshComponent", {
+            handle: group
+        });
 
         // Add Raycast Target
         world.addComponent<RaycastTargetComponent>(eid, "RaycastTargetComponent", {
@@ -63,6 +66,7 @@ export class BlockSystem implements ISystem {
         // 1. Process Adjuncts
         const adjunctsToInit: any[] = [];
         let animations: any[] = [];
+        const meshComp = world.getComponent<MeshComponent>(eid, "MeshComponent");
 
         if (Array.isArray(block.adjuncts) && typeof block.adjuncts[0] === 'number') {
             const raw = block.adjuncts;
@@ -168,8 +172,16 @@ export class BlockSystem implements ISystem {
     }
 
     public syncVisibility(world: World, requiredKeys: string[]) {
-        this.blockGroups.forEach((group, key) => {
-            world.renderEngine.setObjectVisible(group, requiredKeys.includes(key));
-        });
+        // Simplified for refactor: find all BlockComponents and update their MeshComponent visibility
+        const blockEntities = world.queryEntities("BlockComponent");
+        for (const eid of blockEntities) {
+            const block = world.getComponent<BlockComponent>(eid, "BlockComponent");
+            if (!block) continue;
+            const bKey = `${block.x}_${block.y}`;
+            const mesh = world.getComponent<MeshComponent>(eid, "MeshComponent");
+            if (mesh) {
+                mesh.visible = requiredKeys.includes(bKey);
+            }
+        }
     }
 }

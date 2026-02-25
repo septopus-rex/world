@@ -13,6 +13,7 @@ import { PlayerIntentSystem } from './systems/PlayerIntentSystem';
 import { InputProvider } from './systems/InputProvider';
 import { BlockSystem } from './systems/BlockSystem';
 import { EnvironmentSystem } from './systems/EnvironmentSystem';
+import { VisualSyncSystem } from './systems/VisualSyncSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
@@ -108,6 +109,9 @@ export class World {
         this.systems.addSystem(new ParticleEffectSystem());
         this.systems.addSystem(new MinimapSystem());
         this.systems.addSystem(new ItemDropSystem());
+
+        // Final Sync: Presentation Layer
+        this.systems.addSystem(new VisualSyncSystem());
         this.systems.addSystem(new EditSystem(this));
 
         this.start();

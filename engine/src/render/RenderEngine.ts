@@ -23,6 +23,12 @@ export class RenderEngine {
     private renderer: THREE.WebGLRenderer;
     private container: HTMLElement;
 
+    // Reusable raycaster — never instantiated per-frame
+    private raycaster: THREE.Raycaster = new THREE.Raycaster();
+
+    // O(1) entityId → Object3D index (populated by setObjectUserData)
+    private _entityObjectIndex = new Map<string | number, THREE.Object3D>();
+
     constructor(config: RenderEngineConfig) {
         const domElement = document.getElementById(config.containerId);
         if (!domElement) {
@@ -127,6 +133,21 @@ export class RenderEngine {
         (handle as THREE.Object3D).scale.set(x, y, z);
     }
 
+    /**
+     * Converts a world-space position into the local space of an object's parent.
+     * Use this instead of calling Three.js worldToLocal() directly from ECS systems.
+     */
+    private _tmpLocal = new THREE.Vector3();
+    public worldToLocal(handle: RenderHandle, x: number, y: number, z: number): [number, number, number] {
+        const obj = handle as THREE.Object3D;
+        if (obj.parent && obj.parent.type !== 'Scene') {
+            this._tmpLocal.set(x, y, z);
+            obj.parent.worldToLocal(this._tmpLocal);
+            return [this._tmpLocal.x, this._tmpLocal.y, this._tmpLocal.z];
+        }
+        return [x, y, z];
+    }
+
     public setObjectVisible(handle: RenderHandle, visible: boolean): void {
         (handle as THREE.Object3D).visible = visible;
     }
@@ -163,6 +184,10 @@ export class RenderEngine {
 
     public setObjectUserData(handle: RenderHandle, key: string, value: any): void {
         (handle as THREE.Object3D).userData[key] = value;
+        // Keep entityId index in sync
+        if (key === 'entityId') {
+            this._entityObjectIndex.set(value, handle as THREE.Object3D);
+        }
     }
 
     public updateObjectAppearance(handle: RenderHandle, color?: number, opacity?: number): void {
@@ -417,11 +442,10 @@ export class RenderEngine {
      * Interaction API
      */
     public castRayFromCamera(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
-        const raycaster = new THREE.Raycaster();
-        raycaster.layers.set(1); // ONLY intersect with objects on Layer 1
-        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
+        this.raycaster.layers.set(1); // ONLY intersect with objects on Layer 1
+        this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
 
-        const intersects = raycaster.intersectObjects(this.scene.children, true);
+        const intersects = this.raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
             let current: THREE.Object3D | null = hit.object;
             while (current) {
@@ -439,11 +463,10 @@ export class RenderEngine {
     }
 
     public castRayFromMinimap(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
-        const raycaster = new THREE.Raycaster();
-        raycaster.layers.set(1); // Minimap should also respect layers if we allow picking there
-        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.minimapCamera);
+        this.raycaster.layers.set(1); // Minimap should also respect layers if we allow picking there
+        this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.minimapCamera);
 
-        const intersects = raycaster.intersectObjects(this.scene.children, true);
+        const intersects = this.raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
             let current: THREE.Object3D | null = hit.object;
             while (current) {
@@ -464,15 +487,15 @@ export class RenderEngine {
      * Projects a ray from the camera and intersects it with a mathematical plane.
      */
     public intersectRayWithPlane(ndcX: number, ndcY: number, planeNormal: [number, number, number], planePoint: [number, number, number]): [number, number, number] | null {
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
+        this.raycaster.layers.enableAll(); // Plane intersection doesn't use layer filtering
+        this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
 
         const plane = new THREE.Plane(new THREE.Vector3(...planeNormal), 0);
         // Plane offset from origin: dot(normal, point)
         plane.constant = -plane.normal.dot(new THREE.Vector3(...planePoint));
 
         const target = new THREE.Vector3();
-        const result = raycaster.ray.intersectPlane(plane, target);
+        const result = this.raycaster.ray.intersectPlane(plane, target);
         return result ? [result.x, result.y, result.z] : null;
     }
 
@@ -571,14 +594,7 @@ export class RenderEngine {
     }
 
     public getObjectByEntityId(id: string | number): RenderHandle | null {
-        let found: THREE.Object3D | null = null;
-        this.scene.traverse((obj) => {
-            if (found) return;
-            if (obj.userData && obj.userData.entityId === id) {
-                found = obj;
-            }
-        });
-        return found;
+        return this._entityObjectIndex.get(id) ?? null;
     }
 
     public lockControls(): void {
@@ -595,6 +611,11 @@ export class RenderEngine {
         // Correctly remove from whatever parent it has (Scene or Group)
         if (obj.parent) {
             obj.parent.remove(obj);
+        }
+
+        // Remove from entityId index if applicable
+        if (obj.userData && obj.userData.entityId !== undefined) {
+            this._entityObjectIndex.delete(obj.userData.entityId);
         }
 
         // Recursive disposal

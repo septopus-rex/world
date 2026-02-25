@@ -8,5 +8,4 @@ export interface BlockComponent {
     adjuncts: any[]; // Intermediate format (std)
     animations?: any[]; // Block-scoped animation library
     isInitialized: boolean;
-    group?: RenderHandle; // Visual container for this block and its children
 }
