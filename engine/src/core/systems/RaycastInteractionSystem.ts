@@ -31,7 +31,8 @@ export class RaycastInteractionSystem implements ISystem {
 
         const isEdit = world.mode === SystemMode.Edit;
         const isPrimary = inputComp.interactPrimary;
-        const shouldRaycast = isEdit || isPrimary;
+        const isSecondary = inputComp.interactSecondary;
+        const shouldRaycast = isEdit || isPrimary || isSecondary;
 
         if (!shouldRaycast) {
             // Reset throttle so the first frame entering Edit Mode always raycasts
@@ -41,9 +42,10 @@ export class RaycastInteractionSystem implements ISystem {
         }
 
         // In Edit Mode, skip the expensive raycast if the cursor hasn't moved
+        // (but always raycast on click frames — primary or secondary)
         const ndcX = inputComp.mouseNDC[0];
         const ndcY = inputComp.mouseNDC[1];
-        const ndcUnchanged = isEdit && !isPrimary &&
+        const ndcUnchanged = isEdit && !isPrimary && !isSecondary &&
             ndcX === this._lastNDC[0] && ndcY === this._lastNDC[1];
 
         if (ndcUnchanged) return;
@@ -86,6 +88,18 @@ export class RaycastInteractionSystem implements ISystem {
 
                 hitTargetComp.isHovered = true;
                 hitTargetComp.distanceToCamera = hit.distance;
+
+                // Right-click → emit context-interact event (for context menus)
+                if (isSecondary && isEdit) {
+                    world.emitSimple("context-interact", {
+                        entityId: hitEntityId,
+                        metadata: hitTargetComp.metadata,
+                        distance: hit.distance,
+                        point: hit.point,
+                        screenPos: [ndcX, ndcY]
+                    });
+                    return; // Don't also fire primary interact
+                }
 
                 if (isPrimary) {
                     console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);

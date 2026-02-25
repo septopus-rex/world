@@ -2,6 +2,7 @@ import { World } from './core/World';
 import { IDataSource } from './core/services/DataSource';
 import { IUIProvider } from './core/services/UIProvider';
 import { DefaultUIProvider } from './core/services/DefaultUIProvider';
+import { EventUIProxy } from './core/services/EventUIProxy';
 import { Coords } from './core/utils/Coords';
 import { PlayerIntentSystem } from './core/systems/PlayerIntentSystem';
 import { InputProvider } from './core/systems/InputProvider';
@@ -11,6 +12,12 @@ import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
 export interface EngineServices {
     api: IDataSource;
     ui?: IUIProvider;
+    /**
+     * UI rendering mode:
+     *   'default' — use provider (DefaultUIProvider or injected) AND emit ui:* events
+     *   'events'  — emit ui:* events ONLY, no built-in DOM rendering
+     */
+    uiMode?: 'default' | 'events';
     config?: any;
 }
 
@@ -56,10 +63,18 @@ export class Engine {
         this.world = new World(fullConfig);
 
         // 3.5 UI Orchestration
-        if (!this.services.ui) {
-            this.services.ui = new DefaultUIProvider(this.containerId);
+        const uiMode = this.services.uiMode || 'default';
+        let baseProvider: IUIProvider | null = this.services.ui || null;
+
+        // In 'default' mode, ensure there is always a base provider
+        if (!baseProvider && uiMode === 'default') {
+            baseProvider = new DefaultUIProvider(this.containerId);
         }
-        this.world.setUIProvider(this.services.ui);
+
+        // Wrap with EventUIProxy — always emits ui:* events, optionally delegates to provider
+        const emitter = (event: string, data: any) => this.world?.emitSimple(event, data);
+        const uiProxy = new EventUIProxy(emitter, baseProvider, uiMode);
+        this.world.setUIProvider(uiProxy);
 
         // 4. Initialize Player
         const player = this.world.setupPlayer(fullConfig.player.start.position, fullConfig.player.start.rotation);

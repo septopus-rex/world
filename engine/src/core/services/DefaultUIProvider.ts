@@ -1,4 +1,4 @@
-import { IUIProvider, UIButtonConfig, UIModalConfig } from './UIProvider';
+import { IUIProvider, UIButtonConfig, UIModalConfig, UIFormConfig } from './UIProvider';
 
 /**
  * DefaultUIProvider
@@ -60,6 +60,17 @@ export class DefaultUIProvider implements IUIProvider {
         .sept-ui-modal-header { padding: 16px; font-weight: 600; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
         .sept-ui-modal-body { padding: 16px; font-size: 14px; line-height: 1.5; color: rgba(255, 255, 255, 0.8); }
         .sept-ui-modal-footer { padding: 12px 16px; display: flex; justify-content: flex-end; gap: 8px; background: rgba(0, 0, 0, 0.2); }
+        .sept-ui-form-group { padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .sept-ui-form-group-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--sept-color-primary); margin-bottom: 8px; font-weight: 600; }
+        .sept-ui-form-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .sept-ui-form-label { font-size: 13px; color: rgba(255,255,255,0.7); min-width: 80px; }
+        .sept-ui-form-input {
+            flex: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; padding: 6px 10px; border-radius: var(--sept-radius-sm); font-size: 13px;
+            outline: none; font-family: var(--sept-font-main);
+        }
+        .sept-ui-form-input:focus { border-color: var(--sept-color-primary); box-shadow: 0 0 6px rgba(0,255,255,0.2); }
+        .sept-ui-form-select { flex: 1; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: var(--sept-radius-sm); font-size: 13px; }
     `;
 
     constructor(parentContainerId: string) {
@@ -137,6 +148,114 @@ export class DefaultUIProvider implements IUIProvider {
             const btn = this.createButton(`${id}-mbtn-${index}`, btnConfig);
             footer.appendChild(btn);
         });
+
+        backdrop.appendChild(modal);
+        backdrop.onclick = (e) => {
+            if (e.target === backdrop) {
+                this.hide(id);
+                config.onClose?.();
+            }
+        };
+
+        this.container.appendChild(backdrop);
+        this.overlays.set(id, backdrop);
+    }
+
+    public showForm(id: string, config: UIFormConfig): void {
+        this.hide(id);
+
+        const backdrop = document.createElement('div');
+        backdrop.className = 'sept-ui-modal-backdrop';
+
+        const modal = document.createElement('div');
+        modal.className = 'sept-ui-modal';
+        modal.style.width = '380px';
+
+        // Header
+        const header = document.createElement('div');
+        header.className = 'sept-ui-modal-header';
+        header.textContent = config.title;
+        modal.appendChild(header);
+
+        // Form body with groups
+        const body = document.createElement('div');
+        body.style.maxHeight = '400px';
+        body.style.overflowY = 'auto';
+
+        const inputs = new Map<string, HTMLInputElement | HTMLSelectElement>();
+
+        for (const group of config.groups) {
+            const groupEl = document.createElement('div');
+            groupEl.className = 'sept-ui-form-group';
+
+            const titleEl = document.createElement('div');
+            titleEl.className = 'sept-ui-form-group-title';
+            titleEl.textContent = group.title;
+            groupEl.appendChild(titleEl);
+
+            for (const field of group.fields) {
+                const row = document.createElement('div');
+                row.className = 'sept-ui-form-row';
+
+                const label = document.createElement('label');
+                label.className = 'sept-ui-form-label';
+                label.textContent = field.label;
+                row.appendChild(label);
+
+                if (field.type === 'select' && field.options) {
+                    const select = document.createElement('select');
+                    select.className = 'sept-ui-form-select';
+                    field.options.forEach(opt => {
+                        const option = document.createElement('option');
+                        option.value = String(opt.value);
+                        option.textContent = opt.label;
+                        if (opt.value === field.value) option.selected = true;
+                        select.appendChild(option);
+                    });
+                    inputs.set(field.key, select);
+                    row.appendChild(select);
+                } else {
+                    const input = document.createElement('input');
+                    input.className = 'sept-ui-form-input';
+                    input.type = field.type === 'color' ? 'color' : 'number';
+                    input.value = String(field.value ?? '');
+                    if (field.min !== undefined) input.min = String(field.min);
+                    if (field.max !== undefined) input.max = String(field.max);
+                    if (field.step !== undefined) input.step = String(field.step);
+                    inputs.set(field.key, input);
+                    row.appendChild(input);
+                }
+
+                groupEl.appendChild(row);
+            }
+            body.appendChild(groupEl);
+        }
+        modal.appendChild(body);
+
+        // Footer
+        const footer = document.createElement('div');
+        footer.className = 'sept-ui-modal-footer';
+
+        const cancelBtn = this.createButton(`${id}-cancel`, {
+            label: 'Cancel',
+            onClick: () => { this.hide(id); config.onClose?.(); }
+        });
+        const submitBtn = this.createButton(`${id}-submit`, {
+            label: 'Apply',
+            variant: 'primary',
+            onClick: () => {
+                const values: Record<string, any> = {};
+                inputs.forEach((el, key) => {
+                    values[key] = el.type === 'number' ? parseFloat(el.value) : el.value;
+                });
+                this.hide(id);
+                config.onSubmit(values);
+            }
+        });
+
+        footer.appendChild(cancelBtn);
+        footer.appendChild(submitBtn);
+        modal.appendChild(footer);
 
         backdrop.appendChild(modal);
         backdrop.onclick = (e) => {

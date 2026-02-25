@@ -46,6 +46,9 @@ export class InputProvider {
         this.domElement.addEventListener('touchmove', this.onTouchMove, { passive: false });
         this.domElement.addEventListener('touchend', this.onTouchEnd, { passive: false });
         this.domElement.addEventListener('touchcancel', this.onTouchEnd, { passive: false });
+
+        // Prevent browser default right-click menu so we can use button 2 for our own context menu
+        this.domElement.addEventListener('contextmenu', (e) => e.preventDefault(), false);
     }
 
     private onKeyDown = (e: KeyboardEvent) => {

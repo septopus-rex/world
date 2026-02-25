@@ -8,6 +8,8 @@ import { SystemMode } from '../types/SystemMode';
 import { UIButtonConfig } from '../services/UIProvider';
 import { EditHelperManager } from './EditHelperManager';
 import { EditSessionManager } from './EditSessionManager';
+import { EditTaskExecutor } from '../EditTaskExecutor';
+import { EditTask, ContextMenuItem } from '../types/EditTask';
 
 /**
  * EditSystem
@@ -31,13 +33,18 @@ export class EditSystem implements ISystem {
 
     private helpers: EditHelperManager;
     private session: EditSessionManager;
+    private executor: EditTaskExecutor;
     private interactHandler: (event: GameEvent) => void;
+    private contextHandler: (event: GameEvent) => void;
 
     constructor(world: World) {
         this.helpers = new EditHelperManager(world);
         this.session = new EditSessionManager(world);
+        this.executor = new EditTaskExecutor();
         this.interactHandler = (e) => this.onInteract(world, e.payload);
+        this.contextHandler = (e) => this.onContextInteract(world, e.payload);
         world.on("interact", this.interactHandler);
+        world.on("context-interact", this.contextHandler);
     }
 
     public update(world: World, dt: number): void {
@@ -120,6 +127,10 @@ export class EditSystem implements ISystem {
 
     private onInteract(world: World, data: any) {
         if (world.mode !== SystemMode.Edit) return;
+
+        // Dismiss any open context menu or form on any left-click
+        world.ui?.hide("context-menu");
+        world.ui?.hide("edit-form");
 
         const now = Date.now();
         const isDoubleClick = (now - this.lastClickTime) < this.DOUBLE_CLICK_DELAY;
@@ -230,6 +241,143 @@ export class EditSystem implements ISystem {
         this.movingEntityId = null;
         world.isMovingObject = false;
         this.lastUISelection = null;
+        world.ui?.hide("context-menu");
+        world.ui?.hide("edit-form");
         this.syncUI(world);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Context Menu (Right-Click) Flow
+    // ─────────────────────────────────────────────────────────────
+
+    private onContextInteract(world: World, data: any) {
+        if (world.mode !== SystemMode.Edit) return;
+        if (!data.entityId) return;
+
+        // Only allow context menu on adjuncts belonging to active block
+        const adjComp = world.getComponent<AdjunctComponent>(data.entityId, "AdjunctComponent");
+        if (!adjComp || adjComp.parentBlockEntityId !== this.activeBlockId) return;
+
+        // Select the entity for visual feedback
+        this.selectedEntityId = data.entityId;
+        this.movingEntityId = null;
+        world.isMovingObject = false;
+
+        // Get menu items from the adjunct's plugin
+        const menuDef = adjComp.logicModule?.menu;
+        const items: ContextMenuItem[] = menuDef?.contextMenu
+            ? menuDef.contextMenu(adjComp.stdData)
+            : [{ label: "✏️ Edit", action: "edit" }]; // Fallback
+
+        this.showContextMenu(world, data.entityId, adjComp, items, data.screenPos);
+    }
+
+    private showContextMenu(world: World, entityId: EntityId, adjComp: AdjunctComponent, items: ContextMenuItem[], screenNDC: [number, number]) {
+        if (!world.ui) return;
+
+        // Convert NDC → 0-1 screen space for showGroup
+        const screenPos = {
+            x: (screenNDC[0] + 1) / 2,
+            y: (1 - screenNDC[1]) / 2
+        };
+
+        const buttons: UIButtonConfig[] = items.map(item => ({
+            label: item.label,
+            variant: item.variant,
+            onClick: () => {
+                world.ui!.hide("context-menu");
+                this.handleContextAction(world, entityId, adjComp, item.action);
+            }
+        }));
+
+        world.ui.showGroup("context-menu", buttons, screenPos);
+    }
+
+    private handleContextAction(world: World, entityId: EntityId, adjComp: AdjunctComponent, action: string) {
+        switch (action) {
+            case 'edit':
+                this.showEditForm(world, entityId, adjComp);
+                break;
+            case 'delete': {
+                const task: EditTask = {
+                    entityId,
+                    adjunct: adjComp.adjunctId,
+                    action: 'delete',
+                    param: {}
+                };
+                this.executor.execute(world, task);
+                this.selectedEntityId = null;
+                this.syncUI(world);
+                break;
+            }
+            default:
+                console.warn(`[EditSystem] Unknown context action: ${action}`);
+        }
+    }
+
+    private showEditForm(world: World, entityId: EntityId, adjComp: AdjunctComponent) {
+        if (!world.ui) return;
+
+        const menuDef = adjComp.logicModule?.menu;
+        if (!menuDef?.form) {
+            world.ui.showToast("No editable properties for this object.");
+            return;
+        }
+
+        const groups = menuDef.form(adjComp.stdData);
+
+        world.ui.showForm("edit-form", {
+            title: `Edit ${adjComp.adjunctId} #${adjComp.stdData.index ?? 0}`,
+            groups: groups,
+            onSubmit: (values) => {
+                // Flatten dotted keys (e.g. "material.resource" → nested update)
+                const param = this.flattenFormValues(values, adjComp.stdData);
+
+                const task: EditTask = {
+                    entityId,
+                    adjunct: adjComp.adjunctId,
+                    action: 'set',
+                    param
+                };
+
+                const ok = this.executor.execute(world, task);
+                if (ok) {
+                    world.ui?.showToast(`Updated ${adjComp.adjunctId}`);
+                    // Force UI refresh
+                    this.lastUISelection = null;
+                    this.syncUI(world);
+                }
+            },
+            onClose: () => {
+                // no-op
+            }
+        });
+    }
+
+    /**
+     * Convert form values to a flat param object compatible with EditTask.
+     * Handles dotted keys like "material.resource" by setting the nested value on stdData.
+     */
+    private flattenFormValues(values: Record<string, any>, std: any): Record<string, any> {
+        const param: Record<string, any> = {};
+
+        for (const key in values) {
+            if (key.includes('.')) {
+                // Nested key: "material.resource" → set std.material.resource
+                const parts = key.split('.');
+                let target = std;
+                for (let i = 0; i < parts.length - 1; i++) {
+                    if (!target[parts[i]]) target[parts[i]] = {};
+                    target = target[parts[i]];
+                }
+                target[parts[parts.length - 1]] = values[key];
+                // Also store the top-level container so executor merges correctly
+                param[parts[0]] = std[parts[0]];
+            } else {
+                param[key] = values[key];
+            }
+        }
+
+        return param;
     }
 }

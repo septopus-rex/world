@@ -1,3 +1,5 @@
+import { FormGroup } from '../types/EditTask';
+
 export interface UIButtonConfig {
     label: string;
     icon?: string;
@@ -12,6 +14,13 @@ export interface UIModalConfig {
     title: string;
     body: string;
     buttons: UIButtonConfig[];
+    onClose?: () => void;
+}
+
+export interface UIFormConfig {
+    title: string;
+    groups: FormGroup[];
+    onSubmit: (values: Record<string, any>) => void;
     onClose?: () => void;
 }
 
@@ -32,6 +41,12 @@ export interface IUIProvider {
      * Show a Modal dialog
      */
     showModal(id: string, config: UIModalConfig): void;
+
+    /**
+     * Show an editable Form modal with grouped fields.
+     * The form values are collected and returned via onSubmit.
+     */
+    showForm(id: string, config: UIFormConfig): void;
 
     /**
      * Show a Toast message

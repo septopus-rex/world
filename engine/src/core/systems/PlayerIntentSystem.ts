@@ -64,6 +64,7 @@ export class PlayerIntentSystem implements ISystem {
         input.jump = this.inputProvider.isKeyJustPressed('Space');
         input.run = this.inputProvider.isKeyPressed('ShiftLeft');
         input.interactPrimary = this.inputProvider.isKeyJustPressed('KeyE') || this.inputProvider.isMouseButtonJustPressed(0);
+        input.interactSecondary = this.inputProvider.isMouseButtonJustPressed(2);
 
         input.lookUp = this.inputProvider.isKeyPressed('ArrowUp');
         input.lookDown = this.inputProvider.isKeyPressed('ArrowDown');

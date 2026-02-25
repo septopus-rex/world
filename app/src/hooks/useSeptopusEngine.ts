@@ -19,18 +19,9 @@ export function useSeptopusEngine(containerId: string) {
         if (!loaderRef.current) {
             loaderRef.current = new SandboxLoader();
 
-            // UI Bridge
-            const uiProvider = {
-                showGroup: (id: string, items: any[], pos: string) => console.log(`[HUD Group] ${id} at ${pos}`, items),
-                showButton: (id: string, config: any) => console.log(`[HUD Button] ${id}`, config),
-                showModal: (id: string, config: any) => console.log(`[HUD Modal] ${id}`, config),
-                showToast: (msg: string) => console.log(`[HUD Toast] ${msg}`),
-                hide: (id: string) => console.log(`[HUD Hide] ${id}`),
-                updateCompass: (yaw: number) => console.log(`[HUD Compass] ${yaw}`),
-                updateWidget: (id: string, data: any) => console.log(`[HUD Widget] ${id}`, data)
-            };
-
-            loaderRef.current.init(containerId, uiProvider);
+            // No UI provider passed → engine will use its built-in DefaultUIProvider.
+            // To integrate into a custom app, pass a custom IUIProvider here.
+            loaderRef.current.init(containerId);
             (window as any).loader = loaderRef.current;
         }
     }, [wallet, containerId]);

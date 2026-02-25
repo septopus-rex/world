@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct';
+import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { Coords } from '../../core/utils/Coords';
 
 /**
@@ -33,7 +34,47 @@ const menu = {
                 { type: "number", key: "oz", value: std.oz, label: "Z Offset" },
             ],
         };
-    }
+    },
+    contextMenu: (std: STDObject): ContextMenuItem[] => [
+        { label: "✏️ Edit Properties", action: "edit" },
+        { label: "🗑️ Delete", action: "delete", variant: "danger" as const }
+    ],
+    form: (std: STDObject): FormGroup[] => [
+        {
+            title: "Size",
+            fields: [
+                { key: "x", label: "Width (E)", type: "number" as const, value: std.x, min: 0.1, step: 0.1 },
+                { key: "y", label: "Depth (N)", type: "number" as const, value: std.y, min: 0.1, step: 0.1 },
+                { key: "z", label: "Height", type: "number" as const, value: std.z, min: 0.1, step: 0.1 },
+            ]
+        },
+        {
+            title: "Position",
+            fields: [
+                { key: "ox", label: "X Offset", type: "number" as const, value: std.ox, step: 0.5 },
+                { key: "oy", label: "Y Offset", type: "number" as const, value: std.oy, step: 0.5 },
+                { key: "oz", label: "Z Offset", type: "number" as const, value: std.oz, step: 0.5 },
+            ]
+        },
+        {
+            title: "Visual",
+            fields: [
+                {
+                    key: "material.resource",
+                    label: "Material",
+                    type: "select" as const,
+                    value: std.material?.resource ?? 0,
+                    options: [
+                        { label: "Default", value: 0 },
+                        { label: "Pillar (Dark)", value: 1 },
+                        { label: "Blue", value: 2 },
+                        { label: "Red", value: 3 },
+                        { label: "Ground", value: 10 },
+                    ]
+                }
+            ]
+        }
+    ]
 };
 
 const attribute: AdjunctAttribute = {

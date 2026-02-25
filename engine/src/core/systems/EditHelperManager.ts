@@ -12,6 +12,7 @@ export class EditHelperManager {
     private blockHelper: RenderHandle | null = null;
     private gridHelper: RenderHandle | null = null;
     private selectionHighlight: RenderHandle | null = null;
+    private lastSelectedEntityId: EntityId | null = null;
 
     constructor(private world: World) { }
 
@@ -25,8 +26,14 @@ export class EditHelperManager {
             }
         }
 
-        // 2. Selection Highlight
+        // 2. Selection Highlight — recreate when selected entity changes
         if (selectedEntityId !== null) {
+            // If the selection target changed, destroy the old highlight so we rebuild from the new geometry
+            if (selectedEntityId !== this.lastSelectedEntityId) {
+                this.clearSelectionHighlight();
+                this.lastSelectedEntityId = selectedEntityId;
+            }
+
             const trans = this.world.getComponent<TransformComponent>(selectedEntityId, "TransformComponent");
             const group = this.world.renderEngine.getObjectByEntityId(selectedEntityId);
             if (trans) {
@@ -39,6 +46,7 @@ export class EditHelperManager {
             }
         } else {
             this.clearSelectionHighlight();
+            this.lastSelectedEntityId = null;
         }
 
         // 3. Grid Helper

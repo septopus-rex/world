@@ -1,3 +1,5 @@
+import { FormGroup, ContextMenuItem } from './EditTask';
+
 export interface ComponentMeta {
     name: string;
     short: string;
@@ -62,8 +64,10 @@ export interface AdjunctTransform {
 }
 
 export interface AdjunctMenu {
-    pop(std: STDObject): any[];
-    sidebar(std: STDObject): Record<string, any[]>;
+    pop?(std: STDObject): any[];
+    sidebar?(std: STDObject): Record<string, any[]>;
+    contextMenu?(std: STDObject): ContextMenuItem[];
+    form?(std: STDObject): FormGroup[];
 }
 
 export interface AdjunctAttribute {
