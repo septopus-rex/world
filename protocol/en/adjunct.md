@@ -85,7 +85,10 @@ Events can trigger custom animations (via `hooks.animate`) or execute specific f
 
 If an Adjunct requires external assets (like textures or 3D models `.glb`), it must declare them during the `transform.raw_std` phase. The engine intercepts these declarations and handles the asynchronous loading to prevent UI stuttering.
 
-| Resource Type | Mounting Location in Data | Purpose |
+Adjuncts reference resources via **integer IDs**. For storage format, addressing schemes, and fetch flow, see the [Resource Protocol](./resource.md).
+
+| Resource Type | Reference in Data | Description |
 |---|---|---|
-| Image (Texture) | `STD_ROW.material.texture` | Applied as a diffuse/color map on generated box geometries. |
-| 3D Model (.glb) | `STD_ROW.module` | Replaces standard geometry generation with a fully loaded 3D asset. |
+| Image (Texture) | `adjunct raw[3]` = texture resource ID | Texture resource, applied as diffuse/color map |
+| 3D Model (Module) | `adjunct raw[3]` = module resource ID | Replaces standard geometry with a fully loaded 3D asset |
+| Audio | `STD_ROW.audio.resource` | 3D spatial audio |

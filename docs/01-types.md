@@ -738,6 +738,9 @@ export enum ResourceType {
     Avatar = 'avatar',
     Text = 'text',
     Audio = 'audio',
+    Game = 'game',
+    IDL = 'idl',
+    Wasm = 'wasm',
 }
 
 /**

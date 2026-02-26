@@ -85,7 +85,10 @@ export const CustomAdjunct = {
 
 如果一个附属物需要外部资产（如纹理图片或 3D 模型 `.glb`），它必须在 `transform.raw_std` 阶段声明它们。引擎拦截这些声明并处理异步加载，以防止 UI 卡顿。
 
-| 资源类型 | 数据中的挂载位置 | 用途 |
+附属物通过**整数 ID** 引用资源，资源的存储格式、寻址方式和获取流程详见 [资源协议 (Resource Protocol)](./resource.md)。
+
+| 资源类型 | 数据中的挂载位置 | 说明 |
 |---|---|---|
-| 图像 (Texture) | `STD_ROW.material.texture` | 作为漫反射/颜色贴图应用在生成的盒子几何体上。 |
-| 3D 模型 (.glb) | `STD_ROW.module` | 替换标准几何体生成，使用完整加载的 3D 资产。 |
+| 图像 (Texture) | `adjunct raw[3]` = texture resource ID | 贴图资源，应用为漫反射/颜色贴图 |
+| 3D 模型 (Module) | `adjunct raw[3]` = module resource ID | 替换标准几何体，使用完整 3D 资产 |
+| 音效 (Audio) | `STD_ROW.audio.resource` | 3D 空间音效 |
