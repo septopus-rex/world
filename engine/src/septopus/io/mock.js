@@ -31,40 +31,40 @@ const mock = {
                     "ROTATION_X": 0,
                     "ROTATION_Y": 1,
                     "ROTATION_Z": 2,
-                    "FACE_TOP":0,
-                    "FACE_BOTTOM":1,
-                    "FACE_FRONT":2,                 //from south to north
-                    "FACE_BACK":3,
-                    "FACE_LEFT":4,
-                    "FACE_RIGTH":5,
-                    "MODE_NORMAL":1,                //login player
-                    "MODE_EDIT":2,                  //edit mode on your own block
-                    "MODE_GAME":3,                  //preload all block data
-                    "MODE_GHOST":4,                 //anonymous player, no trig
-                    "INDEX_OF_RAW_ON_CHAIN_DATA":1, //block raw data index on chain
-                    "VERSION_DEFAULT":2025,         //default version
-                    "EFFECTS_MOVING":0,         //effects.moving
-                    "EFFECTS_ROTATE":1,         //effects.rotate
-                    "EFFECTS_SCALE":2,          //effects.scale
-                    "EFFECTS_TEXTURE":3,        //effects.texture
-                    "EFFECTS_CUSTOMIZE":4,        //effects.customize, by adjunct,
+                    "FACE_TOP": 0,
+                    "FACE_BOTTOM": 1,
+                    "FACE_FRONT": 2,                 //from south to north
+                    "FACE_BACK": 3,
+                    "FACE_LEFT": 4,
+                    "FACE_RIGTH": 5,
+                    "MODE_NORMAL": 1,                //login player
+                    "MODE_EDIT": 2,                  //edit mode on your own block
+                    "MODE_GAME": 3,                  //preload all block data
+                    "MODE_GHOST": 4,                 //anonymous player, no trig
+                    "INDEX_OF_RAW_ON_CHAIN_DATA": 1, //block raw data index on chain
+                    "VERSION_DEFAULT": 2025,         //default version
+                    "EFFECTS_MOVING": 0,         //effects.moving
+                    "EFFECTS_ROTATE": 1,         //effects.rotate
+                    "EFFECTS_SCALE": 2,          //effects.scale
+                    "EFFECTS_TEXTURE": 3,        //effects.texture
+                    "EFFECTS_CUSTOMIZE": 4,        //effects.customize, by adjunct,
                 },
                 source: "SOLANA_PDA_ACCOUNT_OF_WORLD_COMMON",
                 owner: "",
-                format:{
-                    "OBJECT_SELECTION":[],
+                format: {
+                    "OBJECT_SELECTION": [],
                 },
             },
-            block:{
+            block: {
                 definition: {
-                    "BLOCK_INDEX_ELEVACATION":0,
-                    "BLOCK_INDEX_STATUS":1,
-                    "BLOCK_INDEX_ADJUNCTS":2,
-                    "BLOCK_INDEX_GAME_SETTING":3,
+                    "BLOCK_INDEX_ELEVACATION": 0,
+                    "BLOCK_INDEX_STATUS": 1,
+                    "BLOCK_INDEX_ADJUNCTS": 2,
+                    "BLOCK_INDEX_GAME_SETTING": 3,
                 },
-                sample:[0.2,1,[]],
-                version:2025,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                sample: [0.2, 1, []],
+                version: 2025,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "SOLANA_PDA_ACCOUNT_OF_BLOCK",
             },
@@ -72,103 +72,103 @@ const mock = {
                 definition: {
                     "TYPE_OF_STOP": 3,
                 },
-                sample:[[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 1],
-                version:2025,
-                short:0x00b4,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                sample: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 1, 1],
+                version: 2025,
+                short: 0x00b4,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "SOLANA_PDA_ACCOUNT_OF_BASIC_ADJUNCT",
             },
             trigger: {
                 definition: {
-                    "RAW_TRIGGER_SHAPE_OPTION":     3,      //["box","ball","more"]
-                    "RAW_TRIGGER_OPTION":           4,      //["in","out","hold"]
-                    "RAW_ACTION_GROUP":             5,      //
-                    "RAW_CONTRACT_ID_ON_CHAIN":     6,
-                    "RAW_RUN_ONCE":                 7,
-                    "RAW_ONLY_GAME_MODE":           8,
+                    "RAW_TRIGGER_SHAPE_OPTION": 3,      //["box","ball","more"]
+                    "RAW_TRIGGER_OPTION": 4,      //["in","out","hold"]
+                    "RAW_ACTION_GROUP": 5,      //
+                    "RAW_CONTRACT_ID_ON_CHAIN": 6,
+                    "RAW_RUN_ONCE": 7,
+                    "RAW_ONLY_GAME_MODE": 8,
 
                     //action array [ "condition", "todo_task", "abord_task", "recover_task" ]
-                    "ACTION_INDEX_CONDITION":   0,
-                    "ACTION_INDEX_TODO":        1,
-                    "ACTION_INDEX_ABORD":       2,
-                    "ACTION_INDEX_RECOVER":     3,
+                    "ACTION_INDEX_CONDITION": 0,
+                    "ACTION_INDEX_TODO": 1,
+                    "ACTION_INDEX_ABORD": 2,
+                    "ACTION_INDEX_RECOVER": 3,
                     //condition array [ "selection_array", "operator", "value" ]
-                    "CONDITION_INDEX_SELECTION":    0,
-                    "CONDITION_INDEX_OPERATOR":     1,
-                    "CONDITION_INDEX_VALUE":        2,
+                    "CONDITION_INDEX_SELECTION": 0,
+                    "CONDITION_INDEX_OPERATOR": 1,
+                    "CONDITION_INDEX_VALUE": 2,
                     //task array    [ "selection", ]
 
                     //section array,
-                    "SELECTION_INDEX_TYPE":     0,
-                    "SELECTION_TYPE_OPETION_SYSTEM":    1,
-                    "SELECTION_TYPE_OPETION_ADJUNCT":   2,
-                    "SELECTION_TYPE_OPETION_PLAYER":    3,
-                    "SELECTION_TYPE_OPETION_BAG":       4,
+                    "SELECTION_INDEX_TYPE": 0,
+                    "SELECTION_TYPE_OPETION_SYSTEM": 1,
+                    "SELECTION_TYPE_OPETION_ADJUNCT": 2,
+                    "SELECTION_TYPE_OPETION_PLAYER": 3,
+                    "SELECTION_TYPE_OPETION_BAG": 4,
 
                     //system selection
-                    "SELECTION_SYSTEM_SUB":     1,
-                    "SYSTEM_SUB_OPTION_UI":     1,
-                    "SYSTEM_SUB_OPTION_TIME":   2,
-                    "SYSTEM_SUB_OPTION_WEATHER":3,
-                    "SYSTEM_SUB_OPTION_SKY":    4,
+                    "SELECTION_SYSTEM_SUB": 1,
+                    "SYSTEM_SUB_OPTION_UI": 1,
+                    "SYSTEM_SUB_OPTION_TIME": 2,
+                    "SYSTEM_SUB_OPTION_WEATHER": 3,
+                    "SYSTEM_SUB_OPTION_SKY": 4,
 
                     "SYSTEM_UI_OPTION_DIALOG": 1,
-                    "SYSTEM_UI_OPTION_TOAST":  2,
+                    "SYSTEM_UI_OPTION_TOAST": 2,
 
                     //adjunct selection
-                    "SELECTION_ADJUNCT_SHORT":  1,
-                    "SELECTION_ADJUNCT_INDEX":  2,
+                    "SELECTION_ADJUNCT_SHORT": 1,
+                    "SELECTION_ADJUNCT_INDEX": 2,
 
                     //player selection
                     //["position","rotation","body","block","capacity","blood","magic"]
-                    "SELECTION_PLAYER_ATTIBUTION":  1,
-                    "PLAYER_ATTIBUTION_OPTION_POSITION":    0,
-                    "PLAYER_ATTIBUTION_OPTION_ROTATION":    1,
-                    "PLAYER_ATTIBUTION_OPTION_BODY":        2,
-                    "PLAYER_ATTIBUTION_OPTION_BLOCK":       3,
-                    "PLAYER_ATTIBUTION_OPTION_CAPACITY":    4,
-                    "PLAYER_ATTIBUTION_OPTION_BLOOD":       5,
-                    "PLAYER_ATTIBUTION_OPTION_MAGIC":       6,
+                    "SELECTION_PLAYER_ATTIBUTION": 1,
+                    "PLAYER_ATTIBUTION_OPTION_POSITION": 0,
+                    "PLAYER_ATTIBUTION_OPTION_ROTATION": 1,
+                    "PLAYER_ATTIBUTION_OPTION_BODY": 2,
+                    "PLAYER_ATTIBUTION_OPTION_BLOCK": 3,
+                    "PLAYER_ATTIBUTION_OPTION_CAPACITY": 4,
+                    "PLAYER_ATTIBUTION_OPTION_BLOOD": 5,
+                    "PLAYER_ATTIBUTION_OPTION_MAGIC": 6,
 
                     //task definition
-                    "TASK_SYSTEM_UI_":      1,
+                    "TASK_SYSTEM_UI_": 1,
 
                     //bag selection
-                    "SELECTION_BAG_OBJECT":             1,
-                    "SELECTION_BAG_OBJECT_AMOUNT":      2,
+                    "SELECTION_BAG_OBJECT": 1,
+                    "SELECTION_BAG_OBJECT_AMOUNT": 2,
 
                     //adjuction task action
-                    "ACTION_ADJUNCT_SHOW":      1,
-                    "ACTION_ADJUNCT_HIDE":      2,
-                    "ACTION_ADJUNCT_UPDATE":    3,
+                    "ACTION_ADJUNCT_SHOW": 1,
+                    "ACTION_ADJUNCT_HIDE": 2,
+                    "ACTION_ADJUNCT_UPDATE": 3,
 
-                    "ADJUNCT_UPDATE_OPTION_INC":   1,
-                    "ADJUNCT_UPDATE_OPTION_DEC":   1,
+                    "ADJUNCT_UPDATE_OPTION_INC": 1,
+                    "ADJUNCT_UPDATE_OPTION_DEC": 1,
 
-                    "EVENT_OPTION_IN":          1,
-                    "EVENT_OPTION_OUT":         2,
-                    "EVENT_OPTION_HOLD":        3,
-                    "SHAPE_OPTION_BOX":         1,
-                    "SHAPE_OPTION_BALL":        2,
-                    "OPERATOR_!=":              0,
-                    "OPERATOR_==":              1,
-                    "OPERATOR_>":               2,
-                    "OPERATOR_<":               3,
-                    "OPERATOR_>=":              4,
-                    "OPERATOR_<=":              5,
+                    "EVENT_OPTION_IN": 1,
+                    "EVENT_OPTION_OUT": 2,
+                    "EVENT_OPTION_HOLD": 3,
+                    "SHAPE_OPTION_BOX": 1,
+                    "SHAPE_OPTION_BALL": 2,
+                    "OPERATOR_!=": 0,
+                    "OPERATOR_==": 1,
+                    "OPERATOR_>": 2,
+                    "OPERATOR_<": 3,
+                    "OPERATOR_>=": 4,
+                    "OPERATOR_<=": 5,
                 },
-                sample:[[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
+                sample: [[2, 2, 3], [12, 4, 1.5], [0, 0, 0], 1, 1, [
                     [
-                        [[1,3],1,0],                                //`condition`, system.weather == 0 ,can be empty, run anyway
-                        [[1,1,2],[1,20]],                           //`task_todo`, system.ui.toast()
-                        [[1,1,2],[1,33]],                           //`task_abord`, system.ui.toast()
-                        [[2,0x00a1,1],[3,[[0,2],1,0.78]],[10]]      //`task_recover`, adjunct.wall --> update --> position[2] -->
+                        [[1, 3], 1, 0],                                //`condition`, system.weather == 0 ,can be empty, run anyway
+                        [[1, 1, 2], [1, 20]],                           //`task_todo`, system.ui.toast()
+                        [[1, 1, 2], [1, 33]],                           //`task_abord`, system.ui.toast()
+                        [[2, 0x00a1, 1], [3, [[0, 2], 1, 0.78]], [10]]      //`task_recover`, adjunct.wall --> update --> position[2] -->
                     ],
                 ], 0, 1, 1],
-                version:2025,
-                short:0x00b8,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                version: 2025,
+                short: 0x00b8,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "SOLANA_PDA_ACCOUNT_OF_BASIC_ADJUNCT",
             },
@@ -179,10 +179,10 @@ const mock = {
                     "ANIMATION_OPTION": 5,
                     "AUTO_STOP": 6,
                 },
-                sample:[[1.2,1.2,1.2],[8,8,2],[0,0,0],2,[2,2],0,0,1],
-                version:2025,
-                short:0x00a2,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                sample: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 2, [2, 2], 0, 0, 1],
+                version: 2025,
+                short: 0x00a2,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
@@ -193,10 +193,10 @@ const mock = {
                     "ANIMATION_OPTION": 5,
                     "AUTO_STOP": 6,
                 },
-                sample:[[1.2,1.2,1.2],[8,8,2],[0,0,0],2,[2,2],0,0,1],
-                version:2025,
-                short:0x00a6,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                sample: [[1.2, 1.2, 1.2], [8, 8, 2], [0, 0, 0], 2, [2, 2], 0, 0, 1],
+                version: 2025,
+                short: 0x00a6,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
@@ -207,10 +207,10 @@ const mock = {
                     "ANIMATION_OPTION": 5,
                     "AUTO_STOP": 6,
                 },
-                sample:[[1.2,0,0],[8,8,2],[0,0,0],2,[2,2],0,0,1],
-                version:2025,
-                short:0x00a7,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                sample: [[1.2, 0, 0], [8, 8, 2], [0, 0, 0], 2, [2, 2], 0, 0, 1],
+                version: 2025,
+                short: 0x00a7,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
@@ -220,10 +220,10 @@ const mock = {
                     "ANIMATION_OPTION": 4,
                     "AUTO_STOP": 5,
                 },
-                sample:[[3,4,3],[8,12,0],[0,0,0],27,0,1],
-                version:2025,
-                short:0x00a4,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                sample: [[3, 4, 3], [8, 12, 0], [0, 0, 0], 27, 0, 1],
+                version: 2025,
+                short: 0x00a4,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
@@ -235,10 +235,10 @@ const mock = {
                     "AUTO_STOP": 6,
                     "INDEX_OF_HOLE": 7,
                 },
-                sample:[[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, 1],
-                version:2025,
-                short:0x00a1,
-                code:"JAVASCRIPT_BASE64_CODE_STRING",
+                sample: [[1.5, 0.2, 0.5], [1, 0.3, 0], [0, 0, 0], 2, [1, 1], 0, 1],
+                version: 2025,
+                short: 0x00a1,
+                code: "JAVASCRIPT_BASE64_CODE_STRING",
                 source: "SOLANA_DATA_ACCOUNT",
                 owner: "ADJUNCT_OWNER",
             },
@@ -305,10 +305,10 @@ const mock = {
                     ],
                 },
                 degree: 40,
-                data:{
-                    category:[2,4],         //
-                    grade:[10,6],
-                    interval:3*60*60,       // 天气更新间隔       
+                data: {
+                    category: [2, 4],         //
+                    grade: [10, 6],
+                    interval: 3 * 60 * 60,       // 天气更新间隔       
                 }
             },
         }
@@ -329,7 +329,7 @@ const mock = {
             blockheight: 1123456,                   //slot height when this world starts
             index: index,                       //index of world     
             adjunct: mock.adjunct(index),
-            data:mock.single(index),
+            data: mock.single(index),
         };
     },
     single: (index) => {
@@ -356,12 +356,12 @@ const mock = {
                     block: [2022, 617],         //玩家的默认启动位置
                     position: [8, 8, 0],      //默认开始的位置[x,y,z],z为站立高度(相对于block的高度)
                     rotation: [0.108, 0, 0],        //默认的旋转位置
-                    world:0,
-                    extend:4,              
-                    stop:{
-                        on:false,               //whether on stop ( including adjunct type )
-                        adjunct:"",             //adjunct support stop attribution, need to figure out
-                        index:0,                //adjunct index
+                    world: 0,
+                    extend: 4,
+                    stop: {
+                        on: false,               //whether on stop ( including adjunct type )
+                        adjunct: "",             //adjunct support stop attribution, need to figure out
+                        index: 0,                //adjunct index
                     }
                 },
                 body: {     //基础的玩家配置，如需特殊调整，用scale的方式来实现.Avatar里需要有这些参数，不存在的话，就用这个配置
@@ -391,28 +391,28 @@ const mock = {
                     scale: [2, 2, 2],        //虚拟形象身体尺寸的最大放大比例, [高,宽,深]
                 },
             },
-            extend:{
-                news:{
-                    server:"https://news_api.septopus.xyz",
-                    methods:[
+            extend: {
+                news: {
+                    server: "https://news_api.septopus.xyz",
+                    methods: [
                         {
-                            path:"list",
-                            params:{
-                                page:"number",
-                                step:"number",
+                            path: "list",
+                            params: {
+                                page: "number",
+                                step: "number",
                             }
                         },
                         {
-                            path:"view",
-                            params:{
-                                hash:"string[12]",
+                            path: "view",
+                            params: {
+                                hash: "string[12]",
                             }
                         },
                         {
-                            path:"comment",
-                            params:{
-                                hash:"string[12]",
-                                words:"string[500]",
+                            path: "comment",
+                            params: {
+                                hash: "string[12]",
+                                words: "string[500]",
                             }
                         },
                     ]
@@ -421,27 +421,27 @@ const mock = {
         }
     },
     block: (x, y, world) => {
-        return Design.show(x,y,world);
+        return Design.show(x, y, world);
         //return Design.block(x,y,world);
     },
 
     content: (id) => {
-        const txts=[
+        const txts = [
             "跌落死亡，请稍后再试",
             "我是触发器，被触发了哟。这段话是存在IPFS的哟",
             "欢迎来玩爬梯子的游戏，跑到顶就赢啦！",
         ]
         return {
-            data:txts,
-            format:"json",
-            type:"text",
-            more:{lang:"cn"},  
-            index:id,                   //content index in contract counter
+            data: txts,
+            format: "json",
+            type: "text",
+            more: { lang: "cn" },
+            index: id,                   //content index in contract counter
         }
     },
     texture: (id) => {
-        const dt=Design.texture(id);
-        if(dt!==false) return dt;
+        const dt = Design.texture(id);
+        if (dt !== false) return dt;
 
         const arr = [
             "texture/vbw.png",
@@ -457,19 +457,19 @@ const mock = {
         ];
         return {
             index: id,
-            type:"texture",
-            format:"jpg",
+            type: "texture",
+            format: "jpg",
             raw: arr[Toolbox.rand(0, arr.length - 2)],
             repeat: [1, 1]
         }
     },
     module: (id) => {
-        const dt=Design.model(id);
-        if(dt!==false) return dt;
-        
+        const dt = Design.model(id);
+        if (dt !== false) return dt;
+
         return {
             index: id,
-            type:"module",
+            type: "module",
             format: ["3DS", "DAE", "FBX", "MMD"][Toolbox.rand(0, 3)],
             raw: "RAW_DATA_OF_3D_MODULE",
             params: {
@@ -478,37 +478,37 @@ const mock = {
         }
     },
     //get on-chain resource by ID
-    resource: (id) =>{
-        if(id===999){
+    resource: (id) => {
+        if (id === 999) {
             return {
                 index: id,
-                type:"game",
-                format:"json",
-                raw:{
-                    game:"running",
-                    baseurl:"http://lcoalhost:9900",
-                    homepage:"",
-                    version:"1.0.1",
-                    blocks:[                //Game load area. System will add extend 2 automatically
-                        [2026,619,2,4],
-                        [2027,624],
+                type: "game",
+                format: "json",
+                raw: {
+                    game: "running",
+                    baseurl: "http://lcoalhost:9900",
+                    homepage: "",
+                    version: "1.0.1",
+                    blocks: [                //Game load area. System will add extend 2 automatically
+                        [2026, 619, 2, 4],
+                        [2027, 624],
                     ],
-                    methods:[
+                    methods: [
                         {
-                            name:"start",
-                            params:[],
-                            response:[
-                                {type:"string",length:12},
+                            name: "start",
+                            params: [],
+                            response: [
+                                { type: "string", length: 12 },
                             ],
                         },
                         {
-                            name:"view",
-                            params:[
-                                {type:"number",limit:[0,255]},
-                                {type:"string",limit:[0,30]},
+                            name: "view",
+                            params: [
+                                { type: "number", limit: [0, 255] },
+                                { type: "string", limit: [0, 30] },
                             ],
-                            response:[
-                                {key:"data",format:"string"},
+                            response: [
+                                { key: "data", format: "string" },
                             ],
                         },
                     ],
@@ -516,21 +516,21 @@ const mock = {
             }
         }
 
-        if(id===888){
+        if (id === 888) {
             return {
-                index:id,
-                type:"idl",
-                format:"json",
-                raw:lucky,
+                index: id,
+                type: "idl",
+                format: "json",
+                raw: lucky,
             }
         }
 
         return {
             index: id,
-            type:"game",
-            format:"json",
-            raw:{
-                
+            type: "game",
+            format: "json",
+            raw: {
+
             }
         }
     },

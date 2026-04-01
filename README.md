@@ -12,6 +12,12 @@
 * 3D Engine Demo: [https://world.septopus.xyz](https://world.septopus.xyz)
 * Contract: [https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet](https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet)
 
+## Core Protocol
+
+Septopus World is built upon the **String Particle Protocol (SPP)**, a semantic space protocol for AI-native 3D world generation and optimization.
+
+The core specification is maintained independently at [@ff13dfly/spp-protocol](https://github.com/ff13dfly/spp-protocol) and is formally licensed for use within the Septopus open-source project.
+
 ## Roadmap
 
 ### Step1 ( 6 month ): Devnet version Septopus World
@@ -35,3 +41,7 @@
 * King Center on chian.
 * AI Center on chain.
 * Selection of King start.
+## License
+
+* **Code**: Licensed under the [MIT License](LICENSE).
+* **Documentation**: Licensed under the [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](docs/LICENSE).

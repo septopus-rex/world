@@ -17,10 +17,10 @@ target/
 #.idea/
 
 **/.DS_Store
+**/node_modules
 
-test
-engine/chat
+engine/dist
 
-document/backup
-sample/
-engine_back/
+private.md
+
+backup
