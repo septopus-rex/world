@@ -75,6 +75,11 @@ export interface WorldConfig {
 
     // Admin ban-list
     blacklist: number[]; // Blocked adjunct types (E.g. no teleportation pads allowed)
+
+    // Debug options
+    debug?: {
+        stats?: boolean;   // Show Three.js Stats (FPS/MS/MB)
+    };
 }
 
 /**

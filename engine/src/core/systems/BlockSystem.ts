@@ -7,6 +7,7 @@ import { MeshComponent } from '../components/VisualizationComponents';
 import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctTrigger } from '../../plugins/adjunct/adjunct_trigger';
+import { AdjunctLight } from '../../plugins/adjunct/basic_light';
 import { AdjunctDefinition, RenderHandle } from '../types/Adjunct';
 import { DraftStorage } from '../services/DraftStorage';
 
@@ -22,6 +23,7 @@ export class BlockSystem implements ISystem {
     constructor() {
         // Register native Septopus adjuncts
         this.adjunctRegistry.set(0x00a2, AdjunctBox as any);
+        this.adjunctRegistry.set(0x00a3, AdjunctLight as any);
         this.adjunctRegistry.set(0x00b8, AdjunctTrigger as any);
     }
 

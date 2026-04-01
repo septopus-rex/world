@@ -2,12 +2,38 @@ import { World, ISystem, EntityId } from '../World';
 import { TriggerComponent, TriggerAction } from '../components/TriggerComponent';
 import { TransformComponent } from '../components/PlayerComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
-import { Vector3 } from '../utils/Math';
 
 /**
  * TriggerSystem handles logic for spatial triggers.
+ *
+ * OPTIMIZATION:
+ * - Reuses Vector-like scratch variables instead of allocating per frame.
+ * - Caches adjunctId → entityId map for O(1) lookup on trigger actions.
  */
 export class TriggerSystem implements ISystem {
+    // Reusable scratch values to avoid per-frame allocations
+    private _px = 0; private _py = 0; private _pz = 0;
+    private _tx = 0; private _ty = 0; private _tz = 0;
+
+    // adjunctId → entityId cache for O(1) trigger target lookup
+    private _adjunctMap = new Map<string | number, EntityId>();
+    private _adjunctMapDirty = true;
+
+    public invalidateAdjunctMap(): void {
+        this._adjunctMapDirty = true;
+    }
+
+    private rebuildAdjunctMap(world: World): void {
+        this._adjunctMap.clear();
+        const adjuncts = world.queryEntities("AdjunctComponent");
+        for (const id of adjuncts) {
+            const comp = world.getComponent<AdjunctComponent>(id, "AdjunctComponent");
+            if (comp) {
+                this._adjunctMap.set(comp.adjunctId, id);
+            }
+        }
+        this._adjunctMapDirty = false;
+    }
 
     public update(world: World, deltaTime: number): void {
         const triggerEntities = world.queryEntities("TriggerComponent");
@@ -19,11 +45,9 @@ export class TriggerSystem implements ISystem {
         const playerTransform = world.getComponent<TransformComponent>(playerId, "TransformComponent");
         if (!playerTransform) return;
 
-        const playerPos = new Vector3(
-            playerTransform.position[0],
-            playerTransform.position[1],
-            playerTransform.position[2]
-        );
+        this._px = playerTransform.position[0];
+        this._py = playerTransform.position[1];
+        this._pz = playerTransform.position[2];
 
         for (const entityId of triggerEntities) {
             const trigger = world.getComponent<TriggerComponent>(entityId, "TriggerComponent");
@@ -31,25 +55,24 @@ export class TriggerSystem implements ISystem {
 
             if (!trigger || !transform) continue;
 
-            const triggerPos = new Vector3(
-                transform.position[0] + trigger.offset[0],
-                transform.position[1] + trigger.offset[1],
-                transform.position[2] + trigger.offset[2]
-            );
+            this._tx = transform.position[0] + trigger.offset[0];
+            this._ty = transform.position[1] + trigger.offset[1];
+            this._tz = transform.position[2] + trigger.offset[2];
 
             let isInside = false;
             if (trigger.shape === 'sphere') {
-                const dx = playerPos.x - triggerPos.x;
-                const dy = playerPos.y - triggerPos.y;
-                const dz = playerPos.z - triggerPos.z;
-                const distSq = dx * dx + dy * dy + dz * dz;
-                isInside = distSq < trigger.size[0] * trigger.size[0];
+                const dx = this._px - this._tx;
+                const dy = this._py - this._ty;
+                const dz = this._pz - this._tz;
+                isInside = (dx * dx + dy * dy + dz * dz) < trigger.size[0] * trigger.size[0];
             } else {
-                const half = new Vector3(trigger.size[0] / 2, trigger.size[1] / 2, trigger.size[2] / 2);
+                const hx = trigger.size[0] / 2;
+                const hy = trigger.size[1] / 2;
+                const hz = trigger.size[2] / 2;
                 isInside = (
-                    Math.abs(playerPos.x - triggerPos.x) < half.x &&
-                    Math.abs(playerPos.y - triggerPos.y) < half.y &&
-                    Math.abs(playerPos.z - triggerPos.z) < half.z
+                    Math.abs(this._px - this._tx) < hx &&
+                    Math.abs(this._py - this._ty) < hy &&
+                    Math.abs(this._pz - this._tz) < hz
                 );
             }
 
@@ -81,12 +104,12 @@ export class TriggerSystem implements ISystem {
 
     private executeAction(world: World, action: TriggerAction) {
         if (action.type === 'adjunct') {
-            const adjuncts = world.queryEntities("AdjunctComponent");
-            const targetId = adjuncts.find(id => {
-                const comp = world.getComponent<AdjunctComponent>(id, "AdjunctComponent");
-                return comp?.adjunctId === action.target;
-            });
+            // Rebuild map if invalidated
+            if (this._adjunctMapDirty) {
+                this.rebuildAdjunctMap(world);
+            }
 
+            const targetId = this._adjunctMap.get(action.target);
             if (targetId !== undefined) {
                 const comp = world.getComponent<AdjunctComponent>(targetId, "AdjunctComponent");
                 if (comp) {

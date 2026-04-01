@@ -171,6 +171,7 @@ export class PlayerIntentSystem implements ISystem {
         const finalCamRot = world.renderEngine.getMainCameraRotation();
         trans.rotation[0] = finalCamRot[0];
         trans.rotation[1] = finalCamRot[1];
+        trans.dirty = true;
 
         // Avatar Sync
         const avatar = world.getComponent<AvatarComponent>(this.controlledEntity!, "AvatarComponent");

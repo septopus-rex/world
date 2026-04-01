@@ -163,6 +163,7 @@ export class PhysicsSystem implements ISystem {
             trans.position[0] = nextX;
             trans.position[1] = nextY;
             trans.position[2] = nextZ;
+            trans.dirty = true;
 
             // Friction (Deaccelerate XZ velocity smoothly if no input is holding it up)
             body.velocity[0] *= body.friction;

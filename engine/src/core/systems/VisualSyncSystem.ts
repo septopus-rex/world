@@ -5,6 +5,8 @@ import { MeshComponent } from '../components/VisualizationComponents';
 /**
  * VisualSyncSystem automatically synchronizes ECS TransformComponent data
  * to the RenderEngine handles stored in MeshComponent.
+ *
+ * OPTIMIZATION: Only syncs entities whose TransformComponent.dirty flag is true.
  */
 export class VisualSyncSystem implements ISystem {
     public update(world: World, dt: number): void {
@@ -15,6 +17,10 @@ export class VisualSyncSystem implements ISystem {
             const mesh = world.getComponent<MeshComponent>(eid, "MeshComponent")!;
 
             if (!mesh.handle) continue;
+
+            // Skip unchanged entities
+            if (trans.dirty === false) continue;
+
             const obj = mesh.handle as any;
 
             // 1. Sync Position — delegate parent-local conversion to RenderEngine abstraction
@@ -53,6 +59,9 @@ export class VisualSyncSystem implements ISystem {
             if (mesh.visible !== undefined) {
                 world.renderEngine.setObjectVisible(mesh.handle, mesh.visible);
             }
+
+            // Mark as clean
+            trans.dirty = false;
         }
     }
 }

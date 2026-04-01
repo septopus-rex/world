@@ -1,10 +1,12 @@
 import * as THREE from 'three';
+import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { RenderHandle } from '../core/types/Adjunct';
 import { MeshFactory } from './MeshFactory';
 
 export interface RenderEngineConfig {
     containerId: string;
     clearColor?: number;
+    stats?: boolean;
 }
 
 export enum CameraType {
@@ -22,9 +24,19 @@ export class RenderEngine {
     private minimapCamera: THREE.OrthographicCamera;
     private renderer: THREE.WebGLRenderer;
     private container: HTMLElement;
+    private stats: Stats | null = null;
 
     // Reusable raycaster — never instantiated per-frame
     private raycaster: THREE.Raycaster = new THREE.Raycaster();
+
+    // Reusable scratch objects to avoid per-call allocations
+    private _tmpBox3 = new THREE.Box3();
+    private _tmpSize = new THREE.Vector3();
+    private _tmpVec2 = new THREE.Vector2();
+    private _tmpPlane = new THREE.Plane();
+    private _tmpPlaneNormal = new THREE.Vector3();
+    private _tmpPlanePoint = new THREE.Vector3();
+    private _tmpPlaneTarget = new THREE.Vector3();
 
     // O(1) entityId → Object3D index (populated by setObjectUserData)
     private _entityObjectIndex = new Map<string | number, THREE.Object3D>();
@@ -68,10 +80,18 @@ export class RenderEngine {
         this.renderer.autoClear = true;
         this.container.appendChild(this.renderer.domElement);
 
-        // 5. Default Lighting (Failsafe)
-        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+        // 5. Default Lighting (dim ambient so adjunct lights are visible)
+        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
         this.scene.add(hemi);
 
+        // 6. Stats (optional performance monitor)
+        if (config.stats) {
+            this.stats = new Stats();
+            this.stats.dom.style.position = 'absolute';
+            this.stats.dom.style.top = '0px';
+            this.stats.dom.style.left = '0px';
+            this.container.appendChild(this.stats.dom);
+        }
     }
 
     public get mainCameraInstance(): THREE.PerspectiveCamera { return this.mainCamera; }
@@ -153,11 +173,9 @@ export class RenderEngine {
     }
 
     public getObjectSize(handle: RenderHandle): [number, number, number] {
-        const obj = handle as THREE.Object3D;
-        const box = new THREE.Box3().setFromObject(obj);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        return [size.x, size.y, size.z];
+        this._tmpBox3.setFromObject(handle as THREE.Object3D);
+        this._tmpBox3.getSize(this._tmpSize);
+        return [this._tmpSize.x, this._tmpSize.y, this._tmpSize.z];
     }
 
     public setRaycastable(handle: RenderHandle, state: boolean): void {
@@ -271,6 +289,7 @@ export class RenderEngine {
      * Rendering Logic
      */
     public render(isMinimapActive: boolean): void {
+        this.stats?.begin();
         if (!isMinimapActive) {
             this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
             this.renderer.setScissorTest(false);
@@ -298,6 +317,7 @@ export class RenderEngine {
             // Restore
             this.renderer.setClearColor(0xf0f0f0, 0);
         }
+        this.stats?.end();
     }
 
     public getDomElement(): HTMLElement {
@@ -443,7 +463,8 @@ export class RenderEngine {
      */
     public castRayFromCamera(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
         this.raycaster.layers.set(1); // ONLY intersect with objects on Layer 1
-        this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
+        this._tmpVec2.set(ndcX, ndcY);
+        this.raycaster.setFromCamera(this._tmpVec2, this.mainCamera);
 
         const intersects = this.raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
@@ -464,7 +485,8 @@ export class RenderEngine {
 
     public castRayFromMinimap(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
         this.raycaster.layers.set(1); // Minimap should also respect layers if we allow picking there
-        this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.minimapCamera);
+        this._tmpVec2.set(ndcX, ndcY);
+        this.raycaster.setFromCamera(this._tmpVec2, this.minimapCamera);
 
         const intersects = this.raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
@@ -487,15 +509,16 @@ export class RenderEngine {
      * Projects a ray from the camera and intersects it with a mathematical plane.
      */
     public intersectRayWithPlane(ndcX: number, ndcY: number, planeNormal: [number, number, number], planePoint: [number, number, number]): [number, number, number] | null {
-        this.raycaster.layers.enableAll(); // Plane intersection doesn't use layer filtering
-        this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.mainCamera);
+        this.raycaster.layers.enableAll();
+        this._tmpVec2.set(ndcX, ndcY);
+        this.raycaster.setFromCamera(this._tmpVec2, this.mainCamera);
 
-        const plane = new THREE.Plane(new THREE.Vector3(...planeNormal), 0);
-        // Plane offset from origin: dot(normal, point)
-        plane.constant = -plane.normal.dot(new THREE.Vector3(...planePoint));
+        this._tmpPlaneNormal.set(planeNormal[0], planeNormal[1], planeNormal[2]);
+        this._tmpPlanePoint.set(planePoint[0], planePoint[1], planePoint[2]);
+        this._tmpPlane.normal.copy(this._tmpPlaneNormal);
+        this._tmpPlane.constant = -this._tmpPlaneNormal.dot(this._tmpPlanePoint);
 
-        const target = new THREE.Vector3();
-        const result = this.raycaster.ray.intersectPlane(plane, target);
+        const result = this.raycaster.ray.intersectPlane(this._tmpPlane, this._tmpPlaneTarget);
         return result ? [result.x, result.y, result.z] : null;
     }
 
@@ -503,8 +526,9 @@ export class RenderEngine {
      * Projects a 3D world point to 2D screen coordinates (Normalized 0-1 range)
      */
     public worldToScreen(x: number, y: number, z: number): { x: number, y: number } {
-        const vector = new THREE.Vector3(x, y, z);
-        vector.project(this.mainCamera);
+        this._tmpSize.set(x, y, z);
+        this._tmpSize.project(this.mainCamera);
+        const vector = this._tmpSize;
 
         // Convert -1..1 to 0..1
         return {
