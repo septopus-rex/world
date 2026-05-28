@@ -4,9 +4,14 @@ import { TransformComponent } from '../../engine/src/core/components/PlayerCompo
 import { Coords } from '../../engine/src/core/utils/Coords';
 import { MockWorldNormal } from '../../engine/src/core/mocks/WorldConfigs';
 import { IDataSource } from '../../engine/src/core/services/DataSource';
+import { fetchMockBlock } from '../../engine/src/core/mocks/BlockMocks';
 
-import { fetchEmptyBlock } from './lib/api';
-import { fetchMockBlock, MockBlockData } from '../../engine/src/core/mocks/BlockMocks';
+// @ts-ignore
+import SeptopusContract from './lib/contract';
+// @ts-ignore
+import IPFS from './lib/ipfs';
+
+const WORLD_INDEX = 0;
 
 export interface SPPPlayerState {
     block: [number, number];
@@ -148,18 +153,44 @@ export class SandboxLoader implements IDataSource {
 
         const results = await Promise.all(missing.map(k => {
             const [cx, cy] = k.split('_').map(Number);
-            return fetchMockBlock(cx, cy);
+            return this.fetchBlock(cx, cy);
         }));
 
         results.forEach(data => {
             this.engine?.injectBlock({
                 ...data,
-                adjuncts: data.raw // Use complete raw array [elev, status, adj, anim]
+                adjuncts: data.raw
             });
             const key = `${data.x}_${data.y}`;
             this.loadedBlockKeys.add(key);
             this.fetchingBlockKeys.delete(key);
         });
+    }
+
+    // Fetch a single block: chain → IPFS (or inline JSON) → mock fallback
+    private async fetchBlock(x: number, y: number): Promise<any> {
+        if (!SeptopusContract.isReady()) return fetchMockBlock(x, y);
+
+        try {
+            const onChain = await SeptopusContract.get('block', [x, y, WORLD_INDEX]);
+
+            if (!onChain.minted) {
+                // Block exists in world but hasn't been minted yet → empty
+                return { x, y, raw: [0, 1, [], []] };
+            }
+
+            let raw: any;
+            if (IPFS.isCID(onChain.data)) {
+                raw = await IPFS.get(onChain.data);
+            } else {
+                raw = JSON.parse(onChain.data || '[]');
+            }
+
+            return { x, y, raw };
+        } catch (e) {
+            console.warn(`[Loader] fetchBlock(${x},${y}) failed, using mock:`, e);
+            return fetchMockBlock(x, y);
+        }
     }
 
 
