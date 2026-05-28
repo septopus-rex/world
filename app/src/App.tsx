@@ -7,6 +7,8 @@ import { useIsMobile } from './lib/useIsMobile';
 import { Joystick } from './components/Joystick';
 import { useSeptopusEngine } from './hooks/useSeptopusEngine';
 import { Compass, TelemetryReadout } from './components/HUD';
+import { BlockInfoPanel } from './components/BlockInfoPanel';
+import { useBlockInfo } from './hooks/useBlockInfo';
 
 function App() {
   const isMobile = useIsMobile();
@@ -14,6 +16,20 @@ function App() {
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
+
+  // Track current player block (updated from RAF loop when block changes)
+  const [currentBlock, setCurrentBlock] = useState<[number, number] | null>(null);
+  const currentBlockRef = useRef<[number, number]>([0, 0]);
+
+  // Panel coords: minimap selection takes priority over player block
+  const panelCoords: [number, number] | null = selectedBlock
+    ? [selectedBlock.metadata.x, selectedBlock.metadata.y]
+    : currentBlock;
+  const [showPanel, setShowPanel] = useState(false);
+
+  const { info: blockInfo, loading: blockLoading, refresh: refreshBlock } = useBlockInfo(
+    showPanel ? panelCoords : null
+  );
 
   // Minimap Drag State
   const isDraggingMap = useRef(false);
@@ -37,6 +53,12 @@ function App() {
         if (compassBlockDisplayRef.current || minimapBlockDisplayRef.current) {
           const state = loader.playerState;
           const [bx, by] = state.block;
+
+          // Detect block crossing and update panel coords
+          if (bx !== currentBlockRef.current[0] || by !== currentBlockRef.current[1]) {
+            currentBlockRef.current = [bx, by];
+            setCurrentBlock([bx, by]);
+          }
           const [rx, ry, rz] = state.position;
           const text = `BLOCK [${bx}, ${by}]`;
           const subText = `REL X:${rx.toFixed(1)} Y:${ry.toFixed(1)} Z:${rz.toFixed(1)}`;
@@ -187,6 +209,18 @@ function App() {
         </div>
       )}
 
+      {/* Block Info Panel — bottom-left */}
+      {showPanel && blockInfo && (
+        <div className="absolute bottom-4 left-4 z-40 pointer-events-auto">
+          <BlockInfoPanel
+            info={blockInfo}
+            loading={blockLoading}
+            onClose={() => { setShowPanel(false); setSelectedBlock(null); }}
+            onRefresh={refreshBlock}
+          />
+        </div>
+      )}
+
       <div className="absolute bottom-4 right-4 z-40 p-2 flex flex-col gap-2 pointer-events-auto">
         <button
           onClick={() => { if (confirm("Reset player position and state?")) { localStorage.removeItem("spp_player_state"); window.location.reload(); } }}
@@ -195,6 +229,13 @@ function App() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 group-hover:animate-pulse"></span>
           Reset State
+        </button>
+        <button
+          onClick={() => setShowPanel(p => !p)}
+          className={`px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl ${showPanel ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'}`}
+        >
+          <div className={`w-2 h-2 rounded-full ${showPanel ? 'bg-cyan-400 animate-pulse' : 'bg-cyan-500'}`}></div>
+          {showPanel ? 'HIDE INFO' : 'BLOCK INFO'}
         </button>
         <button
           onClick={() => setIsEditMode(!isEditMode)}
