@@ -88,7 +88,20 @@ export function MockBlockData(x: number, y: number): any {
     ];
     adjunctsRaw.push([0x00a2, pillars]);
 
-    // 2. Solid Ground Block
+    // 2. Light sources — only on 2 blocks near spawn (2048,2048)
+    if ((x === 2048 && y === 2048) || (x === 2049 && y === 2048)) {
+        const lights: any[] = [
+            // Warm point light above the pillar
+            [0, [8, 8, 8], [0, 0, 0], 0xffaa44, 2, 20, 0, 0],
+        ];
+        if (x === 2049) {
+            // Cool spot light on the adjacent block
+            lights[0] = [1, [8, 8, 10], [0, 0, 0], 0x4488ff, 3, 25, Math.PI / 4, 0];
+        }
+        adjunctsRaw.push([0x00a3, lights]);
+    }
+
+    // 3. Solid Ground Block
     // Form a single 16x16 plane instead of tiles for a cleaner "ground" look
     const ground: any[] = [];
     ground.push([

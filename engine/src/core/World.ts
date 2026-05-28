@@ -89,7 +89,8 @@ export class World {
         // 1. Rendering Setup
         this.renderEngine = new RenderEngine({
             containerId: config.world.containerId,
-            clearColor: 0x87ceeb
+            clearColor: 0x87ceeb,
+            stats: config.debug?.stats ?? false
         });
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 

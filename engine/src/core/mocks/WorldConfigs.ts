@@ -37,7 +37,8 @@ export const MockWorldNormal: WorldConfig = {
         avatar: { max: 2097152, scale: [1, 1, 1] },
         extend: 2 // 5x5 loading radius
     },
-    blacklist: [] // Nothing blocked
+    blacklist: [], // Nothing blocked
+    debug: { stats: true }
 };
 
 /**

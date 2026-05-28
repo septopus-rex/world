@@ -7,6 +7,8 @@ export interface TransformComponent {
     position: [number, number, number];
     rotation: [number, number, number];
     scale: [number, number, number];
+    /** Dirty flag — set to true when position/rotation/scale changes. VisualSyncSystem resets it after syncing. */
+    dirty?: boolean;
 }
 
 // -----------------------------------------------------------------------------

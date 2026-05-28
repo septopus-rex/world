@@ -6,19 +6,21 @@ import { EntityId, ComponentType, ComponentData } from './World';
  *
  * OPTIMIZATION: Query results are cached and invalidated on any structural change.
  * After world load stabilises, per-frame queryEntities / getEntitiesWith calls become O(1).
+ * Cache keys use pipe-delimiters to prevent false matches (e.g. "Mesh" vs "MeshHelper").
+ * Multi-component queries start from the smallest component set for faster intersection.
  */
 export class ECSRegistry {
     private entities: Set<EntityId> = new Set();
     private components: Map<ComponentType, Map<EntityId, ComponentData>> = new Map();
     private entityCounter: number = 0;
 
-    // Query result cache — key is a sorted, pipe-joined component type string
+    // Query result cache — key is a sorted, pipe-delimited component type string
     private queryCache: Map<string, EntityId[]> = new Map();
 
     // ── Cache helpers ──────────────────────────────────────────────────────────
 
     private makeCacheKey(types: ComponentType[]): string {
-        return types.length === 1 ? types[0] : [...types].sort().join('|');
+        return types.length === 1 ? '|' + types[0] + '|' : '|' + [...types].sort().join('|') + '|';
     }
 
     /** Invalidate all cached queries that reference the given component type(s). */
@@ -26,7 +28,7 @@ export class ECSRegistry {
         if (this.queryCache.size === 0) return;
         for (const key of this.queryCache.keys()) {
             for (const t of types) {
-                if (key === t || key.includes(t)) {
+                if (key.includes('|' + t + '|')) {
                     this.queryCache.delete(key);
                     break;
                 }
@@ -77,12 +79,13 @@ export class ECSRegistry {
     // ── Querying ───────────────────────────────────────────────────────────────
 
     public queryEntities(type: ComponentType): EntityId[] {
-        const cached = this.queryCache.get(type);
+        const key = '|' + type + '|';
+        const cached = this.queryCache.get(key);
         if (cached) return cached;
 
         const compMap = this.components.get(type);
         const result = compMap ? Array.from(compMap.keys()) : [];
-        this.queryCache.set(type, result);
+        this.queryCache.set(key, result);
         return result;
     }
 
@@ -93,13 +96,21 @@ export class ECSRegistry {
         const cached = this.queryCache.get(key);
         if (cached) return cached;
 
-        // Start with entities having the first component
-        let results = this.queryEntities(types[0]);
+        // Sort by component set size (smallest first) for faster intersection
+        const sorted = types.slice().sort((a, b) => {
+            const aSize = this.components.get(a)?.size ?? 0;
+            const bSize = this.components.get(b)?.size ?? 0;
+            return aSize - bSize;
+        });
 
-        // Intersect with entities having subsequent components
-        for (let i = 1; i < types.length; i++) {
-            const nextTypeEntities = new Set(this.queryEntities(types[i]));
-            results = results.filter(id => nextTypeEntities.has(id));
+        // Start with the smallest component set
+        let results = this.queryEntities(sorted[0]);
+
+        // Intersect with remaining sets — check membership directly via Map.has()
+        for (let i = 1; i < sorted.length; i++) {
+            const compMap = this.components.get(sorted[i]);
+            if (!compMap) { results = []; break; }
+            results = results.filter(id => compMap.has(id));
         }
 
         this.queryCache.set(key, results);

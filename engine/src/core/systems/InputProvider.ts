@@ -169,17 +169,30 @@ export class InputProvider {
         this.domElement.removeEventListener('touchcancel', this.onTouchEnd);
     }
 
+    // Reusable gamepad state to avoid per-frame allocations
+    private _gpAxes: number[] = [0, 0, 0, 0];
+    private _gpButtons: boolean[] = [];
+    private _gpState = { connected: false, axes: this._gpAxes, buttons: this._gpButtons };
+
     public getGamepadState() {
         const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
         const pad = gamepads[0];
         if (pad && pad.connected) {
             const deadzone = CONTROL_CONSTANTS.DEADZONE;
-            return {
-                connected: true,
-                axes: pad.axes.map(a => Math.abs(a) > deadzone ? a : 0),
-                buttons: pad.buttons.map(b => b.pressed)
-            };
+            // Resize arrays if needed
+            while (this._gpAxes.length < pad.axes.length) this._gpAxes.push(0);
+            for (let i = 0; i < pad.axes.length; i++) {
+                this._gpAxes[i] = Math.abs(pad.axes[i]) > deadzone ? pad.axes[i] : 0;
+            }
+            while (this._gpButtons.length < pad.buttons.length) this._gpButtons.push(false);
+            for (let i = 0; i < pad.buttons.length; i++) {
+                this._gpButtons[i] = pad.buttons[i].pressed;
+            }
+            this._gpState.connected = true;
+            return this._gpState;
         }
-        return { connected: false, axes: [0, 0, 0, 0], buttons: [] };
+        this._gpState.connected = false;
+        for (let i = 0; i < this._gpAxes.length; i++) this._gpAxes[i] = 0;
+        return this._gpState;
     }
 }

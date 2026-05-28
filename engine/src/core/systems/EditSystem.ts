@@ -185,6 +185,7 @@ export class EditSystem implements ISystem {
             trans.position[0] = newX;
             trans.position[1] = newY;
             trans.position[2] = newZ;
+            trans.dirty = true;
         }
     }
 

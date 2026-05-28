@@ -55,6 +55,7 @@ export class AnimationSystem implements ISystem {
         if (iv.position) transform.position = [iv.position[0], iv.position[1], iv.position[2]];
         if (iv.rotation) transform.rotation = [iv.rotation[0], iv.rotation[1], iv.rotation[2]];
         if (iv.scale) transform.scale = [iv.scale[0], iv.scale[1], iv.scale[2]];
+        transform.dirty = true;
     }
 
     private processAnimation(world: World, entityId: EntityId, anim: AnimationComponent, transform: TransformComponent, deltaTime: number) {
@@ -100,7 +101,7 @@ export class AnimationSystem implements ISystem {
         }
     }
 
-    private applyStep(anim: AnimationComponent, transform: TransformComponent, step: any, progress: number, deltaTime: number, stepDuration: number) {
+    private applyStep(anim: AnimationComponent, transform: TransformComponent & { dirty?: boolean }, step: any, progress: number, deltaTime: number, stepDuration: number) {
         const mode = step.mode || 'add';
         const type = step.type || 'rotate';
         const axes = (step.axis || 'XYZ').split('');
@@ -162,6 +163,7 @@ export class AnimationSystem implements ISystem {
                     targetArr[idx] = newValue;
                 }
             }
+            transform.dirty = true;
         } else if (type === 'opacity') {
             const base = getBase('opacity');
             const val = calculateValue(base, step.value, progress, false);

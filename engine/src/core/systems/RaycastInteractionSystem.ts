@@ -10,12 +10,14 @@ import { SystemMode } from '../types/SystemMode';
  * Shoots a ray from the active Camera Component center frame every tick.
  *
  * OPTIMIZATION: In Edit Mode, the raycast is skipped when mouseNDC hasn't changed
- * since the last frame (cursor is stationary). This eliminates dozens of unnecessary
- * raycasts per second during idle edit-mode interaction.
+ * since the last frame (cursor is stationary). Only the previously hovered entity
+ * is cleared instead of iterating all targets.
  */
 export class RaycastInteractionSystem implements ISystem {
     // NDC throttle: skip Edit Mode raycast when cursor hasn't moved
     private _lastNDC: [number, number] = [Infinity, Infinity];
+    // Cache last hovered entity to avoid O(n) clearing
+    private _lastHoveredId: EntityId | null = null;
 
     public update(world: World, dt: number): void {
         // Find the active camera entity
@@ -56,15 +58,15 @@ export class RaycastInteractionSystem implements ISystem {
         // Perform Raycast via RenderEngine (reuses shared Raycaster instance)
         const hit = world.renderEngine.castRayFromCamera(ndcX, ndcY);
 
-        // Clear Hover states globally
-        const targets = world.getEntitiesWith(["RaycastTargetComponent"]);
-        targets.forEach((tId: EntityId) => {
-            const tComp = world.getComponent<RaycastTargetComponent>(tId, "RaycastTargetComponent");
-            if (tComp) {
-                tComp.isHovered = false;
-                tComp.distanceToCamera = Infinity;
+        // Clear only the previously hovered entity instead of all targets
+        if (this._lastHoveredId !== null) {
+            const prevComp = world.getComponent<RaycastTargetComponent>(this._lastHoveredId, "RaycastTargetComponent");
+            if (prevComp) {
+                prevComp.isHovered = false;
+                prevComp.distanceToCamera = Infinity;
             }
-        });
+            this._lastHoveredId = null;
+        }
 
         // Update Hover State of the hitting object
         if (hit) {
@@ -88,6 +90,7 @@ export class RaycastInteractionSystem implements ISystem {
 
                 hitTargetComp.isHovered = true;
                 hitTargetComp.distanceToCamera = hit.distance;
+                this._lastHoveredId = hitEntityId;
 
                 // Right-click → emit context-interact event (for context menus)
                 if (isSecondary && isEdit) {
