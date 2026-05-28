@@ -96,8 +96,9 @@ pub mod septopus {
         x: u32,
         y: u32,
         world: u32,
+        expected_price: u64,
     ) -> Result<()> {
-        block::buy(ctx,x,y,world)
+        block::buy(ctx,x,y,world,expected_price)
     }
 
     ///buy the on-sell block

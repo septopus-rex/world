@@ -141,9 +141,10 @@ pub fn sell(
 
 pub fn buy(
     ctx: Context<BuyBlock>,      //default from system
-    x:u32,                      
+    x:u32,
     y:u32,
     world:u32,
+    expected_price:u64,         //price the buyer agreed to, guards against price front-running
 ) -> Result<()> {
 
     //1. input check
@@ -152,20 +153,32 @@ pub fn buy(
         return Err(error!(ErrorCode::InvalidBlockIndex));
     }
 
-    //2.check whether the owner to buy the block
     let bk= &mut ctx.accounts.block_data;
     let check_key = ctx.accounts.payer.key();
+
+    //2. block must be listed for sale
+    if bk.status != BlockStatus::Selling as u32 {
+        return Err(error!(ErrorCode::BlockNotForSale));
+    }
+
+    //3. can not buy the block owned by yourself
     if is_owner(check_key,&bk.owner) {
         return Err(error!(ErrorCode::InvalidBuyYourself));
     }
 
-    //3.pay the fee to owner
+    //4. on-chain price must match the buyer's expectation
+    if bk.price != expected_price {
+        return Err(error!(ErrorCode::PriceMismatch));
+    }
+
+    //5. recipient must be the current owner
     let fee_recipient=&bk.owner;
     let check_pubkey = str_to_pubkey(fee_recipient)?;
     if check_pubkey != *ctx.accounts.recipient.key{
         return Err(error!(ErrorCode::InvalidRecipient));
     }
 
+    //6. pay the fee to owner
     system_program::transfer(
         CpiContext::new(
             ctx.accounts.system_program.to_account_info(),
@@ -177,10 +190,12 @@ pub fn buy(
         bk.price,
     )?;
 
+    //7. transfer ownership and delist
     let clock = &ctx.accounts.clock;
     bk.owner=check_key.to_string();
     bk.update=clock.slot;
     bk.price=0;
+    bk.status=BlockStatus::Public as u32;
 
     Ok(())
 }
@@ -209,6 +224,7 @@ pub fn withdraw(
     let clock = &ctx.accounts.clock;
     bk.update=clock.slot;
     bk.price=0;
+    bk.status=BlockStatus::Public as u32;
 
     Ok(())
 }
@@ -229,14 +245,10 @@ fn is_valid_block(x:u32,y:u32,world:u32,world_list:&WorldList) -> bool {
 }
 
 fn is_owner(check_pubkey:Pubkey,record:&str) -> bool{
-    //let pubkey = solana_program::pubkey::Pubkey::from_str(record).expect("Invalid pubkey");
-    let pubkey = Pubkey::from_str(record).expect("Invalid pubkey");
-    let pubkey_bytes: [u8; 32] = pubkey.to_bytes();
-    let manage_pubkey = anchor_lang::prelude::Pubkey::new_from_array(pubkey_bytes);
-    if check_pubkey != manage_pubkey {
-        return false;
+    match Pubkey::from_str(record) {
+        Ok(owner) => check_pubkey == owner,
+        Err(_) => false,
     }
-    return true;
 }
 
 fn is_account_initialized(account_info: &AccountInfo) -> bool {

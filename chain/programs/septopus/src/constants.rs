@@ -305,4 +305,10 @@ pub enum ErrorCode {
 
     #[msg("Invalid recipient of selling block.")]
     InvalidRecipient,
+
+    #[msg("Block is not listed for sale.")]
+    BlockNotForSale,
+
+    #[msg("Block price has changed, please retry.")]
+    PriceMismatch,
 }
