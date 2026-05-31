@@ -60,3 +60,82 @@ Adjunct 是 Septopus “链上可用性”设计的结晶。
 `["wl", [[2,4,0], [1,0,0], [0,0,0], 13]]`
 
 而还原出这些生涩数据的解释权，就封装在对应这个短键（"wl" 即 Wall）的扩展包代码里。
+
+## 5. 动态 Adjunct（用户自定义扩展）
+
+内建 adjunct 类型（`wall/water/ball/module/trigger` 等）覆盖了引擎原生支持的集合。但 Septopus World 的开放性要求**任何人都可以发布自己的 adjunct 类型**，而不需要引擎升级或官方审批。
+
+### 5.1 设计目标
+
+| 目标 | 说明 |
+|------|------|
+| **无需改引擎** | 自定义 adjunct 与内建 adjunct 遵循完全相同的 `hooks` 接口，引擎无法区分二者 |
+| **内容寻址** | adjunct 实现代码以 IPFS CID 为标识，链上只存指针，代码不可篡改 |
+| **按需加载** | 引擎遇到未知 `short` 键时，才去链上查 CID 并拉取代码，不影响已知类型的渲染性能 |
+| **沙箱执行** | 加载的代码运行在受限上下文，无法访问钱包私钥、全局 DOM 或其他 Block 数据 |
+
+### 5.2 加载流程
+
+```
+Block.raw_data 包含未知 short 键（如 "my"）
+  → 查询链上 AdjunctTypeRegistry：short "my" → IPFS CID
+  → 从 IPFS 拉取 adjunct JS（<100KB）
+  → 校验 SHA256 与 CID 一致
+  → 在 Web Worker 沙箱中执行，导出 hooks 对象
+  → VBW.register(hooks) 注册进当前引擎实例
+  → 后续渲染与内建 adjunct 完全相同
+```
+
+同一个 CID 在会话内只加载一次，注册后缓存在 VBW 里。
+
+### 5.3 链上注册模型
+
+自定义 adjunct 类型以独立 PDA 账户形式注册（`AdjunctType`）：
+
+```
+seeds = [ b"adj_t", short_key_bytes ]
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `short` | `String(4)` | 全局唯一的 2~4 字符短键（引擎查找用） |
+| `name` | `String(32)` | 可读名称 |
+| `ipfs` | `String(64)` | 代码的 IPFS CID |
+| `owner` | `Pubkey` | 发布者，可更新 `ipfs` 字段（发新版本） |
+| `version` | `u32` | 单调递增，客户端可做缓存失效判断 |
+
+**short 键冲突**：与内建类型重名的 short 键会被引擎拒绝注册（内建优先）。
+
+### 5.4 沙箱安全模型
+
+动态代码在 Web Worker 中执行，暴露给它的 API 面只有：
+
+```javascript
+// 允许
+adjunctAPI.createMesh(geometry, material)  // 创建三维物体
+adjunctAPI.emitEvent(type, payload)        // 向引擎抛出事件
+adjunctAPI.getParam(index)                 // 读取 Raw 数据参数
+
+// 不允许（抛出异常）
+window.localStorage / fetch / WebSocket   // 外部 I/O
+wallet / privateKey                        // 钱包访问
+document / DOM                             // DOM 操作
+```
+
+代码体积上限 100KB（压缩前），超限直接拒绝加载。
+
+### 5.5 与发布管道的关系
+
+自定义 adjunct 的发布流程与内容上链共用同一套管道（见 [链上存储 §8](../architecture/onchain-storage.md#8-发布管道-publish-pipeline)）：
+
+```
+开发者编写 adjunct hooks 实现
+  → 打包压缩（<100KB）
+  → uploadData() → IPFS CID
+  → 调用合约 register_adjunct_type(short, name, ipfs_cid)
+  → AdjunctType PDA 创建/更新
+  → 世界设计师在编辑器里通过 short 键引用该类型
+  → 内容上链时，short 键进入 Block 的压缩数据流
+```
+
+完整规格见 [动态 Adjunct 详细设计](../features/dynamic-adjunct.md)。

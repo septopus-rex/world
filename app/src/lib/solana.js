@@ -102,7 +102,10 @@ const Solana={
     getContract: async (wallet) =>{
         await self.init();
         const provider = new anchor.AnchorProvider(linker, wallet, {commitment: 'confirmed' });
-        const caller = new anchor.Program(IDL,provider);
+        const programId = config.programId ? new PublicKey(config.programId) : undefined;
+        const caller = programId
+            ? new anchor.Program(IDL, programId, provider)
+            : new anchor.Program(IDL, provider);
         return caller
     },
     getSigner:(tx)=>{

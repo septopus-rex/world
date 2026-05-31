@@ -24,3 +24,11 @@ engine/dist
 private.md
 
 backup
+
+# Solana test validator ledger (local dev only)
+test-ledger/
+**/test-ledger/
+.anchor/test-ledger/
+
+# App config backup
+app/src/config.js.bak
