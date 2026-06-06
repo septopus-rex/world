@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/septopus.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Septopus World — Desktop</title>
+    <meta name="description" content="Septopus World 3D 引擎桌面客户端（纯本地，离线优先）" />
+    <meta name="theme-color" content="#06b6d4" />
+  </head>
+  <body class="bg-black text-white overflow-hidden antialiased">
+    <div id="root"></div>
+
+    <style>
+      .init-loader {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        background: #000; z-index: 9999;
+        transition: opacity 0.6s ease-out, visibility 0.6s;
+      }
+      .init-loader.fade-out { opacity: 0; visibility: hidden; }
+      .init-icon {
+        width: 80px; height: 80px; border: 2px solid #06b6d4; border-radius: 24px;
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 10px 30px -5px rgba(6, 182, 212, 0.35);
+        animation: init-pulse 2s infinite ease-in-out;
+      }
+      @keyframes init-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(0.92); opacity: 0.8; }
+      }
+    </style>
+
+    <div id="init-loader" class="init-loader">
+      <div class="init-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2l9 5v10l-9 5-9-5V7z"></path>
+          <path d="M12 12l9-5M12 12v10M12 12L3 7"></path>
+        </svg>
+      </div>
+      <div id="init-label" style="margin-top: 32px; font-size: 10px; font-weight: 900; color: #475569; text-transform: uppercase; letter-spacing: 0.3em; font-family: monospace;">
+        Booting World...
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -30,5 +30,16 @@ test-ledger/
 **/test-ledger/
 .anchor/test-ledger/
 
-# App config backup
-app/src/config.js.bak
+# ── Decoupled from the desktop client build ───────────────────────────────────
+# The Solana contract (chain/) and the legacy chain-coupled frontend (app/) are
+# no longer part of the standalone 3D engine + desktop client (client/desktop/).
+# See docs/plan/CHAIN_DECOUPLE_PLAN.md.
+# NOTE: app/ and chain/ are still git-tracked from earlier commits; .gitignore
+# only affects UNtracked files. To actually stop tracking them (keeps files on
+# disk):  git rm -r --cached app chain
+/app/
+/chain/
+
+# Client build artifacts (PWA frontends under client/)
+client/*/dist/
+client/*/dev-dist/

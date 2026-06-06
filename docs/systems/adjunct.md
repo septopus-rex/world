@@ -61,6 +61,92 @@ Adjunct 是 Septopus “链上可用性”设计的结晶。
 
 而还原出这些生涩数据的解释权，就封装在对应这个短键（"wl" 即 Wall）的扩展包代码里。
 
+> **演进方向**：数据压缩格式（`raw_format`）将被正式提取为 **Schema JSON**（存 IPFS，CID 上链），使数据独立于任何引擎实现，可被任意语言/引擎直接解读。见 §6。
+
+## 5. 动态 Adjunct（用户自定义扩展）
+
+内建 adjunct 类型（`wall/water/ball/module/trigger` 等）覆盖了引擎原生支持的集合。但 Septopus World 的开放性要求**任何人都可以发布自己的 adjunct 类型**，而不需要引擎升级或官方审批。
+
+### 5.1 设计目标
+
+| 目标 | 说明 |
+|------|------|
+| **Schema 优先** | adjunct 的参数定义独立于实现，任何引擎都能按 schema 渲染 |
+| **无需改引擎** | 自定义 adjunct 与内建 adjunct 遵循完全相同的接口 |
+| **内容寻址** | Schema 和实现代码以 IPFS CID 为标识，不可篡改 |
+| **按需加载** | 引擎遇到未知 short 键时，查链上 AdjunctType → 拉取 Schema（必须）→ 拉取 Impl（可选） |
+| **沙箱执行** | 加载的 JS 实现在 Web Worker 受限上下文中运行，Schema 约束进一步收窄攻击面 |
+
+### 5.2 两个独立 CID：Schema vs Impl
+
+| | Schema CID（必须） | Impl CID（可选） |
+|---|---|---|
+| 内容 | 参数定义 + 约束 + raw 格式 + render_hint | JS 渲染实现代码 |
+| 引擎依赖 | 无（engine-agnostic） | 有（engine-specific） |
+| 无此 CID 时 | 无法注册 | 引擎用 render_hint 降级渲染 |
+| 安全审计 | 格式校验即可 | 需要沙箱 + AI 审计 + GitHub 溯源 |
+
+### 5.3 加载流程
+
+```
+Block.raw_data 包含未知 short 键（如 "mo"）
+  → 查链上 AdjunctType：schema_cid + impl_cid
+  → 拉取 Schema（必须）→ 解析参数定义 + render_hint
+  → impl_cid 存在？
+      是 → 拉取 JS → CID 校验 → 沙箱执行 → 完整自定义渲染
+      否 → buildDefaultLogic(schema) → render_hint 降级渲染
+  → 注册到引擎，后续渲染与内建完全相同
+```
+
+### 5.4 链上注册模型
+
+PDA 只存**极简权威信息**，所有元数据（schema、impl、source、github）集中在 IPFS Manifest 里：
+
+```
+seeds = [b"adj_t", type_id.to_le_bytes()]  // 2 字节，约 103B，rent ≈ 0.001 SOL
+
+AdjunctType {
+    type_id:      u16       // 全局唯一数字 ID（0x0001-0x00FF 内建，0x0100+ 社区）
+    manifest_cid: String(64)// IPFS Manifest 入口 CID（所有元数据的单一入口）
+    owner:        Pubkey    // 可更新 manifest_cid
+    version:      u32       // 单调递增，缓存失效用
+    status:       u8        // Active/Deprecated/Banned
+}
+
+// IPFS Manifest 内容（manifest_cid 指向的 JSON）：
+// { name, short, type_id, schema{render_hint,parameters,...},
+//   impl_cid?, source_cid?, github? }
+```
+
+IPFS 内容意外丢失时，owner 重新上传后调用 `update_manifest` 更新 CID 即可恢复——**类型不会永久消失**。
+
+完整规格见 [动态 Adjunct 详细设计](../features/dynamic-adjunct.md)。
+
+## 6. Schema 即定义（面向未来）
+
+这是 §4 数据压缩哲学的自然延伸：压缩格式不只是引擎内部的约定，而是**可被任何系统读取的正式规范**。
+
+当前的 `adjunct_wall.ts` 的参数定义是隐式的（藏在 `stdToRenderData` 函数内）。演进方向是把它提取为显式 Schema：
+
+```json
+{
+  "name": "wall", "short": "wl", "render_hint": "box",
+  "parameters": [
+    { "key": "x", "type": "float", "min": 0, "max": 16, "unit": "m" },
+    { "key": "texture", "type": "resource_uri" },
+    { "key": "stop", "type": "bool" }
+  ]
+}
+```
+
+这个 Schema 存 IPFS，CID 上链。它让：
+- **任意引擎**（Unity/Godot/原生 App）读 schema → 按自己方式渲染同一份世界数据
+- **链上数据工具**无需运行 JS 即可验证 BlockData 参数合法性
+- **AI 世界生成器**知道 wall 接受哪些参数，自动构建符合规范的世界数据
+- **编辑器 UI** 从 schema.parameters 自动生成属性面板，无需硬编码
+
+**数据从此真正从引擎中独立出来。**
+
 ## 5. 动态 Adjunct（用户自定义扩展）
 
 内建 adjunct 类型（`wall/water/ball/module/trigger` 等）覆盖了引擎原生支持的集合。但 Septopus World 的开放性要求**任何人都可以发布自己的 adjunct 类型**，而不需要引擎升级或官方审批。

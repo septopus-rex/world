@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+html,
+body {
+  margin: 0;
+  overscroll-behavior: none;
+  /* Disable browser forward/back swipe navigation */
+  overscroll-behavior-x: none;
+}
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #000000;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* The engine mounts its <canvas> into #three_demo */
+#three_demo canvas {
+  display: block;
+}
