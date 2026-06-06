@@ -212,7 +212,7 @@ document / DOM                             // DOM 操作
 
 ### 5.5 与发布管道的关系
 
-自定义 adjunct 的发布流程与内容上链共用同一套管道（见 [链上存储 §8](../architecture/onchain-storage.md#8-发布管道-publish-pipeline)）：
+自定义 adjunct 的发布流程与内容上链共用同一套管道（见 [链上存储 §8](../../chain/docs/onchain-storage.md#8-发布管道-publish-pipeline)）：
 
 ```
 开发者编写 adjunct hooks 实现

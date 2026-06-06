@@ -15,7 +15,7 @@
 | [数据管线](./architecture/pipeline.md) | 数据流从压缩格式到渲染管线的全生命周期 |
 | [坐标系统](./architecture/coordinate.md) | Septopus 左手系与网格对齐逻辑 |
 | [性能优化](./architecture/performance.md) | 性能优化策略和资源回收机制 |
-| [链上存储](./architecture/onchain-storage.md) | Solana Per-Block PDA 模型、租金、交易安全与发布管道 |
+| [链上存储](../chain/docs/onchain-storage.md) | Solana Per-Block PDA 模型、租金、交易安全与发布管道（已随链剥离归档至 `chain/docs/`，不在版本库内） |
 
 ---
 

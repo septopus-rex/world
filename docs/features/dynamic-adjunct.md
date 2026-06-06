@@ -579,8 +579,8 @@ septopus-cli update-manifest --type-id 0x0100 --manifest-ipfs bafyMANIFEST_FULL.
 
 | 系统 | 关系 |
 |------|------|
-| [链上存储](../architecture/onchain-storage.md) | `AdjunctType` PDA 是全链架构 Layer 4 的锚点 |
-| [StorageRouter](../architecture/onchain-storage.md#15-存储抽象层-storagerouter) | Schema + Impl 的 get/put 统一走 StorageRouter |
+| [链上存储](../../chain/docs/onchain-storage.md) | `AdjunctType` PDA 是全链架构 Layer 4 的锚点 |
+| [StorageRouter](../../chain/docs/onchain-storage.md#15-存储抽象层-storagerouter) | Schema + Impl 的 get/put 统一走 StorageRouter |
 | [附属物系统](../systems/adjunct.md) | 动态 adjunct 是 §2 注册机制的运行时扩展，Schema 是 §4 数据压缩哲学的外显化 |
 | [数据管线](../architecture/pipeline.md) | Schema 定义 Raw 格式，stdToRenderData 实现管线的最后一步 |
 | [SPP 协议](./spp-protocol.md) | short 键是 SPP 协议内的类型标识符；schema 的 raw_format 即 SPP 序列化规范 |

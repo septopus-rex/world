@@ -1,6 +1,6 @@
 # Phase 0 · 引擎收敛与迁移 — 详细实施规格
 
-> **上级文档**：[ONCHAIN_ROADMAP.md](../../ONCHAIN_ROADMAP.md) § Phase 0  
+> **上级文档**：[ONCHAIN_ROADMAP.md](../../../chain/docs/ONCHAIN_ROADMAP.md) § Phase 0（已随链剥离归档至 `chain/docs/`）  
 > **目标**：消除双引擎，以新 TS 引擎为唯一运行时；迁移旧引擎沙箱原型；补全空壳 transform；废弃旧引擎。  
 > **前置条件**：无（所有后续 Phase 均依赖本 Phase 完成）  
 > **预估规模**：5 个 PR，约 800~1200 行净增（含测试）
