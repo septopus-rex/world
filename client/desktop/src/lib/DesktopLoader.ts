@@ -6,7 +6,7 @@
  * chain (no @solana/*, no SeptopusContract) and NO IPFS. Block data comes from
  * the engine's local mocks.
  *
- * Decoupling roadmap (see docs/plan/CHAIN_DECOUPLE_PLAN.md):
+ * Roadmap (see docs/plan/STANDALONE_ENGINE_ROADMAP.md):
  *   - `fetchBlock` is the single data seam. Today it returns local mocks;
  *     Phase 1 swaps in a LocalDataSource backed by DraftStorage so locally
  *     edited blocks persist and reload.

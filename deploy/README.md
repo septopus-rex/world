@@ -12,7 +12,7 @@
 
 旧的 `deploy/` 几乎全是链/基础设施编排:`solana-test-validator` + `anchor build/deploy` + IPFS daemon + 替换 `app/src/config.js`,服务于已废弃的 `app/`。
 
-随着链从引擎中剥离(见 [`docs/plan/CHAIN_DECOUPLE_PLAN.md`](../docs/plan/CHAIN_DECOUPLE_PLAN.md)),这套链上开发环境已**原样归档到 `chain/deploy/`**(`chain/` 已不被 git 追踪,作为本地存档保留)。需要重新拉起链上栈时,从那里恢复:
+随着链从引擎中剥离(见 [`docs/plan/STANDALONE_ENGINE_ROADMAP.md`](../docs/plan/STANDALONE_ENGINE_ROADMAP.md)),这套链上开发环境已**原样归档到 `chain/deploy/`**(`chain/` 已不被 git 追踪,作为本地存档保留)。需要重新拉起链上栈时,从那里恢复:
 
 ```
 chain/deploy/

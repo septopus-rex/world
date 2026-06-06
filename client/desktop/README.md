@@ -2,7 +2,7 @@
 
 纯 3D 引擎的桌面客户端,用于**内容创建、调试与体验**。**不含链、不含钱包**——只依赖 `engine/`。
 
-它替代了旧的 `app/`(旧版与 Solana 钱包/合约强耦合)。剥离思路见 [`docs/plan/CHAIN_DECOUPLE_PLAN.md`](../../docs/plan/CHAIN_DECOUPLE_PLAN.md)。
+它替代了旧的 `app/`(旧版与 Solana 钱包/合约强耦合)。剥离记录与后续路线见 [`docs/plan/STANDALONE_ENGINE_ROADMAP.md`](../../docs/plan/STANDALONE_ENGINE_ROADMAP.md)。
 
 ## 技术栈(对齐 `qr/client` 的 PWA 模式)
 
@@ -24,7 +24,7 @@ npm run preview
 ## 与链的边界
 
 - **数据来源**:`src/lib/DesktopLoader.ts` 的 `fetchBlock()` 是唯一数据接缝,当前永远走引擎本地 mock(`@engine/core/mocks/BlockMocks`)。无网络、无钱包即可运行。
-- **路线**:按 `CHAIN_DECOUPLE_PLAN.md`,Phase 1 将 `fetchBlock` 换成 `DraftStorage` 支撑的 `LocalDataSource`(本地编辑可持久化);"选中 block 上链"属于可选的链插件(`IChainPublisher`),不进此客户端。
+- **路线**:按 `STANDALONE_ENGINE_ROADMAP.md`,P1 将 `fetchBlock` 换成 IndexedDB 草稿支撑的 `LocalDataSource`(本地编辑可持久化 + 导出);"选中 block 上链"属于可选的链插件(`IChainPublisher`·P4),不进此客户端。
 - 本客户端**不应**出现任何 `@solana/*` / `SeptopusContract` 依赖。
 
 ## 结构
