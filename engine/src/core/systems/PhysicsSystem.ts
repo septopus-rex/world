@@ -63,6 +63,9 @@ export class PhysicsSystem implements ISystem {
             const body = world.getComponent<RigidBodyComponent>(bid, "RigidBodyComponent");
             const trans = world.getComponent<TransformComponent>(bid, "TransformComponent");
             if (!body || !trans) continue;
+            // The controlled player is owned by CharacterController (substepped,
+            // step-over aware); skip it here to avoid double-integration.
+            if (world.getComponent(bid, "InputStateComponent")) continue;
 
             // 1. Integration (Apply Gravity over time)
             if (!body.isGrounded) {

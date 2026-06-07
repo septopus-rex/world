@@ -23,15 +23,25 @@ export interface IAdjunctLogic {
 export class AdjunctSystem implements ISystem {
     private initializedAdjuncts: Set<EntityId> = new Set();
 
+    /**
+     * Max adjunct MESHES built per frame. Building a mesh (geometry+material via
+     * AdjunctFactory) is the heavy cost; when a whole neighbourhood streams in at
+     * once, building them all in one frame stalls the renderer. Budgeting spreads
+     * the work across frames (frame-split loading) so the 3D stays smooth.
+     */
+    private static readonly BUILD_BUDGET = 16;
+
     public update(world: World, deltaTime: number): void {
         const adjunctEntities = world.queryEntities("AdjunctComponent");
 
+        let built = 0;
         for (const entityId of adjunctEntities) {
             const adjunct = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
             if (!adjunct) continue;
 
             if (!adjunct.isInitialized) {
                 this.initializeAdjunct(world, entityId, adjunct);
+                if (++built >= AdjunctSystem.BUILD_BUDGET) break; // rest of the queue next frame
             }
 
             // Note: VisualSyncSystem now handles the Coordinate Sync from TransformComponent -> MeshComponent handle

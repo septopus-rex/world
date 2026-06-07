@@ -6,8 +6,6 @@ import { DefaultUIProvider } from './core/services/DefaultUIProvider';
 import { EventUIProxy } from './core/services/EventUIProxy';
 import { IChainPublisher } from './core/services/IChainPublisher';
 import { Coords } from './core/utils/Coords';
-import { PlayerIntentSystem } from './core/systems/PlayerIntentSystem';
-import { InputProvider } from './core/systems/InputProvider';
 import { GlobalConfig } from './core/GlobalConfig';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
 

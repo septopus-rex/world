@@ -9,7 +9,7 @@ import { EntityFactory } from './EntityFactory';
 
 // Systems (Imported only for registration in constructor or specialized logic)
 import { PhysicsSystem } from './systems/PhysicsSystem';
-import { PlayerIntentSystem } from './systems/PlayerIntentSystem';
+import { CharacterController } from './movement/CharacterController';
 import { InputProvider } from './systems/InputProvider';
 import { BlockSystem } from './systems/BlockSystem';
 import { EnvironmentSystem } from './systems/EnvironmentSystem';
@@ -108,7 +108,7 @@ export class World {
         // 2. System Bootstrap (Extractable to configuration in future)
         const inputProvider = deps.inputProvider ?? new InputProvider(this.renderEngine.getDomElement());
 
-        this.systems.addSystem(new PlayerIntentSystem(this, inputProvider));
+        this.systems.addSystem(new CharacterController(this, inputProvider));
         this.systems.addSystem(new RaycastInteractionSystem());
         this.systems.addSystem(new TriggerSystem());
         this.systems.addSystem(new InventorySystem());

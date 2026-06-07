@@ -42,3 +42,9 @@ test-ledger/
 # Client build artifacts (PWA frontends under client/)
 client/*/dist/
 client/*/dev-dist/
+
+# Playwright (e2e) artifacts
+client/*/test-results/
+client/*/playwright-report/
+client/*/e2e/__screenshots__/
+**/.last-run.json

@@ -1,6 +1,6 @@
 import { World, EntityId } from './World';
-import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent } from './components/PlayerComponents';
-import { PlayerIntentSystem } from './systems/PlayerIntentSystem';
+import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent, PlayerBodyComponent } from './components/PlayerComponents';
+import { CharacterController } from './movement/CharacterController';
 
 /**
  * EntityFactory: Centralized assembler for complex entities.
@@ -45,6 +45,15 @@ export class EntityFactory {
             active: true
         });
 
+        world.addComponent<PlayerBodyComponent>(player, "PlayerBodyComponent", {
+            height: 1.8,
+            eyeHeight: 1.7,
+            stepHeight: 0.5,
+            crouchHeight: 0.9,
+            jumpHeight: 1.2,
+            fallDeathHeight: 12
+        });
+
         const avatarHandle = world.renderEngine.createAvatarMesh();
         world.renderEngine.setObjectPosition(avatarHandle, position[0], position[1], position[2]);
 
@@ -58,9 +67,9 @@ export class EntityFactory {
         world.renderEngine.setMainCameraPosition(position[0], position[1] + 1.7, position[2]);
 
         // Attach Controls
-        const intentSystem = world.systems.findSystem(PlayerIntentSystem);
-        if (intentSystem) {
-            (intentSystem as PlayerIntentSystem).attachToEntity(player);
+        const controller = world.systems.findSystem(CharacterController);
+        if (controller) {
+            controller.attachToEntity(player);
         }
 
         return player;

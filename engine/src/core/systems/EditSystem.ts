@@ -101,7 +101,7 @@ export class EditSystem implements ISystem {
 
         // Ctrl+Z = undo, Ctrl+Shift+Z = redo
         // We use the world's inputProvider via the system manager
-        const sys = world.systems.findSystemByName("PlayerIntentSystem") as any;
+        const sys = world.systems.findSystemByName("CharacterController") as any;
         const ip: InputProvider | null = sys?.inputProvider || null;
         if (!ip) return;
 

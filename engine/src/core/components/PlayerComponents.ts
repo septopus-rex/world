@@ -68,6 +68,27 @@ export interface RigidBodyComponent {
 }
 
 // -----------------------------------------------------------------------------
+// 3b. Player Body / Capacity parameters (movement + collision tuning)
+// -----------------------------------------------------------------------------
+export interface PlayerBodyComponent {
+    /** Total body height (m) — collision column height. */
+    height: number;
+    /** Camera eye height above feet (m). */
+    eyeHeight: number;
+    /**
+     * Max auto step-up / cross height (m). The single threshold for
+     * "step over" (climb onto obstacles <= stepHeight) vs "block" (taller).
+     */
+    stepHeight: number;
+    /** Crouch height (m). Reserved. */
+    crouchHeight: number;
+    /** Target jump apex (m). Reserved (jumpForce drives the impulse for now). */
+    jumpHeight: number;
+    /** Fall distance (m) that emits a "player:fell" event. */
+    fallDeathHeight: number;
+}
+
+// -----------------------------------------------------------------------------
 // 4. Static Collision Boundaries (e.g. Walls, Floors)
 // -----------------------------------------------------------------------------
 export interface SolidComponent {

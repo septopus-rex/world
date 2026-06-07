@@ -21,15 +21,25 @@ export class BlockSystem implements ISystem {
     // Native adjunct dispatch is sourced from the shared AdjunctRegistry
     // (getBuiltinAdjunct) so block init and dynamic resolution share one map.
 
+    /**
+     * Max blocks initialized per frame. When a whole neighbourhood streams in at
+     * once, building every block (entities + adjunct components + group) in one
+     * frame stalls; budgeting spreads it across frames (frame-split loading).
+     * The per-adjunct MESH build is separately budgeted by AdjunctSystem.
+     */
+    private static readonly BUILD_BUDGET = 4;
+
     public update(world: World, dt: number): void {
         const blockEntities = world.queryEntities("BlockComponent");
 
+        let built = 0;
         for (const eid of blockEntities) {
             const block = world.getComponent<BlockComponent>(eid, "BlockComponent");
             if (!block || block.isInitialized) continue;
 
             this.initializeBlock(world, eid, block);
             block.isInitialized = true;
+            if (++built >= BlockSystem.BUILD_BUDGET) break; // rest of the queue next frame
         }
     }
 
