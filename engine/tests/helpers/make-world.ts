@@ -41,3 +41,30 @@ export async function makeHeadlessEngine(playerStart?: {
 export function stepN(engine: Engine, ticks: number, dt: number = FIXED_DT): void {
   for (let i = 0; i < ticks; i++) engine.step(dt);
 }
+
+/**
+ * Boot a headless engine with custom services — a data source that serves real
+ * module/texture records and injected resource loaders. Used by the module(model)
+ * + resource-dedup tests to exercise the full World/AdjunctFactory path while
+ * keeping the heavy 3D decode out of node.
+ */
+export async function makeHeadlessEngineWith(opts: {
+  api: any;
+  resources?: any;
+  nullEngine?: any;
+  playerStart?: { block: [number, number]; position: [number, number, number]; rotation?: [number, number, number] };
+}): Promise<{ engine: Engine; nullEngine: any }> {
+  const nullEngine = opts.nullEngine ?? createNullRenderEngine();
+  const engine = new Engine('headless-test-root', {
+    api: opts.api,
+    renderer: nullEngine as any,
+    uiMode: 'events',
+    resources: opts.resources,
+  });
+  await engine.bootWorld(0, opts.playerStart ?? {
+    block: [2048, 2048],
+    position: [8, 8, 1],
+    rotation: [0, 0, 0],
+  });
+  return { engine, nullEngine };
+}

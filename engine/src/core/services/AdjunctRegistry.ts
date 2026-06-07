@@ -5,6 +5,7 @@ import { AdjunctTrigger } from '../../plugins/adjunct/adjunct_trigger';
 import { BasicWallAdjunct } from '../../plugins/adjunct/basic_wall';
 import { BasicConeAdjunct } from '../../plugins/adjunct/basic_cone';
 import { BasicSphereAdjunct } from '../../plugins/adjunct/basic_sphere';
+import { AdjunctModule } from '../../plugins/adjunct/basic_module';
 
 /**
  * Registry of built-in (native) adjunct types, keyed by on-chain type-id.
@@ -12,13 +13,14 @@ import { BasicSphereAdjunct } from '../../plugins/adjunct/basic_sphere';
  * source of truth.
  *
  * Type-ids match the Septopus chain adjunct set:
- *   a1 wall · a2 box · a3 light · a4 module(unported) · a6 cone · a7 ball(sphere)
+ *   a1 wall · a2 box · a3 light · a4 module(3D model) · a6 cone · a7 ball(sphere)
  *   · b4 stop(unported) · b8 trigger
  */
 export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<number, AdjunctDefinition>([
     [0x00a1, BasicWallAdjunct as unknown as AdjunctDefinition],   // wall
     [0x00a2, AdjunctBox as unknown as AdjunctDefinition],         // box
     [0x00a3, AdjunctLight as unknown as AdjunctDefinition],       // light
+    [0x00a4, AdjunctModule as unknown as AdjunctDefinition],      // module (3D model)
     [0x00a6, BasicConeAdjunct as unknown as AdjunctDefinition],   // cone
     [0x00a7, BasicSphereAdjunct as unknown as AdjunctDefinition], // ball -> sphere
     [0x00b8, AdjunctTrigger as unknown as AdjunctDefinition],     // trigger

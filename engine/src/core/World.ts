@@ -28,6 +28,8 @@ import { EditSystem } from './systems/EditSystem';
 import { FullWorldConfig } from './types/WorldConfig';
 import { SystemMode } from './types/SystemMode';
 import { IUIProvider } from './services/UIProvider';
+import { IDataSource } from './services/DataSource';
+import { ResourceManager, ResourceManagerConfig } from './services/ResourceManager';
 
 export type EntityId = number;
 export type ComponentType = string;
@@ -51,7 +53,19 @@ export interface GameEvent {
 export interface WorldDeps {
     renderEngine?: RenderEngine;
     inputProvider?: InputProvider;
+    /** Data source for external resources (models/textures). Engine passes its api. */
+    dataSource?: IDataSource;
+    /** Injectable resource loaders (tests pass fakes + fetch counters). */
+    resources?: ResourceManagerConfig;
 }
+
+/** Inert data source so a World constructed without one never crashes on resource calls. */
+const NULL_DATA_SOURCE: IDataSource = {
+    world: async () => ({}),
+    view: async () => null,
+    module: async () => ({}),
+    texture: async () => ({})
+} as unknown as IDataSource;
 
 /**
  * World: The Single Source of Truth & Main Orchestrator.
@@ -68,6 +82,13 @@ export class World {
     // 2. Rendering (Abstracted)
     public renderEngine: RenderEngine;
     public pipeline: RenderPipeline;
+
+    /**
+     * Load-once-by-id authority for external models/textures. AdjunctFactory uses
+     * it to swap a placeholder box for a real model clone; one decoded file →
+     * many instances (shared geometry/material). See ResourceManager.
+     */
+    public resourceManager: ResourceManager;
 
     // 3. Simulation State
     private lastTime: number = 0;
@@ -104,6 +125,12 @@ export class World {
             stats: config.debug?.stats ?? false
         });
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
+
+        // 1.5 Resource manager — load-once-by-id for models/textures.
+        this.resourceManager = new ResourceManager(
+            deps.dataSource ?? NULL_DATA_SOURCE,
+            { ipfsGateway: (config as any).ipfsGateway, ...deps.resources }
+        );
 
         // 2. System Bootstrap (Extractable to configuration in future)
         const inputProvider = deps.inputProvider ?? new InputProvider(this.renderEngine.getDomElement());
@@ -230,10 +257,18 @@ export class World {
         }
     }
 
-    private resolveAsset(face: ParticleFace, variantIndex: number, cell: ParticleCell): any { return null; }
+    /**
+     * SPP/MeshBuilder asset resolver (particle-face path). The module-ADJUNCT
+     * path does NOT go through here — it loads via AdjunctFactory + ResourceManager.
+     * Wiring the SPP variantIndex→resource-id mapping onto ResourceManager is a
+     * follow-up; until then this returns null (SPP model/texture faces stay
+     * unrendered, same as before — no regression).
+     */
+    private resolveAsset(_face: ParticleFace, _variantIndex: number, _cell: ParticleCell): any { return null; }
 
     public dispose(): void {
         this.isRunning = false;
+        this.resourceManager.dispose();
         this.renderEngine.dispose();
     }
 }

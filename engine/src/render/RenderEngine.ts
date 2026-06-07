@@ -239,6 +239,9 @@ export class RenderEngine {
         });
         for (const child of toRemove) {
             this.scene.remove(child);
+            // Skip ResourceManager-shared (template-owned) geometry/material —
+            // disposing it would corrupt every live model instance/textured face.
+            if ((child as any).userData?.shared) continue;
             if ((child as any).geometry) (child as any).geometry.dispose();
             if ((child as any).material) {
                 if (Array.isArray((child as any).material)) {
@@ -632,6 +635,11 @@ export class RenderEngine {
     public removeHandle(handle: RenderHandle): void {
         const obj = handle as THREE.Object3D;
 
+        // Liveness flag for async swaps: an in-flight model load checks this on
+        // the meshGroup before instancing, so it never adds a clone to a disposed
+        // group (the placeholder-then-swap eviction race).
+        if (obj.userData) obj.userData.__removed = true;
+
         // Correctly remove from whatever parent it has (Scene or Group)
         if (obj.parent) {
             obj.parent.remove(obj);
@@ -645,6 +653,11 @@ export class RenderEngine {
         // Recursive disposal
         obj.traverse((child) => {
             if (child instanceof THREE.Mesh || child instanceof THREE.Points) {
+                // Skip ResourceManager-shared (template-owned) geometry/material:
+                // a model clone shares these by reference, so disposing them here
+                // would corrupt every other instance. The shared template is freed
+                // only via ResourceManager.release (ref-count → 0).
+                if ((child as any).userData?.shared) return;
                 child.geometry.dispose();
                 if (Array.isArray(child.material)) {
                     child.material.forEach(m => m.dispose());

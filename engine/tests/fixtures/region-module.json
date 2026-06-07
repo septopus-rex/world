@@ -1,0 +1,27 @@
+{
+  "_doc": "One block whose raw references ONE module resource id (27) MANY times, plus a second id (31) once. Proves N placements -> 1 file load (resource dedup). Row format per basic_module.deserialize: [[sx,sy,sz],[ox,oy,oz],[rx,ry,rz], RESOURCE_ID, animate, stop]. Adjunct typeId 164 = 0x00a4 module.",
+  "block": {
+    "x": 2048,
+    "y": 2048,
+    "elevation": 0.2,
+    "raw": [
+      0.2,
+      1,
+      [
+        [
+          164,
+          [
+            [[2, 2, 3], [2, 2, 0], [0, 0, 0], 27, 0, 0],
+            [[2, 2, 3], [6, 2, 0], [0, 0, 0], 27, 0, 0],
+            [[2, 2, 3], [10, 2, 0], [0, 0, 0], 27, 0, 0],
+            [[2, 2, 3], [2, 6, 0], [0, 0, 0], 27, 0, 0],
+            [[2, 2, 3], [6, 6, 0], [0, 0, 0], 27, 0, 0],
+            [[2, 2, 3], [10, 6, 0], [0, 0, 0], 31, 0, 0]
+          ]
+        ]
+      ],
+      []
+    ],
+    "counts": { "id27": 5, "id31": 1, "total": 6 }
+  }
+}

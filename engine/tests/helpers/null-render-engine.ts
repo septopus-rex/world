@@ -42,7 +42,15 @@ export function createNullRenderEngine() {
     clientHeight: 1,
   };
 
+  // Handle bookkeeping so module placeholder-then-swap can be asserted headlessly:
+  // count group creation, child adds, and removals (the swap adds the model clone
+  // then removes the placeholder; eviction removes the group).
+  const counts = { groups: 0, added: 0, removed: 0 };
+
   return {
+    // Test introspection (not part of the RenderEngine interface).
+    __counts: counts,
+
     // THREE-typed getters (not exercised in headless ticks) — permissive dummies
     get mainCameraInstance() { return {} as any; },
     get minimapCameraInstance() { return {} as any; },
@@ -69,9 +77,9 @@ export function createNullRenderEngine() {
     setRaycastable: () => {},
 
     // Scene graph
-    createGroup: () => handle(),
-    addObjectToGroup: () => {},
-    setObjectUserData: () => {},
+    createGroup: () => { counts.groups++; return handle(); },
+    addObjectToGroup: (_group: Handle, _object: Handle) => { counts.added++; },
+    setObjectUserData: (h: Handle, key: string, value: any) => { if (h && h.userData) h.userData[key] = value; },
     updateObjectAppearance: () => {},
     add: () => {},
     remove: () => {},
@@ -113,7 +121,12 @@ export function createNullRenderEngine() {
     getObjectByEntityId: () => null,
     lockControls: () => {},
     unlockControls: () => {},
-    removeHandle: () => {},
+    removeHandle: (h: Handle) => {
+      counts.removed++;
+      // Mirror RenderEngine: flag the handle so an in-flight async model swap
+      // detects the group/placeholder was evicted and aborts.
+      if (h && typeof h === 'object') { (h.userData ??= {}).__removed = true; }
+    },
     dispose: () => {},
   };
 }

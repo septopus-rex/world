@@ -37,6 +37,9 @@ export class DesktopLoader implements IDataSource {
 
     private loadedBlockKeys: Set<string> = new Set();
     private fetchingBlockKeys: Set<string> = new Set();
+    private blockLastSeen: Map<string, number> = new Map();
+    /** Evict blocks that have been outside the view window longer than this (ms). */
+    private static readonly EVICT_TTL_MS = 10_000;
 
     public playerState: SPPPlayerState = { ...DEFAULT_PLAYER_STATE };
 
@@ -125,6 +128,22 @@ export class DesktopLoader implements IDataSource {
         }
 
         (this.engine.getWorld() as any)?.blocks.syncVisibility(requiredKeys);
+
+        // Hide-then-timestamp-then-evict: in-window blocks are kept fresh; blocks
+        // that have been OUT of the window past the TTL are destroyed to bound memory
+        // (recently-left blocks stay loaded+hidden for instant re-entry).
+        const now = Date.now();
+        const required = new Set(requiredKeys);
+        for (const k of requiredKeys) this.blockLastSeen.set(k, now);
+        for (const k of [...this.loadedBlockKeys]) {
+            if (required.has(k)) continue;
+            if (now - (this.blockLastSeen.get(k) ?? now) > DesktopLoader.EVICT_TTL_MS) {
+                const [ex, ey] = k.split('_').map(Number);
+                this.engine.removeBlock(ex, ey);
+                this.loadedBlockKeys.delete(k);
+                this.blockLastSeen.delete(k);
+            }
+        }
 
         const missing = requiredKeys.filter(k => !this.loadedBlockKeys.has(k) && !this.fetchingBlockKeys.has(k));
         if (missing.length === 0) return;

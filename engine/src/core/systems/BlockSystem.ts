@@ -188,6 +188,53 @@ export class BlockSystem implements ISystem {
         }
     }
 
+    /**
+     * Destroy a block and all its adjuncts, freeing their render handles.
+     * Resets the block so it can be re-streamed if the player returns.
+     */
+    public removeBlock(world: World, x: number, y: number): void {
+        const bKey = `${x}_${y}`;
+        let blockEid: EntityId | null = null;
+        for (const eid of world.queryEntities("BlockComponent")) {
+            const b = world.getComponent<BlockComponent>(eid, "BlockComponent");
+            if (b && b.x === x && b.y === y) { blockEid = eid; break; }
+        }
+        if (blockEid === null) return;
+
+        // Destroy child adjuncts (free their meshes first).
+        for (const aid of world.getEntitiesWith(["AdjunctComponent"])) {
+            const a = world.getComponent<AdjunctComponent>(aid, "AdjunctComponent");
+            if (a && a.parentBlockEntityId === blockEid) {
+                this.releaseModuleResources(world, aid);
+                this.freeMesh(world, aid);
+                world.destroyEntity(aid);
+            }
+        }
+        // Destroy the block group + entity.
+        this.freeMesh(world, blockEid);
+        world.destroyEntity(blockEid);
+        this.blockGroups.delete(bKey);
+    }
+
+    private freeMesh(world: World, eid: EntityId): void {
+        const mesh = world.getComponent<MeshComponent>(eid, "MeshComponent");
+        if (mesh?.handle) world.renderEngine.removeHandle(mesh.handle);
+    }
+
+    /**
+     * Release the model resources a module adjunct instanced (recorded on its
+     * mesh group by AdjunctFactory's swap). One release() per clone so the shared
+     * template's ref-count drops; the template is freed only when it hits 0. This
+     * ties resource dedup into block eviction so memory stays bounded.
+     */
+    private releaseModuleResources(world: World, eid: EntityId): void {
+        const mesh = world.getComponent<MeshComponent>(eid, "MeshComponent");
+        const loaded = (mesh?.handle as any)?.userData?.loadedResources as string[] | undefined;
+        if (loaded && loaded.length) {
+            for (const id of loaded) world.resourceManager.release(id);
+        }
+    }
+
     public syncVisibility(world: World, requiredKeys: string[]) {
         // Simplified for refactor: find all BlockComponents and update their MeshComponent visibility
         const blockEntities = world.queryEntities("BlockComponent");

@@ -1,10 +1,12 @@
+import * as THREE from 'three';
 import { World } from '../World';
-import { RenderHandle, AdjunctDefinition } from '../types/Adjunct';
+import { RenderHandle, AdjunctDefinition, RenderObject } from '../types/Adjunct';
 import { Coords } from '../utils/Coords';
 import { MeshFactory } from '../../render/MeshFactory';
 import { Color } from '../utils/Math';
 import { BlockComponent } from '../components/BlockComponent';
 import { MeshComponent } from '../components/VisualizationComponents';
+import type { ResourceManager } from '../services/ResourceManager';
 
 export interface IAdjunctCreationResult {
     handle: RenderHandle;
@@ -71,12 +73,88 @@ export class AdjunctFactory {
                 );
 
                 world.renderEngine.addObjectToGroup(meshGroup, mesh);
+
+                // Module adjuncts: `mesh` is just a loading PLACEHOLDER. Kick off
+                // the async model load and swap a real clone in when it resolves
+                // (deterministic port of the old engine's replaceFun).
+                if (renderItem.type === 'module' && renderItem.resource) {
+                    this.scheduleModuleSwap(world, meshGroup, mesh, renderItem, relativePos);
+                }
             }
         } catch (error) {
             console.error(`[AdjunctFactory] Failed to assemble mesh for adjunct.`, error);
         }
 
         return { handle: meshGroup, triggerVolumes };
+    }
+
+    /**
+     * Placeholder-then-swap for a module (3D-model) adjunct.
+     *
+     * createMesh is synchronous but model loading is async, so we:
+     *   1. load the model ONCE via ResourceManager (dedup by id — N placements of
+     *      the same id trigger ONE fetch + decode),
+     *   2. when it resolves, replace the placeholder box with a cheap clone that
+     *      shares the decoded geometry/material by reference,
+     *   3. scale the clone so its bounding box matches the authored std size,
+     *   4. inherit the placeholder's local position/rotation.
+     *
+     * Hazard handled: the block (and its meshGroup) may be EVICTED before the
+     * load resolves. We check the group's __removed flag (set by
+     * RenderEngine.removeHandle) BEFORE instancing, so we never leak a clone into
+     * a disposed group and never bump the refcount for a dead placement.
+     */
+    private static scheduleModuleSwap(
+        world: World,
+        meshGroup: RenderHandle,
+        placeholder: RenderHandle,
+        renderItem: RenderObject,
+        relativePos: number[]
+    ): void {
+        const rm = (world as any).resourceManager as ResourceManager | undefined;
+        const resource = renderItem.resource as string;
+        if (!rm || !resource) return;
+
+        rm.getModel(resource).then(() => {
+            // Evicted mid-load? Abort — do not instance (no refcount, no leak).
+            if (this.isHandleRemoved(meshGroup) || this.isHandleRemoved(placeholder)) return;
+
+            const entry = rm.getModelEntry(resource);
+            if (!entry) return;
+            const model = rm.instance(resource) as THREE.Object3D;
+
+            // Scale the clone to fit the authored size (decision: honor std size).
+            const size = entry.bounds.getSize(new THREE.Vector3());
+            const desired = renderItem.params.size;
+            const sx = size.x > 1e-6 ? desired[0] / size.x : 1;
+            const sy = size.y > 1e-6 ? desired[1] / size.y : 1;
+            const sz = size.z > 1e-6 ? desired[2] / size.z : 1;
+            model.scale.set(sx, sy, sz);
+
+            // Inherit the placeholder's local pose within the group.
+            world.renderEngine.setObjectPosition(model, relativePos[0], relativePos[1], relativePos[2]);
+            world.renderEngine.setObjectRotation(model,
+                renderItem.params.rotation[0] || 0,
+                renderItem.params.rotation[1] || 0,
+                renderItem.params.rotation[2] || 0
+            );
+
+            // Swap: add the model, remove the placeholder. Record the resource on
+            // the group so block eviction can release() exactly one clone per id.
+            world.renderEngine.addObjectToGroup(meshGroup, model);
+            world.renderEngine.removeHandle(placeholder);
+
+            const ud = (meshGroup as any).userData ?? ((meshGroup as any).userData = {});
+            ud.loadedResources = [...(ud.loadedResources ?? []), resource];
+        }).catch((err: any) => {
+            // Load failed / unsupported format — keep the placeholder box visible.
+            console.warn(`[AdjunctFactory] module ${resource} load failed; keeping placeholder.`, err?.message ?? err);
+        });
+    }
+
+    /** True if a handle has been removed/disposed (set by RenderEngine.removeHandle). */
+    private static isHandleRemoved(handle: RenderHandle): boolean {
+        return !!(handle as any)?.userData?.__removed;
     }
 
     private static applyMaterialHashing(world: World, block: any, std: any, renderItem: any) {

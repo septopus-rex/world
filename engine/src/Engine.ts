@@ -26,6 +26,8 @@ export interface EngineServices {
      * so a World can boot and step without a GPU/DOM.
      */
     renderer?: RenderEngine;
+    /** Injectable resource loaders (tests pass fakes + fetch counters). */
+    resources?: import('./core/services/ResourceManager').ResourceManagerConfig;
     config?: any;
 }
 
@@ -68,7 +70,11 @@ export class Engine {
 
         fullConfig.player.start = { ...start, position: enginePos, rotation: engineRot };
 
-        this.world = new World(fullConfig, { renderEngine: this.services.renderer });
+        this.world = new World(fullConfig, {
+            renderEngine: this.services.renderer,
+            dataSource: this.services.api,
+            resources: this.services.resources
+        });
 
         // 3.5 UI Orchestration
         const uiMode = this.services.uiMode || 'default';
@@ -124,6 +130,13 @@ export class Engine {
                 isInitialized: false
             });
         }
+    }
+
+    /** Destroy a streamed-in block and its adjuncts (frees meshes). Used by the
+     *  loader's view-window eviction to bound memory as the player roams. */
+    public removeBlock(x: number, y: number): void {
+        const bs = this.world?.systems.findSystemByName('BlockSystem') as any;
+        if (bs?.removeBlock) bs.removeBlock(this.world, x, y);
     }
 
     public getWorld(): World | null {
