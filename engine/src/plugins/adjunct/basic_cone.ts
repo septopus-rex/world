@@ -5,6 +5,7 @@ import {
     AdjunctDefinition,
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
+import { standardAttribute } from './_shared.js';
 
 /**
  * Basic Cone/Cylinder Adjunct (Modernized)
@@ -13,7 +14,7 @@ import {
 const reg: ComponentMeta = {
     name: "cone",
     short: "CN",
-    typeId: 5,
+    typeId: 0x00a6,
     desc: "Cone/Cylinder adjunct.",
     version: "1.0.0",
 };
@@ -39,5 +40,6 @@ export const BasicConeAdjunct: AdjunctDefinition = {
                 animate: row.animate,
             }));
         }
-    }
+    },
+    attribute: standardAttribute
 };

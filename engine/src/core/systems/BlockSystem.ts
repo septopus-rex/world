@@ -6,9 +6,8 @@ import { AdjunctComponent } from '../components/AdjunctComponents';
 import { MeshComponent } from '../components/VisualizationComponents';
 import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
-import { AdjunctTrigger } from '../../plugins/adjunct/adjunct_trigger';
-import { AdjunctLight } from '../../plugins/adjunct/basic_light';
-import { AdjunctDefinition, RenderHandle } from '../types/Adjunct';
+import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
+import { RenderHandle } from '../types/Adjunct';
 import { DraftStorage } from '../services/DraftStorage';
 
 /**
@@ -17,15 +16,10 @@ import { DraftStorage } from '../services/DraftStorage';
  */
 export class BlockSystem implements ISystem {
     private blockGroups: Map<string, RenderHandle> = new Map();
-    private adjunctRegistry: Map<number, AdjunctDefinition> = new Map();
     private draftStorage: DraftStorage = new DraftStorage();
 
-    constructor() {
-        // Register native Septopus adjuncts
-        this.adjunctRegistry.set(0x00a2, AdjunctBox as any);
-        this.adjunctRegistry.set(0x00a3, AdjunctLight as any);
-        this.adjunctRegistry.set(0x00b8, AdjunctTrigger as any);
-    }
+    // Native adjunct dispatch is sourced from the shared AdjunctRegistry
+    // (getBuiltinAdjunct) so block init and dynamic resolution share one map.
 
     public update(world: World, dt: number): void {
         const blockEntities = world.queryEntities("BlockComponent");
@@ -92,7 +86,7 @@ export class BlockSystem implements ISystem {
                 if (Array.isArray(adjData) && typeof adjData[0] === 'number') {
                     const typeId = adjData[0];
                     const instances = adjData[1];
-                    const definition = this.adjunctRegistry.get(typeId);
+                    const definition = getBuiltinAdjunct(typeId);
 
                     if (definition) {
                         instances.forEach((rawInst: any[], idx: number) => {

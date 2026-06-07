@@ -6,6 +6,7 @@ import {
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
 import { Coords } from '../../core/utils/Coords.js';
+import { standardAttribute } from './_shared.js';
 
 /**
  * Adjunct - Wall (Modernized)
@@ -14,7 +15,7 @@ import { Coords } from '../../core/utils/Coords.js';
 const reg: ComponentMeta = {
     name: "wall",
     short: "WL",
-    typeId: 2,
+    typeId: 0x00a1,
     desc: "Wall with texture support.",
     version: "1.0.0",
 };
@@ -67,5 +68,6 @@ export const BasicWallAdjunct: AdjunctDefinition = {
         reg: () => reg,
         init: () => ({ chain: "", value: null })
     },
-    transform
+    transform,
+    attribute: standardAttribute
 };

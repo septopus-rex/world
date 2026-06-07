@@ -1,4 +1,5 @@
 import { World } from './core/World';
+import type { RenderEngine } from './render/RenderEngine';
 import { IDataSource } from './core/services/DataSource';
 import { IUIProvider } from './core/services/UIProvider';
 import { DefaultUIProvider } from './core/services/DefaultUIProvider';
@@ -21,6 +22,12 @@ export interface EngineServices {
     uiMode?: 'default' | 'events';
     /** Optional chain publisher for uploading edits to blockchain */
     publisher?: IChainPublisher;
+    /**
+     * Optional injected render engine. Omit in production (the real WebGL
+     * RenderEngine is created by default). Tests inject a headless NullRenderEngine
+     * so a World can boot and step without a GPU/DOM.
+     */
+    renderer?: RenderEngine;
     config?: any;
 }
 
@@ -63,7 +70,7 @@ export class Engine {
 
         fullConfig.player.start = { ...start, position: enginePos, rotation: engineRot };
 
-        this.world = new World(fullConfig);
+        this.world = new World(fullConfig, { renderEngine: this.services.renderer });
 
         // 3.5 UI Orchestration
         const uiMode = this.services.uiMode || 'default';
@@ -93,6 +100,14 @@ export class Engine {
 
     public start() {
         this.world?.start();
+    }
+
+    /**
+     * Advance the simulation by one fixed step (deterministic). Used by tests to
+     * pump the world frame-by-frame instead of the rAF-driven start() loop.
+     */
+    public step(dt: number) {
+        this.world?.step(dt);
     }
 
     public stop() {

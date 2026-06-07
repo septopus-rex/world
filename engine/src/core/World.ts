@@ -44,6 +44,16 @@ export interface GameEvent {
 }
 
 /**
+ * Injectable dependencies for headless / test boot. Production passes nothing
+ * and the real WebGL RenderEngine + DOM InputProvider are constructed by default.
+ * Tests inject a NullRenderEngine (no WebGL/DOM) to tick systems headlessly.
+ */
+export interface WorldDeps {
+    renderEngine?: RenderEngine;
+    inputProvider?: InputProvider;
+}
+
+/**
  * World: The Single Source of Truth & Main Orchestrator.
  * Handles ECS registry, Game Loop, and Integration of Systems.
  * 
@@ -81,13 +91,14 @@ export class World {
     public get minimap() { return this.bridge.minimap; }
     public get blocks() { return this.bridge.blocks; }
 
-    constructor(config: FullWorldConfig) {
+    constructor(config: FullWorldConfig, deps: WorldDeps = {}) {
         this.config = config;
         this.bridge = new WorldBridge(this);
         Coords.BLOCK_SIZE = config.world.block[0];
 
-        // 1. Rendering Setup
-        this.renderEngine = new RenderEngine({
+        // 1. Rendering Setup — injectable. Default = real WebGL engine; tests pass
+        //    a headless NullRenderEngine so a World can boot+tick without a GPU/DOM.
+        this.renderEngine = deps.renderEngine ?? new RenderEngine({
             containerId: config.world.containerId,
             clearColor: 0x87ceeb,
             stats: config.debug?.stats ?? false
@@ -95,7 +106,7 @@ export class World {
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 
         // 2. System Bootstrap (Extractable to configuration in future)
-        const inputProvider = new InputProvider(this.renderEngine.getDomElement());
+        const inputProvider = deps.inputProvider ?? new InputProvider(this.renderEngine.getDomElement());
 
         this.systems.addSystem(new PlayerIntentSystem(this, inputProvider));
         this.systems.addSystem(new RaycastInteractionSystem());
@@ -115,8 +126,13 @@ export class World {
         this.systems.addSystem(new VisualSyncSystem());
         this.systems.addSystem(new EditSystem(this));
 
-        this.start();
-        window.addEventListener('resize', () => this.renderEngine.resize(), false);
+        // NOTE: the run loop is NOT auto-started here. Production callers (Engine
+        // consumers) call start() explicitly after boot + initial block injection
+        // (which also fixes the prior "loop runs before blocks are injected" race).
+        // Tests drive the sim deterministically via step(dt) instead of start().
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', () => this.renderEngine.resize(), false);
+        }
     }
 
     /**
@@ -153,12 +169,20 @@ export class World {
             if (!this.isRunning) return;
             const dt = Math.min((now - this.lastTime) / 1000, 0.1);
             this.lastTime = now;
-
-            this.systems.update(this, dt);
-            this.renderEngine.render(this.pipeline.isMinimapActive);
+            this.step(dt);
             requestAnimationFrame(loop);
         };
         requestAnimationFrame(loop);
+    }
+
+    /**
+     * Advance the simulation by one step: tick all systems, then render.
+     * Production drives this from the rAF loop (start()); tests call it directly
+     * with a fixed dt for deterministic, reproducible stepping.
+     */
+    public step(dt: number): void {
+        this.systems.update(this, dt);
+        this.renderEngine.render(this.pipeline.isMinimapActive);
     }
 
     public stop(): void { this.isRunning = false; }

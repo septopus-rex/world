@@ -35,6 +35,13 @@ export class InputProvider {
     }
 
     private bindEvents(): void {
+        // Headless guard: in Node (tests) there is no DOM to bind to. The engine
+        // still constructs an InputProvider; it simply reports "no input".
+        if (typeof document === 'undefined'
+            || !this.domElement
+            || typeof (this.domElement as any).addEventListener !== 'function') {
+            return;
+        }
         document.addEventListener('keydown', this.onKeyDown, false);
         document.addEventListener('keyup', this.onKeyUp, false);
         document.addEventListener('mouseup', this.onMouseUp, false);
