@@ -65,7 +65,7 @@ cd engine && yarn build                            # tsc
 ## 编辑 / Adjunct
 
 - 编辑经 `EditSystem`(select / move / set / delete / undo)→ `DraftStorage`(localStorage 草稿)。
-- adjunct 按链 type-id 注册于 `core/services/AdjunctRegistry.ts`:`a1` wall · `a2` box · `a3` light · `a6` cone · `a7` ball(sphere) · `b8` trigger。**module(a4)/stop(b4) 尚未迁移**。
+- adjunct 按链 type-id 注册于 `core/services/AdjunctRegistry.ts`:`a1` wall · `a2` box · `a3` light · `a4` module(3D 模型) · `a6` cone · `a7` ball(sphere) · `b8` trigger。**仅 `stop`(b4) 尚未迁移**;module 经 `ResourceManager`/`ModelLoader` 加载外部模型 + 占位→swap、按 id 去重实例化。
 - 动态/链上加载的 adjunct 代码经 `AdjunctSandbox`(Web Worker 沙箱 + 静态 `validateCode` 过滤)+ `AdjunctLoader`(已迁 TS,**暂未接入运行时**,随链相关功能启用)。
 
 ## 测试
