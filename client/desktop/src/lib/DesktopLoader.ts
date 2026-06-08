@@ -22,11 +22,18 @@ import { IDataSource } from '@engine/core/services/DataSource';
 import { DEFAULT_PLAYER_STATE, STORAGE_KEYS } from '../Constants';
 
 // Demo fixtures (client/desktop/public/assets) wired through the model/texture
-// pipeline so `npm run dev` shows a real network-loaded model + texture. The
-// model file is loaded ONCE and instanced per placement; the texture is shared.
+// pipeline so `npm run dev` shows real network-loaded models + textures. Each
+// model file is loaded ONCE and instanced per placement; textures are shared.
 const DEMO_BLOCK: [number, number] = [2048, 2048];
-const DEMO_MODEL_ID = 27;   // → /assets/pyramid.gltf
 const DEMO_TEXTURE_ID = 7;  // → /assets/checker.png
+
+// Resource id → model record. Real Khronos sample assets (helmet = complex PBR
+// with baked textures; fox = rigged + animated, exercises SkeletonUtils.clone).
+const DEMO_MODELS: Record<number, { type: string; format: string; raw: string }> = {
+    27: { type: 'module', format: 'gltf', raw: '/assets/pyramid.gltf' },
+    28: { type: 'module', format: 'glb', raw: '/assets/helmet.glb' },
+    29: { type: 'module', format: 'glb', raw: '/assets/fox.glb' },
+};
 
 export interface SPPPlayerState {
     block: [number, number];
@@ -65,7 +72,7 @@ export class DesktopLoader implements IDataSource {
     public async module(ids: number[]): Promise<any> {
         const out: Record<string, any> = {};
         for (const id of ids) {
-            if (id === DEMO_MODEL_ID) out[id] = { type: 'module', format: 'gltf', raw: '/assets/pyramid.gltf' };
+            if (DEMO_MODELS[id]) out[id] = DEMO_MODELS[id];
         }
         return out;
     }
@@ -134,6 +141,42 @@ export class DesktopLoader implements IDataSource {
 
         await blockReadyPromise;
         console.log('[Loader] World Ready.');
+
+        this.startEnvironmentClock();
+    }
+
+    /**
+     * Mock chain-height clock (the engine is chain-decoupled, so there is no real
+     * slot feed). The old engine derived time+weather from each new block height +
+     * hash; here a ticker bumps a synthetic height every few seconds and feeds it
+     * to EnvironmentSystem, so the sun arcs across a ~2-minute day/night cycle and
+     * weather cycles. Replace with a real chain-height subscription when the chain
+     * plugin ships.
+     */
+    private envHeight = 0;
+    private envTimer: ReturnType<typeof setInterval> | null = null;
+    private static readonly ENV_TICK_MS = 2000;
+    private static readonly ENV_INTERVAL = 1440; // game-seconds per tick (24 game-min) → ~120s/day
+
+    private startEnvironmentClock() {
+        if (this.envTimer) return;
+        const tick = () => {
+            this.envHeight += 1;
+            this.engine?.feedChainState(this.envHeight, this.mockHash(this.envHeight), DesktopLoader.ENV_INTERVAL);
+        };
+        tick(); // kick once so time starts advancing from boot, not after the first delay
+        this.envTimer = setInterval(tick, DesktopLoader.ENV_TICK_MS);
+    }
+
+    /**
+     * Synthetic block hash whose weather slices (chars 12–15, per
+     * EnvironmentSystem.simulateWeatherHash) cycle clear → cloud → rain → snow
+     * every 10 ticks, so weather visibly changes in the no-chain client.
+     */
+    private mockHash(height: number): string {
+        const catIdx = Math.floor(height / 10) % 4;          // 0 clear · 1 cloud · 2 rain · 3 snow
+        const catHex = catIdx.toString(16).padStart(2, '0'); // occupies hash chars [12,13]
+        return '0x' + 'a'.repeat(10) + catHex + '02' + 'a'.repeat(48);
     }
 
     private async handleGridRequest(center: [number, number]) {
@@ -199,13 +242,26 @@ export class DesktopLoader implements IDataSource {
      * slab share ONE texture (shared by reference, tiled by size-derived UVs).
      */
     private injectDemoAssets(data: any) {
+        // [size, offset, rot, RESOURCE_ID, animate, stop]. oz lifts the base just
+        // above ground (avoids coplanar z-fighting). Box size is matched to each
+        // model's natural aspect so the per-axis scale-to-fit stays ~uniform (no
+        // stretching) — pyramids are symmetric; helmet ≈ cubic; fox is elongated.
+        // rot = [pitch(x), YAW(y, around vertical), roll(z)] — distinct yaw per
+        // instance so you can see rotation correctly applied to loaded models and
+        // view each from a different side. Applied AFTER scale-to-fit, so an
+        // aspect-matched (≈uniform) model rotates cleanly with no shear.
+        const Y = Math.PI;
         const modules = [
-            // [size, offset, rot, RESOURCE_ID, animate, stop] — oz = half of size-z
-            // (1.5) + 0.05 clearance so the centered model's base sits just ABOVE the
-            // ground instead of coplanar with it (coplanar → z-fighting bleed).
-            [[2, 2, 3], [3, 12, 1.55], [0, 0, 0], DEMO_MODEL_ID, 0, 0],
-            [[2, 2, 3], [8, 12, 1.55], [0, 0, 0], DEMO_MODEL_ID, 0, 0],
-            [[2, 2, 3], [13, 12, 1.55], [0, 0, 0], DEMO_MODEL_ID, 0, 0],
+            // 3 pyramids share one .gltf (load-once, instance-many)
+            [[2, 2, 3], [3, 12, 1.55], [0, 0.4, 0], 27, 0, 0],
+            [[2, 2, 3], [8, 12, 1.55], [0, Y / 4, 0], 27, 0, 0],
+            [[2, 2, 3], [13, 12, 1.55], [0, -0.6, 0], 27, 0, 0],
+            // 2 damaged helmets (complex PBR) share one .glb — aspect ≈ cubic
+            [[3.15, 3.33, 3.0], [6, 3, 1.55], [0, 0.6, 0], 28, 0, 0],
+            [[3.15, 3.33, 3.0], [10, 3, 1.55], [0, -Y / 3, 0], 28, 0, 0],
+            // 2 foxes (rigged) share one .glb — aspect ~1 : 6 : 3 (W:N:Alt)
+            [[0.64, 3.92, 2.0], [2, 6, 1.05], [0, Y / 2, 0], 29, 0, 0],
+            [[0.64, 3.92, 2.0], [14, 8, 1.05], [0, Y, 0], 29, 0, 0],
         ];
         const texturedBoxes = [
             // [size, pos, rot, colorIdx, repeat, animate, stop, TEXTURE_ID]

@@ -139,6 +139,17 @@ export class Engine {
         if (bs?.removeBlock) bs.removeBlock(this.world, x, y);
     }
 
+    /**
+     * Feed a chain-height tick to the environment (time + weather are derived from
+     * block height + hash, like the old engine's slot subscription). In the
+     * chain-decoupled client a mock ticker drives this so the day/night cycle and
+     * weather actually advance. Without it, time stays frozen at the initial state.
+     */
+    public feedChainState(height: number, hash: string, intervalSeconds: number): void {
+        const env = this.world?.systems.findSystemByName('EnvironmentSystem') as any;
+        if (env?.onNewBlock) env.onNewBlock(this.world, height, hash, intervalSeconds);
+    }
+
     public getWorld(): World | null {
         return this.world;
     }

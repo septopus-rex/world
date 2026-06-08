@@ -64,11 +64,15 @@ export class EnvironmentSystem implements ISystem {
 
     private simulateTimeBreakdown(state: EnvironmentStateComponent, height: number, interval: number): void {
         let diff = Math.max(0, (height - this.timeConfig.startHeight)) * interval * this.timeConfig.speed;
-        if (diff >= this.timeConfig.year) { state.year = Math.floor(diff / this.timeConfig.year); diff %= this.timeConfig.year; }
-        if (diff >= this.timeConfig.month) { state.month = Math.floor(diff / this.timeConfig.month); diff %= this.timeConfig.month; }
-        if (diff >= this.timeConfig.day) { state.day = Math.floor(diff / this.timeConfig.day); diff %= this.timeConfig.day; }
-        if (diff >= this.timeConfig.hour) { state.hour = Math.floor(diff / this.timeConfig.hour); diff %= this.timeConfig.hour; }
-        if (diff >= this.timeConfig.minute) { state.minute = Math.floor(diff / this.timeConfig.minute); diff %= this.timeConfig.minute; }
+        // Always assign every unit (the old engine reset lower units too). The
+        // earlier port only assigned when diff >= unit, so at a day boundary
+        // (diff % day == small) hour/minute stayed STALE instead of resetting to 0,
+        // freezing the sun. Unconditional assignment keeps the clock continuous.
+        state.year = Math.floor(diff / this.timeConfig.year); diff %= this.timeConfig.year;
+        state.month = Math.floor(diff / this.timeConfig.month); diff %= this.timeConfig.month;
+        state.day = Math.floor(diff / this.timeConfig.day); diff %= this.timeConfig.day;
+        state.hour = Math.floor(diff / this.timeConfig.hour); diff %= this.timeConfig.hour;
+        state.minute = Math.floor(diff / this.timeConfig.minute); diff %= this.timeConfig.minute;
         state.second = Math.floor(diff);
     }
 
