@@ -54,6 +54,13 @@ export interface ResourceManagerConfig {
     textureLoader?: ITextureLoader;
     ipfsGateway?: string;
     maxConcurrent?: number;
+    /**
+     * Max texture anisotropy (from renderer.capabilities.getMaxAnisotropy()).
+     * Raising anisotropy is the single biggest defense against grazing-angle
+     * shimmer/blur on long or large faces (floors, walls, pipes) — the main
+     * texture-quality gap that left the old engine looking mosaic-y.
+     */
+    maxAnisotropy?: number;
 }
 
 export class ResourceManager {
@@ -62,6 +69,7 @@ export class ResourceManager {
     private readonly textureLoader: ITextureLoader;
     private readonly ipfsGateway: string;
     private readonly maxConcurrent: number;
+    private readonly maxAnisotropy: number;
 
     // Promise-keyed caches: fetch+decode dedup under concurrent bursts.
     private models = new Map<string, Promise<ModelEntry>>();
@@ -79,6 +87,9 @@ export class ResourceManager {
         this.textureLoader = config.textureLoader ?? (new THREE.TextureLoader() as ITextureLoader);
         this.ipfsGateway = config.ipfsGateway ?? 'https://gateway.pinata.cloud/ipfs/';
         this.maxConcurrent = config.maxConcurrent ?? 3;
+        // Cap anisotropy at 8: near-indistinguishable from higher on most GPUs but
+        // cheaper. 0/undefined renderer caps fall back to 1 (no anisotropic filtering).
+        this.maxAnisotropy = Math.max(1, Math.min(8, config.maxAnisotropy ?? 8));
     }
 
     // ── Models ────────────────────────────────────────────────────────────────
@@ -174,8 +185,19 @@ export class ResourceManager {
      * Load a texture for a resource id, ONCE. Shared BY REFERENCE: the SAME
      * THREE.Texture is assigned to every material that references the id, so 50
      * walls using texture 7 keep ONE Texture in memory.
+     *
+     * `repeat` is a property of the (shared) Texture, so it is ONE value per id —
+     * effective on first load only. It is NOT a per-surface override (that would
+     * need per-surface texture clones, defeating dedup). Per-face texel density is
+     * handled separately by size-derived UV tiling (see TextureScale); the texture
+     * record's repeat acts as a global multiplier on top. Callers (AdjunctFactory)
+     * therefore omit it and let the record's repeat be canonical.
      */
-    async getTexture(resourceId: string | number, repeat?: [number, number]): Promise<THREE.Texture> {
+    async getTexture(
+        resourceId: string | number,
+        repeat?: [number, number],
+        opts: { srgb?: boolean } = {}
+    ): Promise<THREE.Texture> {
         const id = String(resourceId);
         const existing = this.textures.get(id);
         if (existing) return existing;
@@ -188,9 +210,23 @@ export class ResourceManager {
             }
             const url = this.resolveUrl(rec.raw);
             const tex = await this.textureLoader.loadAsync(url);
+
             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
             const rep = repeat ?? rec.repeat ?? [1, 1];
             tex.repeat?.set?.(rep[0], rep[1]);
+
+            // Anisotropic filtering — the main fix for grazing-angle shimmer on
+            // long/large faces (kills the old "mosaic" look at oblique views).
+            tex.anisotropy = this.maxAnisotropy;
+            // Albedo/color textures are sRGB; renderer.outputColorSpace is sRGB too.
+            if (opts.srgb !== false && 'colorSpace' in tex) {
+                (tex as any).colorSpace = THREE.SRGBColorSpace;
+            }
+            // RepeatWrapping + mipmaps require power-of-two dimensions; three silently
+            // clamps wrap + disables mipmaps for NPOT, degrading tiling/filtering.
+            this.warnIfNPOT(id, rec.raw, tex);
+            tex.needsUpdate = true;
+
             this.textureEntries.set(id, { texture: tex, refCount: 0 });
             return tex;
         });
@@ -220,6 +256,18 @@ export class ResourceManager {
     }
 
     // ── Internals ───────────────────────────────────────────────────────────────
+
+    /** Dev warning: NPOT textures break RepeatWrapping + mipmaps in WebGL. */
+    private warnIfNPOT(id: string, raw: string, tex: THREE.Texture): void {
+        const img: any = (tex as any).image;
+        const w = img?.width, h = img?.height;
+        if (!w || !h) return; // headless / not yet decoded
+        const isPow2 = (n: number) => (n & (n - 1)) === 0;
+        if (!isPow2(w) || !isPow2(h)) {
+            console.warn(`[ResourceManager] texture ${id} (${raw}) is non-power-of-two (${w}x${h}); ` +
+                `WebGL will disable mipmaps + clamp RepeatWrapping — resize to power-of-two to keep tiling crisp.`);
+        }
+    }
 
     /** Tag every Mesh in a tree as sharing template-owned geometry/material. */
     private markShared(root: THREE.Object3D): void {
@@ -279,10 +327,12 @@ export class ResourceManager {
     }
 
     /** Diagnostics for tests/dev: how many distinct files are currently held. */
-    getStats(): { models: number; textures: number; modelRefs: Record<string, number> } {
+    getStats(): { models: number; textures: number; modelRefs: Record<string, number>; textureRefs: Record<string, number> } {
         const modelRefs: Record<string, number> = {};
         for (const [id, e] of this.modelEntries) modelRefs[id] = e.refCount;
-        return { models: this.modelEntries.size, textures: this.textureEntries.size, modelRefs };
+        const textureRefs: Record<string, number> = {};
+        for (const [id, e] of this.textureEntries) textureRefs[id] = e.refCount;
+        return { models: this.modelEntries.size, textures: this.textureEntries.size, modelRefs, textureRefs };
     }
 
     dispose(): void {

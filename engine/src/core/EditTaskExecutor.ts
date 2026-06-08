@@ -55,6 +55,10 @@ export class EditTaskExecutor {
         // Rebuild mesh
         const meshComp = world.getComponent<MeshComponent>(entityId, "MeshComponent");
         if (meshComp?.handle) {
+            // Release model/texture refs this adjunct held BEFORE disposing its
+            // handle, else edit set/delete/restore leaks ResourceManager refcounts
+            // (set also re-retains on every rebuild → monotonic climb).
+            AdjunctFactory.releaseHandleResources(world, meshComp.handle);
             world.renderEngine.removeHandle(meshComp.handle);
         }
         const logic = adjComp.logicModule;
@@ -88,6 +92,10 @@ export class EditTaskExecutor {
         // Remove old mesh
         const meshComp = world.getComponent<MeshComponent>(entityId, "MeshComponent");
         if (meshComp?.handle) {
+            // Release model/texture refs this adjunct held BEFORE disposing its
+            // handle, else edit set/delete/restore leaks ResourceManager refcounts
+            // (set also re-retains on every rebuild → monotonic climb).
+            AdjunctFactory.releaseHandleResources(world, meshComp.handle);
             world.renderEngine.removeHandle(meshComp.handle);
         }
 
@@ -121,6 +129,10 @@ export class EditTaskExecutor {
     private executeDelete(world: World, entityId: EntityId): boolean {
         const meshComp = world.getComponent<MeshComponent>(entityId, "MeshComponent");
         if (meshComp?.handle) {
+            // Release model/texture refs this adjunct held BEFORE disposing its
+            // handle, else edit set/delete/restore leaks ResourceManager refcounts
+            // (set also re-retains on every rebuild → monotonic climb).
+            AdjunctFactory.releaseHandleResources(world, meshComp.handle);
             world.renderEngine.removeHandle(meshComp.handle);
         }
         world.destroyEntity(entityId);

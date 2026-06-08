@@ -21,6 +21,13 @@ import { IDataSource } from '@engine/core/services/DataSource';
 
 import { DEFAULT_PLAYER_STATE, STORAGE_KEYS } from '../Constants';
 
+// Demo fixtures (client/desktop/public/assets) wired through the model/texture
+// pipeline so `npm run dev` shows a real network-loaded model + texture. The
+// model file is loaded ONCE and instanced per placement; the texture is shared.
+const DEMO_BLOCK: [number, number] = [2048, 2048];
+const DEMO_MODEL_ID = 27;   // → /assets/pyramid.gltf
+const DEMO_TEXTURE_ID = 7;  // → /assets/checker.png
+
 export interface SPPPlayerState {
     block: [number, number];
     world: string | number;
@@ -55,8 +62,21 @@ export class DesktopLoader implements IDataSource {
         return null;
     }
 
-    public async module(_ids: number[]): Promise<any> { return {}; }
-    public async texture(_ids: number[]): Promise<any> { return {}; }
+    public async module(ids: number[]): Promise<any> {
+        const out: Record<string, any> = {};
+        for (const id of ids) {
+            if (id === DEMO_MODEL_ID) out[id] = { type: 'module', format: 'gltf', raw: '/assets/pyramid.gltf' };
+        }
+        return out;
+    }
+
+    public async texture(ids: number[]): Promise<any> {
+        const out: Record<string, any> = {};
+        for (const id of ids) {
+            if (id === DEMO_TEXTURE_ID) out[id] = { type: 'texture', format: 'png', raw: '/assets/checker.png', repeat: [1, 1] };
+        }
+        return out;
+    }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
 
@@ -167,7 +187,33 @@ export class DesktopLoader implements IDataSource {
     // (Phase 1 of the decoupling plan replaces this with a DraftStorage-backed
     // LocalDataSource so edited blocks persist.)
     private async fetchBlock(x: number, y: number): Promise<any> {
-        return fetchMockBlock(x, y);
+        const data = await fetchMockBlock(x, y);
+        if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) this.injectDemoAssets(data);
+        return data;
+    }
+
+    /**
+     * Demo only: splice a few model instances + textured boxes into the spawn
+     * block so the model/texture pipeline is visible in `npm run dev`. The 3
+     * pyramids share ONE model file (load-once, instance-many); the wall + floor
+     * slab share ONE texture (shared by reference, tiled by size-derived UVs).
+     */
+    private injectDemoAssets(data: any) {
+        const modules = [
+            // [size, offset, rot, RESOURCE_ID, animate, stop] — oz = half of size-z
+            // (1.5) + 0.05 clearance so the centered model's base sits just ABOVE the
+            // ground instead of coplanar with it (coplanar → z-fighting bleed).
+            [[2, 2, 3], [3, 12, 1.55], [0, 0, 0], DEMO_MODEL_ID, 0, 0],
+            [[2, 2, 3], [8, 12, 1.55], [0, 0, 0], DEMO_MODEL_ID, 0, 0],
+            [[2, 2, 3], [13, 12, 1.55], [0, 0, 0], DEMO_MODEL_ID, 0, 0],
+        ];
+        const texturedBoxes = [
+            // [size, pos, rot, colorIdx, repeat, animate, stop, TEXTURE_ID]
+            [[6, 0.3, 4], [12, 5, 2], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],     // wall
+            [[6, 6, 0.3], [3, 4, 0.15], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],   // floor slab
+        ];
+        data.raw[2].push([0x00a4, modules]);
+        data.raw[2].push([0x00a2, texturedBoxes]);
     }
 
     // ── Player / view controls ─────────────────────────────────────────────────

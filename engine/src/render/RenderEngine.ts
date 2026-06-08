@@ -78,6 +78,9 @@ export class RenderEngine {
         this.renderer.setSize(Math.max(1, this.container.clientWidth), Math.max(1, this.container.clientHeight));
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.autoClear = true;
+        // Color management: render in sRGB so albedo textures aren't gamma-wrong
+        // (linear-treated-as-sRGB). Color textures are tagged SRGBColorSpace on load.
+        this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.container.appendChild(this.renderer.domElement);
 
         // 5. Default Lighting (dim ambient so adjunct lights are visible)
@@ -92,6 +95,11 @@ export class RenderEngine {
             this.stats.dom.style.left = '0px';
             this.container.appendChild(this.stats.dom);
         }
+    }
+
+    /** Max supported texture anisotropy (for ResourceManager to raise on textures). */
+    public getMaxAnisotropy(): number {
+        return this.renderer.capabilities?.getMaxAnisotropy?.() ?? 1;
     }
 
     public get mainCameraInstance(): THREE.PerspectiveCamera { return this.mainCamera; }
@@ -239,17 +247,8 @@ export class RenderEngine {
         });
         for (const child of toRemove) {
             this.scene.remove(child);
-            // Skip ResourceManager-shared (template-owned) geometry/material —
-            // disposing it would corrupt every live model instance/textured face.
-            if ((child as any).userData?.shared) continue;
-            if ((child as any).geometry) (child as any).geometry.dispose();
-            if ((child as any).material) {
-                if (Array.isArray((child as any).material)) {
-                    (child as any).material.forEach((m: any) => m.dispose());
-                } else {
-                    (child as any).material.dispose();
-                }
-            }
+            // Same shared-resource guard as removeHandle (don't dispose cached/shared).
+            RenderEngine.disposeMeshResources(child);
         }
     }
 
@@ -650,22 +649,33 @@ export class RenderEngine {
             this._entityObjectIndex.delete(obj.userData.entityId);
         }
 
-        // Recursive disposal
-        obj.traverse((child) => {
-            if (child instanceof THREE.Mesh || child instanceof THREE.Points) {
-                // Skip ResourceManager-shared (template-owned) geometry/material:
-                // a model clone shares these by reference, so disposing them here
-                // would corrupt every other instance. The shared template is freed
-                // only via ResourceManager.release (ref-count → 0).
-                if ((child as any).userData?.shared) return;
-                child.geometry.dispose();
-                if (Array.isArray(child.material)) {
-                    child.material.forEach(m => m.dispose());
-                } else {
-                    child.material.dispose();
-                }
-            }
-        });
+        // Recursive disposal, guarded against shared resources (see disposeMeshResources).
+        obj.traverse((child) => RenderEngine.disposeMeshResources(child));
+    }
+
+    /**
+     * Dispose a mesh's geometry + material UNLESS they are shared — disposing a
+     * shared resource corrupts every other live block/instance that references it.
+     * Two shared kinds:
+     *   • whole-mesh shared: ResourceManager model clones share the template's
+     *     geometry+material by reference (userData.shared on the mesh) → skip all.
+     *   • per-resource shared: MeshFactory's process-wide cached geometry + colour
+     *     materials (userData.shared on the geometry / material) → skip that one.
+     * Only instance-owned (fresh) resources are disposed; shared ones are freed by
+     * ResourceManager.release / MeshFactory.clearCache. Static + dependency-free so
+     * it is unit-testable without a WebGL context.
+     */
+    private static disposeMeshResources(child: any): void {
+        if (!child || !(child.isMesh || child.isPoints)) return;
+        if (child.userData?.shared) return;
+        const geo = child.geometry;
+        if (geo && !geo.userData?.shared) geo.dispose();
+        const mat = child.material;
+        if (Array.isArray(mat)) {
+            mat.forEach((m: any) => { if (m && !m.userData?.shared) m.dispose(); });
+        } else if (mat && !mat.userData?.shared) {
+            mat.dispose();
+        }
     }
 
     public dispose(): void {

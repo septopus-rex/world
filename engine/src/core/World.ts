@@ -30,6 +30,7 @@ import { SystemMode } from './types/SystemMode';
 import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
 import { ResourceManager, ResourceManagerConfig } from './services/ResourceManager';
+import { MeshFactory } from '../render/MeshFactory';
 
 export type EntityId = number;
 export type ComponentType = string;
@@ -126,10 +127,16 @@ export class World {
         });
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 
-        // 1.5 Resource manager — load-once-by-id for models/textures.
+        // 1.5 Resource manager — load-once-by-id for models/textures. Anisotropy
+        //     comes from the live renderer's capabilities (defends large faces
+        //     against grazing-angle shimmer).
         this.resourceManager = new ResourceManager(
             deps.dataSource ?? NULL_DATA_SOURCE,
-            { ipfsGateway: (config as any).ipfsGateway, ...deps.resources }
+            {
+                ipfsGateway: (config as any).ipfsGateway,
+                maxAnisotropy: (this.renderEngine as any).getMaxAnisotropy?.() ?? 1,
+                ...deps.resources
+            }
         );
 
         // 2. System Bootstrap (Extractable to configuration in future)
@@ -269,6 +276,10 @@ export class World {
     public dispose(): void {
         this.isRunning = false;
         this.resourceManager.dispose();
+        // Free MeshFactory's process-wide shared geometry/material caches. They are
+        // tagged userData.shared so removeHandle never disposes them per-eviction;
+        // teardown is the only place they're released.
+        MeshFactory.clearCache();
         this.renderEngine.dispose();
     }
 }

@@ -118,6 +118,7 @@ export function createNullRenderEngine() {
     updateParticleBurst: () => {},
 
     // Misc
+    getMaxAnisotropy: () => 1,
     getObjectByEntityId: () => null,
     lockControls: () => {},
     unlockControls: () => {},

@@ -6,6 +6,7 @@ import { AdjunctComponent } from '../components/AdjunctComponents';
 import { MeshComponent } from '../components/VisualizationComponents';
 import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
+import { AdjunctFactory } from '../factories/AdjunctFactory';
 import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
 import { RenderHandle } from '../types/Adjunct';
 import { DraftStorage } from '../services/DraftStorage';
@@ -205,7 +206,7 @@ export class BlockSystem implements ISystem {
         for (const aid of world.getEntitiesWith(["AdjunctComponent"])) {
             const a = world.getComponent<AdjunctComponent>(aid, "AdjunctComponent");
             if (a && a.parentBlockEntityId === blockEid) {
-                this.releaseModuleResources(world, aid);
+                this.releaseResources(world, aid);
                 this.freeMesh(world, aid);
                 world.destroyEntity(aid);
             }
@@ -222,17 +223,14 @@ export class BlockSystem implements ISystem {
     }
 
     /**
-     * Release the model resources a module adjunct instanced (recorded on its
-     * mesh group by AdjunctFactory's swap). One release() per clone so the shared
-     * template's ref-count drops; the template is freed only when it hits 0. This
-     * ties resource dedup into block eviction so memory stays bounded.
+     * Release the model + texture resources an adjunct instanced, so the shared
+     * template/texture ref-counts drop and the underlying file is freed when it
+     * hits 0. Ties resource dedup into block eviction (bounded memory as the player
+     * roams). Shares one helper with edit-mode teardown (AdjunctFactory).
      */
-    private releaseModuleResources(world: World, eid: EntityId): void {
-        const mesh = world.getComponent<MeshComponent>(eid, "MeshComponent");
-        const loaded = (mesh?.handle as any)?.userData?.loadedResources as string[] | undefined;
-        if (loaded && loaded.length) {
-            for (const id of loaded) world.resourceManager.release(id);
-        }
+    private releaseResources(world: World, eid: EntityId): void {
+        const handle = world.getComponent<MeshComponent>(eid, "MeshComponent")?.handle;
+        if (handle) AdjunctFactory.releaseHandleResources(world, handle);
     }
 
     public syncVisibility(world: World, requiredKeys: string[]) {

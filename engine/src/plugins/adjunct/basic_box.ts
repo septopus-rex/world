@@ -89,7 +89,11 @@ const attribute: AdjunctAttribute = {
             rx: data[2][0] ?? 0, ry: data[2][1] ?? 0, rz: data[2][2] ?? 0,
             material: {
                 resource: data[3] ?? 0,
-                repeat: data[4] ?? [1, 1]
+                repeat: data[4] ?? [1, 1],
+                // Optional explicit texture resource id (slot 7 extension). When set,
+                // ResourceManager loads it (deduped) and AdjunctFactory assigns .map;
+                // legacy 7-element boxes have no slot 7 → solid colour as before.
+                ...(data[7] != null ? { texture: String(data[7]) } : {})
             },
             animate: data[5] ?? null,
             stop: data[6] ?? null
@@ -119,6 +123,10 @@ const transform: AdjunctTransform = {
             if (resId === 1) color = 0x555555; // Dark Gray (Pillar)
             if (resId === 2) color = 0x3366ff; // Blue (Avatar/Float)
             if (resId === 3) color = 0xff0000; // Red (Flash)
+
+            // A textured surface uses a white tint so the image shows true colours
+            // (unless the author set an explicit colour).
+            if (row.material?.texture && row.material?.color == null) color = 0xffffff;
 
             return {
                 type: "box",

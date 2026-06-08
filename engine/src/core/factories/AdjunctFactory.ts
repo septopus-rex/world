@@ -79,6 +79,12 @@ export class AdjunctFactory {
                 // (deterministic port of the old engine's replaceFun).
                 if (renderItem.type === 'module' && renderItem.resource) {
                     this.scheduleModuleSwap(world, meshGroup, mesh, renderItem, relativePos);
+                } else if (renderItem.material?.texture) {
+                    // Textured surfaces (box/wall/etc): the mesh shows its colour now;
+                    // load the texture and assign it to the material when ready.
+                    // Mutually exclusive with module — a module placeholder must not
+                    // also pin a texture it never shows.
+                    this.scheduleTextureSwap(world, meshGroup, mesh, renderItem);
                 }
             }
         } catch (error) {
@@ -152,9 +158,69 @@ export class AdjunctFactory {
         });
     }
 
+    /**
+     * Async texture application for a textured surface. The mesh renders with its
+     * solid colour immediately; the texture is loaded ONCE per id (shared by
+     * reference across every surface using it) and assigned as .map when ready.
+     * Texel density is already handled at the geometry level (size-derived UV
+     * tiling in MeshFactory), so a low-res image won't go mosaic on a big face.
+     *
+     * Eviction-safe: skips assignment if the group was removed mid-load, and
+     * records the texture id on the group so block eviction releases it (ref-count).
+     */
+    private static scheduleTextureSwap(
+        world: World,
+        meshGroup: RenderHandle,
+        mesh: RenderHandle,
+        renderItem: RenderObject
+    ): void {
+        const rm = (world as any).resourceManager as ResourceManager | undefined;
+        const texId = renderItem.material?.texture as string | undefined;
+        if (!rm || !texId) return;
+        // Texel density is handled by size-derived UV tiling (MeshFactory), so we do
+        // NOT pass a per-surface repeat: a texture is shared by reference, its
+        // `.repeat` is one value per id (taken from the texture record). Per-surface
+        // repeat would silently be first-writer-wins on the shared texture.
+        rm.getTexture(texId).then((tex: THREE.Texture) => {
+            if (this.isHandleRemoved(meshGroup)) return; // evicted mid-load — don't retain
+
+            const mat = (mesh as THREE.Mesh).material as any;
+            const assign = (m: any) => { if (m) { m.map = tex; m.needsUpdate = true; } };
+            if (Array.isArray(mat)) mat.forEach(assign); else assign(mat);
+
+            rm.retainTexture(texId);
+            const ud = (meshGroup as any).userData ?? ((meshGroup as any).userData = {});
+            ud.loadedTextures = [...(ud.loadedTextures ?? []), texId];
+        }).catch((err: any) => {
+            console.warn(`[AdjunctFactory] texture ${texId} load failed; keeping solid colour.`, err?.message ?? err);
+        });
+    }
+
     /** True if a handle has been removed/disposed (set by RenderEngine.removeHandle). */
     private static isHandleRemoved(handle: RenderHandle): boolean {
         return !!(handle as any)?.userData?.__removed;
+    }
+
+    /**
+     * Release the model/texture resources an adjunct's mesh group instanced
+     * (recorded on the group's userData by the swap callbacks). Call this BEFORE
+     * removeHandle anywhere a textured/model adjunct's handle is torn down — block
+     * eviction AND edit-mode set/delete/restore — so ResourceManager ref-counts
+     * return to 0 and the shared file is freed. Clears the records so a second call
+     * (or a rebuilt handle) can't double-release.
+     */
+    public static releaseHandleResources(world: World, handle: RenderHandle): void {
+        const ud = (handle as any)?.userData;
+        const rm = (world as any).resourceManager as ResourceManager | undefined;
+        if (!ud || !rm) return;
+        if (Array.isArray(ud.loadedResources)) {
+            for (const id of ud.loadedResources) rm.release(id);
+            ud.loadedResources = [];
+        }
+        if (Array.isArray(ud.loadedTextures)) {
+            for (const id of ud.loadedTextures) rm.releaseTexture(id);
+            ud.loadedTextures = [];
+        }
     }
 
     private static applyMaterialHashing(world: World, block: any, std: any, renderItem: any) {

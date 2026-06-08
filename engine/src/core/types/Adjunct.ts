@@ -38,9 +38,10 @@ export interface RenderParams {
 export type RenderHandle = any;
 
 export interface MaterialConfig {
-    resource?: string | string[];   // 纹理资源引用
-    color?: number;                 // 颜色（十六进制）
-    repeat?: [number, number];      // 纹理重复
+    resource?: string | string[];   // 旧色板/资源索引（legacy color index）
+    texture?: string;               // 贴图资源 id（经 ResourceManager.getTexture 加载并赋为 .map）
+    color?: number;                 // 颜色（十六进制；贴图存在时作为 tint，纯贴图用 0xffffff）
+    repeat?: [number, number];      // 纹理重复（在尺寸推导 UV 平铺之上的额外乘子）
     offset?: [number, number];      // 纹理偏移
     rotation?: number;              // 纹理旋转
     opacity?: number;               // 透明度 [0, 1]

@@ -131,6 +131,25 @@ describe('ResourceManager — texture dedup (shared by reference)', () => {
         expect(tex.wrapS).toBe(THREE.RepeatWrapping);
     });
 
+    it('applies anti-mosaic filtering: anisotropy + sRGB colorSpace + authored repeat', async () => {
+        const ds = new CountingDataSource({}, { '7': { type: 'texture', format: 'jpg', raw: 'textures/wall.jpg', repeat: [3, 3] } });
+        const rm = new ResourceManager(ds as any, { textureLoader: new FakeTextureLoader(), maxAnisotropy: 16 });
+        const tex = await rm.getTexture('7');
+        expect(tex.anisotropy).toBe(8);                       // capped at 8 (16 requested)
+        expect(tex.colorSpace).toBe(THREE.SRGBColorSpace);    // albedo gamma-correct
+        expect(tex.wrapS).toBe(THREE.RepeatWrapping);
+        expect(tex.wrapT).toBe(THREE.RepeatWrapping);
+        expect([tex.repeat.x, tex.repeat.y]).toEqual([3, 3]); // authored repeat (atop UV tiling)
+    });
+
+    it('honors a lower anisotropy cap and a linear (non-sRGB) data texture', async () => {
+        const ds = new CountingDataSource({}, { '7': { type: 'texture', format: 'png', raw: 'data/normal.png' } });
+        const rm = new ResourceManager(ds as any, { textureLoader: new FakeTextureLoader(), maxAnisotropy: 4 });
+        const tex = await rm.getTexture('7', undefined, { srgb: false });
+        expect(tex.anisotropy).toBe(4);
+        expect(tex.colorSpace).not.toBe(THREE.SRGBColorSpace);
+    });
+
     it('releaseTexture disposes only when the last user is gone', async () => {
         const { rm } = makeRM();
         const tex = await rm.getTexture('7');

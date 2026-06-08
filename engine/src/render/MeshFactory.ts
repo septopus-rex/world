@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RenderObject, MaterialConfig } from '../core/types/Adjunct';
+import { applyBoxWorldUV } from './TextureScale';
 
 /**
  * MeshFactory is the central unit for transforming protocol-agnostic RenderObjects
@@ -96,8 +97,18 @@ export class MeshFactory {
                 case 'box':
                 default:
                     geo = new THREE.BoxGeometry(w, h, d);
+                    // Size-derived UV tiling: constant texel density regardless of
+                    // face size (kills the old low-texel-density "mosaic"). Pure
+                    // function of (w,h,d) → safe with the size-keyed geo cache, and
+                    // harmless for colour-only materials (they ignore UVs).
+                    applyBoxWorldUV(geo, [w, h, d]);
                     break;
             }
+            // Tag as shared: this geometry instance is reused by reference across
+            // every block/adjunct of the same size, so RenderEngine.removeHandle
+            // must NOT dispose it on eviction (that corrupts all other live blocks).
+            // It is freed only by MeshFactory.clearCache() on full teardown.
+            geo.userData.shared = true;
             this._geoCache.set(key, geo);
         }
         return geo;
@@ -109,6 +120,21 @@ export class MeshFactory {
     private static getMaterial(config?: MaterialConfig): THREE.MeshStandardMaterial {
         const color = config?.color ?? 0xcccccc;
         const opacity = config?.opacity ?? 1;
+
+        // Textured surfaces get a FRESH, un-cached, un-shared material. AdjunctFactory
+        // assigns its .map async per surface; the .map TEXTURE is shared + ref-counted
+        // by ResourceManager and survives material.dispose(). A fresh material is
+        // disposed cleanly on eviction — unlike a process-wide cached material, which
+        // would dangle (pointing at a freed texture) after its texture is released.
+        if (config?.texture) {
+            return new THREE.MeshStandardMaterial({
+                color, transparent: opacity < 1, opacity, side: THREE.DoubleSide
+            });
+        }
+
+        // Colour-only materials are cached + shared by reference; tag them shared so
+        // removeHandle never disposes one still used by another block (freed only by
+        // clearCache on teardown).
         const key = `${color},${opacity}`;
         let mat = this._matCache.get(key);
         if (!mat) {
@@ -118,6 +144,7 @@ export class MeshFactory {
                 opacity,
                 side: THREE.DoubleSide
             });
+            mat.userData.shared = true;
             this._matCache.set(key, mat);
         }
         return mat;
