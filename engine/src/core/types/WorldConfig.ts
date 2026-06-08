@@ -69,7 +69,9 @@ export interface WorldConfig {
         };
         // Items & Size ceilings
         bag: { max: number };
-        avatar: { max: number, scale: [number, number, number] };
+        // `resource`: optional model id (IPFS CID / path) for the player's avatar,
+        // loaded via ResourceManager; omit to keep the placeholder body box.
+        avatar: { max: number, scale: [number, number, number], resource?: string | number };
         extend: number; // Viewport loading radius
     };
 

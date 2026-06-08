@@ -150,6 +150,18 @@ export class Engine {
         if (env?.onNewBlock) env.onNewBlock(this.world, height, hash, intervalSeconds);
     }
 
+    /** Switch the camera between first-person and third-person (slight top-down). */
+    public setCameraView(mode: 'first' | 'third'): void {
+        const cc = this.world?.systems.findSystemByName('CharacterController') as any;
+        cc?.setViewMode?.(mode);
+    }
+
+    /** Toggle first/third-person; returns the new mode (or undefined if not ready). */
+    public toggleCameraView(): 'first' | 'third' | undefined {
+        const cc = this.world?.systems.findSystemByName('CharacterController') as any;
+        return cc?.toggleViewMode?.();
+    }
+
     public getWorld(): World | null {
         return this.world;
     }

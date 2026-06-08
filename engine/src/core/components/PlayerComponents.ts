@@ -112,4 +112,6 @@ export interface CameraComponent {
 export interface AvatarComponent {
     handle: any;
     visible: boolean;
+    /** Optional model resource id (IPFS CID / path) loaded via ResourceManager. */
+    resource?: string;
 }

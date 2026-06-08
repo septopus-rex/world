@@ -41,6 +41,9 @@ export class RenderEngine {
     // O(1) entityId → Object3D index (populated by setObjectUserData)
     private _entityObjectIndex = new Map<string | number, THREE.Object3D>();
 
+    // Skeletal animation: one mixer per animated handle.
+    private _mixers = new Map<THREE.Object3D, THREE.AnimationMixer>();
+
     constructor(config: RenderEngineConfig) {
         const domElement = document.getElementById(config.containerId);
         if (!domElement) {
@@ -631,6 +634,28 @@ export class RenderEngine {
     public unlockControls(): void {
     }
 
+    // ── Skeletal animation ────────────────────────────────────────────────────
+
+    /** Start playing the first clip on this handle (creates + caches the mixer). */
+    public startAnimation(handle: RenderHandle, clips: THREE.AnimationClip[]): void {
+        if (!clips.length) return;
+        const obj = handle as THREE.Object3D;
+        const mixer = new THREE.AnimationMixer(obj);
+        mixer.clipAction(clips[0]).play();
+        this._mixers.set(obj, mixer);
+    }
+
+    /** Advance the mixer for this handle by dt seconds (called from CharacterController). */
+    public updateAnimation(handle: RenderHandle, dt: number): void {
+        this._mixers.get(handle as THREE.Object3D)?.update(dt);
+    }
+
+    /** Stop and remove the mixer for this handle (called on avatar swap or disposal). */
+    public stopAnimation(handle: RenderHandle): void {
+        const mixer = this._mixers.get(handle as THREE.Object3D);
+        if (mixer) { mixer.stopAllAction(); this._mixers.delete(handle as THREE.Object3D); }
+    }
+
     public removeHandle(handle: RenderHandle): void {
         const obj = handle as THREE.Object3D;
 
@@ -638,6 +663,8 @@ export class RenderEngine {
         // the meshGroup before instancing, so it never adds a clone to a disposed
         // group (the placeholder-then-swap eviction race).
         if (obj.userData) obj.userData.__removed = true;
+
+        this.stopAnimation(handle);
 
         // Correctly remove from whatever parent it has (Scene or Group)
         if (obj.parent) {

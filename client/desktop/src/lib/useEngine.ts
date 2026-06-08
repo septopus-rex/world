@@ -10,6 +10,8 @@ export function useEngine(containerId: string) {
     const [ready, setReady] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [showMinimap, setShowMinimap] = useState(false);
+    // Default third-person so the avatar is visible (matches CharacterController default).
+    const [view, setView] = useState<'first' | 'third'>('third');
 
     useEffect(() => {
         if (!loaderRef.current) {
@@ -26,6 +28,7 @@ export function useEngine(containerId: string) {
 
     useEffect(() => { loaderRef.current?.toggleMinimap(showMinimap); }, [showMinimap]);
     useEffect(() => { loaderRef.current?.toggleEditMode(isEditMode); }, [isEditMode]);
+    useEffect(() => { if (ready) loaderRef.current?.setCameraView(view); }, [view, ready]);
 
     return {
         loader: loaderRef.current,
@@ -34,5 +37,7 @@ export function useEngine(containerId: string) {
         setIsEditMode,
         showMinimap,
         setShowMinimap,
+        view,
+        setView,
     };
 }

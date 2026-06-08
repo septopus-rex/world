@@ -29,10 +29,12 @@ const DEMO_TEXTURE_ID = 7;  // → /assets/checker.png
 
 // Resource id → model record. Real Khronos sample assets (helmet = complex PBR
 // with baked textures; fox = rigged + animated, exercises SkeletonUtils.clone).
+const DEMO_AVATAR_ID = 30;  // → /assets/avatar.glb (rigged human)
 const DEMO_MODELS: Record<number, { type: string; format: string; raw: string }> = {
     27: { type: 'module', format: 'gltf', raw: '/assets/pyramid.gltf' },
     28: { type: 'module', format: 'glb', raw: '/assets/helmet.glb' },
     29: { type: 'module', format: 'glb', raw: '/assets/fox.glb' },
+    30: { type: 'avatar', format: 'glb', raw: '/assets/avatar.glb' },
 };
 
 export interface SPPPlayerState {
@@ -60,8 +62,11 @@ export class DesktopLoader implements IDataSource {
     // ── IDataSource ───────────────────────────────────────────────────────────
 
     public async world(_index: number): Promise<any> {
-        // Local Genesis world config.
-        return JSON.parse(JSON.stringify(MockWorldNormal));
+        // Local Genesis world config + a demo avatar resource so the player has a
+        // real (network-loaded) body instead of the placeholder box.
+        const cfg = JSON.parse(JSON.stringify(MockWorldNormal));
+        if (cfg.player?.avatar) cfg.player.avatar.resource = DEMO_AVATAR_ID;
+        return cfg;
     }
 
     public async view(_x: number, _y: number, _ext: number, _worldIndex: number): Promise<any> {
@@ -280,6 +285,15 @@ export class DesktopLoader implements IDataSource {
 
     public toggleEditMode(active: boolean) {
         this.engine?.setEditMode(active);
+    }
+
+    public setCameraView(mode: 'first' | 'third') {
+        this.engine?.setCameraView(mode);
+    }
+
+    /** Toggle first/third-person; returns the new mode. */
+    public toggleCameraView(): 'first' | 'third' | undefined {
+        return this.engine?.toggleCameraView();
     }
 
     public triggerPlayerJump() {

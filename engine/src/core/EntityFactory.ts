@@ -57,10 +57,19 @@ export class EntityFactory {
         const avatarHandle = world.renderEngine.createAvatarMesh();
         world.renderEngine.setObjectPosition(avatarHandle, position[0], position[1], position[2]);
 
+        const avatarRes = (world.config.player as any)?.avatar?.resource;
         world.addComponent<AvatarComponent>(player, "AvatarComponent", {
             handle: avatarHandle,
-            visible: true
+            visible: true,
+            resource: avatarRes != null ? String(avatarRes) : undefined
         });
+
+        // The avatar is just a model resource (IPFS-fetchable) — reuse the model
+        // pipeline: show the placeholder box now, swap in the loaded model when it
+        // resolves (load-once-by-id, dedup-ready for future multiplayer).
+        if (avatarRes != null) {
+            EntityFactory.loadAvatarModel(world, player, String(avatarRes), avatarHandle, 1.8);
+        }
 
         // Initial Camera Sync
         world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
@@ -73,5 +82,53 @@ export class EntityFactory {
         }
 
         return player;
+    }
+
+    /**
+     * Load the avatar model for `resourceId` via ResourceManager (load-once-by-id,
+     * IPFS-CID-capable through resolveUrl) and swap it in for the placeholder box:
+     * scale uniformly so its height matches the player body, add it to the scene
+     * (CharacterController positions/rotates it each frame). Eviction-safe: keeps
+     * the placeholder if the load fails.
+     */
+    private static loadAvatarModel(world: World, player: EntityId, resourceId: string, placeholder: any, bodyHeight: number): void {
+        const rm = (world as any).resourceManager;
+        if (!rm?.getModel) return;
+        rm.getModel(resourceId).then((entry: any) => {
+            const av = world.getComponent<AvatarComponent>(player, "AvatarComponent");
+            if (!av) return;
+            const model = rm.instance(resourceId);
+
+            // Uniform scale-to-body (preserve aspect). Guard against a degenerate
+            // bound (e.g. empty Box3) so the avatar never scales to 0 / NaN.
+            const h = entry.bounds.max.y - entry.bounds.min.y;
+            const k = Number.isFinite(h) && h > 1e-4 ? bodyHeight / h : 1;
+            model.scale.set(k, k, k);
+
+            // Skinned avatars near the camera: disable frustum culling — a cloned/
+            // scaled SkinnedMesh keeps a stale bind-pose bounding sphere and three
+            // would wrongly cull it (invisible). Cheap for a single avatar.
+            model.traverse?.((o: any) => { if (o.isMesh) o.frustumCulled = false; });
+
+            // Place it at the player immediately (the per-frame sync would otherwise
+            // leave it at world origin for one frame).
+            const t = world.getComponent<any>(player, "TransformComponent");
+            if (t) model.position?.set?.(t.position[0], t.position[1], t.position[2]);
+
+            world.renderEngine.add(model);          // into the scene; posed each frame by the controller
+            world.renderEngine.removeHandle(placeholder);
+            av.handle = model;
+
+            // Wire skeletal animation via the render layer (keeps core Three.js-free).
+            const clips: any[] = model.userData?.animations ?? [];
+            if (clips.length > 0) {
+                (world.renderEngine as any).startAnimation(model, clips);
+            }
+
+            let meshes = 0; model.traverse?.((o: any) => { if (o.isMesh) meshes++; });
+            console.log(`[Avatar] loaded ${resourceId}: meshes=${meshes} clips=${clips.length} bodyH=${bodyHeight} srcH=${h?.toFixed?.(2)} scale=${k.toFixed(3)} at`, t?.position);
+        }).catch((err: any) => {
+            console.warn(`[Avatar] model ${resourceId} load FAILED; keeping placeholder box.`, err?.message ?? err);
+        });
     }
 }

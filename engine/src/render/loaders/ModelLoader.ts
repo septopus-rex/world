@@ -118,6 +118,10 @@ export class ModelLoader implements IModelLoader {
      */
     static computeBounds(template: THREE.Object3D): THREE.Box3 {
         try {
+            // Ensure node transforms are current first — a model with a baked root
+            // scale (common in glTF) would otherwise yield bounds in the wrong unit,
+            // breaking scale-to-fit.
+            template.updateMatrixWorld?.(true);
             return new THREE.Box3().setFromObject(template);
         } catch (err) {
             // Some malformed/rigged geometries throw in setFromObject; bounds are

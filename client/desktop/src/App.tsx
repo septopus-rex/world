@@ -7,7 +7,7 @@ import { Compass, TelemetryReadout } from './components/HUD';
 
 function App() {
   const isMobile = useIsMobile();
-  const { loader, ready, isEditMode, setIsEditMode, showMinimap, setShowMinimap } = useEngine('three_demo');
+  const { loader, ready, isEditMode, setIsEditMode, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -209,6 +209,14 @@ function App() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-red-500 group-hover:animate-pulse"></span>
           Reset State
+        </button>
+        <button
+          onClick={() => setView(view === 'third' ? 'first' : 'third')}
+          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20"
+          title="Switch first/third-person view"
+        >
+          <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
+          {view === 'third' ? '3RD PERSON' : '1ST PERSON'}
         </button>
         <button
           onClick={() => setIsEditMode(!isEditMode)}

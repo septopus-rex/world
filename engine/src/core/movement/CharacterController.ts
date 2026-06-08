@@ -55,6 +55,22 @@ export class CharacterController implements ISystem {
     /** Fall this far (m) below the last grounded spot -> treat as a void fall and recover. */
     private static readonly VOID_RECOVER = 20;
 
+    /** Camera view: first-person (at the eyes) or third-person (behind + slightly above). */
+    private viewMode: 'first' | 'third' = 'third';
+    private static readonly TP_DISTANCE = 4.5;  // metres the follow-cam sits behind
+    private static readonly TP_HEIGHT = 1.2;    // metres above the eye
+    /** Idle rest pitch in third-person: a slight downward tilt so the avatar is framed. */
+    private static readonly TP_REST_PITCH = -0.34; // rad ≈ -19.5°
+    /** Most GLTF characters face +Z; engine forward is -Z, so flip the avatar to face away. */
+    private static readonly AVATAR_FACING = Math.PI;
+
+    public setViewMode(mode: 'first' | 'third'): void { this.viewMode = mode; }
+    public getViewMode(): 'first' | 'third' { return this.viewMode; }
+    public toggleViewMode(): 'first' | 'third' {
+        this.viewMode = this.viewMode === 'first' ? 'third' : 'first';
+        return this.viewMode;
+    }
+
     constructor(_world: World, inputProvider: InputProvider) {
         this.inputProvider = inputProvider;
     }
@@ -109,7 +125,7 @@ export class CharacterController implements ISystem {
         this.voidRecovery(world, body, trans);
 
         this.processFallEvents(world, body, trans, pbody);
-        this.syncCameraAndAvatar(world, eid, trans, body, cam);
+        this.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
         this.processPersistence(world, trans);
 
         this.inputProvider.flushDeltas();
@@ -160,9 +176,13 @@ export class CharacterController implements ISystem {
         const pitchActive = keyboardPitch || ip.isMouseDown || ip.touchLookActive || (pad.connected && pad.axes[3] !== 0);
         if (keyboardPitch && input.modifierAlt) this._isPitchLocked = true;
         else if (pitchActive) this._isPitchLocked = false;
-        if (!pitchActive && !this._isPitchLocked && Math.abs(camRot[0]) > 0.001) {
-            camRot[0] -= camRot[0] * CONTROL_CONSTANTS.AUTO_LEVEL_SPEED * dt;
-            if (Math.abs(camRot[0]) < 0.001) camRot[0] = 0;
+        // Idle auto-level: ease pitch toward a rest angle — horizontal in first-person,
+        // a slight downward tilt in third-person so the avatar stays framed (otherwise
+        // the raised follow-cam looks straight over the avatar's head).
+        const restPitch = this.viewMode === 'third' ? CharacterController.TP_REST_PITCH : 0;
+        if (!pitchActive && !this._isPitchLocked && Math.abs(camRot[0] - restPitch) > 0.001) {
+            camRot[0] -= (camRot[0] - restPitch) * CONTROL_CONSTANTS.AUTO_LEVEL_SPEED * dt;
+            if (Math.abs(camRot[0] - restPitch) < 0.001) camRot[0] = restPitch;
         }
         world.renderEngine.setMainCameraRotation(camRot[0], camRot[1], camRot[2]);
         if (world.ui) world.ui.updateCompass(camRot[1]);
@@ -363,19 +383,40 @@ export class CharacterController implements ISystem {
     }
 
     // ── camera + avatar sync ─────────────────────────────────────────────────
-    private syncCameraAndAvatar(world: World, eid: EntityId, trans: TransformComponent, body: RigidBodyComponent, cam?: CameraComponent): void {
+    private syncCameraAndAvatar(world: World, eid: EntityId, trans: TransformComponent, body: RigidBodyComponent, dt: number, cam?: CameraComponent): void {
         const ox = cam?.offset[0] ?? 0, oy = cam?.offset[1] ?? 1.7, oz = cam?.offset[2] ?? 0;
-        world.renderEngine.setMainCameraPosition(trans.position[0] + ox, trans.position[1] + oy, trans.position[2] + oz);
+        const eyeX = trans.position[0] + ox, eyeY = trans.position[1] + oy, eyeZ = trans.position[2] + oz;
 
+        // Look rotation is input-driven on the camera; read it first so third-person
+        // can offset the camera by the current yaw.
         const camRot = world.renderEngine.getMainCameraRotation();
+        const yaw = camRot[1];
+
+        if (this.viewMode === 'third') {
+            // Follow-cam: sit behind the player along the horizontal look direction and
+            // raised a little for a slight top-down angle. Camera keeps its input-driven
+            // rotation, so it still looks where the mouse points (player out front).
+            const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+            world.renderEngine.setMainCameraPosition(
+                eyeX - fx * CharacterController.TP_DISTANCE,
+                eyeY + CharacterController.TP_HEIGHT,
+                eyeZ - fz * CharacterController.TP_DISTANCE
+            );
+        } else {
+            world.renderEngine.setMainCameraPosition(eyeX, eyeY, eyeZ);
+        }
+
         trans.rotation[0] = camRot[0];
         trans.rotation[1] = camRot[1];
 
         const avatar = world.getComponent<AvatarComponent>(eid, 'AvatarComponent');
         if (avatar && avatar.handle) {
             world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], trans.position[1], trans.position[2]);
-            world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1], 0);
-            world.renderEngine.setObjectVisible(avatar.handle, avatar.visible);
+            world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + CharacterController.AVATAR_FACING, 0);
+            // Visible only in third-person — in first-person the camera is inside the avatar.
+            const show = avatar.visible !== false && this.viewMode === 'third';
+            world.renderEngine.setObjectVisible(avatar.handle, show);
+            (world.renderEngine as any).updateAnimation(avatar.handle, dt);
         }
     }
 

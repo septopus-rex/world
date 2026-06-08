@@ -117,6 +117,11 @@ export function createNullRenderEngine() {
     createParticleBurst: () => ({ handle: handle(), velocities: new Float32Array(0) }),
     updateParticleBurst: () => {},
 
+    // Skeletal animation (no-op in headless tests)
+    startAnimation: () => {},
+    updateAnimation: () => {},
+    stopAnimation: () => {},
+
     // Misc
     getMaxAnisotropy: () => 1,
     getObjectByEntityId: () => null,
