@@ -1,73 +1,83 @@
 /**
  * Trigger System Types
- * Defines the strict JSON-serializable structures for AI-driven generation.
  */
 
 // -----------------------------------------------------------------------------
-// 1. Data-Driven Logic Definitions
+// 1. JSONLogic
 // -----------------------------------------------------------------------------
 
-export type ConditionType =
-    | "player_has_item"
-    | "player_within_distance"
-    | "time_of_day"
-    | "global_flag_equals";
+/**
+ * A JSONLogic rule — any valid JSONLogic expression.
+ * Examples:
+ *   {"==": [{"var": "flags.door_open"}, true]}
+ *   {"and": [{">=": [{"var": "time"}, 6]}, {"<": [{"var": "time"}, 20]}]}
+ *
+ * Available vars in the evaluation context (WorldContext):
+ *   player.position[0|1|2], player.x/y/z
+ *   flags.<key>      — world.globalFlags
+ *   time             — world.time (0–1 float, 0.5 = noon)
+ *   weather          — world.weather string
+ */
+export type JsonLogicRule = Record<string, any>;
 
-export interface Condition {
-    type: ConditionType;
-    // Flexible payload for condition parameters (e.g., id: "key_01", value: true)
-    payload: Record<string, any>;
-}
+// -----------------------------------------------------------------------------
+// 2. Trigger Event / Logic Node
+// -----------------------------------------------------------------------------
 
-export type ActionType =
-    | "component_invoke"
-    | "play_audio"
-    | "spawn_entity"
-    | "set_global_flag"
-    | "ui_message";
-
-export interface Action {
-    type: ActionType;
-    // Flexible payload for action parameters (e.g., target: "door_12", method: "open")
-    payload: Record<string, any>;
-}
-
+/**
+ * One event handler on a trigger volume.
+ * Serialized format (slot 5 in adjunct data):
+ *   { type, conditions?, actions, fallbackActions?, oneTime? }
+ */
 export interface TriggerLogicNode {
-    event: "in" | "out" | "hold" | "on" | "beside";
-    conditions?: Condition[];
-    actions: Action[];
-    // What to do if conditions fail
-    fallbackActions?: Action[];
-    // E.g. trigger only once and then disable
-    runOneTime?: boolean;
+    /** When to fire: player enters, leaves, or stays inside the volume. */
+    type: "in" | "out" | "hold";
+    /**
+     * Optional JSONLogic guard. If present, evaluated against WorldContext before
+     * dispatching actions. Falsy result → fallbackActions (if any) instead.
+     */
+    conditions?: JsonLogicRule;
+    actions: TriggerAction[];
+    /** Fired when conditions evaluate to false (optional). */
+    fallbackActions?: TriggerAction[];
+    /** Fire at most once per world load. */
+    oneTime?: boolean;
+}
+
+export interface TriggerAction {
+    /** Action category: 'adjunct' | 'flag' | 'system' */
+    type: string;
+    /** Target reference — adjunctId, flag key, or system name. */
+    target: string | number;
+    method: string;
+    params: any[];
 }
 
 // -----------------------------------------------------------------------------
-// 2. ECS Component Definition
+// 3. ECS Component Definition
 // -----------------------------------------------------------------------------
 
-/**
- * The runtime ECS component attached to an entity.
- * It has NO visual mesh, only a mathematical boundary.
- */
 export interface TriggerVolumeComponent {
-    shape: "box" | "sphere" | "cylinder"; // Determines the math used for collision
-    size: [number, number, number];       // Extents
-    offset: [number, number, number];     // Relative local offset from entity root
-    rotation?: [number, number, number];  // Relative rotation for OBB collisions
-
-    // List of logic sequences attached directly to this volume
+    shape: "box" | "sphere";
+    size: [number, number, number];
+    offset: [number, number, number];
     logic: TriggerLogicNode[];
 }
 
-/**
- * Utility config when triggers are loaded from an SPP cell triggerId (0-255).
- * Represents a global template registry entry.
- */
-export interface TriggerTemplate {
-    id: number; // 1-255
-    name: string;
-    desc: string;
-    volume: Omit<TriggerVolumeComponent, "logic">; // Standard shape mapping
-    logic: TriggerLogicNode[];
+// -----------------------------------------------------------------------------
+// 4. WorldContext — the data object passed to JSONLogic at evaluation time
+// -----------------------------------------------------------------------------
+
+export interface WorldContext {
+    player: {
+        position: [number, number, number];
+        x: number;
+        y: number;
+        z: number;
+    };
+    /** world.globalFlags — key/value store readable and writable by trigger actions */
+    flags: Record<string, any>;
+    /** world.time — 0-1 float (0.5 = noon) */
+    time: number;
+    weather: string;
 }

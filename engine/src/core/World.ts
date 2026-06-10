@@ -29,7 +29,7 @@ import { FullWorldConfig } from './types/WorldConfig';
 import { SystemMode } from './types/SystemMode';
 import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
-import { ResourceManager, ResourceManagerConfig } from './services/ResourceManager';
+import { ResourceManager, ResourceManagerConfig } from '../render/ResourceManager';
 import { MeshFactory } from '../render/MeshFactory';
 
 export type EntityId = number;
@@ -97,6 +97,8 @@ export class World {
     public time: number = 0.5;
     public weather: string = 'clear';
     public mode: SystemMode = SystemMode.Normal;
+    /** Key/value store for trigger conditions and actions (set_flag / flag checks). */
+    public globalFlags: Record<string, any> = {};
     public isMovingObject: boolean = false;
     public activeEditBlockId: EntityId | null = null;
     public ui: IUIProvider | null = null;

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { IDataSource } from './DataSource';
-import { IModelLoader, ModelLoader } from '../../render/loaders/ModelLoader';
+import { IDataSource } from '../core/services/DataSource';
+import { IModelLoader, ModelLoader } from './loaders/ModelLoader';
 
 /**
  * ResourceManager — the single load-once-by-id authority for external 3D assets
@@ -31,6 +31,8 @@ export interface ModelEntry {
     template: THREE.Object3D;
     /** Source-space bounding box, for scaling clones to an authored size. */
     bounds: THREE.Box3;
+    /** Pre-computed [width, height, depth] of bounds — renderer-agnostic convenience. */
+    boundsSize: [number, number, number];
     /** Whether the template contains skinned meshes (needs SkeletonUtils.clone). */
     rigged: boolean;
     /** Live clone count; template is disposed when this returns to 0 on release. */
@@ -118,9 +120,13 @@ export class ResourceManager {
             // Mark the template's own meshes shared so it survives a stray removeHandle.
             this.markShared(template);
 
+            const bounds = ModelLoader.computeBounds(template);
+            const bsz = new THREE.Vector3();
+            bounds.getSize(bsz);
             const entry: ModelEntry = {
                 template,
-                bounds: ModelLoader.computeBounds(template),
+                bounds,
+                boundsSize: [bsz.x, bsz.y, bsz.z],
                 rigged,
                 refCount: 0
             };

@@ -8,8 +8,7 @@ import {
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
 import { Coords } from '../../core/utils/Coords.js';
-// Assume the new Trigger types are re-exported from index or imported directly:
-// import { TriggerVolumeComponent, TriggerLogicNode } from '../../core/types/Trigger';
+import type { TriggerLogicNode } from '../../core/types/Trigger.js';
 
 /**
  * Trigger Component Metadata
@@ -46,38 +45,24 @@ export interface EditorFormConfig {
  * and attaches a mathematical `triggerVolume` component payload.
  */
 export const TriggerTransform: AdjunctTransform = {
-    stdToRenderData(stds: STDObject[], elevation: number): RenderObject[] {
+    stdToRenderData(stds: STDObject[], _elevation: number): RenderObject[] {
         return stds.map((row, index) => {
-
-            // In the SPP/ECS model, Triggers don't need Three.js meshes.
-            // However, to keep it compatible with existing pipelines that might 
-            // use the Scene Graph for spatial queries, we can emit a 'box' type 
-            // but explicitly mark it hidden.
-
-            const renderObj: RenderObject & { triggerVolume?: any, hidden?: boolean, event?: any } = {
-                type: "box", // Always emit a box for consistency, actual shape handled by triggerVolume
-                index: index,
-                hidden: true, // Crucial: Do not draw this!
+            const renderObj: RenderObject & { triggerVolume?: any; hidden?: boolean } = {
+                type: "box",
+                index,
+                hidden: true,
                 params: {
                     size: Coords.getBoxDimensions([row.x, row.y, row.z]),
                     position: [row.ox, row.oy, row.oz],
                     rotation: [row.rx, row.ry, row.rz],
                 },
-                // Crucial for AdjunctSystem to attach TriggerComponent
-                event: row.event,
             };
-
-            // Attach the pure data payload for the TriggerSystem ECS
             renderObj.triggerVolume = {
                 shape: row.shape === 2 ? "sphere" : "box",
-                type: row.triggerType, // 1: in, 2: out, 3: hold
                 size: [row.x, row.y, row.z],
                 offset: [0, 0, 0],
-                logic: row.logic,
-                runOnce: row.runOnce === 1,
-                gameOnly: row.gameOnly === 1
+                events: row.events ?? [],
             };
-
             return renderObj;
         });
     }
@@ -98,15 +83,13 @@ export const TriggerMenu: AdjunctMenu = {
             { type: "number", key: "y", value: std.y, label: "Height", desc: "Y Extents" },
             { type: "number", key: "z", value: std.z, label: "Depth", desc: "Z Extents" },
         ],
-        // ... Position & Rotation ...
-        logic: [
-            // Replaces the old function builder with a direct JSON editing panel
+        events: [
             {
                 type: "json",
-                key: "event" as any,
-                value: std.event?.rawLogic || "[]",
-                label: "Logic Array",
-                desc: "Data-driven conditions and actions"
+                key: "events" as any,
+                value: JSON.stringify(std.events ?? [], null, 2),
+                label: "Events (JSONLogic)",
+                desc: "Array of { type, conditions?, actions, fallbackActions?, oneTime? }"
             }
         ]
     })
@@ -117,22 +100,30 @@ export const TriggerMenu: AdjunctMenu = {
 // -----------------------------------------------------------------------------
 export const TriggerAttribute: AdjunctAttribute = {
     /**
-     * Map Septopus Native Array indices to STDObject
-     * [size, pos, rot, shape, type, logic, run_once, game_only]
+     * Slot map: [size, offset, rotation, shape, gameOnly, events]
+     *
+     * slot 5 = events: TriggerLogicNode[]
+     *   { type, conditions?, actions, fallbackActions?, oneTime? }
+     *
+     * Backward-compat: if slot 5 is a plain array (old format) it is kept as-is
+     * and deserialized into a single 'in' event with no conditions.
      */
     deserialize: (data: any[]): STDObject => {
+        const rawEvents = data[5] ?? [];
+        let events: TriggerLogicNode[];
+        if (Array.isArray(rawEvents) && rawEvents.length > 0 && !rawEvents[0]?.type) {
+            // old flat-array logic — wrap in a basic 'in' event
+            events = [{ type: 'in', actions: rawEvents }];
+        } else {
+            events = rawEvents as TriggerLogicNode[];
+        }
         return {
-            x: data[0][0] ?? 1, y: data[0][1] ?? 1, z: data[0][2] ?? 1,
-            ox: data[1][0] ?? 0, oy: data[1][1] ?? 0, oz: data[1][2] ?? 0,
-            rx: data[2][0] ?? 0, ry: data[2][1] ?? 0, rz: data[2][2] ?? 0,
-            shape: data[3] ?? 1,      // 1: box, 2: ball
-            triggerType: data[4] ?? 1, // 1: in, 2: out, 3: hold
-            logic: data[5] ?? [],
-            runOnce: data[6] ?? 0,
-            gameOnly: data[7] ?? 1,
-            event: {
-                rawLogic: data[5] ?? []
-            }
+            x: data[0]?.[0] ?? 1, y: data[0]?.[1] ?? 1, z: data[0]?.[2] ?? 1,
+            ox: data[1]?.[0] ?? 0, oy: data[1]?.[1] ?? 0, oz: data[1]?.[2] ?? 0,
+            rx: data[2]?.[0] ?? 0, ry: data[2]?.[1] ?? 0, rz: data[2]?.[2] ?? 0,
+            shape: data[3] ?? 1,     // 1: box, 2: sphere
+            gameOnly: data[4] ?? 1,
+            events,
         };
     },
     serialize: (std: STDObject) => {
@@ -140,11 +131,9 @@ export const TriggerAttribute: AdjunctAttribute = {
             [std.x, std.y, std.z],
             [std.ox, std.oy, std.oz],
             [std.rx, std.ry, std.rz],
-            std.shape,
-            std.triggerType,
-            std.logic,
-            std.runOnce,
-            std.gameOnly
+            std.shape ?? 1,
+            std.gameOnly ?? 1,
+            std.events ?? [],
         ];
     }
 };

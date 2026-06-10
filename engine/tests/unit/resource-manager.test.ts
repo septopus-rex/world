@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { ResourceManager } from '../../src/core/services/ResourceManager';
+import { ResourceManager } from '../../src/render/ResourceManager';
 import {
     FakeModelLoader,
     FakeTextureLoader,

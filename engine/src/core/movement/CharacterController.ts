@@ -294,14 +294,18 @@ export class CharacterController implements ISystem {
                 continue; // allow the horizontal move
             }
 
-            // Block: snap to the obstacle face on this axis.
+            // Block: snap to the NEAREST face on this axis (minimum penetration).
+            // Using velocity direction instead would teleport the player to the far
+            // face when they clip inside the solid from a corner or thin wall.
             if (axis === 0) {
-                trans.position[0] = sx > 0 ? (w.px - w.hx) - body.size[0] / 2 - body.offset[0]
-                                           : (w.px + w.hx) + body.size[0] / 2 - body.offset[0];
+                const toPos = (w.px + w.hx) + body.size[0] / 2 - trans.position[0]; // → east face
+                const toNeg = (w.px - w.hx) - body.size[0] / 2 - trans.position[0]; // → west face
+                trans.position[0] += Math.abs(toPos) <= Math.abs(toNeg) ? toPos : toNeg;
                 body.velocity[0] = 0;
             } else {
-                trans.position[2] = sz > 0 ? (w.pz - w.hz) - body.size[2] / 2 - body.offset[2]
-                                           : (w.pz + w.hz) + body.size[2] / 2 - body.offset[2];
+                const toPos = (w.pz + w.hz) + body.size[2] / 2 - trans.position[2]; // → south face
+                const toNeg = (w.pz - w.hz) - body.size[2] / 2 - trans.position[2]; // → north face
+                trans.position[2] += Math.abs(toPos) <= Math.abs(toNeg) ? toPos : toNeg;
                 body.velocity[2] = 0;
             }
             return;

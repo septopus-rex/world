@@ -1,4 +1,3 @@
-import * as THREE from 'three';
 import { World } from '../World';
 import { RenderHandle, AdjunctDefinition, RenderObject } from '../types/Adjunct';
 import { Coords } from '../utils/Coords';
@@ -6,7 +5,7 @@ import { MeshFactory } from '../../render/MeshFactory';
 import { Color } from '../utils/Math';
 import { BlockComponent } from '../components/BlockComponent';
 import { MeshComponent } from '../components/VisualizationComponents';
-import type { ResourceManager } from '../services/ResourceManager';
+import type { ResourceManager } from '../../render/ResourceManager';
 
 export interface IAdjunctCreationResult {
     handle: RenderHandle;
@@ -127,14 +126,14 @@ export class AdjunctFactory {
 
             const entry = rm.getModelEntry(resource);
             if (!entry) return;
-            const model = rm.instance(resource) as THREE.Object3D;
+            const model = rm.instance(resource) as any;
 
             // Scale the clone to fit the authored size (decision: honor std size).
-            const size = entry.bounds.getSize(new THREE.Vector3());
+            const [bx, by, bz] = entry.boundsSize;
             const desired = renderItem.params.size;
-            const sx = size.x > 1e-6 ? desired[0] / size.x : 1;
-            const sy = size.y > 1e-6 ? desired[1] / size.y : 1;
-            const sz = size.z > 1e-6 ? desired[2] / size.z : 1;
+            const sx = bx > 1e-6 ? desired[0] / bx : 1;
+            const sy = by > 1e-6 ? desired[1] / by : 1;
+            const sz = bz > 1e-6 ? desired[2] / bz : 1;
             model.scale.set(sx, sy, sz);
 
             // Inherit the placeholder's local pose within the group.
@@ -181,10 +180,10 @@ export class AdjunctFactory {
         // NOT pass a per-surface repeat: a texture is shared by reference, its
         // `.repeat` is one value per id (taken from the texture record). Per-surface
         // repeat would silently be first-writer-wins on the shared texture.
-        rm.getTexture(texId).then((tex: THREE.Texture) => {
+        rm.getTexture(texId).then((tex: any) => {
             if (this.isHandleRemoved(meshGroup)) return; // evicted mid-load — don't retain
 
-            const mat = (mesh as THREE.Mesh).material as any;
+            const mat = (mesh as any).material;
             const assign = (m: any) => { if (m) { m.map = tex; m.needsUpdate = true; } };
             if (Array.isArray(mat)) mat.forEach(assign); else assign(mat);
 

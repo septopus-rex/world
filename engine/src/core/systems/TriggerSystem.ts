@@ -1,21 +1,14 @@
+import jsonLogic from 'json-logic-js';
 import { World, ISystem, EntityId } from '../World';
-import { TriggerComponent, TriggerAction } from '../components/TriggerComponent';
+import { TriggerComponent, TriggerEvent } from '../components/TriggerComponent';
 import { TransformComponent } from '../components/PlayerComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
+import { TriggerAction, WorldContext } from '../types/Trigger';
 
-/**
- * TriggerSystem handles logic for spatial triggers.
- *
- * OPTIMIZATION:
- * - Reuses Vector-like scratch variables instead of allocating per frame.
- * - Caches adjunctId → entityId map for O(1) lookup on trigger actions.
- */
 export class TriggerSystem implements ISystem {
-    // Reusable scratch values to avoid per-frame allocations
     private _px = 0; private _py = 0; private _pz = 0;
     private _tx = 0; private _ty = 0; private _tz = 0;
 
-    // adjunctId → entityId cache for O(1) trigger target lookup
     private _adjunctMap = new Map<string | number, EntityId>();
     private _adjunctMapDirty = true;
 
@@ -25,20 +18,16 @@ export class TriggerSystem implements ISystem {
 
     private rebuildAdjunctMap(world: World): void {
         this._adjunctMap.clear();
-        const adjuncts = world.queryEntities("AdjunctComponent");
-        for (const id of adjuncts) {
+        for (const id of world.queryEntities("AdjunctComponent")) {
             const comp = world.getComponent<AdjunctComponent>(id, "AdjunctComponent");
-            if (comp) {
-                this._adjunctMap.set(comp.adjunctId, id);
-            }
+            if (comp) this._adjunctMap.set(comp.adjunctId, id);
         }
         this._adjunctMapDirty = false;
     }
 
-    public update(world: World, deltaTime: number): void {
+    public update(world: World, _deltaTime: number): void {
         const triggerEntities = world.queryEntities("TriggerComponent");
         const playerEntities = world.queryEntities("TransformComponent");
-
         if (playerEntities.length === 0) return;
 
         const playerId = playerEntities[0];
@@ -49,10 +38,11 @@ export class TriggerSystem implements ISystem {
         this._py = playerTransform.position[1];
         this._pz = playerTransform.position[2];
 
+        const ctx = this._buildContext(world, playerTransform);
+
         for (const entityId of triggerEntities) {
             const trigger = world.getComponent<TriggerComponent>(entityId, "TriggerComponent");
             const transform = world.getComponent<TransformComponent>(entityId, "TransformComponent");
-
             if (!trigger || !transform) continue;
 
             this._tx = transform.position[0] + trigger.offset[0];
@@ -79,56 +69,85 @@ export class TriggerSystem implements ISystem {
             const wasInside = trigger.entitiesInside.has(playerId);
 
             if (isInside && !wasInside) {
-                this.handleEvent(world, trigger, 'in');
+                this._handleEvent(world, trigger, 'in', ctx);
                 trigger.entitiesInside.add(playerId);
             } else if (!isInside && wasInside) {
-                this.handleEvent(world, trigger, 'out');
+                this._handleEvent(world, trigger, 'out', ctx);
                 trigger.entitiesInside.delete(playerId);
             } else if (isInside) {
-                this.handleEvent(world, trigger, 'hold');
+                this._handleEvent(world, trigger, 'hold', ctx);
             }
         }
     }
 
-    private handleEvent(world: World, trigger: TriggerComponent, type: string) {
+    private _buildContext(world: World, transform: TransformComponent): WorldContext {
+        return {
+            player: {
+                position: [transform.position[0], transform.position[1], transform.position[2]],
+                x: transform.position[0],
+                y: transform.position[1],
+                z: transform.position[2],
+            },
+            flags: world.globalFlags,
+            time: world.time,
+            weather: world.weather,
+        };
+    }
+
+    private _handleEvent(world: World, trigger: TriggerComponent, type: string, ctx: WorldContext): void {
         const event = trigger.events.find(e => e.type === type);
         if (!event) return;
         if (event.oneTime && (trigger.triggeredCount[type] || 0) > 0) return;
 
-        for (const action of event.actions) {
-            this.executeAction(world, action);
+        const pass = this._evalConditions(event, ctx);
+        const actions = pass ? event.actions : (event.fallbackActions ?? []);
+
+        for (const action of actions) {
+            this._executeAction(world, action);
         }
 
         trigger.triggeredCount[type] = (trigger.triggeredCount[type] || 0) + 1;
     }
 
-    private executeAction(world: World, action: TriggerAction) {
-        if (action.type === 'adjunct') {
-            // Rebuild map if invalidated
-            if (this._adjunctMapDirty) {
-                this.rebuildAdjunctMap(world);
-            }
-
-            const targetId = this._adjunctMap.get(action.target);
-            if (targetId !== undefined) {
-                const comp = world.getComponent<AdjunctComponent>(targetId, "AdjunctComponent");
-                if (comp) {
-                    this.applyAdjunctModification(comp, action.method, action.params);
-                }
-            }
-        } else if (action.type === 'system') {
-            if (action.method === 'log') {
-                console.log(`[TriggerSystem Action Log]:`, ...action.params);
-            }
+    /** Returns true when there are no conditions, or when JSONLogic evaluates truthy. */
+    private _evalConditions(event: TriggerEvent, ctx: WorldContext): boolean {
+        if (!event.conditions) return true;
+        try {
+            return !!jsonLogic.apply(event.conditions, ctx as unknown as Record<string, unknown>);
+        } catch {
+            return false;
         }
     }
 
-    private applyAdjunctModification(adjunct: AdjunctComponent, method: string, params: any[]) {
+    private _executeAction(world: World, action: TriggerAction): void {
+        switch (action.type) {
+            case 'adjunct': {
+                if (this._adjunctMapDirty) this.rebuildAdjunctMap(world);
+                const targetId = this._adjunctMap.get(action.target);
+                if (targetId !== undefined) {
+                    const comp = world.getComponent<AdjunctComponent>(targetId, "AdjunctComponent");
+                    if (comp) this._applyAdjunctModification(comp, action.method, action.params);
+                }
+                break;
+            }
+            case 'flag':
+                // set_flag: target = key, params[0] = value (default true)
+                world.globalFlags[action.target as string] = action.params[0] ?? true;
+                break;
+            case 'system':
+                if (action.method === 'log') {
+                    console.log('[TriggerSystem]', ...action.params);
+                }
+                break;
+        }
+    }
+
+    private _applyAdjunctModification(adjunct: AdjunctComponent, method: string, params: any[]): void {
         if (method === 'rotateY') {
-            adjunct.stdData.ry += params[0] || 0.1;
+            adjunct.stdData.ry += params[0] ?? 0.1;
             adjunct.isInitialized = false;
         } else if (method === 'moveZ') {
-            adjunct.stdData.oz += params[0] || 0.1;
+            adjunct.stdData.oz += params[0] ?? 0.1;
             adjunct.isInitialized = false;
         }
     }

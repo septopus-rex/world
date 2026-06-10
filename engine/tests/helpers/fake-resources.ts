@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { IModelLoader } from '../../src/render/loaders/ModelLoader';
-import type { ITextureLoader } from '../../src/core/services/ResourceManager';
+import type { ITextureLoader } from '../../src/render/ResourceManager';
 import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 
 /**

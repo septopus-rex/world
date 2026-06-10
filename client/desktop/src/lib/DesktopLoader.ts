@@ -273,8 +273,15 @@ export class DesktopLoader implements IDataSource {
             [[6, 0.3, 4], [12, 5, 2], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],     // wall
             [[6, 6, 0.3], [3, 4, 0.15], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],   // floor slab
         ];
+        // Stop adjuncts (colliders). Format: [size, offset, rot, mode, animate]
+        // SPP coords: X=East Y=North Z=Alt. Player spawns at N=0 and walks north.
+        // This wall sits at N=5, stretching E=1..15 — right in front of both foxes.
+        const stops = [
+            [[14, 0.4, 2.5], [8, 5, 1.25], [0, 0, 0], 1, 0],
+        ];
         data.raw[2].push([0x00a4, modules]);
         data.raw[2].push([0x00a2, texturedBoxes]);
+        data.raw[2].push([0x00b4, stops]);
     }
 
     // ── Player / view controls ─────────────────────────────────────────────────

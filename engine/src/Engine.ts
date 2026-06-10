@@ -27,7 +27,7 @@ export interface EngineServices {
      */
     renderer?: RenderEngine;
     /** Injectable resource loaders (tests pass fakes + fetch counters). */
-    resources?: import('./core/services/ResourceManager').ResourceManagerConfig;
+    resources?: import('./render/ResourceManager').ResourceManagerConfig;
     config?: any;
 }
 

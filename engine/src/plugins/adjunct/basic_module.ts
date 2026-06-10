@@ -1,14 +1,15 @@
-import * as THREE from 'three';
 import {
     ComponentMeta,
     STDObject,
     RenderObject,
+    RenderHandle,
     AdjunctDefinition,
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { Coords } from '../../core/utils/Coords';
+import { MeshFactory } from '../../render/MeshFactory';
 
 /**
  * Module adjunct (type-id 0x00a4) — the 3D-MODEL adjunct.
@@ -93,25 +94,17 @@ const transform: AdjunctTransform = {
     /**
      * Synchronously build the LOADING PLACEHOLDER (a tinted box sized to the
      * authored dimensions). Returned immediately so the build frame never blocks;
-     * AdjunctFactory schedules the async model load + swap. Uses a fresh
-     * (un-shared) geometry/material so disposing the placeholder on swap is clean
-     * and never touches MeshFactory's shared primitive caches.
+     * AdjunctFactory schedules the async model load + swap.
      */
-    createMesh: (data: RenderObject): THREE.Object3D => {
+    createMesh: (data: RenderObject): RenderHandle => {
         const [w, h, d] = data.params.size;
-        const geo = new THREE.BoxGeometry(w || 1, h || 1, d || 1);
-        const mat = new THREE.MeshStandardMaterial({
-            color: data.material?.color ?? PLACEHOLDER_COLOR,
-            transparent: true,
-            opacity: data.material?.opacity ?? 0.6,
-            side: THREE.DoubleSide
+        const mesh = MeshFactory.create({
+            type: 'box',
+            index: 0,
+            params: { size: [w || 1, h || 1, d || 1], position: [0, 0, 0], rotation: [0, 0, 0] },
+            material: { color: data.material?.color ?? PLACEHOLDER_COLOR, opacity: data.material?.opacity ?? 0.6 },
         });
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.userData = {
-            isPlaceholder: true,
-            adjunct: 'module',
-            resource: data.resource ?? ''
-        };
+        (mesh as any).userData = { ...((mesh as any).userData ?? {}), isPlaceholder: true, adjunct: 'module', resource: data.resource ?? '' };
         return mesh;
     }
 };
