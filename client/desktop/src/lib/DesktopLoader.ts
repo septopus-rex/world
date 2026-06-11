@@ -138,6 +138,10 @@ export class DesktopLoader implements IDataSource {
             setTimeout(resolve, 3000);
         });
 
+        // P1 persistence: pull every saved draft into the sync cache BEFORE the
+        // first block materializes — BlockSystem swaps drafts in synchronously.
+        await this.engine.hydrateDrafts(0);
+
         // Inject the initial neighborhood BEFORE starting physics (prevents falling).
         console.log(`[Loader] Pre-loading initial neighborhood for ${initialBKey}...`);
         await this.handleGridRequest(this.playerState.block);
@@ -387,6 +391,32 @@ export class DesktopLoader implements IDataSource {
             ]],
         ];
         data.raw[2].push([0x00b8, triggers]);
+    }
+
+    // ── World export / import (P1) ─────────────────────────────────────────────
+
+    /** All local drafts of the world as a versioned JSON string. */
+    public exportWorldJson(worldId = 0): Promise<string> {
+        if (!this.engine) return Promise.reject(new Error('engine not booted'));
+        return this.engine.exportWorldJson(worldId);
+    }
+
+    /** Import a previously exported JSON string; reload to see restored blocks. */
+    public importWorldJson(json: string): Promise<{ worldId: number; imported: number }> {
+        if (!this.engine) return Promise.reject(new Error('engine not booted'));
+        return this.engine.importWorldJson(json);
+    }
+
+    /** Convenience: trigger a browser download of the current world export. */
+    public async downloadWorldExport(worldId = 0): Promise<void> {
+        const json = await this.exportWorldJson(worldId);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `septopus-world-${worldId}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     // ── Player / view controls ─────────────────────────────────────────────────

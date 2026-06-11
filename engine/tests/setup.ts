@@ -1,8 +1,8 @@
 // Vitest global setup (node environment).
 //
-// Minimal Map-based `localStorage` shim so DraftStorage — which BlockSystem reads
-// on the block-load hot path — works headlessly instead of throwing. P1's
-// IndexedDB DraftStore will use `fake-indexeddb` the same way.
+// Minimal Map-based `localStorage` shim (IdbDraftBackend's legacy-draft
+// migration probes it; player-state persistence writes it). The P1 DraftStore
+// itself runs against `fake-indexeddb` where the draft-store suite opts in.
 //
 // Guards on a missing OR partial localStorage (Node's experimental localStorage
 // may be present but incomplete under vitest).

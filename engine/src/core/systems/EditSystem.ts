@@ -11,7 +11,6 @@ import { EditSessionManager } from './EditSessionManager';
 import { EditTaskExecutor } from '../EditTaskExecutor';
 import { EditTask, ContextMenuItem } from '../types/EditTask';
 import { EditHistory } from '../EditHistory';
-import { DraftStorage } from '../services/DraftStorage';
 import { InputProvider } from './InputProvider';
 
 /**
@@ -37,7 +36,6 @@ export class EditSystem implements ISystem {
     private session: EditSessionManager;
     private executor: EditTaskExecutor;
     private history: EditHistory;
-    private draftStorage: DraftStorage;
     private interactHandler: (event: GameEvent) => void;
     private contextHandler: (event: GameEvent) => void;
     private dirty: boolean = false;  // tracks if any edits were made this session
@@ -47,7 +45,6 @@ export class EditSystem implements ISystem {
         this.session = new EditSessionManager(world);
         this.executor = new EditTaskExecutor();
         this.history = new EditHistory();
-        this.draftStorage = new DraftStorage();
         this.interactHandler = (e) => this.onInteract(world, e.payload);
         this.contextHandler = (e) => this.onContextInteract(world, e.payload);
         world.on("interact", this.interactHandler);
@@ -359,13 +356,13 @@ export class EditSystem implements ISystem {
             block.animations || []
         ];
 
-        this.draftStorage.save(worldId, block.x, block.y, raw);
+        world.draftStore.save(worldId, block.x, block.y, raw);
         block.isDraft = true;
         world.emitSimple("world:draft_saved", { blockKey: `${block.x}_${block.y}` });
     }
 
     private showUploadButtonIfNeeded(world: World): void {
-        const drafts = this.draftStorage.list(0);
+        const drafts = world.draftStore.list(0);
         if (drafts.length > 0 && world.ui) {
             world.ui.showButton("upload-drafts", {
                 label: `⬆️ Upload (${drafts.length})`,

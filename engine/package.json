@@ -14,12 +14,14 @@
   "author": "ff13dfly",
   "license": "CC-BY-NC-4.0",
   "dependencies": {
+    "idb": "^8.0.3",
     "json-logic-js": "^2.0.5",
     "three": ">=0.160.0"
   },
   "devDependencies": {
     "@types/json-logic-js": "^2.0.8",
     "@types/three": "^0.177.0",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "^5.0.0",
     "vitest": "^3.2.0"
   }

@@ -9,7 +9,6 @@ import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctFactory } from '../factories/AdjunctFactory';
 import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
 import { RenderHandle } from '../types/Adjunct';
-import { DraftStorage } from '../services/DraftStorage';
 
 /**
  * BlockSystem handles the transition from standard Block data (std) 
@@ -17,7 +16,6 @@ import { DraftStorage } from '../services/DraftStorage';
  */
 export class BlockSystem implements ISystem {
     private blockGroups: Map<string, RenderHandle> = new Map();
-    private draftStorage: DraftStorage = new DraftStorage();
 
     // Native adjunct dispatch is sourced from the shared AdjunctRegistry
     // (getBuiltinAdjunct) so block init and dynamic resolution share one map.
@@ -50,7 +48,7 @@ export class BlockSystem implements ISystem {
 
         // Check for localStorage draft — if exists, use draft data instead of chain data
         const worldId = typeof block.world === 'number' ? block.world : 0;
-        const draft = this.draftStorage.load(worldId, block.x, block.y);
+        const draft = world.draftStore.load(worldId, block.x, block.y);
         if (draft) {
             console.log(`[BlockSystem] Loading draft for block ${bKey}`);
             block.adjuncts = draft.raw;

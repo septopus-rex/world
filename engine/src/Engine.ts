@@ -5,6 +5,7 @@ import { IUIProvider } from './core/services/UIProvider';
 import { DefaultUIProvider } from './core/services/DefaultUIProvider';
 import { EventUIProxy } from './core/services/EventUIProxy';
 import { IChainPublisher } from './core/services/IChainPublisher';
+import { ExportService } from './core/services/ExportService';
 import { Coords } from './core/utils/Coords';
 import { GlobalConfig } from './core/GlobalConfig';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
@@ -28,6 +29,8 @@ export interface EngineServices {
     renderer?: RenderEngine;
     /** Injectable resource loaders (tests pass fakes + fetch counters). */
     resources?: import('./render/ResourceManager').ResourceManagerConfig;
+    /** Durable draft storage backend (default: IndexedDB in browsers). */
+    draftBackend?: import('./core/services/DraftStore').IDraftBackend | null;
     config?: any;
 }
 
@@ -73,7 +76,8 @@ export class Engine {
         this.world = new World(fullConfig, {
             renderEngine: this.services.renderer,
             dataSource: this.services.api,
-            resources: this.services.resources
+            resources: this.services.resources,
+            draftBackend: this.services.draftBackend
         });
 
         // 3.5 UI Orchestration
@@ -130,6 +134,29 @@ export class Engine {
                 isInitialized: false
             });
         }
+    }
+
+    /**
+     * Load every persisted draft for a world into the DraftStore's sync cache.
+     * Call AFTER bootWorld and BEFORE injecting the first block — BlockSystem
+     * reads drafts synchronously while materializing blocks.
+     */
+    public async hydrateDrafts(worldId: number = 0): Promise<void> {
+        await this.world?.draftStore.hydrate(worldId);
+    }
+
+    /** Export all local drafts of a world as a versioned JSON string (P1). */
+    public async exportWorldJson(worldId: number = 0): Promise<string> {
+        if (!this.world) throw new Error('[Engine] exportWorldJson before bootWorld');
+        return new ExportService(this.world.draftStore).exportWorld(worldId);
+    }
+
+    /** Import a previously exported JSON file into the local draft store (P1).
+     *  Already-loaded blocks keep their current meshes; re-streamed or reloaded
+     *  blocks pick the imported drafts up. */
+    public async importWorldJson(json: string): Promise<{ worldId: number; imported: number }> {
+        if (!this.world) throw new Error('[Engine] importWorldJson before bootWorld');
+        return new ExportService(this.world.draftStore).importWorld(json);
     }
 
     /** Destroy a streamed-in block and its adjuncts (frees meshes). Used by the

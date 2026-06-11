@@ -1,0 +1,167 @@
+/**
+ * DraftStore — local-first draft persistence (P1).
+ *
+ * The engine's block-load and edit-save paths are SYNCHRONOUS hot paths, while
+ * durable browser storage (IndexedDB) is async. This store bridges the two with
+ * a write-behind in-memory cache:
+ *
+ *   hydrate(worldId)  — once at boot: load every draft for the world into the Map
+ *   load()/list()     — sync, served from the Map (never blocks the frame)
+ *   save()/remove()   — update the Map immediately, then flush to the backend
+ *                       asynchronously; failed writes stay dirty and are retried
+ *                       on the next mutation or flush()
+ *
+ * The durable layer is pluggable (IDraftBackend): browsers use IdbDraftBackend
+ * (IndexedDB via `idb`), headless tests use InMemoryDraftBackend (or none).
+ */
+
+export interface BlockDraft {
+    version: 1;
+    timestamp: number;
+    worldId: number;
+    blockKey: string;           // "3_5" (block coords; worldId kept separately)
+    raw: any[];                 // full block raw: [elevation, status, adjunctsRaw, animations]
+}
+
+export interface IDraftBackend {
+    /** All drafts persisted for a world (boot hydrate). */
+    hydrate(worldId: number): Promise<BlockDraft[]>;
+    put(draft: BlockDraft): Promise<void>;
+    remove(worldId: number, blockKey: string): Promise<void>;
+}
+
+/** Trivial backend for headless boots and unit tests — durable for the process. */
+export class InMemoryDraftBackend implements IDraftBackend {
+    private rows = new Map<string, BlockDraft>();
+    async hydrate(worldId: number): Promise<BlockDraft[]> {
+        return [...this.rows.values()].filter(d => d.worldId === worldId);
+    }
+    async put(draft: BlockDraft): Promise<void> {
+        this.rows.set(`${draft.worldId}:${draft.blockKey}`, draft);
+    }
+    async remove(worldId: number, blockKey: string): Promise<void> {
+        this.rows.delete(`${worldId}:${blockKey}`);
+    }
+}
+
+type PendingOp = { op: 'put'; draft: BlockDraft } | { op: 'remove'; worldId: number; blockKey: string };
+
+export class DraftStore {
+    private cache = new Map<string, BlockDraft>();   // `${worldId}:${blockKey}` → draft
+    private backend: IDraftBackend | null;
+
+    /** Mutations not yet durably written, keyed like the cache (last op wins). */
+    private dirty = new Map<string, PendingOp>();
+    private flushing: Promise<void> | null = null;
+
+    constructor(backend: IDraftBackend | null = null) {
+        this.backend = backend;
+    }
+
+    private static key(worldId: number, blockKey: string): string {
+        return `${worldId}:${blockKey}`;
+    }
+
+    /**
+     * Load every persisted draft for a world into the sync cache. Call ONCE at
+     * boot, BEFORE the first block is injected (BlockSystem reads sync).
+     */
+    public async hydrate(worldId: number): Promise<void> {
+        if (!this.backend) return;
+        const drafts = await this.backend.hydrate(worldId);
+        for (const d of drafts) {
+            const k = DraftStore.key(d.worldId, d.blockKey);
+            // A save() that raced ahead of hydrate wins over the stored copy.
+            if (!this.cache.has(k) && !this.dirty.has(k)) this.cache.set(k, d);
+        }
+        console.log(`[DraftStore] hydrated ${drafts.length} draft(s) for world ${worldId}`);
+    }
+
+    // ── sync facade (hot paths) ────────────────────────────────────────────────
+
+    public load(worldId: number, bx: number, by: number): BlockDraft | null {
+        return this.cache.get(DraftStore.key(worldId, `${bx}_${by}`)) ?? null;
+    }
+
+    public hasDraft(worldId: number, bx: number, by: number): boolean {
+        return this.cache.has(DraftStore.key(worldId, `${bx}_${by}`));
+    }
+
+    public list(worldId: number): BlockDraft[] {
+        return [...this.cache.values()].filter(d => d.worldId === worldId);
+    }
+
+    public save(worldId: number, bx: number, by: number, raw: any[]): void {
+        const draft: BlockDraft = {
+            version: 1,
+            timestamp: Date.now(),
+            worldId,
+            blockKey: `${bx}_${by}`,
+            raw,
+        };
+        this.put(draft);
+    }
+
+    /** Insert a fully-formed draft (import path — preserves its timestamp). */
+    public put(draft: BlockDraft): void {
+        const k = DraftStore.key(draft.worldId, draft.blockKey);
+        this.cache.set(k, draft);
+        this.dirty.set(k, { op: 'put', draft });
+        this.kick();
+    }
+
+    public remove(worldId: number, bx: number, by: number): void {
+        const blockKey = `${bx}_${by}`;
+        const k = DraftStore.key(worldId, blockKey);
+        this.cache.delete(k);
+        this.dirty.set(k, { op: 'remove', worldId, blockKey });
+        this.kick();
+    }
+
+    // ── write-behind ──────────────────────────────────────────────────────────
+
+    /** Number of mutations not yet durably written (tests/diagnostics). */
+    public get pendingWrites(): number {
+        return this.dirty.size;
+    }
+
+    /**
+     * Drain the dirty set to the backend. Each entry is attempted once per
+     * flush; failures stay dirty (retried on the next mutation or flush) so a
+     * transient storage error never loses an edit — and never blocks a frame.
+     */
+    public flush(): Promise<void> {
+        if (!this.backend) { this.dirty.clear(); return Promise.resolve(); }
+        if (this.flushing) return this.flushing;
+
+        this.flushing = (async () => {
+            // Round-based drain: ops enqueued DURING a round are picked up by the
+            // next one, so a mutation landing mid-flush is never stranded. A round
+            // with zero successes stops the loop (storage is down — entries stay
+            // dirty and the next mutation/flush retries).
+            while (this.dirty.size > 0) {
+                const batch = [...this.dirty.entries()];
+                let progressed = false;
+                for (const [k, pending] of batch) {
+                    try {
+                        if (pending.op === 'put') await this.backend!.put(pending.draft);
+                        else await this.backend!.remove(pending.worldId, pending.blockKey);
+                        // Only clear if no newer mutation replaced this entry mid-write.
+                        if (this.dirty.get(k) === pending) this.dirty.delete(k);
+                        progressed = true;
+                    } catch (e) {
+                        console.warn(`[DraftStore] write-behind failed for ${k} (kept dirty)`, e);
+                    }
+                }
+                if (!progressed) break;
+            }
+        })().finally(() => { this.flushing = null; });
+
+        return this.flushing;
+    }
+
+    /** Fire-and-forget flush used by the mutation path. */
+    private kick(): void {
+        void this.flush();
+    }
+}

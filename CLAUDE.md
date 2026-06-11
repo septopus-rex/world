@@ -16,7 +16,7 @@ world/
 │   │   │   ├── World.ts             # ECS 世界 + 系统编排 + 主循环
 │   │   │   ├── systems/             # 系统（Physics/Trigger/Block/Edit/VisualSync/Minimap…）
 │   │   │   ├── components/          # ECS 组件
-│   │   │   ├── services/            # DataSource·DraftStorage·AdjunctSandbox·AdjunctLoader·AdjunctRegistry·IChainPublisher
+│   │   │   ├── services/            # DataSource·DraftStore(IDB)·ExportService·AdjunctSandbox·AdjunctLoader·AdjunctRegistry·IChainPublisher
 │   │   │   ├── protocol/            # CollapseCodec（SPP 二进制编解码）
 │   │   │   ├── factories/ utils/(Coords) types/
 │   │   ├── render/              # Three.js 渲染层（唯一允许 import Three.js 的位置）
@@ -68,14 +68,14 @@ cd engine && yarn build                            # tsc
 
 ## 编辑 / Adjunct
 
-- 编辑经 `EditSystem`（select / move / set / delete / undo）→ `DraftStorage`（localStorage 草稿）。
+- 编辑经 `EditSystem`（select / move / set / delete / undo）→ `DraftStore`（write-behind 内存缓存 + IndexedDB 持久化；启动时 `Engine.hydrateDrafts()` 注水，`ExportService` 提供 JSON 导出/导入）。
 - adjunct 按 type-id 注册于 `core/services/AdjunctRegistry.ts`：`a1` wall · `a2` box · `a3` light · `a4` module（3D 模型）· `a6` cone · `a7` ball（sphere）· `b8` trigger · `b4` stop（全部已迁移）。module 经 `render/ResourceManager` + `render/loaders/ModelLoader` 加载外部模型，占位→swap 模式、按 id 去重实例化；骨骼动画由 `RenderEngine.startAnimation/updateAnimation` 驱动。
 - 动态/链上加载的 adjunct 代码经 `AdjunctSandbox`（Web Worker 沙箱 + 静态 `validateCode` 过滤）+ `AdjunctLoader`（已迁 TS，**暂未接入运行时**，随链相关功能启用）。
 
 ## 测试
 
 - `engine/tests/`（vitest，node 环境）：`unit/`（CollapseCodec、Coords、adjunct transforms/sandbox/registry/resource-manager）、`integration/`（headless-boot）、`systems/`·`scenarios/`（部分 `todo`）。**务必读 `engine/tests/README.md` 的"局限性"**（无 GPU/浏览器、确定性、scenarios 待补等）。
-- 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（未搭）。
+- 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（已搭：boot/movement/fall-through/trigger/avatar/persistence；`npm run test:e2e`，SwiftShader 软渲染 + `engine.step(dt)` 确定性驱动）。
 
 ## 文档索引
 

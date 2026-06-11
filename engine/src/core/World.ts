@@ -29,6 +29,8 @@ import { FullWorldConfig } from './types/WorldConfig';
 import { SystemMode } from './types/SystemMode';
 import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
+import { DraftStore, IDraftBackend, InMemoryDraftBackend } from './services/DraftStore';
+import { IdbDraftBackend, hasIndexedDB } from './services/IdbDraftBackend';
 import { ResourceManager, ResourceManagerConfig } from '../render/ResourceManager';
 import { MeshFactory } from '../render/MeshFactory';
 
@@ -58,6 +60,8 @@ export interface WorldDeps {
     dataSource?: IDataSource;
     /** Injectable resource loaders (tests pass fakes + fetch counters). */
     resources?: ResourceManagerConfig;
+    /** Durable draft storage. Default: IndexedDB in browsers, in-memory in Node. */
+    draftBackend?: IDraftBackend | null;
 }
 
 /** Inert data source so a World constructed without one never crashes on resource calls. */
@@ -104,6 +108,14 @@ export class World {
     public ui: IUIProvider | null = null;
     public config: FullWorldConfig;
 
+    /**
+     * Local-first draft persistence (P1): ONE store shared by BlockSystem (sync
+     * draft reads) and EditSystem (saves) — write-behind cache over the durable
+     * backend. Hydrate once at boot via Engine.hydrateDrafts BEFORE injecting
+     * blocks.
+     */
+    public readonly draftStore: DraftStore;
+
     // 4. Events
     private listeners: Map<string, Function[]> = new Map();
 
@@ -119,6 +131,12 @@ export class World {
         this.config = config;
         this.bridge = new WorldBridge(this);
         Coords.BLOCK_SIZE = config.world.block[0];
+
+        this.draftStore = new DraftStore(
+            deps.draftBackend !== undefined
+                ? deps.draftBackend
+                : (hasIndexedDB() ? new IdbDraftBackend() : new InMemoryDraftBackend())
+        );
 
         // 1. Rendering Setup — injectable. Default = real WebGL engine; tests pass
         //    a headless NullRenderEngine so a World can boot+tick without a GPU/DOM.

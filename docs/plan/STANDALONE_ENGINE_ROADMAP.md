@@ -19,7 +19,7 @@
 | 接缝 | 文件 | 现状 |
 |---|---|---|
 | 读数据 | `engine/src/core/services/DataSource.ts`（`IDataSource`） | 接口;`DesktopLoader` 实现为本地 mock |
-| 本地草稿 | `engine/src/core/services/DraftStorage.ts` | **localStorage**(P1 将换 IndexedDB) |
+| 本地草稿 | `engine/src/core/services/DraftStore.ts` | **IndexedDB**(write-behind 缓存,P1 已完成) |
 | SPP 序列化 | `engine/src/core/protocol/CollapseCodec.ts` | STD ↔ SPP 二进制 |
 | 触发器执行 | `engine/src/core/systems/TriggerSystem.ts` | 引擎内执行,`contract` 动作分支未做 |
 | 上链发布（可选） | `engine/src/core/services/IChainPublisher.ts` | 纯接口,`Engine.publisher?` 声明但从不消费 |
@@ -51,7 +51,7 @@
 
 | Phase | 目标 | 关键产物 | 状态 |
 |---|---|---|---|
-| **P1** | **本地优先持久化 + 导出** | `DraftStore`(IndexedDB)、`LocalDataSource`、`ExportService` | 设计就绪(本文 §3) |
+| **P1** | **本地优先持久化 + 导出** | `DraftStore`(IndexedDB)、`ExportService`、JSON round-trip | **已完成**(2026-06;草稿覆盖在 BlockSystem 层,独立 LocalDataSource 暂不需要) |
 | **P2** | Trigger 本地 actuator | `IActuator` + `LocalActuator`,trigger `contract` 分支 | 待开始 |
 | **P3** | 资源走 OSS / IPFS | `IResourceResolver` + OSS/IPFS 后端 | 待开始 |
 | **P4** | **可选**链插件 | `SolanaPublisher implements IChainPublisher`,选中 block 发布 | 待开始（可选/最后） |
@@ -177,7 +177,7 @@ BlockSystem.load ──同步──→ Map 命中则用草稿,否则 mock
 | 角色 | 文件 |
 |---|---|
 | 读接缝 | `engine/src/core/services/DataSource.ts` |
-| 本地草稿(P1 改 IDB) | `engine/src/core/services/DraftStorage.ts` |
+| 本地草稿(P1 已改 IDB) | `engine/src/core/services/DraftStore.ts` + `IdbDraftBackend.ts` |
 | SPP 编解码 | `engine/src/core/protocol/CollapseCodec.ts` |
 | 触发器执行(P2) | `engine/src/core/systems/TriggerSystem.ts` |
 | 编辑流水线 | `engine/src/core/systems/EditSystem.ts` |
