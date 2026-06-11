@@ -26,24 +26,29 @@ export class ItemDropSystem implements ISystem {
     }
 
     private onPlayerInteract(event: any): void {
-        const { entityId, distance } = event;
+        // Listeners receive the GameEvent envelope — the hit data is in payload.
+        const { entityId, distance } = event?.payload ?? {};
+        if (entityId === null || entityId === undefined) return; // miss / deselect
         const dropComp = this.world.getComponent<ItemDropComponent>(entityId, "ItemDropComponent");
 
         if (dropComp && distance < 10) {
             console.log(`[ItemDrop ECS] Player picked up ${dropComp.quantity}x ${dropComp.itemId}`);
 
+            // Forward the actor (the interacting player) as the event source —
+            // InventorySystem credits the pickup to event.source's inventory.
             this.world.emitSimple("pickup_item", {
                 itemId: dropComp.itemId,
                 amount: dropComp.quantity,
                 metadata: dropComp.metadata
-            });
+            }, event.source);
 
             this.world.destroyEntity(entityId);
         }
     }
 
     private onSpawnDrop(event: any): void {
-        const { itemId, amount, position } = event;
+        const { itemId, amount, position } = event?.payload ?? {};
+        if (!itemId || !position) return;
         const dropEntity = this.world.createEntity();
 
         this.world.addComponent(dropEntity, "ItemDropComponent", {

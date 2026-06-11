@@ -167,9 +167,12 @@ export class World {
         // (which also fixes the prior "loop runs before blocks are injected" race).
         // Tests drive the sim deterministically via step(dt) instead of start().
         if (typeof window !== 'undefined') {
-            window.addEventListener('resize', () => this.renderEngine.resize(), false);
+            window.addEventListener('resize', this._onResize, false);
         }
     }
+
+    /** Named so dispose() can actually unregister it (an inline closure can't be removed). */
+    private _onResize = () => this.renderEngine.resize();
 
     /**
      * Delegate ECS operations to Registry
@@ -277,6 +280,13 @@ export class World {
 
     public dispose(): void {
         this.isRunning = false;
+        // Unhook everything wired in the constructor / via on(): the listeners Map
+        // pins subscriber closures (and whatever they capture) past the World's
+        // life, and the resize handler pins the whole World via this.renderEngine.
+        this.listeners.clear();
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('resize', this._onResize, false);
+        }
         this.resourceManager.dispose();
         // Free MeshFactory's process-wide shared geometry/material caches. They are
         // tagged userData.shared so removeHandle never disposes them per-eviction;

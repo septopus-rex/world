@@ -100,7 +100,7 @@ export class RaycastInteractionSystem implements ISystem {
                         distance: hit.distance,
                         point: hit.point,
                         screenPos: [ndcX, ndcY]
-                    });
+                    }, playerId); // source = the interacting player (the actor)
                     return; // Don't also fire primary interact
                 }
 
@@ -111,7 +111,7 @@ export class RaycastInteractionSystem implements ISystem {
                         metadata: hitTargetComp.metadata,
                         distance: hit.distance,
                         point: hit.point
-                    });
+                    }, playerId); // source = the interacting player (the actor)
                 }
             }
         } else if (isPrimary) {
@@ -121,7 +121,7 @@ export class RaycastInteractionSystem implements ISystem {
                 metadata: null,
                 distance: Infinity,
                 point: [0, 0, 0]
-            });
+            }, playerId);
         }
     }
 }

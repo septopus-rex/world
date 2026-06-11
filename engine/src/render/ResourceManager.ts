@@ -35,6 +35,14 @@ export interface ModelEntry {
     boundsSize: [number, number, number];
     /** Whether the template contains skinned meshes (needs SkeletonUtils.clone). */
     rigged: boolean;
+    /**
+     * The decoded AnimationClip instances (e.g. GLTF animations). First-class
+     * here because clips must NOT travel through cloned userData: Object3D.copy
+     * round-trips userData through JSON, stripping KeyframeTrack prototypes — a
+     * mixer fed those dies with "tracks[i].createInterpolant is not a function".
+     * Clips target nodes BY NAME, so the template's clips drive every clone.
+     */
+    animations: THREE.AnimationClip[];
     /** Live clone count; template is disposed when this returns to 0 on release. */
     refCount: number;
 }
@@ -128,6 +136,9 @@ export class ResourceManager {
                 bounds,
                 boundsSize: [bsz.x, bsz.y, bsz.z],
                 rigged,
+                // ModelLoader stashes the decoded clips on the template's userData;
+                // lift them out while they are still real AnimationClip instances.
+                animations: (template.userData?.animations as THREE.AnimationClip[]) ?? [],
                 refCount: 0
             };
             this.modelEntries.set(id, entry);
@@ -164,6 +175,9 @@ export class ResourceManager {
         // template's geometry/material (which the clone shares by reference).
         this.markShared(clone as THREE.Object3D);
         (clone as any).userData = { ...(clone as any).userData, resourceId: id, isModelInstance: true };
+        // Re-attach the REAL clips: cloning JSON-mangled the userData copy (see
+        // ModelEntry.animations). Consumers read clone.userData.animations.
+        (clone as any).userData.animations = entry.animations;
         entry.refCount++;
         return clone as THREE.Object3D;
     }

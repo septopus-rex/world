@@ -34,7 +34,9 @@ export class ParticleEffectSystem implements ISystem {
     }
 
     private onSpawnEffect(event: any): void {
-        const { position, type } = event;
+        // Listeners receive the GameEvent envelope — the data is in payload.
+        const { position, type } = event?.payload ?? {};
+        if (!position) return;
         const effectEntity = this.world.createEntity();
 
         this.world.addComponent(effectEntity, "TransformComponent", {

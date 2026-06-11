@@ -1,5 +1,6 @@
 import { World, EntityId } from './World';
 import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent, PlayerBodyComponent } from './components/PlayerComponents';
+import { InventoryComponent } from './components/InventoryComponent';
 import { CharacterController } from './movement/CharacterController';
 
 /**
@@ -52,6 +53,13 @@ export class EntityFactory {
             crouchHeight: 0.9,
             jumpHeight: 1.2,
             fallDeathHeight: 12
+        });
+
+        // The pickup chain (interact → pickup_item → InventorySystem) credits
+        // items to the actor's inventory — without this the chain dead-ends.
+        world.addComponent<InventoryComponent>(player, "InventoryComponent", {
+            items: [],
+            maxCapacity: (world.config.player as any)?.inventory?.maxCapacity ?? 30
         });
 
         const avatarHandle = world.renderEngine.createAvatarMesh();
@@ -120,7 +128,9 @@ export class EntityFactory {
             av.handle = model;
 
             // Wire skeletal animation via the render layer (keeps core Three.js-free).
-            const clips: any[] = model.userData?.animations ?? [];
+            // Clips come from the entry (real AnimationClip instances) — clone
+            // userData is JSON-mangled by Object3D.copy and must not be trusted.
+            const clips: any[] = entry.animations ?? model.userData?.animations ?? [];
             if (clips.length > 0) {
                 (world.renderEngine as any).startAnimation(model, clips);
             }

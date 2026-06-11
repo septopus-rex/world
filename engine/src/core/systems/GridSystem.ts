@@ -30,12 +30,10 @@ export class GridSystem implements ISystem {
 
         const currentKey = `${blockX}_${blockY}`;
 
-        // Emit state sync event for persistence (mapped back to Protocol Z-Up)
-        world.emitSimple("player:state", {
-            block: spp.block,
-            position: spp.pos,
-            rotation: [t.rotation[0], t.rotation[1], t.rotation[2]]
-        });
+        // NOTE: player:state is emitted ONLY by CharacterController.processPersistence
+        // (movement-thresholded, rotation properly converted via engineRotationToSpp).
+        // A second unthrottled emitter here used to spam raw engine-axis rotations
+        // into the same persistence channel.
 
         if (currentKey !== this.lastBlockKey) {
             this.lastBlockKey = currentKey;
