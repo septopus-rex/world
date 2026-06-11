@@ -1,146 +1,212 @@
 # Septopus 触发器协议 (Trigger Protocol)
 
-**Septopus 引擎** 通过数据驱动的触发器 (Trigger) system 实现交互逻辑。这种机制允许创作者无需编写复杂脚本，而是通过定义事件与条件的组合，由引擎在运行时自动评估并修改世界状态。
+**Septopus 引擎**通过数据驱动的触发器 (Trigger) 系统实现交互逻辑：创作者无需编写脚本，只需定义"事件 + 条件 + 动作"的组合数据，引擎在运行时自动评估并修改世界状态。
 
-触发器是实现游戏玩法逻辑、环境危险因素和状态变化的主要机制。
+触发器是实现玩法逻辑、环境机关和状态变化的主要机制。
 
-## 1. 触发器架构 (Trigger Architecture)
+> 本文档与引擎实现一一对应：类型定义见 `engine/src/core/types/Trigger.ts`，
+> 运行时见 `engine/src/core/systems/TriggerSystem.ts`，
+> raw 编解码见 `engine/src/plugins/adjunct/adjunct_trigger.ts`。
+> 系统行为层面的说明（生命周期、模式权限、多人感知）见 `docs/systems/trigger.md`。
 
-一个触发器由两部分构成：
+## 1. 触发器架构
 
-- **空间体积 (Volume)**：一个不渲染网格的几何判定区，用于检测玩家的进入/离开/停留。
-- **逻辑节点列表 (Logic Nodes)**：挂载在同一个体积上的一组逻辑。**同一个体积可以同时绑定多个事件**（例如 `in` 时开门、`out` 时关门），每个逻辑节点独立持有自己的条件、动作与恢复动作。
+一个触发器（adjunct 类型 `b8`，typeId `0x00b8`）由两部分构成：
 
-每个逻辑节点的执行流程如下：
+- **空间体积 (Volume)**：一个几何判定区（盒子/球体）。纯行走判定的体积完全不渲染；带 `touch` 节点的体积会生成一个**不可见但可被射线命中**的网格（Three.js 中 `visible=false` 仍可被 Raycaster 命中——引擎利用该特性实现"隐形按钮"）。
+- **逻辑节点列表 (Logic Nodes)**：挂在同一体积上的一组逻辑。**同一个体积可以绑定多个节点**（如 `in` 开门、`out` 关门、`hold` 计时），同类型的多个节点会**全部**依次触发。每个节点独立持有自己的事件类型、条件、动作与回退动作。
 
-`事件触发 (Event TRIGGERED) -> 评估条件 (Evaluate CONDITIONS) -> 执行动作 (Execute ACTIONS) -> 评估退出条件 (Evaluate EXIT CONDITIONS) -> 执行恢复动作 (Execute RECOVERY ACTIONS)`
+每个逻辑节点的执行流程：
 
-## 2. 触发器体积 (Trigger Volume)
+`事件触发 → 评估条件 (JSONLogic) → 真: 执行 actions / 假: 执行 fallbackActions`
 
-体积只参与数学判定，不产生任何可见网格。
+## 2. Raw 数据格式（b8 槽位表）
 
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `shape` | `0` \| `1` \| `2` | 形状：`0`=盒子 (Box)，`1`=球体 (Sphere)，`2`=圆柱 (Cylinder)。 |
-| `size` | `[x, y, z]` | 体积尺寸。盒子为各轴的**全长**；球体取 `x` 为半径；圆柱取 `x` 为半径、`z` 为高度。 |
-| `offset` | `[x, y, z]` | 相对附属物原点的局部偏移。 |
-| `rotation` | `[x, y, z]` | 相对旋转，用于 OBB（有向包围盒）判定。 |
+block raw 中一行 `b8` 数据是**位置数组**：
 
-**运行时判定（多人感知）**：体积按**参与者实体**分别记录"是否在体内"的状态。在游戏模式下接入的多个玩家（WebRTC 多人），每个接入玩家都被独立评估，互不影响彼此的进入/停留/退出状态。
+```
+[ size, offset, rotation, shape, gameOnly, events ]
+```
+
+| 槽位 | 字段 | 类型 | 说明 |
+|---|---|---|---|
+| 0 | `size` | `[x, y, z]` | 体积尺寸（米），**SPP 轴序**（X东 Y北 Z高），盒子为各轴全长；球体取 `x` 为半径。 |
+| 1 | `offset` | `[x, y, z]` | 相对地块原点的位置（米），SPP 轴序，与其他 adjunct 的 `pos` 同语义。 |
+| 2 | `rotation` | `[x, y, z]` | **预留**。当前 in/out/hold 的包含判定是轴对齐盒（AABB），不参与旋转；仅 `touch` 的射线命中网格会应用此旋转。 |
+| 3 | `shape` | `1` \| `2` | 形状：`1` = 盒子 (Box)，`2` = 球体 (Sphere)。缺省 `1`。 |
+| 4 | `gameOnly` | `0` \| `1` | `1` = 仅游戏模式参与评估。**缺省为 `1`**——演示/常驻机关需显式写 `0`。 |
+| 5 | `events` | `TriggerLogicNode[]` | 逻辑节点列表，见下文。 |
+
+**坐标说明**：`size`/`offset` 按 SPP 轴序书写，引擎装载时经 `Coords.getBoxDimensions` 等转换到内部轴序，创作者无需关心。
 
 ## 3. 事件 (Events)
 
-事件由引擎的空间和交互系统发出。逻辑节点监听这些事件以开始评估。
+| 事件 | 触发时机 |
+|---|---|
+| `in` | 玩家进入体积的那一帧，触发一次（边沿触发）。 |
+| `out` | 玩家离开体积的那一帧，触发一次（边沿触发）。 |
+| `hold` | 玩家在体积内**累计停留跨过 `holdDuration` 毫秒阈值**的那一帧，触发一次。 |
+| `touch` | 玩家的主交互射线（点击 / KeyE）命中该体积时触发，事件由 `RaycastInteractionSystem` 的 `interact` 路由进来。 |
 
-- `in`：玩家进入该触发器的空间体积范围内（进入的那一帧触发一次）。
-- `out`：玩家离开该触发器的空间体积范围（离开的那一帧触发一次）。
-- `hold`：玩家在体积内**持续停留达到 `holdDuration` 阈值后**触发。
-- `touch`：玩家直接进行交互（例如，通过鼠标准星点击）。
-
-> `hold` 的停留时长由逻辑节点的 `holdDuration`（毫秒）定义，而非每帧触发。阈值达成后触发一次；如需周期性触发，可由实现侧按 `holdDuration` 的间隔重复评估。
+`hold` 细则：
+- 停留时长由步进 `dt` 累加（确定性，不依赖墙钟），玩家离开时清零。
+- 采用**跨阈值语义**（`prevMs <= D < nowMs`）：每次停留只触发一次；离开再进入后自动重新武装。
+- `holdDuration` 缺省/为 0 时，进入后的下一帧即触发。
 
 ## 4. 逻辑节点 (Logic Node)
 
-逻辑节点是触发器的最小逻辑单元，将一个事件与其条件、动作绑定在一起。
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| `event` | `"in"` \| `"out"` \| `"hold"` \| `"touch"` | 监听的事件类型。 |
-| `holdDuration` | `number` (ms) | 仅 `hold` 事件使用，停留触发阈值。 |
-| `conditions` | `Condition[]` | 前置条件，全部满足（AND）才执行动作。空数组表示无条件。 |
-| `actions` | `Action[]` | 条件满足时执行的修改动作。 |
-| `exitConditions` | `Condition[]` | 可选。判断是否应执行恢复动作的退出条件。 |
-| `recovery` | `Action[]` | 可选。退出条件满足时，将目标恢复到缓存的原始状态。 |
-| `runOnce` | `0` \| `1` | 可选。`1` 表示该节点只触发一次，触发后禁用。 |
-
-**结构示例（一个体积绑定进入开门、离开关门两个事件）：**
-```json
-{
-  "volume": { "shape": 0, "size": [4, 4, 4], "offset": [0, 0, 0], "rotation": [0, 0, 0] },
-  "gameOnly": 0,
-  "logic": [
-    {
-      "event": "in",
-      "conditions": [],
-      "actions": [ [ [1, 161, 0, 1, 2], 0, 90, 0 ] ]
-    },
-    {
-      "event": "out",
-      "conditions": [],
-      "actions": [ [ [1, 161, 0, 1, 2], 0, 0, 0 ] ]
-    }
-  ]
+```ts
+interface TriggerLogicNode {
+    type: "in" | "out" | "hold" | "touch";
+    conditions?: JsonLogicRule;       // 可选，JSONLogic 前置条件
+    actions: TriggerAction[];         // 条件为真（或无条件）时执行
+    fallbackActions?: TriggerAction[]; // 可选，条件为假时执行
+    oneTime?: boolean;                // 可选，成功执行一次后即消耗
+    holdDuration?: number;            // 仅 hold：停留阈值（毫秒）
 }
 ```
 
-## 5. 对象目标寻址 (Object Targeting)
+| 字段 | 说明 |
+|---|---|
+| `type` | 监听的事件类型。 |
+| `conditions` | 可选的 JSONLogic 守卫（见 §5）。缺省视为恒真。评估抛错按假处理。 |
+| `actions` | 条件满足时执行的动作列表（见 §6）。 |
+| `fallbackActions` | 条件**不满足**时执行的动作列表（如提示"先去按按钮"）。注意：这是条件分支的 else，不是旧版协议的"恢复动作"。 |
+| `oneTime` | `true` 时该节点在**一次通过性执行**（条件满足且 actions 已跑）后被消耗。走 fallback 不消耗——锁住的门可以反复尝试。 |
+| `holdDuration` | 仅 `hold` 节点使用。 |
 
-要修改世界，触发器必须能够以数学方式选择其目标。SPP 使用分层数组格式进行寻址。
+## 5. 条件 (Conditions, JSONLogic)
 
-| 目标类型 | 主 ID | 描述 |
+条件是一条标准 [JSONLogic](https://jsonlogic.com/) 规则，运行时由 `json-logic-js` 对 **WorldContext** 求值：
+
+```json
+{ "==": [ { "var": "flags.demo_touch" }, true ] }
+```
+
+```json
+{ "and": [
+    { ">=": [ { "var": "time" }, 0.25 ] },
+    { "<":  [ { "var": "time" }, 0.8 ] }
+] }
+```
+
+### 可用变量 (WorldContext)
+
+| 变量 | 类型 | 说明 |
 |---|---|---|
-| **系统 (System)** | `0` | 全局环境变量（UI、时间、天气、天空）。 |
-| **附属物 (Adjunct)** | `1` | 世界中的其他 3D 对象。 |
-| **玩家 (Player)** | `2` | 玩家的属性状态、定位和移动能力。 |
-| **背包/物品栏 (Bag/Inventory)**| `3` | 玩家的物品栏项目及其数量。 |
+| `player.x` / `player.y` / `player.z` | `number` | 玩家位置（**引擎轴**：`y` 是高度）。`player.position` 为同值数组。 |
+| `flags.<key>` | `any` | 世界级标志位（`world.globalFlags`），可由 `flag` 动作写入——触发器之间靠它串联状态。 |
+| `time` | `number` | 世界时间，0–1 浮点（0.5 = 正午）。 |
+| `weather` | `string` | 当前天气。 |
 
-### 寻址格式示例 (Addressing Format Examples)
+多条件用 JSONLogic 自身的 `and` / `or` / `!` 组合，不再有独立的"条件数组默认 AND"约定。
 
-**定位附属物的属性：**
-```json
-[
-  1,        // 主类型: 附属物 (Adjunct)
-  0x00A1,   // 特定附属物类型的短 ID (例如，一扇"门")
-  0,        // 索引 (如果该地块上存在多个相同类型)
-  1,        // 目标属性 (例如，Rotation 旋转)
-  2         // 子属性 (例如，Z轴)
-]
+## 6. 动作 (Actions)
+
+```ts
+interface TriggerAction {
+    type: string;            // 'adjunct' | 'flag' | 'system'
+    target: string | number; // adjunctId、flag 键名或系统名
+    method: string;
+    params: any[];
+}
 ```
 
-**定位玩家的生命值：**
+| `type` | `target` | `method` | `params` | 效果 |
+|---|---|---|---|---|
+| `adjunct` | adjunctId，格式 `adj_{bx}_{by}_{type十进制}_{idx}`（如 `adj_2048_2048_161_0` = 该地块第 0 面墙） | `moveZ` | `[米]` | 目标沿 SPP 高度轴平移（同步更新 Transform 与 stdData，碰撞随动）。 |
+| | | `rotateY` | `[弧度]` | 目标绕竖直轴旋转。 |
+| `flag` | flag 键名 | （空） | `[值]`，缺省 `true` | 写入 `world.globalFlags[target]`，供其他触发器的条件读取。 |
+| `system` | （空） | `log` | `[...任意]` | 控制台日志（调试用）。 |
+
+> 动作面会随路线图扩展：P2 计划引入 `IActuator` / `LocalActuator` 抽象与 `contract` 分支
+> （同一份 trigger 数据，纯模式本地模拟、接链时换注入的 actuator），见
+> `docs/plan/STANDALONE_ENGINE_ROADMAP.md`。旧版协议中的"玩家属性/背包修改"动作**尚未实现**。
+
+## 7. 完整示例（取自演示场，可直接运行）
+
+一个体积绑三个节点——进开门、出关门、停留 800ms 记标志：
+
 ```json
-[
-  2,        // 主类型: 玩家 (Player)
-  5         // 目标属性: Health (生命值)
-]
+[[4, 4.5, 6], [8, 11.25, 3], [0, 0, 0], 1, 0, [
+  { "type": "in",  "actions": [
+      { "type": "adjunct", "target": "adj_2048_2048_161_0", "method": "moveZ", "params": [3.2] },
+      { "type": "flag", "method": "", "target": "demo_gate", "params": [true] } ] },
+  { "type": "out", "actions": [
+      { "type": "adjunct", "target": "adj_2048_2048_161_0", "method": "moveZ", "params": [-3.2] },
+      { "type": "flag", "method": "", "target": "demo_gate", "params": [false] } ] },
+  { "type": "hold", "holdDuration": 800, "actions": [
+      { "type": "flag", "method": "", "target": "demo_hold", "params": [true] } ] }
+]]
 ```
 
-## 6. 条件 (判断条件 / Conditions)
+条件门——JSONLogic 守卫 + `oneTime` + 回退提示：
 
-格式: `[ 目标寻址数组, 运算符, 数值 ]`
+```json
+[[2.2, 2, 4], [14.2, 12, 2], [0, 0, 0], 1, 0, [
+  { "type": "in", "oneTime": true,
+    "conditions": { "==": [ { "var": "flags.demo_touch" }, true ] },
+    "actions": [
+      { "type": "adjunct", "target": "adj_2048_2048_161_1", "method": "moveZ", "params": [3.2] } ],
+    "fallbackActions": [
+      { "type": "system", "method": "log", "target": "", "params": ["先去按圆锥按钮 (demo_touch)"] } ] }
+]]
+```
 
-**运算符 (Operators)**:
-- `0`: 不等于 (`!=`)
-- `1`: 等于 (`==`)
-- `2`: 大于 (`>`)
-- `3`: 小于 (`<`)
-- `4`: 大于或等于 (`>=`)
-- `5`: 小于或等于 (`<=`)
+## 8. 安全上下文 (Security Contexts)
 
-*注意：一个逻辑节点可以有多个条件。默认情况下，所有条件都必须评估为 `true`（AND/与 逻辑），动作才会执行。*
+触发器服从世界模式的执行权限约束：
 
-## 7. 动作 (修改方式 / Actions / Tasks)
+- **Edit（编辑）/ Ghost（幽灵）模式**：所有触发器禁用，排队中的点击也被丢弃。
+- **Normal（浏览）/ Game（游戏）模式**：触发器正常评估。
+- `gameOnly = 1` 的体积仅在 Game 模式参与评估（**这是缺省值**）。
 
-格式: `[ 目标寻址数组, 修改选项, 数值, (可选的动画索引) ]`
+**多人感知**：体积按参与者实体分别记录"是否在体内"与停留时长，多个玩家互不影响彼此的进入/停留/退出状态。
 
-**修改选项 (Modifier Options)**:
-- `0`: 设置 (`=`) - 将目标属性硬编码覆盖为新值。
-- `1`: 增加/减少 (`+=`) - 增加或减小目标属性。
-- `2`: 随机 (Random) - 在指定的约束范围内应用一个随机值。
+## 9. 数据精简与压缩 (Compaction)
 
-可选的第 4 项**动画索引**指向地块动画表中的一条动画，使该次修改以动画过渡的方式呈现（例如门的旋转插值）。
+### 设计取舍
 
-## 8. 恢复动作 (恢复动作 / Recovery Actions)
+旧版协议用 `[寻址数组, 运算符编号, 数值]` 三元组表达条件，目的是**数据结构精简**（链上字节即成本）。现行协议改用标准 JSONLogic，换来的是：表达力（任意嵌套逻辑）、现成的求值器（`json-logic-js`，不自研解释器）和工具链兼容。代价是明文体积更大。
 
-为了防止对世界状态造成永久性、破坏性的更改，触发器会缓存其目标的原始状态。
-如果逻辑节点定义的**退出条件 (Exit Condition)** 达成，恢复动作会自动将目标恢复到其缓存状态。这对于临时的增益状态 (buffs) 或计时的解谜房门非常有用。
+### 精简路径（机械、无损）
 
-## 9. 安全上下文 (Security Contexts)
+JSONLogic 的结构本质是 `{操作符: [参数...]}` 的树，可以**无损展平为位置数组** `[操作符编号, 参数...]` ——这正是旧三元组格式的一般化。动作对象同理可位置化。例如演示场中的"条件门"节点：
 
-由于触发器可以修改物品栏和玩家的能力，因此它们必须服从基于活动世界模式的执行权限约束。
+| 形态 | 字节 |
+|---|---|
+| 明文 JSON（现行存储） | 348 B |
+| 展平位置数组 + 操作符/动作类型编号表 | 145 B（≈ 2.4×） |
+| 再叠字符串字典（adjunctId / flag 路径在地块级去重）+ 二进制编码（CollapseCodec / CBOR）+ gzip | 进一步压缩，视重复度通常再得 2–4× |
 
-- **正常模式 (Normal Mode)**: 可以触发环境变化和动画。
-- **游戏模式 (Game Mode)**: 可以触发物品栏变化和健康值/属性修改。
-- **幽灵模式 (Ghost Mode)**: 所有触发器均被禁用。
+无条件的简单节点同样有效（107 B → 51 B）。
 
-此外，体积可通过 `gameOnly` 标志声明**仅在游戏模式下生效**：当 `gameOnly = 1` 时，该触发器在正常浏览模式下不参与评估，仅在游戏模式被激活。
+### 分层原则（重要）
+
+**压缩是编解码层的事，不是创作与运行时的事。**
+
+```
+创作/运行时        序列化层 (serialize)          存储/链上
+标准 JSONLogic ⇄  展平 + 字典 + 二进制 + gzip  ⇄  紧凑字节
+```
+
+- 创作者书写、引擎求值的**永远是标准 JSONLogic**（`TriggerSystem` 不感知压缩）。
+- 展平/还原发生在 `serialize`/`deserialize`（`adjunct_trigger.ts` 的 Attribute 层），与 raw 的其余槽位走同一条 CollapseCodec 管线。
+
+### 现状
+
+**尚未实现。** 当前 `events` 以明文 JSON 存于 raw 槽位 5——本地 IndexedDB 持久化与 gzip 传输下字节压力可忽略。紧凑编码计划与 **P4 上链发布**同期落地（链上字节才是真实成本），届时只需新增一层编解码，存量明文数据可一次性迁移，运行时零改动。
+
+## 10. 与旧版协议的差异（迁移对照）
+
+| 旧版 | 现行 | 说明 |
+|---|---|---|
+| 节点字段 `event` | `type` | 改名。 |
+| `runOnce: 0\|1` | `oneTime: boolean` | 改名 + 语义收紧：仅通过性执行消耗。 |
+| `exitConditions` + `recovery`（恢复动作） | **未实现** | `fallbackActions` 是条件不满足的 else 分支，**不是**恢复动作。状态恢复需显式写反向节点（如 `out` 关门）。 |
+| 条件三元组 `[寻址, 运算符0-5, 数值]` | JSONLogic 规则 | 见 §5；紧凑编码见 §9。 |
+| 动作数组 `[寻址, 修改选项, 数值, 动画索引]` | `{type, target, method, params}` 对象 | 动画索引过渡**未实现**（动作即时生效）。 |
+| `shape: 0/1/2`（盒/球/圆柱） | `1` 盒 / `2` 球 | 圆柱未实现；编号变更注意。 |
+| 寻址数组（系统/附属物/玩家/背包） | adjunctId 字符串 / flag 键名 | 玩家与背包目标未实现，随 P2 actuator 扩展。 |
+
+**向后兼容**：raw 槽位 5 若是旧式的**平铺动作数组**（元素不带 `in/out/hold/touch` 节点类型），装载时自动包装为单个无条件 `in` 节点。

@@ -140,11 +140,12 @@ Block raw[3] = 999 → resource(999) → { type: "game", format: "json", raw: { 
 **① 触发器级别** — 整个触发器仅在 Game Mode 执行：
 
 ```
-Trigger Raw: [ size, position, rotation, shape, event, actions, contractId, runOnce, gameOnly ]
-                                                                                      ↑ index 8
+Trigger Raw: [ size, offset, rotation, shape, gameOnly, events ]
+                                              ↑ index 4
 ```
 
-`raw[8] = 1` 表示该触发器仅在游戏模式下激活。
+`raw[4] = 1` 表示该触发器仅在游戏模式下激活（**缺省值即为 1**）。
+完整槽位定义见 [触发器协议 §2](./trigger.md)。
 
 **② 方法级别** — 单个 task 方法仅在 Game Mode 可被调用：
 

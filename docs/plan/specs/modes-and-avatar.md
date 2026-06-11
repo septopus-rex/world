@@ -1,8 +1,20 @@
 # Modes & Avatar — design + near-term implementation spec
 
-Status: **spec / near-term work plan**. Scope: finish the 4-mode system
-(Normal / Edit / Game / Ghost) and implement the player **avatar** as an
-IPFS-fetchable model resource that reuses the existing model pipeline.
+Status: **largely implemented** (avatar: 51cfb17; trigger mode gating: cb2473d,
+2026-06). Scope was: finish the 4-mode system (Normal / Edit / Game / Ghost) and
+implement the player **avatar** as an IPFS-fetchable model resource reusing the
+existing model pipeline.
+
+**Outcome vs. plan** — three deltas, see the annotated checklist in Part C:
+1. Trigger gating shipped with REFINED semantics: triggers evaluate in Normal AND
+   Game (Edit/Ghost fully disabled); the volume-level `gameOnly` flag (raw default
+   = 1) restricts a volume to Game. Net default behavior matches the target table
+   (fire only in Game), but authors can opt volumes into Normal with `gameOnly: 0`
+   — the demo court does. Contract: `protocol/cn/trigger.md`.
+2. `Engine.setMode()` / client mode switcher NOT built — Game/Ghost are still
+   unreachable from the client UI (tests reach them via `getWorld().setMode`).
+3. Hide-avatar-in-Ghost NOT built — currently the avatar is third-person-only
+   (first-person force-hides it), with no Ghost check.
 
 Related: `docs/plan/STANDALONE_ENGINE_ROADMAP.md` (closeout), the module/texture
 work (`ResourceManager`, `ModelLoader`), `engine/src/core/types/SystemMode.ts`.
@@ -11,7 +23,13 @@ work (`ResourceManager`, `ModelLoader`), `engine/src/core/types/SystemMode.ts`.
 
 ## Part A — The 4 modes
 
-### Current state (audited)
+### Current state (audited — HISTORICAL, pre-cb2473d; kept for context)
+
+> The bullets below describe the codebase BEFORE the trigger work landed.
+> Superseded: `TriggerSystem` now gates on `world.mode` (Edit/Ghost disabled,
+> `gameOnly` → Game-only), so "never checks world.mode" and "Ghost: zero
+> consumers" no longer hold. Still true: no `Engine.setMode()`, no client
+> mode switcher.
 
 - `SystemMode` enum has all four values: `Normal · Edit · Game · Ghost`
   (`core/types/SystemMode.ts`).
@@ -158,28 +176,33 @@ player despawn via `resourceManager.release`.
 ## Part C — Near-term checklist ("处理干净")
 
 Modes:
-- [ ] `TriggerSystem.update`: gate firing on `world.mode === Game` (+ clear
-      `entitiesInside` on mode exit).
+- [x] `TriggerSystem.update`: mode gating (cb2473d) — shipped as Edit/Ghost
+      disabled + `gameOnly` (default 1) → Game-only, NOT a blanket Game-only gate;
+      `entitiesInside` is NOT cleared on mode exit (state carries over, which
+      prevents stale `in` re-fires — D4 resolved the other way).
 - [ ] `CharacterController.syncCameraAndAvatar`: hide avatar in Ghost.
+      (Currently third-person-only visibility; no Ghost check.)
 - [ ] `Engine.setMode(mode)` + export `SystemMode` from the engine entry.
 - [ ] `DesktopLoader.setMode` + `App.tsx`/`useEngine` mode switcher (Normal/Game/
       Ghost/Edit) replacing the lone edit toggle.
-- [ ] Tests: triggers fire only in Game; avatar hidden in Ghost; setMode reaches
-      the world (headless, NullRenderEngine).
+- [x] Tests: trigger mode gating covered (`engine/tests/systems/
+      trigger-pipeline.test.ts`, e2e `trigger.spec.ts`); avatar-hidden-in-Ghost
+      untested (feature missing).
 
-Avatar:
-- [ ] `AvatarComponent.resource?: string`; `WorldConfig.player.avatar`.
-- [ ] Avatar load+swap helper (mirror `scheduleModuleSwap`) using
-      `world.resourceManager.getModel/instance` + scale-to-body; new `AvatarSystem`
-      or a method invoked from `setupPlayer`.
-- [ ] `DesktopLoader`: serve a demo avatar record + set the player avatar resource;
-      add a small `.glb` to `public/assets/`.
-- [ ] Tests: avatar resource loads once, swaps the placeholder, scales to body;
-      Ghost hides it; dedup if two players share an id.
+Avatar (all landed in 51cfb17):
+- [x] `AvatarComponent.resource?: string`; `WorldConfig.player.avatar`
+      (only `.resource` is consumed; `.scale`/`.max` reserved, unread).
+- [x] Avatar load+swap: `EntityFactory.loadAvatarModel` (helper, no separate
+      AvatarSystem) — getModel/instance + uniform scale-to-height + placeholder
+      swap; embedded clips auto-play (first clip) via `RenderEngine.startAnimation`.
+- [x] `DesktopLoader`: demo avatar record id 30 → `/assets/avatar.glb` (rigged).
+- [x] Tests: e2e `avatar.spec.ts` + resource-manager unit tests (load-once/dedup).
+      Ghost-hides-it untested (feature missing).
 
 Docs:
-- [ ] Update `STANDALONE_ENGINE_ROADMAP.md`: modes complete, avatar implemented,
-      old-engine avatar was spec-only.
+- [x] Roadmap updated; protocol docs synced to implementation 2026-06-11
+      (`protocol/{cn,en}/player.md`, `docs/systems/player.md` — avatar §3 rewritten,
+      reserved fields and unimplemented items marked).
 
 ---
 

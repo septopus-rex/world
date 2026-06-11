@@ -140,11 +140,12 @@ The `gameonly` flag exists at two levels:
 **① Trigger level** — entire trigger only activates in Game Mode:
 
 ```
-Trigger Raw: [ size, position, rotation, shape, event, actions, contractId, runOnce, gameOnly ]
-                                                                                      ↑ index 8
+Trigger Raw: [ size, offset, rotation, shape, gameOnly, events ]
+                                              ↑ index 4
 ```
 
-`raw[8] = 1` means the trigger only activates in Game Mode.
+`raw[4] = 1` means the trigger only evaluates in Game Mode (**and 1 is the default**).
+See [Trigger Protocol §2](./trigger.md) for the full slot map.
 
 **② Method level** — individual task methods restricted to Game Mode:
 

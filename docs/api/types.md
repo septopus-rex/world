@@ -2,6 +2,12 @@
 
 本文档包含 Septopus World 重构所需的所有 TypeScript 类型定义，基于 ECS 架构设计。
 
+> ⚠️ **历史设计稿（TS 重构期编写），非现行 API 文档。** 以 `engine/src` 中的实际类型
+> 为准。已知与实现不符的部分：玩家相关类型（`PlayerData` 含钱包地址属链耦合时代；
+> `PlayerCapacity` 字段与现行 `RigidBodyComponent`/`PlayerBodyComponent` 不一致；
+> `avatar` 配置缺 `resource?` 字段）——现行契约见 `protocol/cn/player.md` 与
+> `engine/src/core/components/PlayerComponents.ts`、`engine/src/core/types/WorldConfig.ts`。
+
 ## 目录
 
 - [ECS 核心类型](#ecs-核心类型)

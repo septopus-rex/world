@@ -394,8 +394,8 @@ step(dt):
 
 ### 6.0 前置（独立先行，不等总线）
 
-1. **修接线 bug**：重写 `AdjunctSystem.registerTriggers`（AdjunctSystem.ts:89-108）——直读新格式 `vol.events`（当前按旧 `vol.type/logic/runOnce` 解析，作者写的 JSONLogic 被静默丢成 `[{type:'hold',actions:[]}]`）。补一条走真管线（adjunct_trigger → AdjunctSystem → TriggerSystem）的集成测试——现有 `trigger-jsonlogic.test.ts` 手搓组件恰好掩盖此 bug。
-2. **类型统一**：合并 `TriggerLogicNode`（types/Trigger.ts:32-45）与 `TriggerEvent`（TriggerComponent.ts:6-14），type 联合扩为 `'in'|'out'|'hold'|'touch'`；删除死类型 `TriggerVolumeComponent`。**现在就加类型级字段** `holdDuration?: number` 与 `gameOnly?: boolean`（语义实现推迟到 PR-7），避免 adjunct_trigger 槽位 5 的序列化格式二次翻修。
+1. ~~**修接线 bug**~~ **（已完成，cb2473d 2026-06）**：重写 `AdjunctSystem.registerTriggers`——直读新格式 `vol.events`（旧实现按 `vol.type/logic/runOnce` 解析，作者写的 JSONLogic 被静默丢成 `[{type:'hold',actions:[]}]`）。集成测试见 `engine/tests/systems/trigger-pipeline.test.ts`。
+2. **类型统一（大部分已完成，cb2473d）**：`TriggerEvent` 已并为 `TriggerLogicNode` 别名，type 联合已扩为 `'in'|'out'|'hold'|'touch'`，`holdDuration` / `gameOnly` 字段已落（语义也已实现，未推迟）。残留：死类型 `TriggerVolumeComponent`（types/Trigger.ts）尚未删除。
 3. **ISystem.init**：World 构造器注册完全部系统后 `this.systems.init(this)` 一轮。消灭 Inventory/ItemDrop/ParticleEffect "首帧才懒订阅、错过此前事件"的缺陷与 EditSystem 构造器订阅的不对称。
 
 ### 6.1 TriggerSystem：touch + trigger.fired
@@ -520,7 +520,7 @@ export class ContractActuator implements IActuator {    // 链可选注入（ICh
         const reqId = this.nextId++;
         c.emit('actuator.requested', { reqId, action }, { target: c.triggerEid, actor: c.actor });
         if (!this.publisher) { c.emit('actuator.settled', { reqId, ok: false, error: 'no publisher' }, { target: c.triggerEid }); return; }
-        this.publisher.publish(/* contractId = action.target，对应旧 raw 槽位 6（game.md:143）*/)
+        this.publisher.publish(/* contractId = action.target；旧版协议的 raw contractId 槽位已移除，现行格式见 protocol/cn/trigger.md §2 */)
             .then (r => c.emit('actuator.settled', { reqId, ok: true,  result: r },        { target: c.triggerEid }))
             .catch(e => c.emit('actuator.settled', { reqId, ok: false, error: String(e) }, { target: c.triggerEid }));
     }
