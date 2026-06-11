@@ -1,5 +1,11 @@
 # 背包系统（Inventory System）
 
+> ⚠️ **链耦合时代的历史设计稿**——以 Solana 交易为执行原语（PublicKey/Transaction/
+> 链上账户），与现行"无链独立引擎 + 链可选插件"架构冲突，请勿按本稿实现。
+> 现行设计见 [inventory-local-first 规格](../plan/specs/inventory-local-first.md)：
+> 保留了本稿的"物品即 Adjunct"与"seed 确定性推导属性"两个核心思想，
+> 链上原子交换降级为可选 actuator 后端（P4）。
+
 ## 概述
 
 背包系统需要解决的核心问题：**物品存在于 Block（链上空间）中，玩家需要拾取、携带、使用、丢弃、交易这些物品。** 在链上架构中，每一步都涉及数据归属和状态转移。

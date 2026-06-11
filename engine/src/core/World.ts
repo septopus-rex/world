@@ -21,6 +21,7 @@ import { AdjunctSystem } from './systems/AdjunctSystem';
 import { RaycastInteractionSystem } from './systems/RaycastInteractionSystem';
 import { TriggerSystem } from './systems/TriggerSystem';
 import { InventorySystem } from './systems/InventorySystem';
+import { ItemSystem } from './systems/ItemSystem';
 import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
 import { EditSystem } from './systems/EditSystem';
@@ -30,6 +31,7 @@ import { SystemMode } from './types/SystemMode';
 import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
 import { DraftStore, IDraftBackend, InMemoryDraftBackend } from './services/DraftStore';
+import { IActuator, LocalActuator } from './services/Actuator';
 import { IdbDraftBackend, hasIndexedDB } from './services/IdbDraftBackend';
 import { ResourceManager, ResourceManagerConfig } from '../render/ResourceManager';
 import { MeshFactory } from '../render/MeshFactory';
@@ -62,6 +64,8 @@ export interface WorldDeps {
     resources?: ResourceManagerConfig;
     /** Durable draft storage. Default: IndexedDB in browsers, in-memory in Node. */
     draftBackend?: IDraftBackend | null;
+    /** Trigger-action executor. Default: LocalActuator (pure local mutation). */
+    actuator?: IActuator;
 }
 
 /** Inert data source so a World constructed without one never crashes on resource calls. */
@@ -116,6 +120,13 @@ export class World {
      */
     public readonly draftStore: DraftStore;
 
+    /**
+     * Trigger-action execution layer (P2): TriggerSystem decides WHAT fires,
+     * the actuator decides HOW it lands. LocalActuator mutates the live world;
+     * a chain build injects a contract-backed implementation instead.
+     */
+    public readonly actuator: IActuator;
+
     // 4. Events
     private listeners: Map<string, Function[]> = new Map();
 
@@ -137,6 +148,7 @@ export class World {
                 ? deps.draftBackend
                 : (hasIndexedDB() ? new IdbDraftBackend() : new InMemoryDraftBackend())
         );
+        this.actuator = deps.actuator ?? new LocalActuator();
 
         // 1. Rendering Setup — injectable. Default = real WebGL engine; tests pass
         //    a headless NullRenderEngine so a World can boot+tick without a GPU/DOM.
@@ -166,6 +178,7 @@ export class World {
         this.systems.addSystem(new RaycastInteractionSystem());
         this.systems.addSystem(new TriggerSystem());
         this.systems.addSystem(new InventorySystem());
+        this.systems.addSystem(new ItemSystem());
         this.systems.addSystem(new PhysicsSystem());
         this.systems.addSystem(new GridSystem());
         this.systems.addSystem(new BlockSystem());

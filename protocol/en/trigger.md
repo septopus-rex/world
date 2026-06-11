@@ -97,6 +97,7 @@ A condition is a standard [JSONLogic](https://jsonlogic.com/) rule, evaluated by
 |---|---|---|
 | `player.x` / `player.y` / `player.z` | `number` | Player position (**engine axes**: `y` is height). `player.position` is the same as an array. |
 | `flags.<key>` | `any` | World-level flags (`world.globalFlags`), writable by `flag` actions — triggers chain state through them. |
+| `inventory.<itemId>` | `number` | Total count of that item in the player's bag (e.g. `inventory.tpl_2` — "opens only with a key"); see the [inventory spec](../../docs/plan/specs/inventory-local-first.md). |
 | `time` | `number` | World time, 0–1 float (0.5 = noon). |
 | `weather` | `string` | Current weather. |
 
@@ -118,13 +119,15 @@ interface TriggerAction {
 | `adjunct` | adjunctId, format `adj_{bx}_{by}_{typeDecimal}_{idx}` (e.g. `adj_2048_2048_161_0` = wall #0 on that block) | `moveZ` | `[meters]` | Translate the target along the SPP altitude axis (updates Transform AND stdData; collision follows). |
 | | | `rotateY` | `[radians]` | Rotate the target around the vertical axis. |
 | `flag` | flag key | (empty) | `[value]`, default `true` | Write `world.globalFlags[target]`, readable by other triggers' conditions. |
+| `bag` | itemId (`tpl_{template}` / `itm_{template}_{seed}`) | `give` / `take` | `[count]` | Credit/debit the player's bag. **Game mode only** (warned & skipped elsewhere). |
 | `system` | (empty) | `log` | `[...any]` | Console log (debugging). |
 
-> The action surface grows with the roadmap: P2 introduces the `IActuator` /
-> `LocalActuator` abstraction and a `contract` branch (same trigger data, local
-> simulation in pure mode, swap the injected actuator when chain-connected) — see
-> `docs/plan/STANDALONE_ENGINE_ROADMAP.md`. The legacy protocol's player-attribute /
-> inventory actions are **not implemented yet**.
+> Action execution goes through the **actuator layer** (P2, shipped):
+> `TriggerSystem` decides WHAT fires; `world.actuator` (`IActuator`, default
+> `LocalActuator`, swappable via `WorldDeps.actuator`) decides HOW it lands —
+> a chain build injects a contract-backed implementation with zero content
+> changes. The legacy protocol's player-attribute actions are **not implemented
+> yet** (inventory is covered by `bag`).
 
 ## 7. Complete Examples (from the demo court, runnable as-is)
 
@@ -210,6 +213,6 @@ standard JSONLogic ⇄  flatten + dictionary + binary + gzip ⇄  compact bytes
 | condition triples `[addressing, op 0-5, value]` | JSONLogic rules | §5; compact encoding in §9. |
 | action arrays `[addressing, modifier, value, animIndex]` | `{type, target, method, params}` objects | Animated transitions **not implemented** (actions apply instantly). |
 | `shape: 0/1/2` (box/sphere/cylinder) | `1` box / `2` sphere | Cylinder not implemented; note the renumbering. |
-| addressing arrays (system/adjunct/player/bag) | adjunctId string / flag key | Player & inventory targets not implemented; extends with P2 actuators. |
+| addressing arrays (system/adjunct/player/bag) | adjunctId string / flag key / `bag` itemId | Bag targets implemented via the `bag` action (Game mode); player-attribute targets not implemented. |
 
 **Backward compatibility**: if raw slot 5 is a legacy **flat action array** (entries lacking an `in/out/hold/touch` node type), it is wrapped into a single unconditional `in` node on load.

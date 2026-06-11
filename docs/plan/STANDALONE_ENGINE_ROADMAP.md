@@ -52,7 +52,7 @@
 | Phase | 目标 | 关键产物 | 状态 |
 |---|---|---|---|
 | **P1** | **本地优先持久化 + 导出** | `DraftStore`(IndexedDB)、`ExportService`、JSON round-trip | **已完成**(2026-06;草稿覆盖在 BlockSystem 层,独立 LocalDataSource 暂不需要) |
-| **P2** | Trigger 本地 actuator | `IActuator` + `LocalActuator`,trigger `contract` 分支 | 待开始 |
+| **P2** | Trigger 本地 actuator | `IActuator` + `LocalActuator`,trigger `contract` 分支 | **主体已完成**(2026-06;`contract` 分支留待 P4) |
 | **P3** | 资源走 OSS / IPFS | `IResourceResolver` + OSS/IPFS 后端 | 待开始 |
 | **P4** | **可选**链插件 | `SolanaPublisher implements IChainPublisher`,选中 block 发布 | 待开始（可选/最后） |
 | **P5** | 引擎收敛 + 双构建 | 消除双引擎(纳入 `specs/phase0-engine-consolidation.md`)、纯/含链两个打包目标 | 待开始 |
@@ -122,14 +122,20 @@ BlockSystem.load ──同步──→ Map 命中则用草稿,否则 mock
 
 ---
 
-## 4. P2 · Trigger 本地 actuator
+## 4. P2 · Trigger 本地 actuator —— 主体已完成（2026-06）
 
 让 trigger 保留「指向链上合约」的指针,但纯模式用本地逻辑模拟。
 
-- 新增 `IActuator { run(method, params, ctx) }`;`TriggerComponent.TriggerAction` 加 `'contract'` 类型(携带 `contractId`,数据格式向前兼容)。
-- `TriggerSystem.executeAction` 补 `contract` 分支 → 派发给注入的 actuator。
-- `LocalActuator`(纯模式默认:打印 + 改本地状态 + 返回可配结果)/ 日后 `ChainActuator`(P4 包 publisher)。
-- 效果:同一份 trigger 数据、同一个小游戏逻辑回路,纯模式本地模拟,接链时只换注入的 actuator,内容零改。
+**已落地**（与背包 P0–P2 同批,规格见 `specs/inventory-local-first.md`）:
+- `IActuator { execute(action, ctx) }` + `LocalActuator`(`core/services/Actuator.ts`),
+  经 `WorldDeps.actuator` / `EngineServices.actuator` 注入,缺省本地实现。
+- `TriggerSystem` 不再自持动作执行逻辑——`_fireNode` 统一走 `world.actuator.execute`。
+- 动作面: `adjunct`(moveZ/rotateY) · `flag` · `bag`(give/take,仅 Game 模式) · `system`(log)。
+- 配套: b5 item adjunct + `ItemSystem` 原子拾取/丢弃、`ItemRegistry` seed 推导、
+  JSONLogic `inventory.*` 条件、背包 IndexedDB 持久化(DraftStore meta 通道)。
+
+**待 P4**: `'contract'` 动作类型(携带 `contractId`)→ `ChainActuator`(包 publisher)。
+接链时只换注入的 actuator,trigger 内容零改。
 
 ---
 

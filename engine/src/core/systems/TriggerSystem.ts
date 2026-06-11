@@ -2,8 +2,7 @@ import jsonLogic from 'json-logic-js';
 import { World, ISystem, EntityId } from '../World';
 import { TriggerComponent, TriggerEvent } from '../components/TriggerComponent';
 import { TransformComponent } from '../components/PlayerComponents';
-import { AdjunctComponent } from '../components/AdjunctComponents';
-import { TriggerAction, WorldContext } from '../types/Trigger';
+import { WorldContext } from '../types/Trigger';
 import { SystemMode } from '../types/SystemMode';
 
 /**
@@ -23,30 +22,21 @@ import { SystemMode } from '../types/SystemMode';
  *
  * oneTime consumes only on a PASSING execution (conditions met, actions run) —
  * fallbackActions never consume, so e.g. a locked door stays re-tryable.
+ *
+ * Action EXECUTION is delegated to world.actuator (IActuator) — this system
+ * only decides WHAT fires; the injected actuator decides HOW it lands
+ * (LocalActuator in pure mode, contract-backed when chain-connected).
  */
 export class TriggerSystem implements ISystem {
     private _px = 0; private _py = 0; private _pz = 0;
     private _tx = 0; private _ty = 0; private _tz = 0;
 
-    private _adjunctMap = new Map<string | number, EntityId>();
-    private _adjunctMapDirty = true;
+    /** The acting player this frame (actuator context for bag actions). */
+    private _playerId: EntityId | null = null;
 
     /** Clicked entities queued by the 'interact' subscription, drained per update. */
     private _pendingTouches: EntityId[] = [];
     private _interactSubscribed = false;
-
-    public invalidateAdjunctMap(): void {
-        this._adjunctMapDirty = true;
-    }
-
-    private rebuildAdjunctMap(world: World): void {
-        this._adjunctMap.clear();
-        for (const id of world.queryEntities("AdjunctComponent")) {
-            const comp = world.getComponent<AdjunctComponent>(id, "AdjunctComponent");
-            if (comp) this._adjunctMap.set(comp.adjunctId, id);
-        }
-        this._adjunctMapDirty = false;
-    }
 
     public update(world: World, deltaTime: number): void {
         // Edit mode is for authoring, Ghost is read-only — no trigger may fire.
@@ -68,6 +58,7 @@ export class TriggerSystem implements ISystem {
         }
 
         const playerId = playerEntities[0];
+        this._playerId = playerId;
         const playerTransform = world.getComponent<TransformComponent>(playerId, "TransformComponent");
         if (!playerTransform) return;
 
@@ -75,7 +66,7 @@ export class TriggerSystem implements ISystem {
         this._py = playerTransform.position[1];
         this._pz = playerTransform.position[2];
 
-        const ctx = this._buildContext(world, playerTransform);
+        const ctx = this._buildContext(world, playerId, playerTransform);
 
         // 1) touch — route queued raycast hits to their trigger components.
         if (this._pendingTouches.length > 0) {
@@ -148,7 +139,16 @@ export class TriggerSystem implements ISystem {
         this._interactSubscribed = true;
     }
 
-    private _buildContext(world: World, transform: TransformComponent): WorldContext {
+    private _buildContext(world: World, playerId: EntityId, transform: TransformComponent): WorldContext {
+        // itemId → total count, so conditions can gate on possession:
+        //   {">=": [{"var": "inventory.tpl_2"}, 1]}   — "has a key"
+        const counts: Record<string, number> = {};
+        const inv = world.getComponent<{ items?: { id: string; quantity?: number }[] }>(playerId, "InventoryComponent");
+        if (inv?.items) {
+            for (const item of inv.items) {
+                counts[item.id] = (counts[item.id] ?? 0) + (item.quantity ?? 0);
+            }
+        }
         return {
             player: {
                 position: [transform.position[0], transform.position[1], transform.position[2]],
@@ -157,6 +157,7 @@ export class TriggerSystem implements ISystem {
                 z: transform.position[2],
             },
             flags: world.globalFlags,
+            inventory: counts,
             time: world.time,
             weather: world.weather,
         };
@@ -195,7 +196,7 @@ export class TriggerSystem implements ISystem {
         const actions = pass ? node.actions : (node.fallbackActions ?? []);
 
         for (const action of actions) {
-            this._executeAction(world, action);
+            world.actuator.execute(action, { world, playerId: this._playerId, mode: world.mode });
         }
 
         // Only a passing execution consumes oneTime / counts as triggered.
@@ -212,49 +213,4 @@ export class TriggerSystem implements ISystem {
         }
     }
 
-    private _executeAction(world: World, action: TriggerAction): void {
-        switch (action.type) {
-            case 'adjunct': {
-                if (this._adjunctMapDirty) this.rebuildAdjunctMap(world);
-                const targetId = this._adjunctMap.get(action.target);
-                if (targetId !== undefined) {
-                    const comp = world.getComponent<AdjunctComponent>(targetId, "AdjunctComponent");
-                    if (comp) this._applyAdjunctModification(world, targetId, comp, action.method, action.params);
-                }
-                break;
-            }
-            case 'flag':
-                // set_flag: target = key, params[0] = value (default true)
-                world.globalFlags[action.target as string] = action.params[0] ?? true;
-                break;
-            case 'system':
-                if (action.method === 'log') {
-                    console.log('[TriggerSystem]', ...action.params);
-                }
-                break;
-        }
-    }
-
-    /**
-     * Live adjunct mutation: update the entity's TransformComponent (the mesh
-     * group's pose authority via VisualSyncSystem — collision follows too) AND
-     * stdData (so edit-mode persistence sees the new values). Forcing a mesh
-     * rebuild here (the old approach) changed nothing visually — the rebuilt
-     * sub-mesh cancels its own offset — and orphaned the previous mesh group.
-     *
-     * Axis note: SPP Alt maps to engine +Y, SPP yaw maps to engine Y rotation,
-     * so both deltas apply 1:1 to the engine transform.
-     */
-    private _applyAdjunctModification(world: World, entityId: EntityId, adjunct: AdjunctComponent, method: string, params: any[]): void {
-        const trans = world.getComponent<TransformComponent>(entityId, "TransformComponent");
-        if (method === 'rotateY') {
-            const amount = params[0] ?? 0.1;
-            adjunct.stdData.ry += amount;
-            if (trans) { trans.rotation[1] += amount; trans.dirty = true; }
-        } else if (method === 'moveZ') {
-            const amount = params[0] ?? 0.1;
-            adjunct.stdData.oz += amount;
-            if (trans) { trans.position[1] += amount; trans.dirty = true; }
-        }
-    }
 }

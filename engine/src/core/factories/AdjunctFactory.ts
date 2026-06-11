@@ -10,6 +10,8 @@ import type { ResourceManager } from '../../render/ResourceManager';
 export interface IAdjunctCreationResult {
     handle: RenderHandle;
     triggerVolumes: any[];
+    /** b5 item payloads ({templateId, seed, count}) — AdjunctSystem → ItemComponent. */
+    itemPickups: any[];
 }
 
 /**
@@ -23,6 +25,7 @@ export class AdjunctFactory {
         const block = world.getComponent<BlockComponent>(blockEid, "BlockComponent");
         const meshComp = world.getComponent<MeshComponent>(blockEid, "MeshComponent");
         const triggerVolumes: any[] = [];
+        const itemPickups: any[] = [];
 
         // 1. Create a group to hold all parts of the adjunct
         const meshGroup = world.renderEngine.createGroup(meshComp?.handle);
@@ -43,6 +46,9 @@ export class AdjunctFactory {
             for (const renderItem of renderDataList) {
                 if (renderItem.triggerVolume) {
                     triggerVolumes.push(renderItem.triggerVolume);
+                }
+                if (renderItem.itemPickup) {
+                    itemPickups.push(renderItem.itemPickup);
                 }
 
                 if (renderItem.hidden) continue;
@@ -90,7 +96,7 @@ export class AdjunctFactory {
             console.error(`[AdjunctFactory] Failed to assemble mesh for adjunct.`, error);
         }
 
-        return { handle: meshGroup, triggerVolumes };
+        return { handle: meshGroup, triggerVolumes, itemPickups };
     }
 
     /**

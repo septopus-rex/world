@@ -77,10 +77,14 @@ The engine continuously resolves player-vs-terrain/adjunct collisions:
 Movement capacities live in `RigidBodyComponent`: `maxSpeedWalk` / `maxSpeedRun` /
 `jumpForce` / `gravity` / `friction` / `isGrounded`.
 
-> ⚠️ In world config, `player.capacity` (rotate/speed/jumpForce/gravityMultiplier),
-> `player.body` (head/hand/leg segments) and `player.bag.max` are **reserved
-> types** — the engine hardcodes defaults at player creation and does not read
-> them. Setting them in a king's config has no effect today.
+> ⚠️ In world config, `player.capacity` (rotate/speed/jumpForce/gravityMultiplier)
+> and `player.body` (head/hand/leg segments) are **reserved types** — the engine
+> hardcodes defaults at player creation and does not read them. `player.bag.max`
+> **is wired**: it caps the player's bag slots (`InventoryComponent.maxCapacity`);
+> the full inventory design lives in the
+> [inventory-local-first spec](../../docs/plan/specs/inventory-local-first.md)
+> (b5 item adjuncts, atomic pickup/drop, IndexedDB persistence, trigger `bag`
+> actions and `inventory.*` conditions).
 
 ## 3. Avatar
 

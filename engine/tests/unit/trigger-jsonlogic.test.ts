@@ -4,6 +4,7 @@ import { TriggerSystem } from '../../src/core/systems/TriggerSystem';
 import { TriggerComponent } from '../../src/core/components/TriggerComponent';
 import { TransformComponent } from '../../src/core/components/PlayerComponents';
 import { WorldContext } from '../../src/core/types/Trigger';
+import { LocalActuator } from '../../src/core/services/Actuator';
 
 // ---------------------------------------------------------------------------
 // Minimal fake World
@@ -25,6 +26,9 @@ function makeWorld(flags: Record<string, any> = {}, time = 0.5, weather = 'clear
         globalFlags: flags,
         time,
         weather,
+        // Action execution goes through the injected actuator (P2) — the fake
+        // world carries a real LocalActuator like World's default.
+        actuator: new LocalActuator(),
         // Multi-type query intersects like the real registry (the system asks for
         // ["TransformComponent","InputStateComponent"] to find the player).
         queryEntities: (...types: string[]) => {
@@ -108,7 +112,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
         sys.update(world as any, 0.016);
         console.log = origLog;
 
-        expect(log).toContain('[TriggerSystem] entered');
+        expect(log).toContain('[Actuator] entered');
         expect(trigger.entitiesInside.has(1)).toBe(true);
     });
 
@@ -129,8 +133,8 @@ describe('TriggerSystem with JSONLogic conditions', () => {
         sys.update(world as any, 0.016);
         console.log = origLog;
 
-        expect(log).toContain('[TriggerSystem] unlocked-enter');
-        expect(log).not.toContain('[TriggerSystem] locked');
+        expect(log).toContain('[Actuator] unlocked-enter');
+        expect(log).not.toContain('[Actuator] locked');
     });
 
     it('fires fallbackActions when conditions fail', () => {
@@ -150,8 +154,8 @@ describe('TriggerSystem with JSONLogic conditions', () => {
         sys.update(world as any, 0.016);
         console.log = origLog;
 
-        expect(log).toContain('[TriggerSystem] locked');
-        expect(log).not.toContain('[TriggerSystem] unlocked-enter');
+        expect(log).toContain('[Actuator] locked');
+        expect(log).not.toContain('[Actuator] unlocked-enter');
     });
 
     it('set_flag action writes to world.globalFlags', () => {

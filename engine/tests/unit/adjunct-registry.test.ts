@@ -4,9 +4,9 @@ import { BUILTIN_ADJUNCTS, getBuiltinAdjunct, resolveLogicModule } from '../../s
 // L1 — the shared adjunct registry that BlockSystem dispatches through.
 
 describe('AdjunctRegistry', () => {
-  it('registers the 8 native adjuncts by chain type-id', () => {
+  it('registers the 9 native adjuncts by chain type-id', () => {
     expect([...BUILTIN_ADJUNCTS.keys()].sort((a, b) => a - b)).toEqual([
-      0x00a1, 0x00a2, 0x00a3, 0x00a4, 0x00a6, 0x00a7, 0x00b4, 0x00b8,
+      0x00a1, 0x00a2, 0x00a3, 0x00a4, 0x00a6, 0x00a7, 0x00b4, 0x00b5, 0x00b8,
     ]);
   });
 

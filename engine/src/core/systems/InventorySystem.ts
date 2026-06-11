@@ -35,6 +35,7 @@ export class InventorySystem implements ISystem {
         }
 
         this.world.emitSimple("inventory_updated", { entity: event.source, inventory });
+        this.persist(inventory);
     }
 
     private onItemConsume(event: GameEvent): void {
@@ -57,5 +58,12 @@ export class InventorySystem implements ISystem {
         }
 
         this.world.emitSimple("inventory_updated", { entity: event.source, inventory });
+        this.persist(inventory);
+    }
+
+    /** Write-behind the (single local) player's inventory to durable storage —
+     *  restored at boot by Engine.hydrateDrafts(). */
+    private persist(inventory: InventoryComponent): void {
+        this.world.draftStore.saveMeta(0, "inventory", inventory.items);
     }
 }

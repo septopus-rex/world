@@ -37,8 +37,9 @@
 *   `gravity` / `friction`：重力与摩擦系数。
 
 > 旧文档中的 `capacity{move/jump/span/death}` 能力面板与"经 Adjunct/触发器修改
-> 能力"的机制**未实现**——触发器当前的动作面是 adjunct/flag/system
-> （见 [触发器协议](../../protocol/cn/trigger.md) §6），玩家属性目标随 P2 actuator 扩展。
+> 能力"的机制**未实现**——触发器当前的动作面是 adjunct/flag/bag/system
+> （见 [触发器协议](../../protocol/cn/trigger.md) §6）；背包动作已实现（Game 模式），
+> 玩家属性目标仍待扩展。
 
 ### 身体参数（`PlayerBodyComponent`）
 

@@ -28,11 +28,15 @@ export interface IDraftBackend {
     hydrate(worldId: number): Promise<BlockDraft[]>;
     put(draft: BlockDraft): Promise<void>;
     remove(worldId: number, blockKey: string): Promise<void>;
+    /** World-scoped key/value metadata (player inventory, etc.). Optional. */
+    loadMeta?(worldId: number, key: string): Promise<any>;
+    saveMeta?(worldId: number, key: string, value: any): Promise<void>;
 }
 
 /** Trivial backend for headless boots and unit tests — durable for the process. */
 export class InMemoryDraftBackend implements IDraftBackend {
     private rows = new Map<string, BlockDraft>();
+    private meta = new Map<string, any>();
     async hydrate(worldId: number): Promise<BlockDraft[]> {
         return [...this.rows.values()].filter(d => d.worldId === worldId);
     }
@@ -41,6 +45,12 @@ export class InMemoryDraftBackend implements IDraftBackend {
     }
     async remove(worldId: number, blockKey: string): Promise<void> {
         this.rows.delete(`${worldId}:${blockKey}`);
+    }
+    async loadMeta(worldId: number, key: string): Promise<any> {
+        return this.meta.get(`${worldId}:${key}`);
+    }
+    async saveMeta(worldId: number, key: string, value: any): Promise<void> {
+        this.meta.set(`${worldId}:${key}`, value);
     }
 }
 
@@ -116,6 +126,36 @@ export class DraftStore {
         this.cache.delete(k);
         this.dirty.set(k, { op: 'remove', worldId, blockKey });
         this.kick();
+    }
+
+    // ── world metadata (player inventory, etc.) ───────────────────────────────
+
+    /** Read a world-scoped metadata value (boot restore). */
+    public async loadMeta(worldId: number, key: string): Promise<any> {
+        if (!this.backend?.loadMeta) return undefined;
+        try {
+            return await this.backend.loadMeta(worldId, key);
+        } catch (e) {
+            console.warn(`[DraftStore] loadMeta(${worldId}, ${key}) failed`, e);
+            return undefined;
+        }
+    }
+
+    /**
+     * Persist a world-scoped metadata value (fire-and-forget). The value is
+     * JSON-snapshotted so callers can keep mutating the live object.
+     */
+    public saveMeta(worldId: number, key: string, value: any): void {
+        if (!this.backend?.saveMeta) return;
+        let snapshot: any;
+        try {
+            snapshot = JSON.parse(JSON.stringify(value));
+        } catch {
+            console.warn(`[DraftStore] saveMeta(${worldId}, ${key}): value not serializable, skipped`);
+            return;
+        }
+        this.backend.saveMeta(worldId, key, snapshot).catch(e =>
+            console.warn(`[DraftStore] saveMeta(${worldId}, ${key}) failed`, e));
     }
 
     // ── write-behind ──────────────────────────────────────────────────────────

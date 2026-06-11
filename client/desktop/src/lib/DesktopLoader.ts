@@ -304,6 +304,17 @@ export class DesktopLoader implements IDataSource {
             // #1 conditional door (adj_2048_2048_161_1): only opens if the cone
             //    button was touched first (flags.demo_touch) — opens once.
             [[3, 0.4, 3], [14, 14, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
+            // #2 key door (adj_2048_2048_161_2): opens once when the player walks
+            //    up CARRYING the key item (inventory.tpl_2 — pick it up first).
+            [[3, 0.4, 3], [2, 14, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
+        ];
+        // Pickable items (b5): [pos, templateId, seed, count, rot]. Click to pick
+        // up (Normal/Game mode); the bag panel lists them; drop puts them back.
+        const items = [
+            [[5, 8, 0.6], 1, 9347, 1, [0, 0, 0]],     // gem (unique, seed-derived rarity)
+            [[6.5, 8, 0.6], 1, 777, 1, [0, 0, 0]],    // another gem, different roll
+            [[12, 8, 0.5], 2, 0, 1, [0, 0, 0]],       // the KEY for door #2
+            [[13.5, 8, 0.5], 3, 41, 2, [0, 0, 0]],    // 2 potions (stackable)
         ];
         const cones = [
             // touch button (adj_2048_2048_166_0): each click spins it visibly.
@@ -321,6 +332,7 @@ export class DesktopLoader implements IDataSource {
             [[2.2, 2, 0.05], [14.2, 12, 0.1], [0, 0, 0], 1, [1, 1], 0, 0],   // gray: conditional door
         ];
         data.raw[2].push([0x00a1, walls]);
+        data.raw[2].push([0x00b5, items]);
         data.raw[2].push([0x00a6, cones]);
         data.raw[2].push([0x00a7, balls]);
         data.raw[2].push([0x00a2, markers]);
@@ -389,8 +401,28 @@ export class DesktopLoader implements IDataSource {
                     ]
                 },
             ]],
+            // ⑤ key door pad: opens door #2 ONCE if the player carries the key
+            //    item (inventory.tpl_2 ≥ 1 — pick it up at [12, 8] first).
+            [[3, 2.5, 4], [2, 12.5, 2], [0, 0, 0], 1, 0, [
+                {
+                    type: 'in', oneTime: true,
+                    conditions: { '>=': [{ var: 'inventory.tpl_2' }, 1] },
+                    actions: [
+                        { type: 'adjunct', target: 'adj_2048_2048_161_2', method: 'moveZ', params: [3.2] },
+                        { type: 'flag', method: '', target: 'demo_key_door', params: [true] },
+                    ],
+                    fallbackActions: [
+                        { type: 'system', method: 'log', target: '', params: ['key door: pick up the key first (inventory.tpl_2)'] },
+                    ]
+                },
+            ]],
         ];
         data.raw[2].push([0x00b8, triggers]);
+    }
+
+    /** Drop one of an inventory item at the player's feet (atomic, see ItemSystem). */
+    public dropItem(itemId: string, count = 1): boolean {
+        return this.engine?.dropItem(itemId, count) ?? false;
     }
 
     // ── World export / import (P1) ─────────────────────────────────────────────

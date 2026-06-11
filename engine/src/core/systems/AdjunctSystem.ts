@@ -64,8 +64,9 @@ export class AdjunctSystem implements ISystem {
             handle: result.handle
         });
 
-        // 3. Handle Trigger Registration
+        // 3. Handle Trigger / Item Registration
         this.registerTriggers(world, entityId, result.triggerVolumes);
+        this.registerItems(world, entityId, result.itemPickups);
 
         // 4. Add Raycast Target for selection
         world.addComponent<RaycastTargetComponent>(entityId, "RaycastTargetComponent", {
@@ -93,6 +94,17 @@ export class AdjunctSystem implements ISystem {
      * through untouched (re-deriving events here silently dropped the authored
      * JSONLogic nodes).
      */
+    /** Attach the b5 item payload as an ItemComponent (pickable by ItemSystem). */
+    private registerItems(world: World, entityId: EntityId, items: any[]) {
+        for (const item of items) {
+            world.addComponent(entityId, "ItemComponent", {
+                templateId: item.templateId,
+                seed: item.seed ?? 0,
+                count: item.count ?? 1,
+            });
+        }
+    }
+
     private registerTriggers(world: World, entityId: EntityId, volumes: any[]) {
         volumes.forEach(vol => {
             world.addComponent(entityId, "TriggerComponent", {

@@ -12,6 +12,7 @@ import { EditTaskExecutor } from '../EditTaskExecutor';
 import { EditTask, ContextMenuItem } from '../types/EditTask';
 import { EditHistory } from '../EditHistory';
 import { InputProvider } from './InputProvider';
+import { saveBlockDraft } from '../utils/BlockSerializer';
 
 /**
  * EditSystem
@@ -318,47 +319,11 @@ export class EditSystem implements ISystem {
     }
 
     /**
-     * Serialize the active block's adjuncts back to raw format and save to localStorage.
+     * Serialize the active block's adjuncts back to raw format and persist as a
+     * draft (shared path with ItemSystem's atomic pickup/drop — BlockSerializer).
      */
     private saveDraft(world: World, blockEntityId: EntityId): void {
-        const block = world.getComponent<BlockComponent>(blockEntityId, "BlockComponent");
-        if (!block) return;
-
-        const worldId = typeof block.world === 'number' ? block.world : 0;
-        const adjunctEntities = world.getEntitiesWith(["AdjunctComponent"]);
-
-        // Group adjuncts by typeId
-        const grouped = new Map<number, any[]>();
-
-        for (const eid of adjunctEntities) {
-            const adj = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
-            if (!adj || adj.parentBlockEntityId !== blockEntityId) continue;
-
-            const typeId = adj.stdData.typeId ?? 0x00a2;
-            const logic = adj.logicModule;
-            if (!logic?.attribute?.serialize) continue;
-
-            const rawInst = logic.attribute.serialize(adj.stdData);
-            if (!grouped.has(typeId)) grouped.set(typeId, []);
-            grouped.get(typeId)!.push(rawInst);
-        }
-
-        // Rebuild raw format: [elevation, status, adjunctsRaw, animations]
-        const adjunctsRaw: any[] = [];
-        grouped.forEach((instances, typeId) => {
-            adjunctsRaw.push([typeId, instances]);
-        });
-
-        const raw = [
-            block.elevation || 0,
-            1,  // status: active
-            adjunctsRaw,
-            block.animations || []
-        ];
-
-        world.draftStore.save(worldId, block.x, block.y, raw);
-        block.isDraft = true;
-        world.emitSimple("world:draft_saved", { blockKey: `${block.x}_${block.y}` });
+        saveBlockDraft(world, blockEntityId);
     }
 
     private showUploadButtonIfNeeded(world: World): void {

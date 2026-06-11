@@ -59,7 +59,8 @@ export class EntityFactory {
         // items to the actor's inventory — without this the chain dead-ends.
         world.addComponent<InventoryComponent>(player, "InventoryComponent", {
             items: [],
-            maxCapacity: (world.config.player as any)?.inventory?.maxCapacity ?? 30
+            // King's config caps the bag (WorldConfig.player.bag.max).
+            maxCapacity: (world.config.player as any)?.bag?.max ?? 30
         });
 
         const avatarHandle = world.renderEngine.createAvatarMesh();

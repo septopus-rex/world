@@ -154,6 +154,35 @@ export class BlockSystem implements ISystem {
         });
     }
 
+    /**
+     * Runtime-add ONE adjunct to an already-initialized block (item drop, etc.).
+     * Deserializes the raw row via the registry and attaches the standard
+     * component set; AdjunctSystem builds the mesh on the next frame. The caller
+     * persists (saveBlockDraft) — this only mutates the live world.
+     */
+    public spawnAdjunct(world: World, blockEid: EntityId, typeId: number, rawRow: any[]): EntityId | null {
+        const block = world.getComponent<BlockComponent>(blockEid, "BlockComponent");
+        const definition = getBuiltinAdjunct(typeId);
+        const std = definition?.attribute?.deserialize?.(rawRow);
+        if (!block || !definition || !std) return null;
+
+        // Next free index of this type within the block → stable-ish adjunctId.
+        let idx = 0;
+        for (const eid of world.getEntitiesWith(["AdjunctComponent"])) {
+            const a = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
+            if (a && a.parentBlockEntityId === blockEid && (a.stdData?.typeId ?? -1) === typeId) idx++;
+        }
+
+        const adjId = world.createEntity();
+        this.attachAdjunctComponents(
+            world, blockEid, adjId,
+            { ...std, typeId },
+            definition,
+            `adj_${block.x}_${block.y}_${typeId}_${idx}`
+        );
+        return adjId;
+    }
+
     private attachAdjunctComponents(world: World, blockEid: EntityId, adjId: EntityId, data: any, logic: any, id: string) {
         const block = world.getComponent<BlockComponent>(blockEid, "BlockComponent")!;
 

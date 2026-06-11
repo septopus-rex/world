@@ -15,6 +15,7 @@
  * Available vars in the evaluation context (WorldContext):
  *   player.position[0|1|2], player.x/y/z
  *   flags.<key>      — world.globalFlags
+ *   inventory.<itemId> — total count of that item in the player's inventory
  *   time             — world.time (0–1 float, 0.5 = noon)
  *   weather          — world.weather string
  */
@@ -92,6 +93,8 @@ export interface WorldContext {
     };
     /** world.globalFlags — key/value store readable and writable by trigger actions */
     flags: Record<string, any>;
+    /** itemId → total count in the player's inventory ("has key" conditions) */
+    inventory: Record<string, number>;
     /** world.time — 0-1 float (0.5 = noon) */
     time: number;
     weather: string;

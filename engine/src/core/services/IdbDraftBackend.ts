@@ -61,6 +61,21 @@ export class IdbDraftBackend implements IDraftBackend {
         await db.delete('drafts', `${worldId}:${blockKey}`);
     }
 
+    /** World-scoped metadata, stored in the (P1-reserved) `worlds` store as
+     *  one row per world: { worldId, meta: { [key]: value } }. */
+    async loadMeta(worldId: number, key: string): Promise<any> {
+        const db = await this.open();
+        const row = await db.get('worlds', worldId);
+        return row?.meta?.[key];
+    }
+
+    async saveMeta(worldId: number, key: string, value: any): Promise<void> {
+        const db = await this.open();
+        const row = (await db.get('worlds', worldId)) ?? { worldId, meta: {} };
+        row.meta = { ...(row.meta ?? {}), [key]: value };
+        await db.put('worlds', row);
+    }
+
     /** Close the underlying connection (tests / teardown — an open connection
      *  blocks deleteDatabase and version upgrades). */
     async close(): Promise<void> {

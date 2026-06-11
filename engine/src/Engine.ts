@@ -31,6 +31,8 @@ export interface EngineServices {
     resources?: import('./render/ResourceManager').ResourceManagerConfig;
     /** Durable draft storage backend (default: IndexedDB in browsers). */
     draftBackend?: import('./core/services/DraftStore').IDraftBackend | null;
+    /** Trigger-action executor (default: LocalActuator; chain builds inject their own). */
+    actuator?: import('./core/services/Actuator').IActuator;
     config?: any;
 }
 
@@ -77,7 +79,8 @@ export class Engine {
             renderEngine: this.services.renderer,
             dataSource: this.services.api,
             resources: this.services.resources,
-            draftBackend: this.services.draftBackend
+            draftBackend: this.services.draftBackend,
+            actuator: this.services.actuator
         });
 
         // 3.5 UI Orchestration
@@ -137,12 +140,26 @@ export class Engine {
     }
 
     /**
-     * Load every persisted draft for a world into the DraftStore's sync cache.
-     * Call AFTER bootWorld and BEFORE injecting the first block — BlockSystem
-     * reads drafts synchronously while materializing blocks.
+     * Load every persisted draft for a world into the DraftStore's sync cache,
+     * and restore the player's persisted inventory. Call AFTER bootWorld and
+     * BEFORE injecting the first block — BlockSystem reads drafts synchronously
+     * while materializing blocks.
      */
     public async hydrateDrafts(worldId: number = 0): Promise<void> {
-        await this.world?.draftStore.hydrate(worldId);
+        const world = this.world;
+        if (!world) return;
+        await world.draftStore.hydrate(worldId);
+
+        const savedItems = await world.draftStore.loadMeta(worldId, 'inventory');
+        if (Array.isArray(savedItems)) {
+            const players = world.queryEntities("InventoryComponent", "InputStateComponent");
+            const inv = players.length > 0
+                ? world.getComponent<any>(players[0], "InventoryComponent") : null;
+            if (inv) {
+                inv.items = savedItems;
+                world.emitSimple('inventory_updated', { entity: players[0], inventory: inv });
+            }
+        }
     }
 
     /** Export all local drafts of a world as a versioned JSON string (P1). */
@@ -157,6 +174,19 @@ export class Engine {
     public async importWorldJson(json: string): Promise<{ worldId: number; imported: number }> {
         if (!this.world) throw new Error('[Engine] importWorldJson before bootWorld');
         return new ExportService(this.world.draftStore).importWorld(json);
+    }
+
+    /**
+     * Drop `count` of an inventory item at the local player's feet (atomic:
+     * bag debit + b5 adjunct spawn + draft save — see ItemSystem.dropItem).
+     */
+    public dropItem(itemId: string, count: number = 1): boolean {
+        const world = this.world;
+        if (!world) return false;
+        const itemSystem = world.systems.findSystemByName('ItemSystem') as any;
+        const players = world.queryEntities("InventoryComponent", "InputStateComponent");
+        if (!itemSystem?.dropItem || players.length === 0) return false;
+        return itemSystem.dropItem(world, players[0], itemId, count);
     }
 
     /** Destroy a streamed-in block and its adjuncts (frees meshes). Used by the

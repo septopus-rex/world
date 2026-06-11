@@ -71,9 +71,13 @@ localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随
 运动能力在 `RigidBodyComponent`：`maxSpeedWalk` / `maxSpeedRun` / `jumpForce` /
 `gravity` / `friction` / `isGrounded`。
 
-> ⚠️ world config 中的 `player.capacity`（rotate/speed/jumpForce/gravityMultiplier）、
-> `player.body`（头/手/腿分段）、`player.bag.max` 均为**预留类型**——引擎创建玩家时
-> 使用硬编码默认值，目前不读取这些配置。领主配置写了也不会生效。
+> ⚠️ world config 中的 `player.capacity`（rotate/speed/jumpForce/gravityMultiplier）与
+> `player.body`（头/手/腿分段）为**预留类型**——引擎创建玩家时使用硬编码默认值，
+> 目前不读取。`player.bag.max` **已接线**：作为玩家背包的槽位上限
+> （`InventoryComponent.maxCapacity`），背包整体设计见
+> [inventory-local-first 规格](../../docs/plan/specs/inventory-local-first.md)
+> （b5 物品 adjunct、原子拾取/丢弃、IndexedDB 持久化、trigger `bag` 动作与
+> `inventory.*` 条件）。
 
 ## 3. 虚拟化身 (Avatar)
 

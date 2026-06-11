@@ -32,10 +32,12 @@ PR-0..7 迁移计划见 [事件总线设计规格](../plan/specs/event-bus-desig
 
 1. **`in`**：玩家坐标落入包围体的那一帧触发一次（边沿触发）。
 2. **条件评估**：节点可携带一条 JSONLogic 规则（`conditions`），对 WorldContext
-   （`player.*` / `flags.*` / `time` / `weather`）求值。无条件视为恒真。
+   （`player.*` / `flags.*` / `inventory.*` / `time` / `weather`）求值。无条件视为恒真。
 3. **动作执行**：条件为真执行 `actions`，为假执行 `fallbackActions`（如提示
-   "先去拿钥匙"）。当前动作面：`adjunct`（moveZ / rotateY，开门、升降）、
-   `flag`（写世界标志位，触发器间串联状态）、`system`（日志）。
+   "先去拿钥匙"）。动作经 `world.actuator`（`IActuator`，缺省 `LocalActuator`，
+   可注入替换——接链时换 contract 实现）落地。当前动作面：`adjunct`
+   （moveZ / rotateY，开门、升降）、`flag`（写世界标志位）、`bag`
+   （give/take 背包物品，**仅 Game 模式**）、`system`（日志）。
 4. **`hold`**：累计停留**跨过** `holdDuration` 毫秒阈值时触发一次；时长由步进 dt
    累加（确定性），离开清零、再进入自动重新武装。
 5. **`out`**：离开包围体的那一帧触发一次。
@@ -44,8 +46,9 @@ PR-0..7 迁移计划见 [事件总线设计规格](../plan/specs/event-bus-desig
 走 fallback 不消耗，锁住的门可反复尝试。
 
 > 旧设计中的"恢复动作"（退出条件 + 自动回滚缓存原貌）**未实现**：状态恢复需显式
-> 写反向节点（`in` 开门 / `out` 关门就是一对）。玩家属性、背包类动作亦未实现，
-> 将随路线图 P2 的 `IActuator` / `LocalActuator` 扩展。
+> 写反向节点（`in` 开门 / `out` 关门就是一对）。玩家属性类动作未实现；
+> 背包动作已由 `bag`（经 actuator 层）覆盖，见
+> [背包规格](../plan/specs/inventory-local-first.md)。
 
 ### 多人感知的运行时
 

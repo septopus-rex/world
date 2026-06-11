@@ -4,6 +4,7 @@ import { useIsMobile } from './lib/useIsMobile';
 import { useEngine } from './lib/useEngine';
 import { Joystick } from './components/Joystick';
 import { Compass, TelemetryReadout } from './components/HUD';
+import { InventoryPanel } from './components/InventoryPanel';
 
 function App() {
   const isMobile = useIsMobile();
@@ -96,6 +97,8 @@ function App() {
           />
         </div>
       </div>
+
+      {ready && <InventoryPanel loader={loader} />}
 
       {isMobile && (
         <>
