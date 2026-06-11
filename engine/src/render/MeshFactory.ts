@@ -74,6 +74,15 @@ export class MeshFactory {
         object.position.set(params.position[0], params.position[1], params.position[2]);
         object.rotation.set(params.rotation[0], params.rotation[1], params.rotation[2]);
 
+        // Shadows: solid meshes cast + receive. Transparent surfaces (water,
+        // ghosted stops) only receive — a translucent box throwing a hard
+        // shadow reads as a bug.
+        if ((object as THREE.Mesh).isMesh) {
+            const transparent = material?.opacity !== undefined && material.opacity < 1;
+            object.castShadow = !transparent && !data.invisible;
+            object.receiveShadow = true;
+        }
+
         // Invisible-but-raycastable (touch trigger volumes): Three's Raycaster
         // ignores visibility, so visible=false costs nothing to render yet still
         // intersects on the raycast layer.

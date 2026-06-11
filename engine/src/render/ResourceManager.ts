@@ -102,6 +102,30 @@ export class ResourceManager {
         this.maxAnisotropy = Math.max(1, Math.min(8, config.maxAnisotropy ?? 8));
     }
 
+    // ── Audio ─────────────────────────────────────────────────────────────────
+
+    private audioUrls = new Map<string, Promise<string>>();
+
+    /**
+     * Resolve an audio resource id to a playable URL (record served through the
+     * same datasource channel as models; CID/path/data via resolveUrl). Cached —
+     * the actual AudioBuffer decode is cached separately by the render layer.
+     */
+    async getAudioUrl(resourceId: string | number): Promise<string> {
+        const id = String(resourceId);
+        let promise = this.audioUrls.get(id);
+        if (!promise) {
+            promise = (async () => {
+                const records = await this.datasource.module([Number(id)]);
+                const rec = records?.[id] ?? records?.[Number(id)];
+                if (!rec?.raw) throw new Error(`[ResourceManager] no audio record for id ${id}`);
+                return this.resolveUrl(rec.raw);
+            })();
+            this.audioUrls.set(id, promise);
+        }
+        return promise;
+    }
+
     // ── Models ────────────────────────────────────────────────────────────────
 
     /**

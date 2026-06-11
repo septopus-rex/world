@@ -63,6 +63,8 @@ export class CharacterController implements ISystem {
     private static readonly TP_REST_PITCH = -0.34; // rad ≈ -19.5°
     /** Most GLTF characters face +Z; engine forward is -Z, so flip the avatar to face away. */
     private static readonly AVATAR_FACING = Math.PI;
+    /** Ghost-mode vertical fly speed (m/s). */
+    private static readonly GHOST_FLY_SPEED = 6;
 
     public setViewMode(mode: 'first' | 'third'): void { this.viewMode = mode; }
     public getViewMode(): 'first' | 'third' { return this.viewMode; }
@@ -98,6 +100,25 @@ export class CharacterController implements ISystem {
 
         this.syncInputState(input);
         this.processLook(world, input, dt);
+
+        // Ghost mode: incorporeal free-roam — no gravity, no collision, fly
+        // vertically with Space (up) / Shift (down). Skips fall events and
+        // void recovery (a ghost can hover over the abyss by design).
+        if (world.mode === SystemMode.Ghost) {
+            this.computeDesiredVelocity(world, input, body);
+            const fly = (input.jump ? 1 : 0) - (input.run ? 1 : 0);
+            body.velocity[1] = fly * CharacterController.GHOST_FLY_SPEED;
+            input.jump = false;
+            trans.position[0] += body.velocity[0] * dt;
+            trans.position[1] += body.velocity[1] * dt;
+            trans.position[2] += body.velocity[2] * dt;
+            body.isGrounded = false;
+            this.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
+            this.processPersistence(world, trans);
+            this.inputProvider.flushDeltas();
+            return;
+        }
+
         this.computeDesiredVelocity(world, input, body);
 
         // jump impulse
@@ -417,9 +438,21 @@ export class CharacterController implements ISystem {
         if (avatar && avatar.handle) {
             world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], trans.position[1], trans.position[2]);
             world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + CharacterController.AVATAR_FACING, 0);
-            // Visible only in third-person — in first-person the camera is inside the avatar.
-            const show = avatar.visible !== false && this.viewMode === 'third';
+            // Visible only in third-person — in first-person the camera is inside
+            // the avatar. Ghost mode always hides it (incorporeal).
+            const show = avatar.visible !== false && this.viewMode === 'third'
+                && world.mode !== SystemMode.Ghost;
             world.renderEngine.setObjectVisible(avatar.handle, show);
+
+            // Movement state → animation (render layer crossfades; falls back
+            // run→walk→idle for models with fewer clips).
+            const hSpeedSq = body.velocity[0] * body.velocity[0] + body.velocity[2] * body.velocity[2];
+            const walkSq = body.maxSpeedWalk * body.maxSpeedWalk;
+            let animState = 'idle';
+            if (!body.isGrounded) animState = 'air';
+            else if (hSpeedSq > walkSq * 1.2) animState = 'run';
+            else if (hSpeedSq > 0.25) animState = 'walk';
+            (world.renderEngine as any).setAnimationState?.(avatar.handle, animState);
             (world.renderEngine as any).updateAnimation(avatar.handle, dt);
         }
     }

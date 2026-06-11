@@ -45,7 +45,7 @@ export function createNullRenderEngine() {
   // Handle bookkeeping so module placeholder-then-swap can be asserted headlessly:
   // count group creation, child adds, and removals (the swap adds the model clone
   // then removes the placeholder; eviction removes the group).
-  const counts = { groups: 0, added: 0, removed: 0 };
+  const counts = { groups: 0, added: 0, removed: 0, lastAnimState: '', soundsPlayed: [] as string[] };
 
   return {
     // Test introspection (not part of the RenderEngine interface).
@@ -72,7 +72,7 @@ export function createNullRenderEngine() {
     setObjectRotation: () => {},
     setObjectScale: () => {},
     worldToLocal: (_h: Handle, x: number, y: number, z: number): [number, number, number] => [x, y, z],
-    setObjectVisible: () => {},
+    setObjectVisible: (h: Handle, visible: boolean) => { if (h) h.visible = visible; },
     getObjectSize: (): [number, number, number] => [0, 0, 0],
     setRaycastable: () => {},
 
@@ -117,10 +117,14 @@ export function createNullRenderEngine() {
     createParticleBurst: () => ({ handle: handle(), velocities: new Float32Array(0) }),
     updateParticleBurst: () => {},
 
-    // Skeletal animation (no-op in headless tests)
+    // Skeletal animation (no-op in headless tests; state recorded for asserts)
     startAnimation: () => {},
     updateAnimation: () => {},
     stopAnimation: () => {},
+    setAnimationState: (_h: Handle, state: string) => { counts.lastAnimState = state; },
+
+    // Audio (recorded for asserts)
+    playSpatialSound: (url: string) => { counts.soundsPlayed.push(url); },
 
     // Misc
     getMaxAnisotropy: () => 1,

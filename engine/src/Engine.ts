@@ -9,6 +9,9 @@ import { ExportService } from './core/services/ExportService';
 import { Coords } from './core/utils/Coords';
 import { GlobalConfig } from './core/GlobalConfig';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
+import { SystemMode } from './core/types/SystemMode';
+
+export { SystemMode };
 
 export interface EngineServices {
     api: IDataSource;
@@ -150,6 +153,13 @@ export class Engine {
         if (!world) return;
         await world.draftStore.hydrate(worldId);
 
+        // Gameplay session: world flags + durable oneTime trigger consumption.
+        const session = await world.draftStore.loadMeta(worldId, 'session');
+        if (session && typeof session === 'object') {
+            Object.assign(world.globalFlags, session.flags ?? {});
+            world.sessionTriggerFired = { ...(session.triggerFired ?? {}) };
+        }
+
         const savedItems = await world.draftStore.loadMeta(worldId, 'inventory');
         if (Array.isArray(savedItems)) {
             const players = world.queryEntities("InventoryComponent", "InputStateComponent");
@@ -261,6 +271,15 @@ export class Engine {
 
     public setEditMode(active: boolean) {
         this.world?.setEditMode(active);
+    }
+
+    /** Switch the world mode (Normal / Edit / Game / Ghost). setEditMode is sugar. */
+    public setMode(mode: SystemMode) {
+        this.world?.setMode(mode);
+    }
+
+    public getMode(): SystemMode | undefined {
+        return this.world?.mode;
     }
 
     public injectStyle(tokens: Record<string, string>) {

@@ -22,8 +22,10 @@ import { RaycastInteractionSystem } from './systems/RaycastInteractionSystem';
 import { TriggerSystem } from './systems/TriggerSystem';
 import { InventorySystem } from './systems/InventorySystem';
 import { ItemSystem } from './systems/ItemSystem';
+import { HealthSystem } from './systems/HealthSystem';
 import { ItemDropSystem } from './systems/ItemDropSystem';
 import { ParticleEffectSystem } from './systems/ParticleEffectSystem';
+import { BlockLODSystem } from './systems/BlockLODSystem';
 import { EditSystem } from './systems/EditSystem';
 
 import { FullWorldConfig } from './types/WorldConfig';
@@ -32,6 +34,7 @@ import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
 import { DraftStore, IDraftBackend, InMemoryDraftBackend } from './services/DraftStore';
 import { IActuator, LocalActuator } from './services/Actuator';
+import { EventQueue } from './events/EventQueue';
 import { IdbDraftBackend, hasIndexedDB } from './services/IdbDraftBackend';
 import { ResourceManager, ResourceManagerConfig } from '../render/ResourceManager';
 import { MeshFactory } from '../render/MeshFactory';
@@ -107,6 +110,12 @@ export class World {
     public mode: SystemMode = SystemMode.Normal;
     /** Key/value store for trigger conditions and actions (set_flag / flag checks). */
     public globalFlags: Record<string, any> = {};
+    /**
+     * Durable oneTime bookkeeping: `${adjunctId}#${nodeKey}` → pass count.
+     * Survives block reloads (component state is rebuilt) AND page reloads
+     * (persisted with globalFlags as the 'session' meta, restored at hydrate).
+     */
+    public sessionTriggerFired: Record<string, number> = {};
     public isMovingObject: boolean = false;
     public activeEditBlockId: EntityId | null = null;
     public ui: IUIProvider | null = null;
@@ -129,6 +138,15 @@ export class World {
 
     // 4. Events
     private listeners: Map<string, Function[]> = new Map();
+
+    /** Simulation frame counter (incremented by events.beginFrame each step). */
+    public frame = 0;
+    /**
+     * Frame-scoped typed event queue (event-bus PR-1). Coexists with the
+     * legacy on/emitSimple bus — no call sites migrated yet; systems may
+     * adopt readers channel-by-channel (spec §7).
+     */
+    public readonly events = new EventQueue(this);
 
     /**
      * Facades for external UI/Loader compatibility
@@ -179,10 +197,12 @@ export class World {
         this.systems.addSystem(new TriggerSystem());
         this.systems.addSystem(new InventorySystem());
         this.systems.addSystem(new ItemSystem());
+        this.systems.addSystem(new HealthSystem());
         this.systems.addSystem(new PhysicsSystem());
         this.systems.addSystem(new GridSystem());
         this.systems.addSystem(new BlockSystem());
         this.systems.addSystem(new AdjunctSystem());
+        this.systems.addSystem(new BlockLODSystem());
         this.systems.addSystem(new EnvironmentSystem(this));
         this.systems.addSystem(new AnimationSystem());
         this.systems.addSystem(new ParticleEffectSystem());
@@ -209,7 +229,10 @@ export class World {
      * Delegate ECS operations to Registry
      */
     public createEntity(): EntityId { return this.registry.createEntity(); }
-    public destroyEntity(id: EntityId): void { this.registry.removeEntity(id); }
+    public destroyEntity(id: EntityId): void {
+        this.registry.removeEntity(id);
+        this.events.dropTarget(id);     // ent-targeted boundary subs die with the entity
+    }
     public addComponent<T>(entity: EntityId, type: ComponentType, data: T): void { this.registry.addComponent(entity, type, data); }
     public getComponent<T>(entity: EntityId, type: ComponentType): T | undefined { return this.registry.getComponent<T>(entity, type); }
     public queryEntities(...types: ComponentType[]): EntityId[] { return this.registry.getEntitiesWith(types); }
@@ -251,8 +274,10 @@ export class World {
      * with a fixed dt for deterministic, reproducible stepping.
      */
     public step(dt: number): void {
+        this.events.beginFrame();       // frame++, rotate event buffers
         this.systems.update(this, dt);
         this.renderEngine.render(this.pipeline.isMinimapActive);
+        this.events.flushBoundary();    // the ONLY boundary-callback dispatch point
     }
 
     public stop(): void { this.isRunning = false; }
@@ -315,6 +340,7 @@ export class World {
         // pins subscriber closures (and whatever they capture) past the World's
         // life, and the resize handler pins the whole World via this.renderEngine.
         this.listeners.clear();
+        this.events.dispose();
         if (typeof window !== 'undefined') {
             window.removeEventListener('resize', this._onResize, false);
         }

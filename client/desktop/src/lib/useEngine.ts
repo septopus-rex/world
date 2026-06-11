@@ -5,10 +5,12 @@ import { DesktopLoader } from './DesktopLoader';
  * Boots the chain-free engine loader and exposes UI-facing state.
  * No wallet, no chain — the loader runs on local data only.
  */
+export type WorldMode = 'normal' | 'edit' | 'game' | 'ghost';
+
 export function useEngine(containerId: string) {
     const loaderRef = useRef<DesktopLoader | null>(null);
     const [ready, setReady] = useState(false);
-    const [isEditMode, setIsEditMode] = useState(false);
+    const [mode, setMode] = useState<WorldMode>('normal');
     const [showMinimap, setShowMinimap] = useState(false);
     // Default third-person so the avatar is visible (matches CharacterController default).
     const [view, setView] = useState<'first' | 'third'>('third');
@@ -27,14 +29,15 @@ export function useEngine(containerId: string) {
     }, [containerId]);
 
     useEffect(() => { loaderRef.current?.toggleMinimap(showMinimap); }, [showMinimap]);
-    useEffect(() => { loaderRef.current?.toggleEditMode(isEditMode); }, [isEditMode]);
+    useEffect(() => { if (ready) loaderRef.current?.setMode(mode); }, [mode, ready]);
     useEffect(() => { if (ready) loaderRef.current?.setCameraView(view); }, [view, ready]);
 
     return {
         loader: loaderRef.current,
         ready,
-        isEditMode,
-        setIsEditMode,
+        mode,
+        setMode,
+        isEditMode: mode === 'edit',
         showMinimap,
         setShowMinimap,
         view,

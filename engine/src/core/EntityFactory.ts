@@ -1,6 +1,7 @@
 import { World, EntityId } from './World';
 import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent, PlayerBodyComponent } from './components/PlayerComponents';
 import { InventoryComponent } from './components/InventoryComponent';
+import { HealthComponent } from './components/HealthComponent';
 import { CharacterController } from './movement/CharacterController';
 
 /**
@@ -61,6 +62,11 @@ export class EntityFactory {
             items: [],
             // King's config caps the bag (WorldConfig.player.bag.max).
             maxCapacity: (world.config.player as any)?.bag?.max ?? 30
+        });
+
+        world.addComponent<HealthComponent>(player, "HealthComponent", {
+            hp: 100,
+            maxHp: 100
         });
 
         const avatarHandle = world.renderEngine.createAvatarMesh();

@@ -5,10 +5,11 @@ import { useEngine } from './lib/useEngine';
 import { Joystick } from './components/Joystick';
 import { Compass, TelemetryReadout } from './components/HUD';
 import { InventoryPanel } from './components/InventoryPanel';
+import { HealthBar } from './components/HealthBar';
 
 function App() {
   const isMobile = useIsMobile();
-  const { loader, ready, isEditMode, setIsEditMode, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
+  const { loader, ready, mode, setMode, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -99,6 +100,7 @@ function App() {
       </div>
 
       {ready && <InventoryPanel loader={loader} />}
+      {ready && <HealthBar loader={loader} />}
 
       {isMobile && (
         <>
@@ -221,13 +223,27 @@ function App() {
           <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
           {view === 'third' ? '3RD PERSON' : '1ST PERSON'}
         </button>
-        <button
-          onClick={() => setIsEditMode(!isEditMode)}
-          className={`px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl ${isEditMode ? 'bg-yellow-500/20 border-yellow-400 text-yellow-300' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20'}`}
-        >
-          <div className={`w-2 h-2 rounded-full ${isEditMode ? 'bg-yellow-400 animate-pulse' : 'bg-cyan-500'}`}></div>
-          {isEditMode ? 'EXIT EDIT' : 'ENTER EDIT'}
-        </button>
+        <div className="flex flex-col gap-1 p-1.5 border border-cyan-500/30 bg-black/40 backdrop-blur-md rounded-2xl shadow-2xl">
+          <span className="text-[8px] font-black tracking-[0.25em] text-cyan-500/60 uppercase text-center">Mode</span>
+          {([
+            { key: 'normal', label: 'NORMAL', on: 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/60', dot: 'bg-cyan-400' },
+            { key: 'game', label: 'GAME', on: 'bg-green-500/25 text-green-300 border border-green-400/60', dot: 'bg-green-400' },
+            { key: 'ghost', label: 'GHOST', on: 'bg-purple-500/25 text-purple-300 border border-purple-400/60', dot: 'bg-purple-400' },
+            { key: 'edit', label: 'EDIT', on: 'bg-yellow-500/25 text-yellow-300 border border-yellow-400/60', dot: 'bg-yellow-400' },
+          ] as const).map(({ key, label, on, dot }) => (
+            <button
+              key={key}
+              data-testid={`mode-${key}`}
+              onClick={() => setMode(key)}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 ${
+                mode === key ? on : 'text-gray-400 hover:bg-white/10 border border-transparent'
+              }`}
+            >
+              <div className={`w-1.5 h-1.5 rounded-full ${mode === key ? `${dot} animate-pulse` : 'bg-gray-600'}`}></div>
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

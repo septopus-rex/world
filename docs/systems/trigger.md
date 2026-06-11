@@ -37,13 +37,16 @@ PR-0..7 迁移计划见 [事件总线设计规格](../plan/specs/event-bus-desig
    "先去拿钥匙"）。动作经 `world.actuator`（`IActuator`，缺省 `LocalActuator`，
    可注入替换——接链时换 contract 实现）落地。当前动作面：`adjunct`
    （moveZ / rotateY，开门、升降）、`flag`（写世界标志位）、`bag`
-   （give/take 背包物品，**仅 Game 模式**）、`system`（日志）。
+   （give/take 背包物品，**仅 Game 模式**）、`player`（damage/heal 生命值，
+   **仅 Game 模式**）、`sound`（3D 空间音效，锚定触发体）、`system`（日志）。
 4. **`hold`**：累计停留**跨过** `holdDuration` 毫秒阈值时触发一次；时长由步进 dt
    累加（确定性），离开清零、再进入自动重新武装。
 5. **`out`**：离开包围体的那一帧触发一次。
 
 节点可声明 `oneTime`，在一次**通过性执行**（条件满足且动作已跑）后被消耗；
-走 fallback 不消耗，锁住的门可反复尝试。
+走 fallback 不消耗，锁住的门可反复尝试。消耗以 `adjunctId#节点键` 计入
+**会话存档**（与世界标志位一起持久化到 IndexedDB，`Engine.hydrateDrafts`
+启动还原）——跨地块重载与页面刷新均不复活。
 
 > 旧设计中的"恢复动作"（退出条件 + 自动回滚缓存原貌）**未实现**：状态恢复需显式
 > 写反向节点（`in` 开门 / `out` 关门就是一对）。玩家属性类动作未实现；

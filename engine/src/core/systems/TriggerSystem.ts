@@ -74,7 +74,7 @@ export class TriggerSystem implements ISystem {
                 const trigger = world.getComponent<TriggerComponent>(target, "TriggerComponent");
                 if (!trigger) continue;                                  // clicked a non-trigger
                 if (trigger.gameOnly && mode !== SystemMode.Game) continue;
-                this._handleEvent(world, trigger, 'touch', ctx);
+                this._handleEvent(world, target, trigger, 'touch', ctx);
             }
             this._pendingTouches.length = 0;
         }
@@ -112,18 +112,18 @@ export class TriggerSystem implements ISystem {
             const wasInside = trigger.entitiesInside.has(playerId);
 
             if (isInside && !wasInside) {
-                this._handleEvent(world, trigger, 'in', ctx);
+                this._handleEvent(world, entityId, trigger, 'in', ctx);
                 trigger.entitiesInside.add(playerId);
                 trigger.insideMs.set(playerId, 0);
             } else if (!isInside && wasInside) {
-                this._handleEvent(world, trigger, 'out', ctx);
+                this._handleEvent(world, entityId, trigger, 'out', ctx);
                 trigger.entitiesInside.delete(playerId);
                 trigger.insideMs.delete(playerId);
             } else if (isInside) {
                 const prevMs = trigger.insideMs.get(playerId) ?? 0;
                 const nowMs = prevMs + deltaTime * 1000;
                 trigger.insideMs.set(playerId, nowMs);
-                this._handleHold(world, trigger, ctx, prevMs, nowMs);
+                this._handleHold(world, entityId, trigger, ctx, prevMs, nowMs);
             }
         }
     }
@@ -164,11 +164,11 @@ export class TriggerSystem implements ISystem {
     }
 
     /** Fire every logic node of the given type (a volume may carry several). */
-    private _handleEvent(world: World, trigger: TriggerComponent, type: string, ctx: WorldContext): void {
+    private _handleEvent(world: World, entityId: EntityId, trigger: TriggerComponent, type: string, ctx: WorldContext): void {
         for (let i = 0; i < trigger.events.length; i++) {
             const node = trigger.events[i];
             if (node.type !== type) continue;
-            this._fireNode(world, trigger, node, `${type}#${i}`, ctx);
+            this._fireNode(world, entityId, trigger, node, `${type}#${i}`, ctx);
         }
     }
 
@@ -178,29 +178,52 @@ export class TriggerSystem implements ISystem {
      * crossing — not on `elapsed >= D` — makes it once-per-stay without extra
      * bookkeeping, and re-arms automatically when the player exits (insideMs reset).
      */
-    private _handleHold(world: World, trigger: TriggerComponent, ctx: WorldContext, prevMs: number, nowMs: number): void {
+    private _handleHold(world: World, entityId: EntityId, trigger: TriggerComponent, ctx: WorldContext, prevMs: number, nowMs: number): void {
         for (let i = 0; i < trigger.events.length; i++) {
             const node = trigger.events[i];
             if (node.type !== 'hold') continue;
             const threshold = Math.max(0, node.holdDuration ?? 0);
             if (prevMs <= threshold && nowMs > threshold) {
-                this._fireNode(world, trigger, node, `hold#${i}`, ctx);
+                this._fireNode(world, entityId, trigger, node, `hold#${i}`, ctx);
             }
         }
     }
 
-    private _fireNode(world: World, trigger: TriggerComponent, node: TriggerEvent, key: string, ctx: WorldContext): void {
-        if (node.oneTime && (trigger.triggeredCount[key] || 0) > 0) return;
+    private _fireNode(world: World, entityId: EntityId, trigger: TriggerComponent, node: TriggerEvent, key: string, ctx: WorldContext): void {
+        // Durable oneTime: keyed by the adjunct's stable id (component state is
+        // rebuilt on every block reload, so triggeredCount alone forgets).
+        const adjunctId = world.getComponent<{ adjunctId?: string }>(entityId, "AdjunctComponent")?.adjunctId;
+        const session: Record<string, number> | undefined = (world as any).sessionTriggerFired;
+        const sessionKey = adjunctId ? `${adjunctId}#${key}` : null;
+
+        if (node.oneTime) {
+            if ((trigger.triggeredCount[key] || 0) > 0) return;
+            if (sessionKey && session && (session[sessionKey] || 0) > 0) return;
+        }
 
         const pass = this._evalConditions(node, ctx);
         const actions = pass ? node.actions : (node.fallbackActions ?? []);
 
         for (const action of actions) {
-            world.actuator.execute(action, { world, playerId: this._playerId, mode: world.mode });
+            world.actuator.execute(action, {
+                world, playerId: this._playerId, mode: world.mode, sourceEntity: entityId,
+            });
         }
 
         // Only a passing execution consumes oneTime / counts as triggered.
-        if (pass) trigger.triggeredCount[key] = (trigger.triggeredCount[key] || 0) + 1;
+        if (pass) {
+            trigger.triggeredCount[key] = (trigger.triggeredCount[key] || 0) + 1;
+            if (sessionKey && session) session[sessionKey] = (session[sessionKey] || 0) + 1;
+        }
+
+        // Persist the gameplay session (flags + oneTime) whenever a node ran
+        // anything — fire-and-forget write-behind, restored by hydrateDrafts.
+        if (actions.length > 0 || pass) {
+            (world as any).draftStore?.saveMeta?.(0, 'session', {
+                flags: world.globalFlags,
+                triggerFired: session ?? {},
+            });
+        }
     }
 
     /** Returns true when there are no conditions, or when JSONLogic evaluates truthy. */

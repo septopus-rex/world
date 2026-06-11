@@ -73,7 +73,7 @@ interface TriggerLogicNode {
 | `conditions` | Optional JSONLogic guard (§5). Absent = always true. Evaluation errors count as false. |
 | `actions` | Actions to run when conditions pass (§6). |
 | `fallbackActions` | Actions to run when conditions **fail** (e.g. hint "press the button first"). Note: this is the else-branch of the condition — NOT the legacy protocol's "recovery actions". |
-| `oneTime` | When `true`, the node is consumed after **one passing execution** (conditions met, actions ran). Fallback runs never consume — a locked door stays re-tryable. |
+| `oneTime` | When `true`, the node is consumed after **one passing execution** (conditions met, actions ran). Fallback runs never consume — a locked door stays re-tryable. **Consumption is durable**: recorded per `adjunctId#nodeKey` in the session store (IndexedDB, alongside world flags) and survives block reloads AND page reloads. |
 | `holdDuration` | `hold` nodes only. |
 
 ## 5. Conditions (JSONLogic)
@@ -120,6 +120,8 @@ interface TriggerAction {
 | | | `rotateY` | `[radians]` | Rotate the target around the vertical axis. |
 | `flag` | flag key | (empty) | `[value]`, default `true` | Write `world.globalFlags[target]`, readable by other triggers' conditions. |
 | `bag` | itemId (`tpl_{template}` / `itm_{template}_{seed}`) | `give` / `take` | `[count]` | Credit/debit the player's bag. **Game mode only** (warned & skipped elsewhere). |
+| `player` | (unused) | `damage` / `heal` | `[amount]` | Hurt/heal the player (HealthSystem; hp ≤ 0 dies and respawns at the spawn point). **Game mode only.** |
+| `sound` | audio resource id (or a direct URL/path) | `play` | `[volume]` | 3D positional one-shot anchored at the firing volume (flat 2D without a position). Resolved via `ResourceManager.getAudioUrl` (CID/path); buffers deduped by URL. |
 | `system` | (empty) | `log` | `[...any]` | Console log (debugging). |
 
 > Action execution goes through the **actuator layer** (P2, shipped):

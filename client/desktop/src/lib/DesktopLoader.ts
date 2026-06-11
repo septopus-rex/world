@@ -35,6 +35,7 @@ const DEMO_MODELS: Record<number, { type: string; format: string; raw: string }>
     28: { type: 'module', format: 'glb', raw: '/assets/helmet.glb' },
     29: { type: 'module', format: 'glb', raw: '/assets/fox.glb' },
     30: { type: 'avatar', format: 'glb', raw: '/assets/avatar.glb' },
+    31: { type: 'audio', format: 'wav', raw: '/assets/ding.wav' },
 };
 
 export interface SPPPlayerState {
@@ -373,6 +374,7 @@ export class DesktopLoader implements IDataSource {
                     type: 'touch', actions: [
                         { type: 'adjunct', target: 'adj_2048_2048_166_0', method: 'rotateY', params: [0.8] },
                         { type: 'flag', method: '', target: 'demo_touch', params: [true] },
+                        { type: 'sound', target: 31, method: 'play', params: [0.8] },
                     ]
                 },
             ]],
@@ -459,6 +461,11 @@ export class DesktopLoader implements IDataSource {
 
     public toggleEditMode(active: boolean) {
         this.engine?.setEditMode(active);
+    }
+
+    /** Switch the world mode: normal / edit / game / ghost. */
+    public setMode(mode: 'normal' | 'edit' | 'game' | 'ghost') {
+        this.engine?.setMode(mode as any);
     }
 
     public setCameraView(mode: 'first' | 'third') {

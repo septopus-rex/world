@@ -53,9 +53,21 @@ localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随
   时自动踏上，否则水平阻挡。该规则统一覆盖"地块→附属物 / 附属物→附属物 /
   附属物→地块"的所有过渡。
 - **坠落事件**：离地时记录起跌高度，落地时若坠距 ≥ `fallDeathHeight`（默认 12m）
-  发出 **`player:fell`** 事件 `{ drop }`（由监听方决定复位/扣血等后果）。
+  发出 **`player:fell`** 事件 `{ drop }`——`HealthSystem` 据此判定致死（见下文）。
 - **失足保险**：跌出世界（深渊）时引擎将玩家复位到最近安全点并发出
   `player:recovered`。
+- **Ghost 模式**：无重力、无碰撞的自由漫游（Space 上升 / Shift 下降），
+  跳过坠落事件与失足保险，Avatar 隐藏。
+
+### 生命值与重生（`HealthComponent` + `HealthSystem`）
+
+玩家携带 `HealthComponent { hp, maxHp }`（默认 100/100）。事件流：
+
+- `player:damage` / `player:heal` `{ amount }` —— 扣减/恢复（trigger 经 actuator 的
+  `player` 动作发出，**仅 Game 模式**）；每次变化广播 `player:health { hp, maxHp }`。
+- 致死坠落（`player:fell`）或 hp ≤ 0 —— 发 `player:died { cause }`，传送回世界
+  出生点、清零速度、回满血，发 `player:respawned`。
+- 客户端 HP 条消费 `player:health`（满血隐藏）。
 
 ### 身体参数（`PlayerBodyComponent`）
 

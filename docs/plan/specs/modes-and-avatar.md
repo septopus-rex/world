@@ -5,16 +5,16 @@ Status: **largely implemented** (avatar: 51cfb17; trigger mode gating: cb2473d,
 implement the player **avatar** as an IPFS-fetchable model resource reusing the
 existing model pipeline.
 
-**Outcome vs. plan** — three deltas, see the annotated checklist in Part C:
+**Outcome vs. plan** — one semantic delta remains; the gaps closed 2026-06-12:
 1. Trigger gating shipped with REFINED semantics: triggers evaluate in Normal AND
    Game (Edit/Ghost fully disabled); the volume-level `gameOnly` flag (raw default
    = 1) restricts a volume to Game. Net default behavior matches the target table
    (fire only in Game), but authors can opt volumes into Normal with `gameOnly: 0`
    — the demo court does. Contract: `protocol/cn/trigger.md`.
-2. `Engine.setMode()` / client mode switcher NOT built — Game/Ghost are still
-   unreachable from the client UI (tests reach them via `getWorld().setMode`).
-3. Hide-avatar-in-Ghost NOT built — currently the avatar is third-person-only
-   (first-person force-hides it), with no Ghost check.
+2. ✅ `Engine.setMode()` + `SystemMode` export + `DesktopLoader.setMode` + the
+   4-button client mode switcher (App.tsx) shipped.
+3. ✅ Ghost shipped: avatar hidden, noclip free-roam (no gravity/collision,
+   Space ascends / Shift descends), fall events skipped. D3 resolved as "now".
 
 Related: `docs/plan/STANDALONE_ENGINE_ROADMAP.md` (closeout), the module/texture
 work (`ResourceManager`, `ModelLoader`), `engine/src/core/types/SystemMode.ts`.
@@ -180,14 +180,14 @@ Modes:
       disabled + `gameOnly` (default 1) → Game-only, NOT a blanket Game-only gate;
       `entitiesInside` is NOT cleared on mode exit (state carries over, which
       prevents stale `in` re-fires — D4 resolved the other way).
-- [ ] `CharacterController.syncCameraAndAvatar`: hide avatar in Ghost.
-      (Currently third-person-only visibility; no Ghost check.)
-- [ ] `Engine.setMode(mode)` + export `SystemMode` from the engine entry.
-- [ ] `DesktopLoader.setMode` + `App.tsx`/`useEngine` mode switcher (Normal/Game/
-      Ghost/Edit) replacing the lone edit toggle.
-- [x] Tests: trigger mode gating covered (`engine/tests/systems/
-      trigger-pipeline.test.ts`, e2e `trigger.spec.ts`); avatar-hidden-in-Ghost
-      untested (feature missing).
+- [x] `CharacterController.syncCameraAndAvatar`: avatar hidden in Ghost; ghost
+      branch = noclip fly (no gravity/collision, Space up / Shift down).
+- [x] `Engine.setMode(mode)` + `SystemMode` exported from Engine.ts.
+- [x] `DesktopLoader.setMode` + `useEngine.mode` + App.tsx 4-mode switcher
+      (replaced the lone edit toggle; `isEditMode` derived for compat).
+- [x] Tests: trigger mode gating (`trigger-pipeline.test.ts`, e2e
+      `trigger.spec.ts`); Ghost fly/hide + setMode reachability
+      (`engine-features.test.ts`, e2e `engine-features.spec.ts`).
 
 Avatar (all landed in 51cfb17):
 - [x] `AvatarComponent.resource?: string`; `WorldConfig.player.avatar`

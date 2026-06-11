@@ -19,6 +19,8 @@ export interface ActuatorContext {
     /** The acting player (bag actions credit/debit this entity). */
     playerId: EntityId | null;
     mode: SystemMode;
+    /** The entity whose logic fired (trigger volume) — spatial anchor for sound. */
+    sourceEntity?: EntityId | null;
 }
 
 export interface IActuator {
@@ -32,6 +34,9 @@ export interface IActuator {
  *   adjunct  target=adjunctId          moveZ [m] / rotateY [rad]
  *   flag     target=key                params[0] = value (default true)
  *   bag      target=itemId             give/take [count]   — GAME MODE ONLY
+ *   player   (target unused)           damage/heal [amount] — GAME MODE ONLY
+ *   sound    target=audio resource id  play [volume] — 3D positional at the
+ *            firing trigger (sourceEntity); flat 2D when it has no transform
  *   system   method=log                console passthrough
  */
 export class LocalActuator implements IActuator {
@@ -52,6 +57,12 @@ export class LocalActuator implements IActuator {
                 break;
             case 'bag':
                 this.execBag(action, ctx);
+                break;
+            case 'sound':
+                this.execSound(action, ctx);
+                break;
+            case 'player':
+                this.execPlayer(action, ctx);
                 break;
             case 'system':
                 if (action.method === 'log') console.log('[Actuator]', ...(action.params ?? []));
@@ -81,6 +92,47 @@ export class LocalActuator implements IActuator {
         } else {
             console.warn(`[Actuator] unknown bag method '${action.method}'`);
         }
+    }
+
+    // ── player vitals (Game mode only — game.md permission matrix) ───────────
+
+    private execPlayer(action: TriggerAction, ctx: ActuatorContext): void {
+        if (ctx.mode !== SystemMode.Game) {
+            console.warn(`[Actuator] player action '${action.method}' ignored outside Game mode`);
+            return;
+        }
+        if (ctx.playerId == null) return;
+        const amount = action.params?.[0] ?? 0;
+        if (action.method === 'damage' || action.method === 'heal') {
+            ctx.world.emitSimple(`player:${action.method}`, { amount }, ctx.playerId);
+        } else {
+            console.warn(`[Actuator] unknown player method '${action.method}'`);
+        }
+    }
+
+    // ── sound (3D one-shot via the render layer) ─────────────────────────────
+
+    private execSound(action: TriggerAction, ctx: ActuatorContext): void {
+        const world = ctx.world;
+        const volume = action.params?.[0] ?? 1;
+
+        // Anchor at the firing trigger's transform (engine coords) when known.
+        let position: [number, number, number] | null = null;
+        if (ctx.sourceEntity != null) {
+            const trans = world.getComponent<TransformComponent>(ctx.sourceEntity, "TransformComponent");
+            if (trans) position = [trans.position[0], trans.position[1], trans.position[2]];
+        }
+
+        // Observable immediately (tests / UI), before the async fetch+decode.
+        world.emitSimple?.('audio:played', { target: action.target, position, volume });
+
+        const rm = (world as any).resourceManager;
+        const resolve: Promise<string> = rm?.getAudioUrl
+            ? rm.getAudioUrl(action.target)
+            : Promise.resolve(String(action.target));   // direct URL/path fallback
+        resolve.then(url => {
+            (world.renderEngine as any)?.playSpatialSound?.(url, position, volume);
+        }).catch(e => console.warn(`[Actuator] sound ${action.target} failed`, e?.message ?? e));
     }
 
     // ── adjunct (live world mutation) ─────────────────────────────────────────

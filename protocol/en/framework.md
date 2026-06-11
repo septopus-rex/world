@@ -26,7 +26,8 @@ The engine must reliably switch between predefined environmental states. SPP pro
 |---|---|---|
 | **Normal (Browse)** | Default world exploration for registered avatars. | Full movement, interaction with active triggers and objects. |
 | **Edit** | **Exclusive** real-time world building. | Enables the **"Exclusive Session Rules"** below, allowing modification of single Block data. |
-| **Game** | Locked narrative or interactive simulation. | Focuses rendering strictly on involved Blocks; restricts player from leaving the designated simulation boundaries. |
+| **Game** | Locked narrative or interactive simulation. | Focuses rendering strictly on involved Blocks; restricts player from leaving the designated simulation boundaries. Bag/health mutations are open only here. |
+| **Ghost** | Read-only visitor roaming. | Gravity-free, collision-free flight (Space up / Shift down); avatar hidden; all triggers disabled; no editing. |
 
 ### 2.2 Exclusive Session Rules (Edit Mode)
 

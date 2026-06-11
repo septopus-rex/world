@@ -123,5 +123,5 @@ class LocalActuator  // adjunct / flag / system / bag 全量本地实现
 - 拾取的"原子性"是单帧同步语义（无并发写者）；多人/链上时代由 actuator 后端保证。
 - 物品掉落实体（`spawn_drop`，临时漂浮掉落物）与 b5 adjunct 并存：前者是运行时
   临时物（不持久化），后者是世界内容。
-- `Engine.setMode` 仍缺（modes spec 的遗留项）——Game 模式 bag 动作目前仅测试
-  可达（`getWorld().setMode`），客户端模式切换器到位后自然可用。
+- ~~`Engine.setMode` 仍缺~~ **已补齐**（2026-06-12）：`Engine.setMode` +
+  客户端四模式切换器落地，Game 模式 bag/player 动作用户可达。

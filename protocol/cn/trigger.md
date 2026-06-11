@@ -72,7 +72,7 @@ interface TriggerLogicNode {
 | `conditions` | 可选的 JSONLogic 守卫（见 §5）。缺省视为恒真。评估抛错按假处理。 |
 | `actions` | 条件满足时执行的动作列表（见 §6）。 |
 | `fallbackActions` | 条件**不满足**时执行的动作列表（如提示"先去按按钮"）。注意：这是条件分支的 else，不是旧版协议的"恢复动作"。 |
-| `oneTime` | `true` 时该节点在**一次通过性执行**（条件满足且 actions 已跑）后被消耗。走 fallback 不消耗——锁住的门可以反复尝试。 |
+| `oneTime` | `true` 时该节点在**一次通过性执行**（条件满足且 actions 已跑）后被消耗。走 fallback 不消耗——锁住的门可以反复尝试。**消耗是持久的**：以 `adjunctId#节点键` 计入会话存档（与世界标志位一起进 IndexedDB），跨地块重载与页面刷新均不复活。 |
 | `holdDuration` | 仅 `hold` 节点使用。 |
 
 ## 5. 条件 (Conditions, JSONLogic)
@@ -119,6 +119,8 @@ interface TriggerAction {
 | | | `rotateY` | `[弧度]` | 目标绕竖直轴旋转。 |
 | `flag` | flag 键名 | （空） | `[值]`，缺省 `true` | 写入 `world.globalFlags[target]`，供其他触发器的条件读取。 |
 | `bag` | itemId（`tpl_{模板}` / `itm_{模板}_{seed}`） | `give` / `take` | `[数量]` | 给予/扣除玩家背包物品。**仅 Game 模式生效**（其余模式警告跳过）。 |
+| `player` | （不使用） | `damage` / `heal` | `[数值]` | 扣减/恢复玩家生命值（HealthSystem；hp≤0 死亡并重生于出生点）。**仅 Game 模式生效**。 |
+| `sound` | 音频资源 id（或直接 URL/路径） | `play` | `[音量]` | 3D 空间音效，锚定在触发体位置（无位置则平面播放）。资源经 `ResourceManager.getAudioUrl` 解析（CID/路径），缓冲按 URL 去重。 |
 | `system` | （空） | `log` | `[...任意]` | 控制台日志（调试用）。 |
 
 > 动作执行经 **actuator 分层**（P2 已落地）：`TriggerSystem` 只决定触发什么，

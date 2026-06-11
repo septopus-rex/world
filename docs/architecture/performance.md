@@ -9,8 +9,18 @@ Septopus World 引擎采用纯 Web 前端运行的架构，因此要在浏览器
 *   **自动卸载**：当玩家移动导致旧的 Block 移出可视范围，底层资源管理器会自动销毁对应的 Three.js Scene 对象并清除 Raw/STD 内存数据。
 *   **组件资源池**：不同的 Block 长着相同贴图或模块外形时（常见于基础功能如 `Wall` 或标准 `Module`），引擎底层使用全局共享引用计数（Shared Reference Pool），杜绝几何体和纹理对象的多重冗余拷贝。
 
-### 批量渲染提交
-*   相同的材质如果在同一场景中被高频复用，通过内部批次合并技术（如 InstancedMesh），将数百次 Draw Call 合并执行。
+### 渲染规模化（现状，2026-06）
+*   **几何/材质缓存**：`MeshFactory` 按尺寸/参数缓存 geometry 与 material，同规格物体共享 GPU 资源（已实现）。
+*   **Block LOD**（`BlockLODSystem`，已实现）：地块中心超出 `world.performance.lodNear`
+    （默认 40m）的 adjunct 网格组整体隐藏，地面板保留（远处仍读得出地形）；
+    **仿真不受影响**——物理/触发器/物品照常运行，只裁渲染。0.25s 间隔评估，
+    Edit 模式强制全显。流式驱逐管内存，LOD 管这两个半径之间的 draw call。
+*   **阴影成本控制**：单一投影太阳光、1024² PCF 软阴影、阴影视锥逐帧锚定玩家
+    （世界跨数万米，静止视锥永远照不到玩家）。
+*   **InstancedMesh（评估后延迟）**：逐 adjunct 的 mesh group 承载着 per-entity
+    的拾取/编辑/驱逐语义（userData.entityId 射线映射、单体增删、按组释放资源），
+    合并进 InstancedMesh 会与这三者冲突；当前对象量级下 LOD + 共享几何已够。
+    待单块对象数量级上升（如植被/粒子地表）再为"无交互静态层"单独引入。
 
 ## 2. 调度与运行时优化
 
@@ -20,7 +30,9 @@ Septopus World 引擎采用纯 Web 前端运行的架构，因此要在浏览器
 
 ### 帧数解耦 (Decoupled execution loop)
 *   **可变渲染计算**：`requestAnimationFrame` 接管纯画面的显示轮询，尽量顶格硬件。
-*   **固定物理与逻辑计算**：各种核心系统（如玩家下落判定、碰撞检测）使用固定的、更低频率（如 30~50Hz）的固定步长更新(Fixed-dt Update)，从而节省 CPU 周期的开销并保证跨设备表现一致性。
+*   **物理与逻辑计算**：当前生产循环以 rAF 的可变 dt 直驱 `World.step(dt)`
+    （碰撞用子步进钳制单步位移补稳定性；测试经 `Engine.step(dt)` 确定性驱动）；
+    独立固定步长（Fixed-dt Update）为规划项。
 
 ## 3. 面向网络的数据侧优化
 

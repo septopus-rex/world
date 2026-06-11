@@ -58,10 +58,23 @@ The engine continuously resolves player-vs-terrain/adjunct collisions:
   adjunct→adjunct, adjunct→block).
 - **Fall events**: falling start height is recorded on leaving the ground; on
   landing, if the drop ≥ `fallDeathHeight` (default 12 m) the engine emits
-  **`player:fell`** with `{ drop }` (consequences — respawn, damage — are up to
-  the listener).
+  **`player:fell`** with `{ drop }` — `HealthSystem` treats it as lethal (below).
 - **Void failsafe**: falling out of the world resets the player to the last safe
   spot and emits `player:recovered`.
+- **Ghost mode**: gravity-free, collision-free roaming (Space ascends / Shift
+  descends); fall events and the void failsafe are skipped; the avatar is hidden.
+
+### Health & respawn (`HealthComponent` + `HealthSystem`)
+
+The player carries `HealthComponent { hp, maxHp }` (default 100/100). Event flow:
+
+- `player:damage` / `player:heal` `{ amount }` — debit/credit (triggers reach
+  this via the actuator's `player` action, **Game mode only**); every change
+  broadcasts `player:health { hp, maxHp }`.
+- A lethal fall (`player:fell`) or hp ≤ 0 — emits `player:died { cause }`,
+  teleports back to the world spawn point, zeroes velocity, restores full hp,
+  emits `player:respawned`.
+- The client HP bar consumes `player:health` (hidden at full health).
 
 ### Body parameters (`PlayerBodyComponent`)
 

@@ -23,6 +23,9 @@ export class RenderEngine {
     private mainCamera: THREE.PerspectiveCamera;
     private minimapCamera: THREE.OrthographicCamera;
     private renderer: THREE.WebGLRenderer;
+    /** The shadow-casting sun (first directional light) + its authored direction. */
+    private sunLight: THREE.DirectionalLight | null = null;
+    private _sunDir = new THREE.Vector3(0.45, 0.89, 0.45);
     private container: HTMLElement;
     private stats: Stats | null = null;
 
@@ -42,7 +45,12 @@ export class RenderEngine {
     private _entityObjectIndex = new Map<string | number, THREE.Object3D>();
 
     // Skeletal animation: one mixer per animated handle.
-    private _mixers = new Map<THREE.Object3D, THREE.AnimationMixer>();
+    private _mixers = new Map<THREE.Object3D, {
+        mixer: THREE.AnimationMixer;
+        /** state name → action (idle/walk/run/air + every clip by raw name). */
+        actions: Map<string, THREE.AnimationAction>;
+        current: string | null;
+    }>();
 
     constructor(config: RenderEngineConfig) {
         const domElement = document.getElementById(config.containerId);
@@ -84,6 +92,9 @@ export class RenderEngine {
         // Color management: render in sRGB so albedo textures aren't gamma-wrong
         // (linear-treated-as-sRGB). Color textures are tagged SRGBColorSpace on load.
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+        // Shadows: one shadow-casting sun (see setDirectionalLight), soft PCF.
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
 
         // 5. Default Lighting (dim ambient so adjunct lights are visible)
@@ -268,7 +279,32 @@ export class RenderEngine {
         const light = new THREE.DirectionalLight(color, intensity);
         light.position.set(x, y, z);
         this.scene.add(light);
+
+        // The FIRST directional light becomes the shadow-casting "sun". Its
+        // authored position only encodes the DIRECTION — the world spans tens of
+        // kilometres while a directional shadow camera covers ~100 m, so render()
+        // re-anchors the light around the main camera every frame.
+        if (!this.sunLight) {
+            this.sunLight = light;
+            if ((x * x + y * y + z * z) > 1e-6) this._sunDir.set(x, y, z).normalize();
+            light.castShadow = true;
+            light.shadow.mapSize.set(1024, 1024);
+            const cam = light.shadow.camera;
+            cam.left = -80; cam.right = 80; cam.top = 80; cam.bottom = -80;
+            cam.near = 1; cam.far = 400;
+            this.scene.add(light.target);
+        }
         return light;
+    }
+
+    /** Keep the sun's shadow frustum centred on the player (called per render). */
+    private anchorSunShadow(): void {
+        const sun = this.sunLight;
+        if (!sun) return;
+        const anchor = this.mainCamera.position;
+        sun.target.position.copy(anchor);
+        sun.position.copy(anchor).addScaledVector(this._sunDir, 150);
+        sun.target.updateMatrixWorld();
     }
 
     public setHemisphereLight(skyColor: number, groundColor: number, intensity: number): RenderHandle {
@@ -288,6 +324,12 @@ export class RenderEngine {
         l.color.setHex(color);
         l.intensity = intensity;
         l.position.set(x, y, z);
+        // For the sun, the authored position encodes its DIRECTION (sun cycle
+        // around the origin) — record it; anchorSunShadow re-bases the actual
+        // position around the camera each frame.
+        if (l === this.sunLight && (x * x + y * y + z * z) > 1e-6) {
+            this._sunDir.set(x, y, z).normalize();
+        }
     }
 
     /**
@@ -295,6 +337,7 @@ export class RenderEngine {
      */
     public render(isMinimapActive: boolean): void {
         this.stats?.begin();
+        this.anchorSunShadow();
         if (!isMinimapActive) {
             this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
             this.renderer.setScissorTest(false);
@@ -634,26 +677,136 @@ export class RenderEngine {
     public unlockControls(): void {
     }
 
+    // ── Audio (3D spatial) ───────────────────────────────────────────────────
+
+    private audioListener: THREE.AudioListener | null = null;
+    private audioLoader: THREE.AudioLoader | null = null;
+    /** Decoded buffers, load-once by URL (shared across every play). */
+    private audioBuffers = new Map<string, Promise<AudioBuffer>>();
+
+    /**
+     * Play a one-shot sound. With a position → THREE.PositionalAudio in the
+     * scene (distance attenuation); without → flat 2D playback. The listener
+     * rides the main camera and is created lazily (first play normally follows
+     * a user gesture, which also satisfies the autoplay policy — a suspended
+     * AudioContext is resumed best-effort).
+     */
+    public playSpatialSound(url: string, position: [number, number, number] | null, volume: number = 1): void {
+        if (!this.audioListener) {
+            this.audioListener = new THREE.AudioListener();
+            this.mainCamera.add(this.audioListener);
+        }
+        const listener = this.audioListener;
+        try { (listener.context as AudioContext)?.resume?.(); } catch { /* pre-gesture: stays suspended */ }
+
+        if (!this.audioLoader) this.audioLoader = new THREE.AudioLoader();
+        let buffer = this.audioBuffers.get(url);
+        if (!buffer) {
+            buffer = this.audioLoader.loadAsync(url);
+            this.audioBuffers.set(url, buffer);
+        }
+        buffer.then((buf) => {
+            if (position) {
+                const sound = new THREE.PositionalAudio(listener);
+                sound.setBuffer(buf);
+                sound.setRefDistance(8);
+                sound.setVolume(volume);
+                sound.position.set(position[0], position[1], position[2]);
+                this.scene.add(sound);
+                sound.onEnded = () => { sound.isPlaying = false; this.scene.remove(sound); };
+                sound.play();
+            } else {
+                const sound = new THREE.Audio(listener);
+                sound.setBuffer(buf);
+                sound.setVolume(volume);
+                sound.play();
+            }
+        }).catch((e) => console.warn(`[RenderEngine] audio ${url} failed to load`, e?.message ?? e));
+    }
+
     // ── Skeletal animation ────────────────────────────────────────────────────
 
-    /** Start playing the first clip on this handle (creates + caches the mixer). */
+    /** Movement-state → clip-name heuristics (case-insensitive substring). */
+    private static readonly ANIM_STATE_PATTERNS: Record<string, RegExp> = {
+        idle: /idle|stand|breath/i,
+        walk: /walk/i,
+        run: /run|sprint|jog/i,
+        air: /jump|fall|air/i,
+    };
+
+    /**
+     * Register a handle's clips with a mixer and start its default state.
+     * Clips are indexed BOTH by movement state (name heuristics) and by raw
+     * clip name; states with no matching clip fall back at setAnimationState
+     * time (run→walk→idle→first clip), so a one-clip model still animates.
+     */
     public startAnimation(handle: RenderHandle, clips: THREE.AnimationClip[]): void {
         if (!clips.length) return;
         const obj = handle as THREE.Object3D;
         const mixer = new THREE.AnimationMixer(obj);
-        mixer.clipAction(clips[0]).play();
-        this._mixers.set(obj, mixer);
+        const actions = new Map<string, THREE.AnimationAction>();
+
+        for (const clip of clips) {
+            const action = mixer.clipAction(clip);
+            actions.set(clip.name, action);
+            for (const [state, pattern] of Object.entries(RenderEngine.ANIM_STATE_PATTERNS)) {
+                if (!actions.has(state) && pattern.test(clip.name)) actions.set(state, action);
+            }
+        }
+        if (!actions.has('idle')) actions.set('idle', mixer.clipAction(clips[0]));
+
+        const rig = { mixer, actions, current: null as string | null };
+        this._mixers.set(obj, rig);
+        this.playRigState(rig, 'idle', 0);
+    }
+
+    /**
+     * Crossfade the handle's animation to a movement state (idle/walk/run/air
+     * or a raw clip name). No-op when the state is already playing or the
+     * handle has no rig (placeholder box / model without clips).
+     */
+    public setAnimationState(handle: RenderHandle, state: string, fadeSec: number = 0.25): void {
+        const rig = this._mixers.get(handle as THREE.Object3D);
+        if (!rig || rig.current === state) return;
+        this.playRigState(rig, state, fadeSec);
+    }
+
+    private playRigState(rig: { mixer: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; current: string | null }, state: string, fadeSec: number): void {
+        const FALLBACK: Record<string, string[]> = {
+            run: ['run', 'walk', 'idle'],
+            walk: ['walk', 'idle'],
+            air: ['air', 'idle'],
+            idle: ['idle'],
+        };
+        let next: THREE.AnimationAction | undefined;
+        for (const name of FALLBACK[state] ?? [state, 'idle']) {
+            next = rig.actions.get(name);
+            if (next) break;
+        }
+        if (!next) return;
+
+        const prev = rig.current ? rig.actions.get(rig.current) : undefined;
+        // The fallback chain can resolve two states to the SAME action (one-clip
+        // model: walk→idle→clips[0]); record the state but don't restart it.
+        rig.current = state;
+        if (prev === next && next.isRunning()) return;
+
+        if (prev && prev.isRunning() && fadeSec > 0) prev.fadeOut(fadeSec);
+        else prev?.stop();
+        next.reset();
+        if (fadeSec > 0 && prev) next.fadeIn(fadeSec);
+        next.play();
     }
 
     /** Advance the mixer for this handle by dt seconds (called from CharacterController). */
     public updateAnimation(handle: RenderHandle, dt: number): void {
-        this._mixers.get(handle as THREE.Object3D)?.update(dt);
+        this._mixers.get(handle as THREE.Object3D)?.mixer.update(dt);
     }
 
     /** Stop and remove the mixer for this handle (called on avatar swap or disposal). */
     public stopAnimation(handle: RenderHandle): void {
-        const mixer = this._mixers.get(handle as THREE.Object3D);
-        if (mixer) { mixer.stopAllAction(); this._mixers.delete(handle as THREE.Object3D); }
+        const rig = this._mixers.get(handle as THREE.Object3D);
+        if (rig) { rig.mixer.stopAllAction(); this._mixers.delete(handle as THREE.Object3D); }
     }
 
     public removeHandle(handle: RenderHandle): void {
