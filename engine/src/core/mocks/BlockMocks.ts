@@ -53,40 +53,44 @@ export function MockBlockData(x: number, y: number): any {
 
     const adjunctsRaw: any[] = [];
 
-    // 1. Pillars & Baton
-    const pillars: any[] = [
-        // [size, pos, rot, resId, repeat, animation_index, stop]
-        [
-            [0.4, 0.4, 6],   // Size
-            [8, 8, 3],       // Position
-            [0, 0, 0],       // Rotation
-            1,              // ResId
-            [1, 1],         // Repeat
-            1,              // Animation Index (references animations[0])
-            0               // Stop
-        ],
-        // Floating Box
-        [
-            [1, 1, 1],      // Size
-            [10, 8, 4],     // Position
-            [0, 0, 0],       // Rotation
-            2,
-            [1, 1],
-            2,              // HoverFlow
-            0
-        ],
-        // Flashing Box
-        [
-            [0.5, 0.5, 0.5],// Size
-            [6, 8, 4],      // Position
-            [0, 0, 0],
-            3,
-            [1, 1],
-            3,              // AlertFlash
-            0
-        ]
-    ];
-    adjunctsRaw.push([0x00a2, pillars]);
+    // 1. Pillars & Baton — animation showcase, ONE copy only (spawn block).
+    //    The 6m pillar doubles as the spawn pad the fall-through e2e steps off.
+    //    Repeating this trio on every block just cluttered the world.
+    if (x === 2048 && y === 2048) {
+        const pillars: any[] = [
+            // [size, pos, rot, resId, repeat, animation_index, stop]
+            [
+                [0.4, 0.4, 6],   // Size
+                [8, 8, 3],       // Position
+                [0, 0, 0],       // Rotation
+                1,              // ResId
+                [1, 1],         // Repeat
+                1,              // Animation Index (references animations[0])
+                1               // Stop (spawn pad — the player stands on it)
+            ],
+            // Floating Box
+            [
+                [1, 1, 1],      // Size
+                [10, 8, 4],     // Position
+                [0, 0, 0],       // Rotation
+                2,
+                [1, 1],
+                2,              // HoverFlow
+                0
+            ],
+            // Flashing Box
+            [
+                [0.5, 0.5, 0.5],// Size
+                [6, 8, 4],      // Position
+                [0, 0, 0],
+                3,
+                [1, 1],
+                3,              // AlertFlash
+                0
+            ]
+        ];
+        adjunctsRaw.push([0x00a2, pillars]);
+    }
 
     // 2. Light sources — only on 2 blocks near spawn (2048,2048)
     if ((x === 2048 && y === 2048) || (x === 2049 && y === 2048)) {

@@ -25,7 +25,13 @@ function makeWorld(flags: Record<string, any> = {}, time = 0.5, weather = 'clear
         globalFlags: flags,
         time,
         weather,
-        queryEntities: (type: string) => entities[type] ?? [],
+        // Multi-type query intersects like the real registry (the system asks for
+        // ["TransformComponent","InputStateComponent"] to find the player).
+        queryEntities: (...types: string[]) => {
+            const [first, ...rest] = types;
+            return (entities[first] ?? []).filter(id =>
+                rest.every(t => components.get(t)?.has(id)));
+        },
         getComponent: <T>(id: number, type: string): T | undefined =>
             components.get(type)?.get(id) as T | undefined,
         _add: addEntity,
@@ -39,6 +45,7 @@ function makeTriggerBox(events: TriggerComponent['events']): TriggerComponent {
         offset: [0, 0, 0],
         events,
         entitiesInside: new Set(),
+        insideMs: new Map(),
         triggeredCount: {},
         showHelper: false,
     };
@@ -46,6 +53,11 @@ function makeTriggerBox(events: TriggerComponent['events']): TriggerComponent {
 
 function makeTransform(x: number, y: number, z: number): TransformComponent {
     return { position: [x, y, z], rotation: [0, 0, 0], scale: [1, 1, 1] };
+}
+
+/** The controlled player = Transform + InputState (matches EntityFactory). */
+function playerComps(x: number, y: number, z: number) {
+    return { TransformComponent: makeTransform(x, y, z), InputStateComponent: {} };
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +97,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
             actions: [{ type: 'system', method: 'log', target: '', params: ['entered'] }],
         }]);
         // player at (0,0,0), trigger center (0,0,0) — inside
-        world._add(1, { TransformComponent: makeTransform(0, 0, 0) });
+        world._add(1, playerComps(0, 0, 0));
         world._add(2, {
             TriggerComponent: trigger,
             TransformComponent: makeTransform(0, 0, 0),
@@ -109,7 +121,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
             actions: [{ type: 'system', method: 'log', target: '', params: ['unlocked-enter'] }],
             fallbackActions: [{ type: 'system', method: 'log', target: '', params: ['locked'] }],
         }]);
-        world._add(1, { TransformComponent: makeTransform(0, 0, 0) });
+        world._add(1, playerComps(0, 0, 0));
         world._add(2, { TriggerComponent: trigger, TransformComponent: makeTransform(0, 0, 0) });
 
         const origLog = console.log;
@@ -130,7 +142,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
             actions: [{ type: 'system', method: 'log', target: '', params: ['unlocked-enter'] }],
             fallbackActions: [{ type: 'system', method: 'log', target: '', params: ['locked'] }],
         }]);
-        world._add(1, { TransformComponent: makeTransform(0, 0, 0) });
+        world._add(1, playerComps(0, 0, 0));
         world._add(2, { TriggerComponent: trigger, TransformComponent: makeTransform(0, 0, 0) });
 
         const origLog = console.log;
@@ -148,7 +160,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
             type: 'in',
             actions: [{ type: 'flag', method: '', target: 'door_open', params: [true] }],
         }]);
-        world._add(1, { TransformComponent: makeTransform(0, 0, 0) });
+        world._add(1, playerComps(0, 0, 0));
         world._add(2, { TriggerComponent: trigger, TransformComponent: makeTransform(0, 0, 0) });
 
         sys.update(world as any, 0.016);
@@ -172,7 +184,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
             fallbackActions: [{ type: 'system', method: 'log', target: '', params: ['door closed'] }],
         }]);
 
-        world._add(1, { TransformComponent: makeTransform(0, 0, 0) });
+        world._add(1, playerComps(0, 0, 0));
         world._add(2, { TriggerComponent: t1, TransformComponent: makeTransform(0, 0, 0) });
         world._add(3, { TriggerComponent: t2, TransformComponent: makeTransform(0, 0, 0) });
 
@@ -201,7 +213,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
             actions: [{ type: 'flag', method: '', target: 'count', params: [1] }],
             oneTime: true,
         }]);
-        world._add(1, { TransformComponent: makeTransform(0, 0, 0) });
+        world._add(1, playerComps(0, 0, 0));
         world._add(2, { TriggerComponent: trigger, TransformComponent: makeTransform(0, 0, 0) });
 
         sys.update(world as any, 0.016);
@@ -213,7 +225,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
 
         // The flag was set once; second 'in' is blocked by oneTime
         expect(world.globalFlags['count']).toBe(1);
-        expect(trigger.triggeredCount['in']).toBe(1);
+        expect(trigger.triggeredCount['in#0']).toBe(1);
     });
 
     it('player outside the box does not trigger', () => {
@@ -223,7 +235,7 @@ describe('TriggerSystem with JSONLogic conditions', () => {
             actions: [{ type: 'flag', method: '', target: 'hit', params: [true] }],
         }]);
         // player at (10,0,0), trigger box size 4 centered at (0,0,0) — no overlap
-        world._add(1, { TransformComponent: makeTransform(10, 0, 0) });
+        world._add(1, playerComps(10, 0, 0));
         world._add(2, { TriggerComponent: trigger, TransformComponent: makeTransform(0, 0, 0) });
 
         sys.update(world as any, 0.016);

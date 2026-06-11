@@ -52,6 +52,9 @@ export interface RenderObject {
     index?: number;
     params: RenderParams;
     hidden?: boolean;
+    /** Build the mesh but render nothing (visible=false). Still raycastable —
+     *  used by touch-enabled trigger volumes. */
+    invisible?: boolean;
     material?: MaterialConfig;
     stop?: any; // ColliderMaterial
     animate?: any; // AnimateRef

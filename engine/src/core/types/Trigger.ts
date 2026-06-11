@@ -27,11 +27,17 @@ export type JsonLogicRule = Record<string, any>;
 /**
  * One event handler on a trigger volume.
  * Serialized format (slot 5 in adjunct data):
- *   { type, conditions?, actions, fallbackActions?, oneTime? }
+ *   { type, conditions?, actions, fallbackActions?, oneTime?, holdDuration? }
  */
 export interface TriggerLogicNode {
-    /** When to fire: player enters, leaves, or stays inside the volume. */
-    type: "in" | "out" | "hold";
+    /**
+     * When to fire:
+     *   in    — player enters the volume
+     *   out   — player leaves the volume
+     *   hold  — player has stayed inside for holdDuration ms (fires once per stay)
+     *   touch — player clicks the volume (primary interact ray hits it)
+     */
+    type: "in" | "out" | "hold" | "touch";
     /**
      * Optional JSONLogic guard. If present, evaluated against WorldContext before
      * dispatching actions. Falsy result → fallbackActions (if any) instead.
@@ -40,8 +46,17 @@ export interface TriggerLogicNode {
     actions: TriggerAction[];
     /** Fired when conditions evaluate to false (optional). */
     fallbackActions?: TriggerAction[];
-    /** Fire at most once per world load. */
+    /**
+     * Consume after the first PASSING execution (conditions met, actions fired).
+     * Fallback executions do not consume — a locked door stays re-tryable.
+     */
     oneTime?: boolean;
+    /**
+     * 'hold' only: milliseconds the player must stay inside before the node
+     * fires. Accumulated from stepped dt (deterministic, no wall-clock); resets
+     * when the player exits. Absent/0 → fires on the first frame after entry.
+     */
+    holdDuration?: number;
 }
 
 export interface TriggerAction {

@@ -47,10 +47,17 @@ export interface EditorFormConfig {
 export const TriggerTransform: AdjunctTransform = {
     stdToRenderData(stds: STDObject[], _elevation: number): RenderObject[] {
         return stds.map((row, index) => {
-            const renderObj: RenderObject & { triggerVolume?: any; hidden?: boolean } = {
+            const events = (row.events ?? []) as TriggerLogicNode[];
+            // A 'touch' node needs the volume to be hit-testable: emit an
+            // invisible mesh (visible=false is still raycastable in Three.js).
+            // Pure walk-through volumes stay fully hidden so they never
+            // intercept clicks meant for objects behind them.
+            const touchable = events.some(e => e.type === 'touch');
+            const renderObj: RenderObject & { triggerVolume?: any; invisible?: boolean } = {
                 type: "box",
                 index,
-                hidden: true,
+                hidden: !touchable,
+                invisible: touchable,
                 params: {
                     size: Coords.getBoxDimensions([row.x, row.y, row.z]),
                     position: [row.ox, row.oy, row.oz],
@@ -59,9 +66,12 @@ export const TriggerTransform: AdjunctTransform = {
             };
             renderObj.triggerVolume = {
                 shape: row.shape === 2 ? "sphere" : "box",
-                size: [row.x, row.y, row.z],
+                // Engine-axis extents (same mapping as params.size) so the
+                // TriggerSystem containment test compares like with like.
+                size: Coords.getBoxDimensions([row.x, row.y, row.z]),
                 offset: [0, 0, 0],
-                events: row.events ?? [],
+                gameOnly: !!row.gameOnly,
+                events,
             };
             return renderObj;
         });
@@ -111,8 +121,13 @@ export const TriggerAttribute: AdjunctAttribute = {
     deserialize: (data: any[]): STDObject => {
         const rawEvents = data[5] ?? [];
         let events: TriggerLogicNode[];
-        if (Array.isArray(rawEvents) && rawEvents.length > 0 && !rawEvents[0]?.type) {
-            // old flat-array logic — wrap in a basic 'in' event
+        // New format = array of logic nodes, whose `type` is an EVENT name.
+        // Anything else (old flat action arrays — whose entries may carry an
+        // ACTION `type` like 'flag') wraps into a basic unconditional 'in' node.
+        const NODE_TYPES = new Set(['in', 'out', 'hold', 'touch']);
+        const isNodeList = Array.isArray(rawEvents)
+            && rawEvents.every((e: any) => NODE_TYPES.has(e?.type));
+        if (Array.isArray(rawEvents) && rawEvents.length > 0 && !isNodeList) {
             events = [{ type: 'in', actions: rawEvents }];
         } else {
             events = rawEvents as TriggerLogicNode[];

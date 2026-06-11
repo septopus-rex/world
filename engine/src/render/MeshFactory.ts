@@ -74,6 +74,11 @@ export class MeshFactory {
         object.position.set(params.position[0], params.position[1], params.position[2]);
         object.rotation.set(params.rotation[0], params.rotation[1], params.rotation[2]);
 
+        // Invisible-but-raycastable (touch trigger volumes): Three's Raycaster
+        // ignores visibility, so visible=false costs nothing to render yet still
+        // intersects on the raycast layer.
+        if (data.invisible) object.visible = false;
+
         return object;
     }
 

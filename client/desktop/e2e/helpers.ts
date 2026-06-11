@@ -50,3 +50,29 @@ export async function cameraYaw(page: Page): Promise<number> {
 export function mainCanvas(page: Page) {
   return page.locator('canvas[data-engine]');
 }
+
+/** Live snapshot of world.globalFlags (the observable triggers write to). */
+export async function worldFlags(page: Page): Promise<Record<string, any>> {
+  return page.evaluate(() => ({ ...(window as any).loader.engine.getWorld().globalFlags }));
+}
+
+/**
+ * Walk with a move intent, stepping in small deterministic chunks until `done`
+ * returns true (or maxSteps elapse). Intent is cleared before returning so the
+ * player stands still for the assertions that follow.
+ */
+export async function walkUntil(
+  page: Page,
+  intent: [number, number],
+  done: () => Promise<boolean>,
+  maxSteps = 600,
+): Promise<boolean> {
+  await page.evaluate(([x, y]) => (window as any).loader.setPlayerMoveIntent(x, y), intent);
+  let ok = false;
+  for (let stepped = 0; stepped < maxSteps && !ok; stepped += 10) {
+    await stepEngine(page, 10);
+    ok = await done();
+  }
+  await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));
+  return ok;
+}

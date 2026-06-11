@@ -86,23 +86,25 @@ export class AdjunctSystem implements ISystem {
         }
     }
 
+    /**
+     * Attach the authored trigger volume to the entity. The volume arrives from
+     * adjunct_trigger's stdToRenderData already in its final shape:
+     * { shape, size, offset, gameOnly, events: TriggerLogicNode[] } — pass it
+     * through untouched (re-deriving events here silently dropped the authored
+     * JSONLogic nodes).
+     */
     private registerTriggers(world: World, entityId: EntityId, volumes: any[]) {
         volumes.forEach(vol => {
-            const triggerTypeStr = vol.type === 1 ? 'in' : (vol.type === 2 ? 'out' : 'hold');
-            const events: any[] = [{
-                type: triggerTypeStr,
-                actions: (vol.logic || []).map((l: any) => ({
-                    type: 'adjunct',
-                    target: l[1]?.[1],
-                    method: 'modify',
-                    params: [l[1]]
-                })),
-                oneTime: vol.runOnce
-            }];
-
             world.addComponent(entityId, "TriggerComponent", {
-                shape: vol.shape, size: vol.size, offset: vol.offset,
-                events, entitiesInside: new Set(), triggeredCount: {}, showHelper: false
+                shape: vol.shape,
+                size: vol.size,
+                offset: vol.offset ?? [0, 0, 0],
+                gameOnly: !!vol.gameOnly,
+                events: vol.events ?? [],
+                entitiesInside: new Set(),
+                insideMs: new Map(),
+                triggeredCount: {},
+                showHelper: false
             });
         });
     }

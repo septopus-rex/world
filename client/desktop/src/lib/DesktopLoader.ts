@@ -257,10 +257,11 @@ export class DesktopLoader implements IDataSource {
         // aspect-matched (≈uniform) model rotates cleanly with no shear.
         const Y = Math.PI;
         const modules = [
-            // 3 pyramids share one .gltf (load-once, instance-many)
-            [[2, 2, 3], [3, 12, 1.55], [0, 0.4, 0], 27, 0, 0],
-            [[2, 2, 3], [8, 12, 1.55], [0, Y / 4, 0], 27, 0, 0],
-            [[2, 2, 3], [13, 12, 1.55], [0, -0.6, 0], 27, 0, 0],
+            // 3 pyramids share one .gltf (load-once, instance-many) — south row,
+            // keeping the north half of the block clear for the trigger court.
+            [[2, 2, 3], [3, 1.2, 1.55], [0, 0.4, 0], 27, 0, 0],
+            [[2, 2, 3], [8, 1.2, 1.55], [0, Y / 4, 0], 27, 0, 0],
+            [[2, 2, 3], [13, 1.2, 1.55], [0, -0.6, 0], 27, 0, 0],
             // 2 damaged helmets (complex PBR) share one .glb — aspect ≈ cubic
             [[3.15, 3.33, 3.0], [6, 3, 1.55], [0, 0.6, 0], 28, 0, 0],
             [[3.15, 3.33, 3.0], [10, 3, 1.55], [0, -Y / 3, 0], 28, 0, 0],
@@ -274,14 +275,118 @@ export class DesktopLoader implements IDataSource {
             [[6, 6, 0.3], [3, 4, 0.15], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],   // floor slab
         ];
         // Stop adjuncts (colliders). Format: [size, offset, rot, mode, animate]
-        // SPP coords: X=East Y=North Z=Alt. Player spawns at N=0 and walks north.
-        // This wall sits at N=5, stretching E=1..15 — right in front of both foxes.
+        // SPP coords: X=East Y=North Z=Alt. This wall sits at N=5, E=1..15,
+        // south of the spawn pillar — the southern showcase stays fenced off.
         const stops = [
             [[14, 0.4, 2.5], [8, 5, 1.25], [0, 0, 0], 1, 0],
         ];
         data.raw[2].push([0x00a4, modules]);
         data.raw[2].push([0x00a2, texturedBoxes]);
         data.raw[2].push([0x00b4, stops]);
+
+        // ── Trigger court (north half of the spawn block) ────────────────────
+        // Interactive trigger test scene; everything gives VISIBLE feedback via
+        // adjunct actions and writes a flag the e2e suite can assert.
+        // gameOnly=0 everywhere so it runs in Normal (browse) mode.
+        //
+        // adjunct action targets use the stable id adj_{x}_{y}_{typeIdDec}_{idx}:
+        // a1 wall=161, a6 cone=166, a7 ball=167.
+
+        // Reactors (visible objects the triggers manipulate):
+        const walls = [
+            // #0 auto door (adj_2048_2048_161_0): slides up when the player stands
+            //    on the blue pad, slides back when they leave (airlock feel).
+            [[4, 0.4, 3], [8, 13, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
+            // #1 conditional door (adj_2048_2048_161_1): only opens if the cone
+            //    button was touched first (flags.demo_touch) — opens once.
+            [[3, 0.4, 3], [14, 14, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
+        ];
+        const cones = [
+            // touch button (adj_2048_2048_166_0): each click spins it visibly.
+            [[1.2, 1.2, 1.6], [12, 10.5, 0.8], [0, 0, 0], 0, [1, 1], 0, 0],
+        ];
+        const balls = [
+            // hold-lift ball (adj_2048_2048_167_0): rises while you camp the pad.
+            [[1, 1, 1], [3, 12, 3], [0, 0, 0], 0, [1, 1], 0, 0],
+        ];
+        // Floor pads marking each invisible volume (colors from basic_box palette:
+        // 1 dark-gray, 2 blue, 3 red).
+        const markers = [
+            [[4, 4.5, 0.05], [8, 11.25, 0.1], [0, 0, 0], 2, [1, 1], 0, 0],   // blue: auto door
+            [[3, 3, 0.05], [3, 10.5, 0.1], [0, 0, 0], 3, [1, 1], 0, 0],      // red: hold lift
+            [[2.2, 2, 0.05], [14.2, 12, 0.1], [0, 0, 0], 1, [1, 1], 0, 0],   // gray: conditional door
+        ];
+        data.raw[2].push([0x00a1, walls]);
+        data.raw[2].push([0x00a6, cones]);
+        data.raw[2].push([0x00a7, balls]);
+        data.raw[2].push([0x00a2, markers]);
+
+        // Trigger volumes (b8). Row format: [size, offset, rot, shape, gameOnly, events].
+        const triggers = [
+            // ① auto door pad (blue): in→open+demo_gate, out→close, hold 800ms→demo_hold.
+            //    Tall (alt 0..6): the player descends from the 6m spawn pillar while
+            //    walking north, so the volume must catch a falling crossing too.
+            //    Deep (N 9..13.5): reaches past the door line so it stays open
+            //    while you walk through.
+            [[4, 4.5, 6], [8, 11.25, 3], [0, 0, 0], 1, 0, [
+                {
+                    type: 'in', actions: [
+                        { type: 'adjunct', target: 'adj_2048_2048_161_0', method: 'moveZ', params: [3.2] },
+                        { type: 'flag', method: '', target: 'demo_gate', params: [true] },
+                    ]
+                },
+                {
+                    type: 'out', actions: [
+                        { type: 'adjunct', target: 'adj_2048_2048_161_0', method: 'moveZ', params: [-3.2] },
+                        { type: 'flag', method: '', target: 'demo_gate', params: [false] },
+                    ]
+                },
+                {
+                    type: 'hold', holdDuration: 800, actions: [
+                        { type: 'flag', method: '', target: 'demo_hold', params: [true] },
+                    ]
+                },
+            ]],
+            // ② touch button: clicking the (invisible) volume around the cone spins
+            //    it and sets demo_touch — which also arms the conditional door.
+            //    Top at alt 3.2: the first-person eye ray sits at ~2.6 (player
+            //    0.9 + 1.7), so the volume must reach above it to catch a level
+            //    center-screen click.
+            [[2, 2, 3.2], [12, 10.5, 1.6], [0, 0, 0], 1, 0, [
+                {
+                    type: 'touch', actions: [
+                        { type: 'adjunct', target: 'adj_2048_2048_166_0', method: 'rotateY', params: [0.8] },
+                        { type: 'flag', method: '', target: 'demo_touch', params: [true] },
+                    ]
+                },
+            ]],
+            // ③ hold-lift pad (red): camp 1.5s and the ball rises one notch;
+            //    leave + re-enter to lift again (hold re-arms per stay).
+            [[3, 3, 4], [3, 10.5, 2], [0, 0, 0], 1, 0, [
+                {
+                    type: 'hold', holdDuration: 1500, actions: [
+                        { type: 'adjunct', target: 'adj_2048_2048_167_0', method: 'moveZ', params: [0.8] },
+                        { type: 'flag', method: '', target: 'demo_lift', params: [true] },
+                    ]
+                },
+            ]],
+            // ④ conditional door pad (gray): JSONLogic gate on demo_touch; opens the
+            //    far door ONCE (oneTime) — fallback just logs until the button is hit.
+            [[2.2, 2, 4], [14.2, 12, 2], [0, 0, 0], 1, 0, [
+                {
+                    type: 'in', oneTime: true,
+                    conditions: { '==': [{ var: 'flags.demo_touch' }, true] },
+                    actions: [
+                        { type: 'adjunct', target: 'adj_2048_2048_161_1', method: 'moveZ', params: [3.2] },
+                        { type: 'flag', method: '', target: 'demo_chain', params: [true] },
+                    ],
+                    fallbackActions: [
+                        { type: 'system', method: 'log', target: '', params: ['conditional door: touch the cone button first (demo_touch)'] },
+                    ]
+                },
+            ]],
+        ];
+        data.raw[2].push([0x00b8, triggers]);
     }
 
     // ── Player / view controls ─────────────────────────────────────────────────
