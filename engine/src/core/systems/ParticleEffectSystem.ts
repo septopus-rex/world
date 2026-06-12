@@ -1,17 +1,20 @@
-import { World, ISystem, EntityId, GameEvent } from '../World';
+import { World, ISystem } from '../World';
 import { TransformComponent } from '../components/PlayerComponents';
 import { EffectComponent } from '../components/EffectComponent';
+import type { EventReader } from '../events/EventReader';
 
 export class ParticleEffectSystem implements ISystem {
     private world!: World;
-
-    public attach(world: World): void {
-        this.world = world;
-        this.world.on("spawn_effect", this.onSpawnEffect.bind(this));
-    }
+    private spawnReader: EventReader<'effect.spawn'> | null = null;
 
     public update(world: World, dt: number): void {
-        if (!this.world) this.attach(world);
+        this.world = world;
+        if (!this.spawnReader && (world as any).events?.reader) {
+            this.spawnReader = world.events.reader('effect.spawn');
+        }
+        if (this.spawnReader) {
+            for (const ev of this.spawnReader.read()) this.onSpawnEffect(ev);
+        }
 
         const effectEntities = world.getEntitiesWith(["EffectComponent", "TransformComponent"]);
 

@@ -122,9 +122,11 @@ describe('trigger full pipeline (raw → TriggerSystem)', () => {
         const { engine, world } = await bootWithTriggers([triggerRow(events)]);
         const eid = triggerEntities(world)[0];
 
-        stepN(engine, 1); // let TriggerSystem subscribe to 'interact'
-        // What RaycastInteractionSystem emits on a primary-click hit:
-        world.emitSimple('interact', { entityId: eid, metadata: {}, distance: 3, point: [0, 0, 0] });
+        stepN(engine, 1); // let TriggerSystem build its interact reader
+        // What RaycastInteractionSystem emits on a primary-click hit (PR-2):
+        world.events.emit('interact.primary',
+            { metadata: {}, distance: 3, point: [0, 0, 0] },
+            { target: eid, actor: playerEid(world) });
         stepN(engine, 1);
         expect(world.globalFlags['touched']).toBe(true);
     });

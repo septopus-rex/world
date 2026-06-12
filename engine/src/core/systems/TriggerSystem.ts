@@ -34,26 +34,28 @@ export class TriggerSystem implements ISystem {
     /** The acting player this frame (actuator context for bag actions). */
     private _playerId: EntityId | null = null;
 
-    /** Clicked entities queued by the 'interact' subscription, drained per update. */
-    private _pendingTouches: EntityId[] = [];
-    private _interactSubscribed = false;
+    /** Pull-cursor over interact.primary (touch routing). Lazily built — unit
+     *  tests with bare fake worlds (no event queue) simply never see touches. */
+    private _interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
 
     public update(world: World, deltaTime: number): void {
-        // Edit mode is for authoring, Ghost is read-only — no trigger may fire.
-        // Drop queued clicks so they don't fire after the mode switches back.
-        const mode = world.mode;
-        if (mode === SystemMode.Edit || mode === SystemMode.Ghost) {
-            this._pendingTouches.length = 0;
-            return;
+        if (!this._interactReader && (world as any).events?.reader) {
+            this._interactReader = world.events.reader('interact.primary');
         }
 
-        this._subscribeInteract(world);
+        // Edit mode is for authoring, Ghost is read-only — no trigger may fire.
+        // Clear the reader so gated-away clicks don't fire after switching back.
+        const mode = world.mode;
+        if (mode === SystemMode.Edit || mode === SystemMode.Ghost) {
+            this._interactReader?.clear();
+            return;
+        }
 
         // The controlled player carries InputStateComponent; plain Transform
         // queries would also match blocks/adjuncts.
         const playerEntities = world.queryEntities("TransformComponent", "InputStateComponent");
         if (playerEntities.length === 0) {
-            this._pendingTouches.length = 0;
+            this._interactReader?.clear();
             return;
         }
 
@@ -68,15 +70,16 @@ export class TriggerSystem implements ISystem {
 
         const ctx = this._buildContext(world, playerId, playerTransform);
 
-        // 1) touch — route queued raycast hits to their trigger components.
-        if (this._pendingTouches.length > 0) {
-            for (const target of this._pendingTouches) {
+        // 1) touch — route this frame's raycast hits to their trigger components.
+        if (this._interactReader) {
+            for (const ev of this._interactReader.read()) {
+                const target = ev.target;
+                if (target === undefined) continue;
                 const trigger = world.getComponent<TriggerComponent>(target, "TriggerComponent");
                 if (!trigger) continue;                                  // clicked a non-trigger
                 if (trigger.gameOnly && mode !== SystemMode.Game) continue;
                 this._handleEvent(world, target, trigger, 'touch', ctx);
             }
-            this._pendingTouches.length = 0;
         }
 
         // 2) volume containment — in / out / hold edges.
@@ -126,17 +129,6 @@ export class TriggerSystem implements ISystem {
                 this._handleHold(world, entityId, trigger, ctx, prevMs, nowMs);
             }
         }
-    }
-
-    /** Lazily hook RaycastInteractionSystem's 'interact' events (real World only;
-     *  unit-test fakes without a bus simply never queue touches). */
-    private _subscribeInteract(world: World): void {
-        if (this._interactSubscribed || typeof world.on !== 'function') return;
-        world.on('interact', (ev: any) => {
-            const id = ev?.payload?.entityId;
-            if (id !== null && id !== undefined) this._pendingTouches.push(id as EntityId);
-        });
-        this._interactSubscribed = true;
     }
 
     private _buildContext(world: World, playerId: EntityId, transform: TransformComponent): WorldContext {

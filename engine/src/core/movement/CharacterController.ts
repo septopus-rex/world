@@ -9,8 +9,13 @@ import { CONTROL_CONSTANTS, ENGINE_CONSTANTS, PHYSICS_CONSTANTS } from '../Const
 import { SystemMode } from '../types/SystemMode';
 import { InputProvider } from '../systems/InputProvider';
 
-/** Pre-computed solid AABB for fast, allocation-free collision. */
-interface SolidEntry { px: number; py: number; pz: number; hx: number; hy: number; hz: number; }
+/** Pre-computed solid AABB for fast, allocation-free collision.
+ *  (ox/oy/oz = the SolidComponent offset, kept for in-place position refresh.) */
+interface SolidEntry {
+    px: number; py: number; pz: number;
+    ox: number; oy: number; oz: number;
+    hx: number; hy: number; hz: number;
+}
 
 /**
  * CharacterController — the single, consolidated home for the controlled
@@ -47,6 +52,14 @@ export class CharacterController implements ISystem {
     // solid cache (rebuilt when solid count changes)
     private _solids: SolidEntry[] = [];
     private _solidIds: EntityId[] = [];
+
+    // ── moving-platform carry ────────────────────────────────────────────────
+    /** The solid entity under the player's feet; its frame-to-frame transform
+     *  delta is applied to the player (ride lifts, doors, future movers). */
+    private _supportEid: EntityId | null = null;
+    private _supportLast: [number, number, number] | null = null;
+    /** Grounded-flag flicker tolerance (standing still alternates the flag). */
+    private _airFrames = 0;
     private _lastSolidCount = -1;
 
     /** Max metres moved per collision substep (< thinnest ground -> no tunneling). */
@@ -125,6 +138,8 @@ export class CharacterController implements ISystem {
         if (input.jump && body.isGrounded) {
             body.velocity[1] = body.jumpForce;
             body.isGrounded = false;
+            this._supportEid = null;
+            this._supportLast = null;
         }
         input.jump = false;
 
@@ -134,6 +149,7 @@ export class CharacterController implements ISystem {
         // guarantee: the player never sinks through ground that hasn't streamed in
         // yet (the "walking along, fell below the block" symptom).
         this.ensureSolidCache(world);
+        this.carrySupport(world, body, trans);
         if (!this._safe) this._safe = [trans.position[0], trans.position[1], trans.position[2]];
         const groundBelow = this.hasGroundBelow(trans, body);
         if (!groundBelow) {
@@ -144,6 +160,16 @@ export class CharacterController implements ISystem {
 
         this.integrateAndCollide(world, body, trans, dt, stepHeight);
         this.voidRecovery(world, body, trans);
+
+        // Drop the platform attachment after a SUSTAINED airborne streak — the
+        // grounded flag flickers one frame while standing still (velocity 0
+        // skips the landing probe), which must not detach a rider.
+        if (body.isGrounded) {
+            this._airFrames = 0;
+        } else if (++this._airFrames > 2) {
+            this._supportEid = null;
+            this._supportLast = null;
+        }
 
         this.processFallEvents(world, body, trans, pbody);
         this.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
@@ -273,6 +299,7 @@ export class CharacterController implements ISystem {
                     trans.position[1] = (w.py + w.hy) + body.size[1] / 2 - body.offset[1];
                     body.velocity[1] = 0;
                     body.isGrounded = true;
+                    this.setSupport(this._solidIds[si]);
                 } else { // ceiling
                     trans.position[1] = (w.py - w.hy) - body.size[1] / 2 - body.offset[1];
                     body.velocity[1] = 0;
@@ -312,6 +339,7 @@ export class CharacterController implements ISystem {
                 trans.position[1] = (w.py + w.hy) + body.size[1] / 2 - body.offset[1];
                 if (body.velocity[1] < 0) body.velocity[1] = 0;
                 body.isGrounded = true;
+                this.setSupport(this._solidIds[si]);
                 continue; // allow the horizontal move
             }
 
@@ -335,9 +363,55 @@ export class CharacterController implements ISystem {
         trans.position[2] = nextZ;
     }
 
+    /** Record (or switch) the solid under the player's feet. */
+    private setSupport(eid: EntityId): void {
+        if (this._supportEid !== eid) {
+            this._supportEid = eid;
+            this._supportLast = null;    // snapshot on the next carry pass
+        }
+    }
+
+    /**
+     * Moving-platform carry: apply the support solid's frame-to-frame transform
+     * delta to the player BEFORE integration, so standing on a trigger-driven
+     * lift/door rides it instead of having it slide out from underfoot.
+     */
+    private carrySupport(world: World, body: RigidBodyComponent, trans: TransformComponent): void {
+        const eid = this._supportEid;
+        if (eid === null) return;
+        const t = world.getComponent<TransformComponent>(eid, 'TransformComponent');
+        if (!t) { this._supportEid = null; this._supportLast = null; return; } // support despawned
+        if (this._supportLast) {
+            const dx = t.position[0] - this._supportLast[0];
+            const dy = t.position[1] - this._supportLast[1];
+            const dz = t.position[2] - this._supportLast[2];
+            if (dx !== 0 || dy !== 0 || dz !== 0) {
+                trans.position[0] += dx;
+                trans.position[1] += dy;
+                trans.position[2] += dz;
+                trans.dirty = true;
+            }
+        }
+        this._supportLast = [t.position[0], t.position[1], t.position[2]];
+    }
+
     private ensureSolidCache(world: World): void {
         const solids = world.queryEntities('SolidComponent');
-        if (solids.length === this._lastSolidCount) return;
+        if (solids.length === this._lastSolidCount) {
+            // Same population: refresh POSITIONS in place. Adjuncts move at
+            // runtime (trigger moveZ doors/lifts) and a stale cache would keep
+            // colliding at the old pose — the bug that made "open" doors still
+            // block until block streaming happened to rebuild the cache.
+            for (let i = 0; i < this._solidIds.length; i++) {
+                const t = world.getComponent<TransformComponent>(this._solidIds[i], 'TransformComponent');
+                if (!t) { this._lastSolidCount = -1; this.ensureSolidCache(world); return; } // entity churn → rebuild
+                const entry = this._solids[i];
+                entry.px = t.position[0] + entry.ox;
+                entry.py = t.position[1] + entry.oy;
+                entry.pz = t.position[2] + entry.oz;
+            }
+            return;
+        }
         this._lastSolidCount = solids.length;
         this._solidIds = solids;
         this._solids = solids.map((sid) => {
@@ -346,6 +420,7 @@ export class CharacterController implements ISystem {
             const p = t?.position ?? [0, 0, 0];
             return {
                 px: p[0] + s.offset[0], py: p[1] + s.offset[1], pz: p[2] + s.offset[2],
+                ox: s.offset[0], oy: s.offset[1], oz: s.offset[2],
                 hx: s.size[0] / 2, hy: s.size[1] / 2, hz: s.size[2] / 2,
             };
         });
@@ -463,7 +538,7 @@ export class CharacterController implements ISystem {
         const rotDist = Math.abs(trans.rotation[1] - this._lastRot[1]);
         if (distSq > CONTROL_CONSTANTS.STATE_EMIT_THRESHOLD ** 2 || rotDist > CONTROL_CONSTANTS.ROT_EMIT_THRESHOLD) {
             const spp = Coords.engineToSpp(trans.position);
-            world.emitSimple('player:state', {
+            world.events.emit('player.state', {
                 block: spp.block, position: spp.pos, rotation: Coords.engineRotationToSpp(trans.rotation),
             });
             this._lastPos.set(trans.position[0], trans.position[1], trans.position[2]);

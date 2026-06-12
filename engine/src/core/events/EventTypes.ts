@@ -46,6 +46,8 @@ export interface EventMap {
     'item.pickup': { itemId: string; amount: number; metadata?: unknown };
     'item.consume': { itemId: string; amount: number };
     'item.spawn_drop': { itemId: string; amount: number; position: [number, number, number] };
+    'item.picked': { itemId: string; templateId: number; seed: number; count: number };
+    'item.dropped': { itemId: string; templateId: number; seed: number; count: number };
     'inventory.updated': { entity: EntityId; inventory: unknown };
     'inventory.full': { entity: EntityId; itemId: string };
     'effect.spawn': { position: [number, number, number]; type: string };

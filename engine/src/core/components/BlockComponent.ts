@@ -9,4 +9,8 @@ export interface BlockComponent {
     animations?: any[]; // Block-scoped animation library
     isInitialized: boolean;
     isDraft?: boolean;  // True if loaded from localStorage draft instead of chain data
+    /** Adjunct meshes still to build; at 0 the block emits ONE block.loaded. */
+    pendingAdjuncts?: number;
+    /** Total adjunct count at init (block.loaded payload). */
+    adjunctTotal?: number;
 }

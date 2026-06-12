@@ -53,6 +53,6 @@ export function saveBlockDraft(world: World, blockEntityId: EntityId): boolean {
     const worldId = typeof block.world === 'number' ? block.world : 0;
     world.draftStore.save(worldId, block.x, block.y, raw);
     block.isDraft = true;
-    world.emitSimple("world:draft_saved", { blockKey: `${block.x}_${block.y}` });
+    world.events.emit("edit.draft_saved", { blockKey: `${block.x}_${block.y}` });
     return true;
 }

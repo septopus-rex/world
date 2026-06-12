@@ -27,14 +27,16 @@ async function findItem(page: any, match: Partial<{ templateId: number; seed: nu
   }, match);
 }
 
-/** Pick an item up the way a click lands (interact event, sourced to the player). */
+/** Pick an item up the way a click lands (interact.primary, actor = player). */
 async function pickUp(page: any, entityId: number) {
   await page.evaluate((eid: number) => {
     const w = (window as any).loader.engine.getWorld();
     const player = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
-    w.emitSimple('interact', { entityId: eid, distance: 2 }, player);
+    w.events.emit('interact.primary',
+      { metadata: {}, distance: 2, point: [0, 0, 0] },
+      { target: eid, actor: player });
   }, entityId);
-  await stepEngine(page, 2);
+  await stepEngine(page, 3); // pull model: click → ItemSystem → InventorySystem
 }
 
 /** The player's live bag contents. */

@@ -68,18 +68,19 @@ cd engine && yarn build                            # tsc
 
 ## 编辑 / Adjunct
 
-- 编辑经 `EditSystem`（select / move / set / delete / undo）→ `DraftStore`（write-behind 内存缓存 + IndexedDB 持久化，另有 `loadMeta/saveMeta` 世界级元数据通道存背包；启动时 `Engine.hydrateDrafts()` 注水，`ExportService` 提供 JSON 导出/导入）。
+- 编辑经 `EditSystem`（**palette 放置(add)** / select / move / set / delete / undo）→ `DraftStore`（write-behind 内存缓存 + IndexedDB 持久化，另有 `loadMeta/saveMeta` 世界级元数据通道存背包；启动时 `Engine.hydrateDrafts()` 注水，`ExportService` 提供 JSON 导出/导入）。
 - adjunct 按 type-id 注册于 `core/services/AdjunctRegistry.ts`：`a1` wall · `a2` box · `a3` light · `a4` module（3D 模型）· `a5` water · `a6` cone · `a7` ball（sphere）· `b4` stop · `b5` item（可拾取物品）· `b8` trigger。module 经 `render/ResourceManager` + `render/loaders/ModelLoader` 加载外部模型，占位→swap 模式、按 id 去重实例化；骨骼动画由 `RenderEngine.startAnimation/setAnimationState`（idle/walk/run/air 状态机 + crossfade，CharacterController 按速度驱动）驱动。
 - **背包/物品**（P0–P2 已落地，规格 `docs/plan/specs/inventory-local-first.md`）：`ItemRegistry`（模板 + seed 确定性推导属性）→ b5 adjunct → `ItemSystem` 原子拾取/丢弃（背包变更 + block raw 重序列化进 draft 同帧完成）；trigger 动作经 `world.actuator`（`IActuator`/`LocalActuator`，可注入）执行，动作面 adjunct/flag/bag/player/sound/system（bag·player 仅 Game 模式），JSONLogic 条件可读 `inventory.*`。
 - **模式**：`Engine.setMode`（Normal/Edit/Game/Ghost）+ 客户端四模式切换器；Ghost = noclip 飞行（Space 升/Shift 降）+ 隐藏 avatar。**会话持久化**：`globalFlags` + oneTime 消耗（`sessionTriggerFired`）随 DraftStore meta 进 IndexedDB，`hydrateDrafts` 还原（背包同通道）。
 - **玩法回路**：`HealthSystem`（player:damage/heal/fell → died/respawned，重生回出生点）+ 客户端 HP 条；**音频** `RenderEngine.playSpatialSound`（PositionalAudio，按 URL 去重缓冲）+ `ResourceManager.getAudioUrl`；**Block LOD** `BlockLODSystem`（`world.performance.lodNear`，远块隐藏 adjunct 网格、仿真照常）；阴影：单太阳光 shadowMap，视锥逐帧锚定玩家。
-- **事件队列**（PR-1 已落地，`core/events/`）：`world.events` 帧作用域双缓冲队列（emit 不跑回调、系统拉 reader、边界回调仅在 step 尾 flushBoundary 派发）；与旧 `World.on/emitSimple` 总线共存，调用点迁移按 event-bus spec §7 逐通道进行。
+- **事件队列**（PR-1..3 已落地，`core/events/`）：`world.events` 帧作用域双缓冲队列（emit 不跑回调、系统拉 reader、边界回调仅在 step 尾 flushBoundary 按 (frame,seq) 全序派发、EntityId+稳定键双键定向）。已迁通道：interact.* / item.* / inventory.* / block.need / block.loaded（每块一次，boot gate 按 `blk:x_y` 定向）/ player.state / system.mode / edit.*；旧总线仅余 `player:*` 生命周期与 `audio:played`（待 PR-4/5）。Engine 门面双总线订阅 + LEGACY_EVENT_MAP 别名（dev 告警一次）。
+- **编辑器创作闭环**：Edit 模式左上 palette（9 类可放置，`core/edit/AdjunctDefaults.ts` 给默认 raw），点击表面放置（`EditTask 'add'` → `spawnAdjunct` 复用），undo=删除；module 需资源选择器暂不在列。**移动平台跟随**：玩家脚下支撑 solid 的帧位移传递（骑乘 moveZ 升降）；solid 缓存每帧原地刷新位置（修复触发器移动后碰撞箱滞留旧位姿）。
 - 动态/链上加载的 adjunct 代码经 `AdjunctSandbox`（Web Worker 沙箱 + 静态 `validateCode` 过滤）+ `AdjunctLoader`（已迁 TS，**暂未接入运行时**，随链相关功能启用）。
 
 ## 测试
 
 - `engine/tests/`（vitest，node 环境）：`unit/`（CollapseCodec、Coords、adjunct transforms/sandbox/registry/resource-manager）、`integration/`（headless-boot）、`systems/`·`scenarios/`（部分 `todo`）。**务必读 `engine/tests/README.md` 的"局限性"**（无 GPU/浏览器、确定性、scenarios 待补等）。
-- 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（已搭：boot/movement/fall-through/trigger/avatar/persistence/inventory/engine-features；`npm run test:e2e`，SwiftShader 软渲染 + `engine.step(dt)` 确定性驱动）。
+- 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（已搭：boot/movement/fall-through/trigger/avatar/persistence/inventory/engine-features/editor-platform；`npm run test:e2e`，SwiftShader 软渲染 + `engine.step(dt)` 确定性驱动）。
 
 ## 文档索引
 

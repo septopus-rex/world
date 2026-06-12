@@ -50,8 +50,8 @@ export function InventoryPanel({ loader }: { loader: any }) {
         const handler = (payload: any) => {
             setItems([...(payload?.inventory?.items ?? [])]);
         };
-        loader.engine.on('inventory_updated', handler);
-        return () => loader.engine?.off('inventory_updated', handler);
+        loader.engine.on('inventory.updated', handler);
+        return () => loader.engine?.off('inventory.updated', handler);
     }, [loader]);
 
     if (items.length === 0) return null;

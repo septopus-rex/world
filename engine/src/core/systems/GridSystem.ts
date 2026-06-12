@@ -38,8 +38,9 @@ export class GridSystem implements ISystem {
         if (currentKey !== this.lastBlockKey) {
             this.lastBlockKey = currentKey;
 
-            // Notify the environment that we need a specific neighborhood
-            world.emitSimple("grid:need", {
+            // Notify the loader that we need a specific neighborhood (block.need
+            // is a boundary channel — DesktopLoader subscribes via the Engine facade).
+            world.events.emit("block.need", {
                 center: [blockX, blockY],
                 key: currentKey
             });

@@ -98,10 +98,10 @@ export class DesktopLoader implements IDataSource {
 
         this.engine = new Engine(containerId, { api: this, ui });
 
-        this.engine.on('grid:need', (payload) => {
+        this.engine.on('block.need', (payload) => {
             this.handleGridRequest(payload.center);
         });
-        this.engine.on('player:state', (state) => {
+        this.engine.on('player.state', (state) => {
             this._saveState(state);
         });
 
@@ -122,19 +122,11 @@ export class DesktopLoader implements IDataSource {
 
         await this.engine.bootWorld(0, this.playerState);
 
-        const world = this.engine.getWorld();
-
         const initialBKey = `${this.playerState.block[0]}_${this.playerState.block[1]}`;
         const blockReadyPromise = new Promise<void>((resolve) => {
-            const onBlockReady = (event: any) => {
-                const blockEntityId = event.blockId;
-                const block = world?.getComponent<any>(blockEntityId, 'BlockComponent');
-                if (block && block.x === this.playerState.block[0] && block.y === this.playerState.block[1]) {
-                    this.engine?.off('world:block_ready', onBlockReady);
-                    resolve();
-                }
-            };
-            this.engine?.on('world:block_ready', onBlockReady);
+            // block.loaded fires ONCE per block (when its last adjunct mesh is
+            // built); the typed queue routes it by the stable block key.
+            this.engine?.on('block.loaded', () => resolve(), { key: `blk:${initialBKey}`, once: true });
             // Failsafe: proceed after 3s even if the ready signal never fires.
             setTimeout(resolve, 3000);
         });
@@ -323,7 +315,8 @@ export class DesktopLoader implements IDataSource {
         ];
         const balls = [
             // hold-lift ball (adj_2048_2048_167_0): rises while you camp the pad.
-            [[1, 1, 1], [3, 12, 3], [0, 0, 0], 0, [1, 1], 0, 0],
+            // stop=1: standable — jump on and ride it up (moving-platform carry).
+            [[1, 1, 1], [3, 12, 3], [0, 0, 0], 0, [1, 1], 0, 1],
         ];
         // Floor pads marking each invisible volume (colors from basic_box palette:
         // 1 dark-gray, 2 blue, 3 red).

@@ -9,14 +9,14 @@ import { TransformComponent } from '../../src/core/components/PlayerComponents';
 //  - World.dispose must actually unhook event subscribers (the listeners Map used
 //    to pin them forever).
 
-describe('player:state emission', () => {
+describe('player.state emission', () => {
     it('emits once per threshold crossing, not on a 10Hz timer', async () => {
         const engine = await makeHeadlessEngine();
         const world = engine.getWorld()!;
         stepN(engine, 30); // flush the initial boot-position emit + settle
 
         const events: any[] = [];
-        world.on('player:state', (ev: any) => events.push(ev.payload));
+        world.events.on('player.state', (ev: any) => events.push(ev.payload));
 
         // Stationary player: half a second of stepping must emit NOTHING
         // (the old GridSystem emitter would have fired ~5 times here).

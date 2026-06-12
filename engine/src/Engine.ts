@@ -39,12 +39,37 @@ export interface EngineServices {
     config?: any;
 }
 
+/** Old event names → migrated typed-queue channels (deprecation shim; spec §3).
+ *  Removed once `grep -rE "<old names>" engine/src client/desktop/src` is zero. */
+const LEGACY_EVENT_MAP: Record<string, string> = {
+    'interact': 'interact.primary',
+    'context-interact': 'interact.context',
+    'pickup_item': 'item.pickup',
+    'consume_item': 'item.consume',
+    'inventory_updated': 'inventory.updated',
+    'inventory_full': 'inventory.full',
+    'grid:need': 'block.need',
+    'player:state': 'player.state',
+    'world:mode_changed': 'system.mode',
+    'world:draft_saved': 'edit.draft_saved',
+    'world:upload_request': 'edit.upload_request',
+};
+
+export interface EngineOnOptions {
+    target?: number;
+    key?: string;
+    once?: boolean;
+}
+
 export class Engine {
     private world: World | null = null;
     private services: EngineServices;
     private containerId: string;
-    private eventQueue: Array<{ type: string; callback: (payload: any) => void }> = [];
-    private eventWrappers = new Map<any, (ev: any) => void>();
+    private preBootSubs: Array<{ type: string; callback: (payload: any, ev?: any) => void; opts?: EngineOnOptions }> = [];
+    /** origEventName → (callback → combined unsubscribe). Keyed per (type, cb),
+     *  fixing the old eventWrappers single-key clobber. */
+    private subscriptions = new Map<string, Map<Function, () => void>>();
+    private warnedLegacy = new Set<string>();
 
     constructor(containerId: string, services: EngineServices) {
         this.containerId = containerId;
@@ -95,8 +120,13 @@ export class Engine {
             baseProvider = new DefaultUIProvider(this.containerId);
         }
 
-        // Wrap with EventUIProxy — always emits ui:* events, optionally delegates to provider
-        const emitter = (event: string, data: any) => this.world?.emitSimple(event, data);
+        // Wrap with EventUIProxy — always emits ui.* events (boundary-only
+        // channels on the typed queue), optionally delegates to the provider.
+        // Legacy "ui:show-group" names normalize to the EventMap's "ui.show_group".
+        const emitter = (event: string, data: any) => {
+            const type = event.replace(':', '.').replace(/-/g, '_');
+            this.world?.events.emit(type as any, data);
+        };
         const uiProxy = new EventUIProxy(emitter, baseProvider, uiMode);
         this.world.setUIProvider(uiProxy);
 
@@ -104,8 +134,8 @@ export class Engine {
         const player = this.world.setupPlayer(fullConfig.player.start.position, fullConfig.player.start.rotation);
 
 
-        this.eventQueue.forEach(sub => this.on(sub.type, sub.callback));
-        this.eventQueue = [];
+        this.preBootSubs.forEach(sub => this.on(sub.type, sub.callback, sub.opts));
+        this.preBootSubs = [];
 
         if (this.services.ui && typeof (this.services.ui as any).showToast === 'function') {
             (this.services.ui as any).showToast("Environment Ready");
@@ -128,7 +158,9 @@ export class Engine {
         this.world?.stop();
     }
 
-    public injectBlock(stdData: any) {
+    /** Returns the block's EntityId so callers can make targeted block.loaded
+     *  subscriptions (boot gates). */
+    public injectBlock(stdData: any): number | undefined {
         if (this.world?.blocks) {
             const blockEntity = this.world.createEntity();
             this.world.addComponent(blockEntity, "BlockComponent", {
@@ -139,7 +171,9 @@ export class Engine {
                 adjuncts: stdData.adjuncts || [],
                 isInitialized: false
             });
+            return blockEntity;
         }
+        return undefined;
     }
 
     /**
@@ -167,7 +201,7 @@ export class Engine {
                 ? world.getComponent<any>(players[0], "InventoryComponent") : null;
             if (inv) {
                 inv.items = savedItems;
-                world.emitSimple('inventory_updated', { entity: players[0], inventory: inv });
+                world.events.emit('inventory.updated', { entity: players[0], inventory: inv });
             }
         }
     }
@@ -233,24 +267,57 @@ export class Engine {
         return this.world;
     }
 
-    public on(event: string, callback: (payload: any) => void) {
+    /**
+     * Subscribe to an engine event. Callback receives (payload, envelope) —
+     * payload-first keeps existing consumers working; the full WorldEvent rides
+     * second for frame/seq/target metadata.
+     *
+     * Channels live on TWO buses during the event-bus migration: the typed
+     * queue (migrated channels) and the legacy Map bus (the rest). We subscribe
+     * both — a channel only ever emits on one of them, so no double delivery.
+     * Legacy names are normalized through LEGACY_EVENT_MAP with a one-time warn.
+     */
+    public on(event: string, callback: (payload: any, ev?: any) => void, opts?: EngineOnOptions) {
         if (!this.world) {
-            this.eventQueue.push({ type: event, callback });
+            this.preBootSubs.push({ type: event, callback, opts });
             return;
         }
 
-        const wrapper = (ev: any) => callback(ev.payload);
-        this.eventWrappers.set(callback, wrapper);
-        this.world.on(event, wrapper);
+        let type = event;
+        const mapped = LEGACY_EVENT_MAP[event];
+        if (mapped) {
+            if (!this.warnedLegacy.has(event)) {
+                console.warn(`[Engine] event name '${event}' is deprecated — use '${mapped}'`);
+                this.warnedLegacy.add(event);
+            }
+            type = mapped;
+        }
+
+        const unQueue = this.world.events.on(type as any, (ev: any) => callback(ev.payload, ev), {
+            target: opts?.target, key: opts?.key, once: opts?.once,
+        });
+        const wrapper = (ev: any) => callback(ev?.payload, ev);
+        this.world.on(type, wrapper);
+
+        const world = this.world;
+        const dispose = () => { unQueue(); world.off(type, wrapper); };
+        let byCb = this.subscriptions.get(event);
+        if (!byCb) { byCb = new Map(); this.subscriptions.set(event, byCb); }
+        byCb.set(callback, dispose);
     }
 
     public off(event: string, callback: (payload: any) => void) {
-        this.eventQueue = this.eventQueue.filter(sub => sub.callback !== callback);
-        const wrapper = this.eventWrappers.get(callback);
-        if (wrapper && this.world) {
-            this.world.off(event, wrapper);
-            this.eventWrappers.delete(callback);
+        this.preBootSubs = this.preBootSubs.filter(sub => sub.callback !== callback);
+        const dispose = this.subscriptions.get(event)?.get(callback);
+        if (dispose) {
+            dispose();
+            this.subscriptions.get(event)!.delete(callback);
         }
+    }
+
+    /** External → queue injection (UI commands, network ingress, test pokes). */
+    public send(type: string, payload: any, opts?: { target?: number; targetKey?: string; actor?: number }) {
+        this.world?.events.emit(type as any, payload, opts);
     }
 
     public setMoveIntent(x: number, y: number) {

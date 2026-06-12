@@ -49,9 +49,14 @@ function itemEntities(world: any): number[] {
     return world.queryEntities('ItemComponent');
 }
 
-/** Click an item entity the way RaycastInteractionSystem reports it. */
-function clickItem(world: any, entityId: number) {
-    world.emitSimple('interact', { entityId, distance: 2 }, playerOf(world));
+/** Click an item entity the way RaycastInteractionSystem reports it (PR-2:
+ *  typed channel + one step so the pull-model chain lands: ItemSystem reads
+ *  the click, InventorySystem credits the bag — same frame by system order). */
+function clickItem(engine: any, world: any, entityId: number) {
+    world.events.emit('interact.primary',
+        { metadata: {}, distance: 2, point: [0, 0, 0] },
+        { target: entityId, actor: playerOf(world) });
+    engine.step(1 / 60);
 }
 
 // ─── ItemRegistry: templates + deterministic derivation ──────────────────────
@@ -130,10 +135,10 @@ describe('item pipeline + atomic pickup (P1)', () => {
     });
 
     it('pickup: bag credited, entity gone, draft has no b5 row (atomic)', async () => {
-        const { world } = await bootWith([[0x00b5, [itemRow([5, 8, 0.6], 1, 9347)]]]);
+        const { engine, world } = await bootWith([[0x00b5, [itemRow([5, 8, 0.6], 1, 9347)]]]);
         const eid = itemEntities(world)[0];
 
-        clickItem(world, eid);
+        clickItem(engine, world, eid);
 
         expect(bagOf(world).items).toEqual([
             { id: 'itm_1_9347', quantity: 1, metadata: { templateId: 1, seed: 9347 } },
@@ -146,14 +151,14 @@ describe('item pipeline + atomic pickup (P1)', () => {
     });
 
     it('a full bag aborts the pickup with zero side effects', async () => {
-        const { world } = await bootWith([[0x00b5, [itemRow([5, 8, 0.6], 1, 1)]]]);
+        const { engine, world } = await bootWith([[0x00b5, [itemRow([5, 8, 0.6], 1, 1)]]]);
         const bag = bagOf(world);
         bag.maxCapacity = 1;
         bag.items.push({ id: 'tpl_3', quantity: 1 });
 
         let full = false;
-        world.on('inventory_full', () => { full = true; });
-        clickItem(world, itemEntities(world)[0]);
+        world.events.on('inventory.full', () => { full = true; });
+        clickItem(engine, world, itemEntities(world)[0]);
 
         expect(full).toBe(true);
         expect(itemEntities(world)).toHaveLength(1);          // still in the world
@@ -161,11 +166,11 @@ describe('item pipeline + atomic pickup (P1)', () => {
     });
 
     it('stackable items merge into one slot', async () => {
-        const { world } = await bootWith([[0x00b5, [
+        const { engine, world } = await bootWith([[0x00b5, [
             itemRow([5, 8, 0.6], 2, 0, 1),
             itemRow([6, 8, 0.6], 2, 0, 1),
         ]]]);
-        for (const eid of [...itemEntities(world)]) clickItem(world, eid);
+        for (const eid of [...itemEntities(world)]) clickItem(engine, world, eid);
         expect(bagOf(world).items).toEqual([
             { id: 'tpl_2', quantity: 2, metadata: { templateId: 2, seed: 0 } },
         ]);
@@ -173,7 +178,7 @@ describe('item pipeline + atomic pickup (P1)', () => {
 
     it('drop: bag debited, entity respawned, draft contains the b5 row', async () => {
         const { engine, world } = await bootWith([[0x00b5, [itemRow([5, 8, 0.6], 1, 9347)]]]);
-        clickItem(world, itemEntities(world)[0]);
+        clickItem(engine, world, itemEntities(world)[0]);
         expect(itemEntities(world)).toHaveLength(0);
 
         expect(engine.dropItem('itm_1_9347')).toBe(true);
@@ -213,7 +218,7 @@ describe('inventory.* trigger conditions', () => {
     ];
 
     it('without the key the fallback fires; carrying it passes', async () => {
-        const { world } = await bootWith([
+        const { engine, world } = await bootWith([
             [0x00b5, [itemRow([5, 8, 0.6], 2, 0, 1)]],
             [0x00b8, [keyDoorTrigger]],
         ]);
@@ -229,7 +234,7 @@ describe('inventory.* trigger conditions', () => {
         // Leave, grab the key, re-enter → opens.
         player.position[0] += 100;
         world.step(1 / 60);
-        clickItem(world, itemEntities(world)[0]);
+        clickItem(engine, world, itemEntities(world)[0]);
         player.position[0] -= 100;
         world.step(1 / 60);
         expect(world.globalFlags.door_open).toBe(true);
@@ -240,21 +245,24 @@ describe('inventory.* trigger conditions', () => {
 
 describe('bag actions (P2)', () => {
     it('give/take work in Game mode and are ignored elsewhere', async () => {
-        const { world } = await bootWith([]);
+        const { engine, world } = await bootWith([]);
         const playerId = playerOf(world);
         const give = { type: 'bag', target: 'tpl_2', method: 'give', params: [1] } as any;
 
         // Normal mode: refused (game.md permission matrix).
         world.actuator.execute(give, { world, playerId, mode: SystemMode.Normal });
+        engine.step(1 / 60);
         expect(bagOf(world).items).toHaveLength(0);
 
-        // Game mode: credited / debited.
+        // Game mode: credited / debited (pull model — lands within one step).
         world.actuator.execute(give, { world, playerId, mode: SystemMode.Game });
+        engine.step(1 / 60);
         expect(bagOf(world).items).toEqual([{ id: 'tpl_2', quantity: 1, metadata: undefined }]);
 
         world.actuator.execute(
             { type: 'bag', target: 'tpl_2', method: 'take', params: [1] } as any,
             { world, playerId, mode: SystemMode.Game });
+        engine.step(1 / 60);
         expect(bagOf(world).items).toHaveLength(0);
     });
 
@@ -291,7 +299,7 @@ describe('inventory persistence (P0)', () => {
 
         // Session 1: pick up a gem; write-behind lands on a microtask.
         const s1 = await bootWith([[0x00b5, [itemRow([5, 8, 0.6], 1, 9347)]]], { draftBackend: backend });
-        clickItem(s1.world, itemEntities(s1.world)[0]);
+        clickItem(s1.engine, s1.world, itemEntities(s1.world)[0]);
         await new Promise(r => setTimeout(r, 0));
 
         // Session 2: same backend (= same browser storage), fresh engine.

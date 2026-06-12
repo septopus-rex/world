@@ -92,36 +92,36 @@ export class RaycastInteractionSystem implements ISystem {
                 hitTargetComp.distanceToCamera = hit.distance;
                 this._lastHoveredId = hitEntityId;
 
-                // Right-click → emit context-interact event (for context menus)
+                // Stable content-address key rides along: adjuncts use their
+                // adjunctId, blocks use blk:x_y (survives reload re-minting).
+                const adj = world.getComponent<AdjunctComponent>(hitEntityId, "AdjunctComponent");
+                const blk = world.getComponent<any>(hitEntityId, "BlockComponent");
+                const targetKey = adj?.adjunctId
+                    ?? (blk ? `blk:${blk.x}_${blk.y}` : undefined);
+
+                // Right-click → interact.context (context menus, Edit mode)
                 if (isSecondary && isEdit) {
-                    world.emitSimple("context-interact", {
-                        entityId: hitEntityId,
+                    world.events.emit('interact.context', {
                         metadata: hitTargetComp.metadata,
                         distance: hit.distance,
-                        point: hit.point,
-                        screenPos: [ndcX, ndcY]
-                    }, playerId); // source = the interacting player (the actor)
+                        point: [hit.point[0], hit.point[1], hit.point[2]],
+                        screenPos: [ndcX, ndcY],
+                    }, { target: hitEntityId, targetKey, actor: playerId });
                     return; // Don't also fire primary interact
                 }
 
                 if (isPrimary) {
                     console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);
-                    world.emitSimple("interact", {
-                        entityId: hitEntityId,
+                    world.events.emit('interact.primary', {
                         metadata: hitTargetComp.metadata,
                         distance: hit.distance,
-                        point: hit.point
-                    }, playerId); // source = the interacting player (the actor)
+                        point: [hit.point[0], hit.point[1], hit.point[2]],
+                    }, { target: hitEntityId, targetKey, actor: playerId });
                 }
             }
         } else if (isPrimary) {
-            // Hit nothing - emit null event for deselection
-            world.emitSimple("interact", {
-                entityId: null,
-                metadata: null,
-                distance: Infinity,
-                point: [0, 0, 0]
-            }, playerId);
+            // Hit nothing → explicit miss event (replaces the entityId:null sentinel)
+            world.events.emit('interact.miss', {}, { actor: playerId });
         }
     }
 }

@@ -67,7 +67,9 @@ test('touch button: sound action fires; session flags survive a reload', async (
       if (t?.events?.some((n: any) => n.type === 'touch')) { touchEid = eid; break; }
     }
     const player = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
-    w.emitSimple('interact', { entityId: touchEid, distance: 2 }, player);
+    w.events.emit('interact.primary',
+      { metadata: {}, distance: 2, point: [0, 0, 0] },
+      { target: touchEid, actor: player });
     for (let i = 0; i < 3; i++) loader.engine.step(1 / 60);
     return audio;
   });

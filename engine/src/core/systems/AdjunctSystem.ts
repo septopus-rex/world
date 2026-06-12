@@ -82,8 +82,19 @@ export class AdjunctSystem implements ISystem {
         adjunct.isInitialized = true;
         this.initializedAdjuncts.add(entityId);
 
-        if (adjunct.parentBlockEntityId) {
-            world.emitSimple("world:block_ready", { blockId: adjunct.parentBlockEntityId });
+        // block.loaded: exactly ONE event per block, when its LAST authored
+        // adjunct mesh lands (PR-3 — the old world:block_ready fired per adjunct).
+        const blockEid = adjunct.parentBlockEntityId;
+        const block = blockEid != null
+            ? world.getComponent<BlockComponent>(blockEid, "BlockComponent") : undefined;
+        if (block && typeof block.pendingAdjuncts === 'number' && block.pendingAdjuncts > 0) {
+            if (--block.pendingAdjuncts === 0) {
+                world.events.emit('block.loaded', {
+                    x: block.x, y: block.y,
+                    adjunctCount: block.adjunctTotal ?? 0,
+                    isDraft: !!block.isDraft,
+                }, { target: blockEid!, targetKey: `blk:${block.x}_${block.y}` });
+            }
         }
     }
 

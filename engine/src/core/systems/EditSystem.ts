@@ -13,6 +13,7 @@ import { EditTask, ContextMenuItem } from '../types/EditTask';
 import { EditHistory } from '../EditHistory';
 import { InputProvider } from './InputProvider';
 import { saveBlockDraft } from '../utils/BlockSerializer';
+import { PLACEABLE_ADJUNCTS, defaultRawFor } from '../edit/AdjunctDefaults';
 
 /**
  * EditSystem
@@ -25,6 +26,9 @@ export class EditSystem implements ISystem {
 
     private gridPlane: 'XZ' | 'XY' | 'YZ' = 'XZ';
     private hasBeenCleared: boolean = false;
+    /** Palette placement: the armed adjunct typeId (next click places it). */
+    private placingTypeId: number | null = null;
+    private paletteDirty: boolean = false;
     private lastClickTime: number = 0;
     private readonly DOUBLE_CLICK_DELAY = 300;
 
@@ -37,23 +41,29 @@ export class EditSystem implements ISystem {
     private session: EditSessionManager;
     private executor: EditTaskExecutor;
     private history: EditHistory;
-    private interactHandler: (event: GameEvent) => void;
-    private contextHandler: (event: GameEvent) => void;
     private dirty: boolean = false;  // tracks if any edits were made this session
+
+    // Pull-cursors over the interact channels (event-bus PR-2a).
+    private primaryReader: import('../events/EventReader').EventReader<'interact.primary'>;
+    private missReader: import('../events/EventReader').EventReader<'interact.miss'>;
+    private contextReader: import('../events/EventReader').EventReader<'interact.context'>;
 
     constructor(world: World) {
         this.helpers = new EditHelperManager(world);
         this.session = new EditSessionManager(world);
         this.executor = new EditTaskExecutor();
         this.history = new EditHistory();
-        this.interactHandler = (e) => this.onInteract(world, e.payload);
-        this.contextHandler = (e) => this.onContextInteract(world, e.payload);
-        world.on("interact", this.interactHandler);
-        world.on("context-interact", this.contextHandler);
+        this.primaryReader = world.events.reader('interact.primary');
+        this.missReader = world.events.reader('interact.miss');
+        this.contextReader = world.events.reader('interact.context');
     }
 
     public update(world: World, dt: number): void {
         if (world.mode !== SystemMode.Edit) {
+            // Mode-gated: align cursors so stale clicks never replay on re-entry.
+            this.primaryReader.clear();
+            this.missReader.clear();
+            this.contextReader.clear();
             if (!this.hasBeenCleared) {
                 this.clearHelpers(world);
                 this.hasBeenCleared = true;
@@ -62,6 +72,17 @@ export class EditSystem implements ISystem {
         }
 
         this.hasBeenCleared = false;
+
+        // Drain this frame's clicks (same-frame: Raycast runs earlier in order).
+        for (const ev of this.primaryReader.read()) {
+            this.onInteract(world, { entityId: ev.target ?? null, ...(ev.payload as any) });
+        }
+        for (const _ev of this.missReader.read()) {
+            this.onInteract(world, { entityId: null, metadata: null, distance: Infinity, point: [0, 0, 0] });
+        }
+        for (const ev of this.contextReader.read()) {
+            this.onContextInteract(world, { entityId: ev.target ?? null, ...(ev.payload as any) });
+        }
 
         // 1. Maintain Session (Active Block locking)
         const prevBlockId = this.activeBlockId;
@@ -75,6 +96,11 @@ export class EditSystem implements ISystem {
                 this.history.startSession(`${block.x}_${block.y}`);
                 this.dirty = false;
             }
+            this.paletteDirty = true;
+        }
+        if (this.paletteDirty) {
+            this.renderPalette(world);
+            this.paletteDirty = false;
         }
 
         // 2. Undo/Redo keyboard shortcuts
@@ -194,6 +220,12 @@ export class EditSystem implements ISystem {
         world.ui?.hide("context-menu");
         world.ui?.hide("edit-form");
 
+        // Palette placement: an armed type turns the next click into "place here".
+        if (this.placingTypeId !== null && data.entityId !== null && data.point) {
+            this.placeAt(world, data.point);
+            return;
+        }
+
         const now = Date.now();
         const isDoubleClick = (now - this.lastClickTime) < this.DOUBLE_CLICK_DELAY;
         this.lastClickTime = now;
@@ -294,11 +326,69 @@ export class EditSystem implements ISystem {
         world.ui.showGroup("edit-controls", buttons, position);
     }
 
+    /** Render the placement palette (one button per placeable adjunct type). */
+    private renderPalette(world: World): void {
+        if (!world.ui || this.activeBlockId === null) return;
+        const buttons: UIButtonConfig[] = PLACEABLE_ADJUNCTS.map(entry => ({
+            label: entry.label,
+            active: this.placingTypeId === entry.typeId,
+            onClick: () => {
+                this.placingTypeId = this.placingTypeId === entry.typeId ? null : entry.typeId;
+                this.paletteDirty = true;
+                if (this.placingTypeId !== null) {
+                    world.ui?.showToast(`Place ${entry.label}: click a surface in the active block`);
+                }
+            },
+        }));
+        world.ui.showGroup("edit-palette", buttons, 'top-left');
+    }
+
+    /** Place the armed palette type at a clicked surface point (engine coords). */
+    private placeAt(world: World, point: [number, number, number]): void {
+        const typeId = this.placingTypeId;
+        if (typeId === null || this.activeBlockId === null) return;
+        const block = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
+        if (!block) return;
+
+        const spp = Coords.engineToSpp([point[0], point[1], point[2]]);
+        if (spp.block[0] !== block.x || spp.block[1] !== block.y) {
+            world.ui?.showToast('Placement must stay inside the active edit block');
+            return; // keep the type armed — let the creator click again
+        }
+        spp.pos[2] -= block.elevation || 0;   // raw altitudes are block-relative
+
+        const raw = defaultRawFor(typeId, spp.pos);
+        if (!raw) { world.ui?.showToast('No placement defaults for this type'); return; }
+
+        const task: EditTask = {
+            entityId: -1,
+            adjunct: '',
+            action: 'add',
+            param: { typeId, blockEntityId: this.activeBlockId, raw },
+        };
+        const result = this.executor.execute(world, task);
+        if (!result.success || !result.snapshot) {
+            world.ui?.showToast('Placement failed');
+            return;
+        }
+
+        this.history.push({ task, snapshot: result.snapshot }); // undo = delete it
+        this.dirty = true;
+        this.placingTypeId = null;
+        this.paletteDirty = true;
+        this.selectedEntityId = task.entityId;
+        this.lastUISelection = null;
+        this.syncUI(world);
+        world.ui?.showToast('Placed — double-click to move, right-click to edit');
+    }
+
     private clearHelpers(world: World) {
         // Save draft to localStorage before clearing
         if (this.dirty && this.activeBlockId !== null) {
             this.saveDraft(world, this.activeBlockId);
         }
+        this.placingTypeId = null;
+        world.ui?.hide("edit-palette");
 
         this.helpers.clearAll();
         this.session.clear();
@@ -333,7 +423,7 @@ export class EditSystem implements ISystem {
                 label: `⬆️ Upload (${drafts.length})`,
                 variant: 'primary',
                 onClick: () => {
-                    world.emitSimple("world:upload_request", { drafts });
+                    world.events.emit("edit.upload_request", { drafts });
                     world.ui?.showToast("Upload requested — awaiting chain connection.");
                     world.ui?.hide("upload-drafts");
                 }

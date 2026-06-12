@@ -195,7 +195,6 @@ export class World {
         this.systems.addSystem(new CharacterController(this, inputProvider));
         this.systems.addSystem(new RaycastInteractionSystem());
         this.systems.addSystem(new TriggerSystem());
-        this.systems.addSystem(new InventorySystem());
         this.systems.addSystem(new ItemSystem());
         this.systems.addSystem(new HealthSystem());
         this.systems.addSystem(new PhysicsSystem());
@@ -208,6 +207,9 @@ export class World {
         this.systems.addSystem(new ParticleEffectSystem());
         this.systems.addSystem(new MinimapSystem());
         this.systems.addSystem(new ItemDropSystem());
+        // AFTER every item.pickup/item.consume emitter (Trigger bag actions,
+        // ItemSystem, ItemDropSystem) — pickups land in the bag the SAME frame.
+        this.systems.addSystem(new InventorySystem());
 
         // Final Sync: Presentation Layer
         this.systems.addSystem(new VisualSyncSystem());
@@ -286,12 +288,11 @@ export class World {
         const oldMode = this.mode;
         if (oldMode === mode) return;
         this.mode = mode;
-        this.emitSimple("world:mode_changed", { mode, oldMode });
-        if (oldMode === SystemMode.Edit && mode !== SystemMode.Edit) {
-            this.emitSimple("world:save_request", { reason: 'exit_edit_mode' });
-        }
+        this.events.emit("system.mode", { mode, oldMode });
+        // (world:save_request was a dead line — exit-Edit saving runs through
+        //  EditSystem's own mode polling, see clearHelpers.)
         if (mode === SystemMode.Game) {
-            this.emitSimple("world:preload_request", { scope: 'all' });
+            this.events.emit("system.preload", { scope: 'all' });
         }
     }
 

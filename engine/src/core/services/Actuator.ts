@@ -83,12 +83,13 @@ export class LocalActuator implements IActuator {
 
         const itemId = String(action.target);
         const count = action.params?.[0] ?? 1;
+        const events = (ctx.world as any).events;   // bare unit-test fakes have no queue
         if (action.method === 'give') {
-            ctx.world.emitSimple('pickup_item', {
+            events?.emit('item.pickup', {
                 itemId, amount: count, metadata: action.params?.[1],
-            }, ctx.playerId);
+            }, { actor: ctx.playerId });
         } else if (action.method === 'take') {
-            ctx.world.emitSimple('consume_item', { itemId, amount: count }, ctx.playerId);
+            events?.emit('item.consume', { itemId, amount: count }, { actor: ctx.playerId });
         } else {
             console.warn(`[Actuator] unknown bag method '${action.method}'`);
         }

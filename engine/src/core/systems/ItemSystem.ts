@@ -32,13 +32,21 @@ const PICKUP_RANGE = 8;
  */
 export class ItemSystem implements ISystem {
     private world!: World;
-    private _subscribed = false;
+    private _interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
 
     public update(world: World, _dt: number): void {
         this.world = world;
-        if (!this._subscribed && typeof world.on === 'function') {
-            world.on('interact', (ev: any) => this.onInteract(ev));
-            this._subscribed = true;
+        if (!this._interactReader && (world as any).events?.reader) {
+            this._interactReader = world.events.reader('interact.primary');
+        }
+        if (!this._interactReader) return;
+
+        if (world.mode === SystemMode.Edit || world.mode === SystemMode.Ghost) {
+            this._interactReader.clear();   // gated-away clicks never pick up
+            return;
+        }
+        for (const ev of this._interactReader.read()) {
+            this.onInteract(ev);
         }
     }
 
@@ -47,10 +55,9 @@ export class ItemSystem implements ISystem {
     private onInteract(ev: any): void {
         const world = this.world;
         if (!world) return;
-        if (world.mode === SystemMode.Edit || world.mode === SystemMode.Ghost) return;
 
-        const entityId = ev?.payload?.entityId;
-        const playerId = ev?.source;
+        const entityId = ev?.target;
+        const playerId = ev?.actor;
         if (entityId == null || playerId == null) return;
         if ((ev.payload?.distance ?? 0) > PICKUP_RANGE) return;
 
@@ -68,16 +75,16 @@ export class ItemSystem implements ISystem {
         const itemId = itemIdFor(template, item.seed);
         const hasStack = inventory.items.some(i => i.id === itemId);
         if (!hasStack && inventory.items.length >= inventory.maxCapacity) {
-            world.emitSimple("inventory_full", { entity: playerId, itemId });
+            world.events.emit("inventory.full", { entity: playerId, itemId });
             return;
         }
 
         // 2. Credit the bag.
-        world.emitSimple("pickup_item", {
+        world.events.emit("item.pickup", {
             itemId,
             amount: item.count,
             metadata: { templateId: item.templateId, seed: item.seed },
-        }, playerId);
+        }, { actor: playerId });
 
         // 3. Remove from the world.
         const adjunct = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
@@ -92,9 +99,9 @@ export class ItemSystem implements ISystem {
         // 4. Persist: the block raw no longer contains this item.
         if (blockEid !== null) saveBlockDraft(world, blockEid);
 
-        world.emitSimple("item:picked", {
+        world.events.emit("item.picked", {
             itemId, templateId: item.templateId, seed: item.seed, count: item.count,
-        }, playerId);
+        }, { actor: playerId });
     }
 
     // ── drop ──────────────────────────────────────────────────────────────────
@@ -128,7 +135,7 @@ export class ItemSystem implements ISystem {
         if (blockEid === null || !blockSystem?.spawnAdjunct) return false;
 
         // All checks passed — debit, spawn, persist (one frame, no awaits).
-        world.emitSimple("consume_item", { itemId, amount: count }, playerId);
+        world.events.emit("item.consume", { itemId, amount: count }, { actor: playerId });
 
         const rawRow = [
             [spp.pos[0], spp.pos[1], Math.max(0, spp.pos[2]) + 0.2],
@@ -137,12 +144,12 @@ export class ItemSystem implements ISystem {
         const spawned = blockSystem.spawnAdjunct(world, blockEid, 0x00b5, rawRow);
         if (spawned === null) {
             // Roll the debit back — never strand items in limbo.
-            world.emitSimple("pickup_item", { itemId, amount: count, metadata: entry.metadata }, playerId);
+            world.events.emit("item.pickup", { itemId, amount: count, metadata: entry.metadata }, { actor: playerId });
             return false;
         }
         saveBlockDraft(world, blockEid);
 
-        world.emitSimple("item:dropped", { itemId, templateId, seed, count }, playerId);
+        world.events.emit("item.dropped", { itemId, templateId, seed, count }, { actor: playerId });
         return true;
     }
 

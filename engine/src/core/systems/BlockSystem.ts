@@ -152,6 +152,12 @@ export class BlockSystem implements ISystem {
         adjunctsToInit.forEach((data) => {
             this.attachAdjunctComponents(world, eid, data.entityId, data, data.logicModule, data.id);
         });
+
+        // block.loaded gate: ONE event when the LAST adjunct mesh is built
+        // (AdjunctSystem decrements; replaces the per-adjunct world:block_ready).
+        const total = adjunctsToInit.length + (hasGround ? 0 : 1);
+        block.pendingAdjuncts = total;
+        block.adjunctTotal = total;
     }
 
     /**

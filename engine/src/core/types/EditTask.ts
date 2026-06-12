@@ -7,7 +7,7 @@ import { EntityId } from '../World';
 export interface EditTask {
     entityId: EntityId;
     adjunct: string;                    // adjunct type name ("box", "wall", ...)
-    action: string;                     // "set" | "delete" | "duplicate"
+    action: string;                     // "add" | "set" | "delete" | "duplicate"
     param: Record<string, any>;         // key-value pairs from the form
 }
 

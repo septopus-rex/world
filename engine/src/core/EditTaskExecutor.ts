@@ -22,6 +22,11 @@ export class EditTaskExecutor {
      * Returns result with pre-execution snapshot for undo support.
      */
     public execute(world: World, task: EditTask): ExecuteResult {
+        // 'add' creates the entity, so it runs before the existing-component guard.
+        if (task.action === 'add') {
+            return this.executeAdd(world, task);
+        }
+
         const adjComp = world.getComponent<AdjunctComponent>(task.entityId, "AdjunctComponent");
         if (!adjComp) {
             console.warn(`[EditTaskExecutor] Entity ${task.entityId} has no AdjunctComponent`);
@@ -43,9 +48,38 @@ export class EditTaskExecutor {
     }
 
     /**
+     * Place a NEW adjunct into a block (palette placement).
+     * param: { typeId, blockEntityId, raw } — raw is a full serialized row
+     * (see AdjunctDefaults). Reuses BlockSystem.spawnAdjunct (the item-drop
+     * path), so the entity gets the standard component set and AdjunctSystem
+     * builds its mesh on the next frame. The spawned entity id is written back
+     * onto task.entityId so history/undo can target it.
+     */
+    private executeAdd(world: World, task: EditTask): ExecuteResult {
+        const { typeId, blockEntityId, raw } = task.param ?? {};
+        const blockSystem = world.systems.findSystemByName('BlockSystem') as any;
+        if (typeId == null || blockEntityId == null || !Array.isArray(raw) || !blockSystem?.spawnAdjunct) {
+            console.warn(`[EditTaskExecutor] add: invalid param`, task.param);
+            return { success: false };
+        }
+        const eid = blockSystem.spawnAdjunct(world, blockEntityId, typeId, raw);
+        if (eid === null || eid === undefined) return { success: false };
+
+        task.entityId = eid;
+        console.log(`[EditTaskExecutor] Added adjunct type 0x${Number(typeId).toString(16)} as entity ${eid}`);
+        // Undo of an add = delete the spawned entity (restore() dispatches on this marker).
+        return { success: true, snapshot: { __action: 'add' } };
+    }
+
+    /**
      * Restore an entity's stdData from a snapshot (for undo).
+     * An 'add' snapshot undoes by deleting the entity it created.
      */
     public restore(world: World, entityId: EntityId, snapshot: Record<string, any>): boolean {
+        if (snapshot?.__action === 'add') {
+            return this.executeDelete(world, entityId);
+        }
+
         const adjComp = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
         if (!adjComp) return false;
 
