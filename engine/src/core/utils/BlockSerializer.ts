@@ -24,6 +24,9 @@ export function serializeBlockToRaw(world: World, blockEntityId: EntityId): any[
         const adj = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
         if (!adj || adj.parentBlockEntityId !== blockEntityId) continue;
         if (typeof adj.adjunctId === 'string' && adj.adjunctId.startsWith('ground')) continue;
+        // SPP expansion products: only the b6 SOURCE row persists — baking the
+        // derived pieces would freeze the particle into loose parts.
+        if ((adj.stdData as any)?.derivedFrom) continue;
 
         const typeId = adj.stdData.typeId ?? 0x00a2;
         const serialize = adj.logicModule?.attribute?.serialize;

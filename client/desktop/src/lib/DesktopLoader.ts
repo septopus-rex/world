@@ -327,6 +327,29 @@ export class DesktopLoader implements IDataSource {
         ];
         data.raw[2].push([0x00a1, walls]);
         data.raw[2].push([0x00b5, items]);
+
+        // String-particle hut (b6): two 4m cells expanded by the engine into
+        // standard walls + a cell trigger. Faces are [state, variant] in
+        // ParticleFace order [Top, Bottom, Front(S), Back(N), Left(W), Right(E)];
+        // state 1=Closed 0=Open; closed variants: 0 solid · 1 doorway · 2 window.
+        // Cell A: window south, sealed elsewhere, open passage east to B.
+        // Cell B: doorway north (player side), interior trigger sets spp_hut.
+        const particles = [
+            [[1, 2.5, 0], [
+                {
+                    position: [0, 0, 0], level: 0,
+                    faces: [[1, 0], [0, 0], [1, 2], [1, 0], [1, 0], [0, 0]],
+                },
+                {
+                    position: [1, 0, 0], level: 0,
+                    faces: [[1, 0], [0, 0], [1, 0], [1, 1], [0, 0], [1, 0]],
+                    trigger: [
+                        { type: 'in', actions: [{ type: 'flag', method: '', target: 'spp_hut', params: [true] }] },
+                    ],
+                },
+            ], 'basic'],
+        ];
+        data.raw[2].push([0x00b6, particles]);
         data.raw[2].push([0x00a6, cones]);
         data.raw[2].push([0x00a7, balls]);
         data.raw[2].push([0x00a2, markers]);

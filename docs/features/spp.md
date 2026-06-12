@@ -1,5 +1,15 @@
 # 弦粒子系统（String Particle System）
 
+> [!NOTE]
+> **引擎集成状态（2026-06）**：M1（展开器）+ M2（管线接入）已落地——b6 adjunct
+> （`plugins/adjunct/adjunct_particle.ts`）经 `core/spp/{Variants,Expander}.ts`
+> 在 BlockSystem 展开为标准 adjunct（独立实体，碰撞/触发器/LOD 原生），
+> 序列化仅保留 b6 源行（derived 不烤死）。当前为开发期明文 raw
+> `[origin, cells, theme]`；v1 约束（不支持 cell rotation、跨 level 相邻消除）、
+> M3（编辑/塌陷 + CollapseCodec L2）与 M4（L1 分发）见
+> [集成规格](../plan/specs/spp-integration.md)。本文其余部分为完整设计
+> （含 M3+ 才落地的部分）。
+
 ## 概述
 
 弦粒子系统是 Septopus World 的**空间内容快速构建方案**。它包含两个层次：

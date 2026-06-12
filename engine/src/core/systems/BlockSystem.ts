@@ -8,6 +8,7 @@ import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctFactory } from '../factories/AdjunctFactory';
 import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
+import { expandParticle } from '../spp/Expander';
 import { RenderHandle } from '../types/Adjunct';
 
 /**
@@ -107,13 +108,34 @@ export class BlockSystem implements ISystem {
                                 }
 
                                 const adjId = world.createEntity();
+                                const sourceId = `adj_${block.x}_${block.y}_${typeId}_${idx}`;
                                 adjunctsToInit.push({
                                     ...std,
                                     typeId,
                                     entityId: adjId,
                                     logicModule: definition,
-                                    id: `adj_${block.x}_${block.y}_${typeId}_${idx}`
+                                    id: sourceId
                                 });
+
+                                // SPP (b6): expand the particle into STANDARD adjunct
+                                // rows — every piece is its own entity (collision /
+                                // triggers / LOD all native). Pieces carry derivedFrom
+                                // so BlockSerializer persists only the b6 source.
+                                if (typeId === 0x00b6) {
+                                    expandParticle(rawInst as any).forEach(([dType, dRow], k) => {
+                                        const dDef = getBuiltinAdjunct(dType);
+                                        const dStd = dDef?.attribute?.deserialize(dRow);
+                                        if (!dDef || !dStd) return;
+                                        adjunctsToInit.push({
+                                            ...dStd,
+                                            typeId: dType,
+                                            entityId: world.createEntity(),
+                                            logicModule: dDef,
+                                            id: `${sourceId}_d${k}`,
+                                            derivedFrom: sourceId,
+                                        });
+                                    });
+                                }
 
                                 if (std.animate) {
                                     world.addComponent(adjId, "AnimationComponent", {
