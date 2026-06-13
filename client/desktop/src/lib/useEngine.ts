@@ -5,7 +5,7 @@ import { DesktopLoader } from './DesktopLoader';
  * Boots the chain-free engine loader and exposes UI-facing state.
  * No wallet, no chain — the loader runs on local data only.
  */
-export type WorldMode = 'normal' | 'edit' | 'game' | 'ghost';
+export type WorldMode = 'normal' | 'edit' | 'game' | 'ghost' | 'observe';
 
 export function useEngine(containerId: string) {
     const loaderRef = useRef<DesktopLoader | null>(null);

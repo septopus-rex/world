@@ -30,7 +30,7 @@ export interface IUIProvider {
      * If position is a string, it uses fixed corners.
      * If position is an object {x, y}, it uses absolute screen coordinates (0-1 range).
      */
-    showGroup(id: string, items: UIButtonConfig[], position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | { x: number, y: number }): void;
+    showGroup(id: string, items: UIButtonConfig[], position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'mid-left' | { x: number, y: number }): void;
 
     /**
      * Show a standardized Button

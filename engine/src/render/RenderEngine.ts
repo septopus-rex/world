@@ -136,6 +136,12 @@ export class RenderEngine {
         this.mainCamera.rotation.set(x, y, z);
     }
 
+    /** Point the main camera at a world target (Observe mode orbit). Three derives
+     *  the orientation; getMainCameraRotation stays consistent afterwards. */
+    public setMainCameraLookAt(x: number, y: number, z: number): void {
+        this.mainCamera.lookAt(x, y, z);
+    }
+
     public updateMainCameraProjection(): void {
         this.mainCamera.updateProjectionMatrix();
     }
@@ -239,6 +245,32 @@ export class RenderEngine {
                     mat.opacity = opacity;
                     mat.transparent = opacity < 1.0;
                 }
+            }
+        });
+    }
+
+    /** Animated texture scroll: set the material map's UV offset (type 'texture').
+     *  Enables RepeatWrapping so the offset wraps instead of clamping. */
+    public setTextureOffset(handle: RenderHandle, u: number, v: number): void {
+        (handle as THREE.Object3D).traverse((child) => {
+            if (child instanceof THREE.Mesh && child.material) {
+                const mat = child.material as THREE.MeshStandardMaterial;
+                if (mat.map) {
+                    mat.map.wrapS = mat.map.wrapT = THREE.RepeatWrapping;
+                    mat.map.offset.set(u, v);
+                }
+            }
+        });
+    }
+
+    /** Drive morph-target (blendshape) influences on a loaded model (type 'morph').
+     *  No-op on primitives, which have no morph attributes. */
+    public setMorphInfluences(handle: RenderHandle, influences: number[]): void {
+        (handle as THREE.Object3D).traverse((child) => {
+            const mesh = child as THREE.Mesh;
+            if (mesh.isMesh && mesh.morphTargetInfluences) {
+                const n = Math.min(influences.length, mesh.morphTargetInfluences.length);
+                for (let i = 0; i < n; i++) mesh.morphTargetInfluences[i] = influences[i];
             }
         });
     }

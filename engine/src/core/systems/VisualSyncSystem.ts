@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { TransformComponent } from '../components/PlayerComponents';
 import { MeshComponent } from '../components/VisualizationComponents';
+import { AnimationComponent } from '../components/AnimationComponent';
 
 /**
  * VisualSyncSystem automatically synchronizes ECS TransformComponent data
@@ -58,6 +59,23 @@ export class VisualSyncSystem implements ISystem {
             // 4. Sync Visibility (if state changed)
             if (mesh.visible !== undefined) {
                 world.renderEngine.setObjectVisible(mesh.handle, mesh.visible);
+            }
+
+            // 5. Apply animation appearance overrides (opacity/color/UV/morph).
+            //    AnimationSystem computes these onto the AnimationComponent and
+            //    marks the transform dirty; the render-sync layer is the single
+            //    place that pushes them onto the handle.
+            const anim = world.getComponent<AnimationComponent>(eid, "AnimationComponent");
+            if (anim) {
+                if (anim.colorOverride !== undefined || anim.opacityOverride !== undefined) {
+                    world.renderEngine.updateObjectAppearance(mesh.handle, anim.colorOverride, anim.opacityOverride);
+                }
+                if (anim.uvOffset) {
+                    world.renderEngine.setTextureOffset(mesh.handle, anim.uvOffset[0], anim.uvOffset[1]);
+                }
+                if (anim.morphOverride) {
+                    world.renderEngine.setMorphInfluences(mesh.handle, anim.morphOverride);
+                }
             }
 
             // Mark as clean

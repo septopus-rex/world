@@ -45,7 +45,16 @@ export function createNullRenderEngine() {
   // Handle bookkeeping so module placeholder-then-swap can be asserted headlessly:
   // count group creation, child adds, and removals (the swap adds the model clone
   // then removes the placeholder; eviction removes the group).
-  const counts = { groups: 0, added: 0, removed: 0, lastAnimState: '', soundsPlayed: [] as string[] };
+  const counts = {
+    groups: 0, added: 0, removed: 0, lastAnimState: '', soundsPlayed: [] as string[],
+    lastAppearance: null as { color?: number; opacity?: number } | null,
+    lastUVOffset: null as [number, number] | null,
+    lastMorph: null as number[] | null,
+    lastAmbient: null as number | null,
+    lastSunIntensity: null as number | null,
+    lastCameraPos: null as [number, number, number] | null,
+    lastCameraLookAt: null as [number, number, number] | null,
+  };
 
   return {
     // Test introspection (not part of the RenderEngine interface).
@@ -58,9 +67,10 @@ export function createNullRenderEngine() {
     get domElement() { return stubDom as any; },
 
     // Cameras
-    setMainCameraPosition: () => {},
+    setMainCameraPosition: (x: number, y: number, z: number) => { counts.lastCameraPos = [x, y, z]; },
     getMainCameraRotation: (): [number, number, number] => [0, 0, 0],
     setMainCameraRotation: () => {},
+    setMainCameraLookAt: (x: number, y: number, z: number) => { counts.lastCameraLookAt = [x, y, z]; },
     updateMainCameraProjection: () => {},
     setMinimapZoom: () => {},
     setMinimapPosition: () => {},
@@ -80,7 +90,9 @@ export function createNullRenderEngine() {
     createGroup: () => { counts.groups++; return handle(); },
     addObjectToGroup: (_group: Handle, _object: Handle) => { counts.added++; },
     setObjectUserData: (h: Handle, key: string, value: any) => { if (h && h.userData) h.userData[key] = value; },
-    updateObjectAppearance: () => {},
+    updateObjectAppearance: (_h: Handle, color?: number, opacity?: number) => { counts.lastAppearance = { color, opacity }; },
+    setTextureOffset: (_h: Handle, u: number, v: number) => { counts.lastUVOffset = [u, v]; },
+    setMorphInfluences: (_h: Handle, inf: number[]) => { counts.lastMorph = [...inf]; },
     add: () => {},
     remove: () => {},
     clearScene: () => {},
@@ -89,8 +101,8 @@ export function createNullRenderEngine() {
     setAmbientLight: () => handle(),
     setDirectionalLight: () => handle(),
     setHemisphereLight: () => handle(),
-    updateAmbientLight: () => {},
-    updateDirectionalLight: () => {},
+    updateAmbientLight: (_h: Handle, _c: number, intensity: number) => { counts.lastAmbient = intensity; },
+    updateDirectionalLight: (_h: Handle, _c: number, intensity: number) => { counts.lastSunIntensity = intensity; },
 
     // Frame
     render: () => {},

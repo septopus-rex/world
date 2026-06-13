@@ -168,9 +168,33 @@ export class AnimationSystem implements ISystem {
             const base = getBase('opacity');
             const val = calculateValue(base, step.value, progress, false);
             anim.opacityOverride = (mode === 'add') ? (anim.opacityOverride ?? base) + val : val;
+            transform.dirty = true;
         } else if (type === 'color') {
             const base = getBase('color');
             anim.colorOverride = calculateValue(base, step.value, progress, true);
+            transform.dirty = true;
+        } else if (type === 'texture') {
+            // Scroll/animate the material's UV offset. axis X→u, Y→v.
+            const base = anim.uvOffset ?? (anim.initialValues?.uvOffset ?? [0, 0]);
+            const next: [number, number] = [base[0], base[1]];
+            for (const axis of axes) {
+                const i = axis === 'X' ? 0 : (axis === 'Y' ? 1 : -1);
+                if (i === -1) continue;
+                const val = calculateValue(base[i], step.value, progress, false);
+                next[i] = (mode === 'add') ? base[i] + val : val;
+            }
+            anim.uvOffset = next;
+            transform.dirty = true;
+        } else if (type === 'morph') {
+            // Drive a morph-target influence (blendshape). step.index selects the
+            // target; value is the influence [0,1] (or a keyframe array for 'set').
+            const idx = step.index ?? step.target ?? 0;
+            const arr = anim.morphOverride ? [...anim.morphOverride] : [];
+            const cur = arr[idx] ?? 0;
+            const val = calculateValue(cur, step.value, progress, false);
+            arr[idx] = (mode === 'add') ? cur + val : val;
+            anim.morphOverride = arr;
+            transform.dirty = true;
         }
     }
 

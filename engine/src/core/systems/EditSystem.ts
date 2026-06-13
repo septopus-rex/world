@@ -340,7 +340,7 @@ export class EditSystem implements ISystem {
                 }
             },
         }));
-        world.ui.showGroup("edit-palette", buttons, 'top-left');
+        world.ui.showGroup("edit-palette", buttons, 'mid-left');
     }
 
     /** Place the armed palette type at a clicked surface point (engine coords). */

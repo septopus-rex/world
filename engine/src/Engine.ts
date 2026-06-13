@@ -204,6 +204,55 @@ export class Engine {
                 world.events.emit('inventory.updated', { entity: players[0], inventory: inv });
             }
         }
+
+        // Player location: restore the last walked-to spot (persisted by
+        // CharacterController on the 'player' meta channel). Validated + void-
+        // guarded; on missing/malformed data the player stays at the spawn point
+        // bootWorld already set, so this never strands the player.
+        const savedLoc = await world.draftStore.loadMeta(worldId, 'player');
+        if (Engine.isValidPlayerLoc(savedLoc)) {
+            const players = world.queryEntities("TransformComponent", "InputStateComponent");
+            const eid = players[0];
+            const trans = eid !== undefined ? world.getComponent<any>(eid, "TransformComponent") : null;
+            const body = eid !== undefined ? world.getComponent<any>(eid, "RigidBodyComponent") : null;
+            if (trans) {
+                const pos = Coords.sppToEngine(savedLoc.position, savedLoc.block);
+                const rot = Coords.sppRotationToEngine(savedLoc.rotation || [0, 0, 0]);
+                trans.position[0] = pos[0]; trans.position[1] = pos[1]; trans.position[2] = pos[2];
+                trans.rotation[0] = rot[0]; trans.rotation[1] = rot[1]; trans.rotation[2] = rot[2];
+                trans.dirty = true;
+                if (body) {
+                    body.velocity[0] = body.velocity[1] = body.velocity[2] = 0;
+                    body.isGrounded = false;
+                }
+            }
+        }
+    }
+
+    /** Shape/sanity gate for a persisted player location before it is trusted to
+     *  move the player: finite block + position, and an altitude that is not the
+     *  tell-tale "fell through into the void" value. */
+    private static isValidPlayerLoc(loc: any): loc is { block: [number, number]; position: [number, number, number]; rotation?: [number, number, number] } {
+        if (!loc || typeof loc !== 'object') return false;
+        const fin = (a: any, n: number) => Array.isArray(a) && a.length === n && a.every((v: any) => Number.isFinite(v));
+        if (!fin(loc.block, 2) || !fin(loc.position, 3)) return false;
+        if (loc.rotation !== undefined && !fin(loc.rotation, 3)) return false;
+        if (loc.position[2] < -50) return false;   // void guard
+        return true;
+    }
+
+    /** The local player's current location in SPP coords, or null before
+     *  bootWorld. Clients read this AFTER hydrateDrafts to preload the restored
+     *  neighborhood (the engine, not the client, owns the persisted spawn). */
+    public getPlayerSppLocation(): { block: [number, number]; position: [number, number, number]; rotation: [number, number, number] } | null {
+        const world = this.world;
+        if (!world) return null;
+        const eid = world.queryEntities("TransformComponent", "InputStateComponent")[0];
+        if (eid === undefined) return null;
+        const trans = world.getComponent<any>(eid, "TransformComponent");
+        if (!trans) return null;
+        const spp = Coords.engineToSpp(trans.position);
+        return { block: spp.block, position: spp.pos, rotation: Coords.engineRotationToSpp(trans.rotation) };
     }
 
     /** Export all local drafts of a world as a versioned JSON string (P1). */

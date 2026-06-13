@@ -49,6 +49,29 @@ export class CharacterController implements ISystem {
     private _wasGrounded = true;
     private _safe: [number, number, number] | null = null;
 
+    // ── camera impact shake (fall "juice") ───────────────────────────────────
+    /** Decaying [0..1] shake magnitude, set on a hard landing. Folded into the
+     *  camera position each frame — never touches the player transform. The old
+     *  engine's effects/camera/fall did the dip; linger (the eased recovery) was
+     *  an empty stub — both live here now as one decaying envelope. */
+    private _camShake = 0;
+    private _shakePhase = 0;
+    private static readonly SHAKE_MIN_DROP = 1.5;   // m: below this, no shake
+    private static readonly SHAKE_FULL_DROP = 8;    // m: full-strength shake
+    private static readonly SHAKE_DECAY = 0.5;      // s to fade to zero (the "linger")
+    private static readonly SHAKE_DIP = 0.35;       // m the camera dips at full impact
+    private static readonly SHAKE_AMP = 0.08;       // m lateral jitter at full impact
+    private static readonly SHAKE_FREQ = 38;        // jitter oscillation rate
+
+    // ── observe-mode orbit camera ─────────────────────────────────────────────
+    /** Spherical orbit around the player/target: drag rotates, W/S zooms. */
+    private _obsAzimuth = 0;
+    private _obsElevation = 0.5;
+    private _obsRadius = 8;
+    private static readonly OBS_ZOOM_SPEED = 12;    // m/s via forward/back
+    private static readonly OBS_MIN_RADIUS = 1.5;
+    private static readonly OBS_MAX_RADIUS = 40;
+
     // solid cache (rebuilt when solid count changes)
     private _solids: SolidEntry[] = [];
     private _solidIds: EntityId[] = [];
@@ -81,6 +104,12 @@ export class CharacterController implements ISystem {
 
     public setViewMode(mode: 'first' | 'third'): void { this.viewMode = mode; }
     public getViewMode(): 'first' | 'third' { return this.viewMode; }
+    /** Current camera-impact shake level [0..1] (diagnostics/tests). */
+    public getCameraShake(): number { return this._camShake; }
+    /** Current observe-orbit state (diagnostics/tests). */
+    public getObserveState(): { azimuth: number; elevation: number; radius: number } {
+        return { azimuth: this._obsAzimuth, elevation: this._obsElevation, radius: this._obsRadius };
+    }
     public toggleViewMode(): 'first' | 'third' {
         this.viewMode = this.viewMode === 'first' ? 'third' : 'first';
         return this.viewMode;
@@ -112,6 +141,15 @@ export class CharacterController implements ISystem {
         input.interactSecondary = false;
 
         this.syncInputState(input);
+
+        // Observe mode: player frozen, camera orbits the target. Owns the camera
+        // itself (skips processLook) — drag to rotate, W/S to zoom.
+        if (world.mode === SystemMode.Observe) {
+            this.processObserve(world, eid, trans, input, dt);
+            this.inputProvider.flushDeltas();
+            return;
+        }
+
         this.processLook(world, input, dt);
 
         // Ghost mode: incorporeal free-roam — no gravity, no collision, fly
@@ -478,6 +516,13 @@ export class CharacterController implements ISystem {
             const drop = this._fallStartY - trans.position[1];
             const deathH = pbody?.fallDeathHeight ?? 12;
             if (drop >= deathH) world.emitSimple('player:fell', { drop });
+            // Camera impact shake on any non-trivial landing (independent of the
+            // lethal-fall threshold) — bigger drop, bigger jolt.
+            if (drop > CharacterController.SHAKE_MIN_DROP) {
+                const t = Math.min(1, (drop - CharacterController.SHAKE_MIN_DROP) /
+                    (CharacterController.SHAKE_FULL_DROP - CharacterController.SHAKE_MIN_DROP));
+                this._camShake = Math.max(this._camShake, t);
+            }
         }
         this._wasGrounded = body.isGrounded;
     }
@@ -492,19 +537,30 @@ export class CharacterController implements ISystem {
         const camRot = world.renderEngine.getMainCameraRotation();
         const yaw = camRot[1];
 
+        // Camera base position by view mode.
+        let camX: number, camY: number, camZ: number;
         if (this.viewMode === 'third') {
             // Follow-cam: sit behind the player along the horizontal look direction and
             // raised a little for a slight top-down angle. Camera keeps its input-driven
             // rotation, so it still looks where the mouse points (player out front).
             const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-            world.renderEngine.setMainCameraPosition(
-                eyeX - fx * CharacterController.TP_DISTANCE,
-                eyeY + CharacterController.TP_HEIGHT,
-                eyeZ - fz * CharacterController.TP_DISTANCE
-            );
+            camX = eyeX - fx * CharacterController.TP_DISTANCE;
+            camY = eyeY + CharacterController.TP_HEIGHT;
+            camZ = eyeZ - fz * CharacterController.TP_DISTANCE;
         } else {
-            world.renderEngine.setMainCameraPosition(eyeX, eyeY, eyeZ);
+            camX = eyeX; camY = eyeY; camZ = eyeZ;
         }
+
+        // Fold in the decaying impact shake — a downward dip + lateral jitter,
+        // applied to the camera ONLY (the player transform stays clean).
+        const shake = this.updateCameraShake(dt);
+        if (shake > 0) {
+            this._shakePhase += dt * CharacterController.SHAKE_FREQ;
+            const amp = CharacterController.SHAKE_AMP * shake;
+            camX += Math.sin(this._shakePhase) * amp;
+            camY += -CharacterController.SHAKE_DIP * shake + Math.cos(this._shakePhase * 1.3) * amp * 0.5;
+        }
+        world.renderEngine.setMainCameraPosition(camX, camY, camZ);
 
         trans.rotation[0] = camRot[0];
         trans.rotation[1] = camRot[1];
@@ -532,15 +588,64 @@ export class CharacterController implements ISystem {
         }
     }
 
+    // ── observe-mode orbit camera ─────────────────────────────────────────────
+    private processObserve(world: World, eid: EntityId, trans: TransformComponent, input: InputStateComponent, dt: number): void {
+        const ip = this.inputProvider;
+        const sens = CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
+        this._obsAzimuth -= (ip.mouseDeltaX + ip.touchDeltaX) * sens;
+        this._obsElevation -= (ip.mouseDeltaY + ip.touchDeltaY) * sens;
+        if (input.lookLeft) this._obsAzimuth += CONTROL_CONSTANTS.TURN_SPEED * dt;
+        if (input.lookRight) this._obsAzimuth -= CONTROL_CONSTANTS.TURN_SPEED * dt;
+        if (input.lookUp) this._obsElevation += CONTROL_CONSTANTS.TURN_SPEED * dt;
+        if (input.lookDown) this._obsElevation -= CONTROL_CONSTANTS.TURN_SPEED * dt;
+        this._obsElevation = Math.max(-1.4, Math.min(1.4, this._obsElevation));
+        // W/S zoom the orbit in/out.
+        if (input.forward) this._obsRadius = Math.max(CharacterController.OBS_MIN_RADIUS, this._obsRadius - CharacterController.OBS_ZOOM_SPEED * dt);
+        if (input.backward) this._obsRadius = Math.min(CharacterController.OBS_MAX_RADIUS, this._obsRadius + CharacterController.OBS_ZOOM_SPEED * dt);
+
+        // Orbit around the player's chest height; camera always faces the target.
+        const tx = trans.position[0], ty = trans.position[1] + 1, tz = trans.position[2];
+        const ce = Math.cos(this._obsElevation), se = Math.sin(this._obsElevation), r = this._obsRadius;
+        world.renderEngine.setMainCameraPosition(
+            tx + r * ce * Math.sin(this._obsAzimuth),
+            ty + r * se,
+            tz + r * ce * Math.cos(this._obsAzimuth),
+        );
+        world.renderEngine.setMainCameraLookAt(tx, ty, tz);
+
+        // The avatar stays visible — you're inspecting it from outside.
+        const avatar = world.getComponent<AvatarComponent>(eid, 'AvatarComponent');
+        if (avatar?.handle) world.renderEngine.setObjectVisible(avatar.handle, avatar.visible !== false);
+    }
+
+    /** Decay the camera-impact shake envelope one frame; returns the level. */
+    private updateCameraShake(dt: number): number {
+        if (this._camShake > 0) {
+            this._camShake = Math.max(0, this._camShake - dt / CharacterController.SHAKE_DECAY);
+        }
+        return this._camShake;
+    }
+
     // ── state persistence (player:state event) ───────────────────────────────
     private processPersistence(world: World, trans: TransformComponent): void {
         const distSq = this._lastPos.distanceToSquared(new Vector3(trans.position[0], trans.position[1], trans.position[2]));
         const rotDist = Math.abs(trans.rotation[1] - this._lastRot[1]);
         if (distSq > CONTROL_CONSTANTS.STATE_EMIT_THRESHOLD ** 2 || rotDist > CONTROL_CONSTANTS.ROT_EMIT_THRESHOLD) {
             const spp = Coords.engineToSpp(trans.position);
+            const sppRot = Coords.engineRotationToSpp(trans.rotation);
             world.events.emit('player.state', {
-                block: spp.block, position: spp.pos, rotation: Coords.engineRotationToSpp(trans.rotation),
+                block: spp.block, position: spp.pos, rotation: sppRot,
             });
+            // Durably persist the player's location (engine-owned, like inventory
+            // and session) so a reload restores it — see Engine.hydrateDrafts. The
+            // 0.5m/0.05rad emit gate above also rate-limits the write. ONLY in
+            // walking modes: a Ghost (hovering) or Edit position must never become
+            // the gameplay spawn. saveMeta is write-behind, so this never blocks.
+            if (world.mode === SystemMode.Normal || world.mode === SystemMode.Game) {
+                world.draftStore?.saveMeta?.(0, 'player', {
+                    version: 1, block: spp.block, position: spp.pos, rotation: sppRot,
+                });
+            }
             this._lastPos.set(trans.position[0], trans.position[1], trans.position[2]);
             this._lastRot = [...trans.rotation];
         }

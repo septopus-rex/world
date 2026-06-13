@@ -40,6 +40,56 @@ async function spawnBlockState(page: any) {
   });
 }
 
+/** The local player's SPP location {block, position, rotation} from the engine. */
+async function playerSpp(page: any) {
+  return page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+}
+
+test('player location survives a reload (engine meta channel)', async ({ page }) => {
+  await bootDeterministic(page);
+  const spawn = await playerSpp(page);
+
+  // Walk the player to a clear lane east of spawn (between the west gems and the
+  // east key, north of the south stop-wall), settle, so CharacterController
+  // persists the spot to the 'player' meta channel.
+  await page.evaluate(() => {
+    const w = (window as any).loader.engine.getWorld();
+    const eid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
+    const t = w.getComponent(eid, 'TransformComponent');
+    // SPP [10.5, 8, 1.5] → engine, in the spawn block (2048,2048).
+    t.position[0] = (2048 - 1) * 16 + 10.5;
+    t.position[1] = 1.5;
+    t.position[2] = -((2048 - 1) * 16 + 8);
+    t.dirty = true;
+  });
+  await stepEngine(page, 30); // settle on ground + emit/persist
+  const moved = await playerSpp(page);
+
+  // The persisted meta matches where the player actually is (engine-owned).
+  const saved = await page.evaluate(async () => {
+    const w = (window as any).loader.engine.getWorld();
+    await w.draftStore.flush();                       // flush now drains meta writes too
+    return w.draftStore.loadMeta(0, 'player');
+  });
+  expect(saved?.version).toBe(1);
+  expect(saved.block).toEqual(moved.block);
+  expect(saved.position[0]).toBeCloseTo(moved.position[0], 0); // within ~0.5m (emit gate)
+  expect(Math.abs(moved.position[0] - spawn.position[0]))      // genuinely moved off spawn
+    .toBeGreaterThan(2);
+
+  // Real reload: a new page + new engine — only IndexedDB carries the location.
+  await page.reload();
+  await settleAfterReload(page);
+
+  const restored = await playerSpp(page);
+  // Restored to the saved spot, NOT the fallback spawn.
+  expect(restored.block).toEqual(saved.block);
+  expect(restored.position[0]).toBeCloseTo(saved.position[0], 0);
+  expect(restored.position[1]).toBeCloseTo(saved.position[1], 0);
+  expect(Math.abs(restored.position[0] - spawn.position[0]),
+    'restored east is far from the spawn east (not a fallback)').toBeGreaterThan(2);
+});
+
 test('a saved draft survives a page reload (IndexedDB)', async ({ page }) => {
   await bootDeterministic(page);
 

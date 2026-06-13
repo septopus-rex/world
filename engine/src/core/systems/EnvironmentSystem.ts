@@ -33,6 +33,18 @@ export class EnvironmentSystem implements ISystem {
         gradeRange: [12, 2]
     };
 
+    // Lightning: a flash envelope that pops during thunderstorms (rain + grade≥1)
+    // and decays. Deterministic (timer-driven, no RNG) so headless steps repeat.
+    private flashLevel = 0;       // current [0..1] brightness pop
+    private strikeTimer = 0;      // seconds since the last strike
+    private baseAmbient = 0.4;    // day/night ambient base, before the flash boost
+    private static readonly LIGHTNING = {
+        baseInterval: 8,   // seconds between strikes at grade 1 (scales 1/grade)
+        decay: 0.35,       // seconds for a flash to fade to black
+        ambientBoost: 1.5, // added to ambient at full flash
+        sunBoost: 2.0,     // added to directional intensity at full flash
+    };
+
     constructor(world: World) {
         // Create singleton Environment Entity
         this.envEntity = world.createEntity();
@@ -89,7 +101,7 @@ export class EnvironmentSystem implements ISystem {
     public update(world: World, dt: number): void {
         const state = world.getComponent<EnvironmentStateComponent>(this.envEntity!, "EnvironmentStateComponent")!;
 
-        // 1. Time progression Visuals
+        // 1. Time progression Visuals (+ lightning flash folded in)
         if (this.sunLight && this.ambientLight) {
             const timePercent = (state.hour * 60 + state.minute) / (24 * 60);
             const angle = timePercent * Math.PI * 2 - Math.PI / 2;
@@ -99,11 +111,17 @@ export class EnvironmentSystem implements ISystem {
             const sunZ = 50;
 
             const isDay = sunY > 0;
-            const intensity = isDay ? 1.0 : 0.1;
-            const ambient = isDay ? 0.4 : 0.1;
+            const baseIntensity = isDay ? 1.0 : 0.1;
+            this.baseAmbient = isDay ? 0.4 : 0.1;
 
-            world.renderEngine.updateDirectionalLight(this.sunLight, 0xffffff, intensity, sunX, sunY, sunZ);
-            world.renderEngine.updateAmbientLight(this.ambientLight, 0xffffff, ambient);
+            // Advance the lightning envelope BEFORE applying lights so a strike
+            // brightens the same frame.
+            const flash = this.updateLightning(state, dt);
+
+            world.renderEngine.updateDirectionalLight(
+                this.sunLight, 0xffffff, baseIntensity + flash * EnvironmentSystem.LIGHTNING.sunBoost, sunX, sunY, sunZ);
+            world.renderEngine.updateAmbientLight(
+                this.ambientLight, 0xffffff, this.baseAmbient + flash * EnvironmentSystem.LIGHTNING.ambientBoost);
         }
 
         // 2. Weather Visuals
@@ -125,5 +143,33 @@ export class EnvironmentSystem implements ISystem {
                 world.renderEngine.updateWeatherParticles(this.particleSystem, 0, 0, 0, false);
             }
         }
+    }
+
+    /**
+     * Advance the lightning flash envelope and return the current level [0..1].
+     * Strikes fire on a grade-scaled timer during a thunderstorm (rain, grade≥1);
+     * each strike snaps the level to 1 and then decays. Deterministic — no RNG —
+     * so deterministic stepping reproduces the same storm.
+     */
+    private updateLightning(state: EnvironmentStateComponent, dt: number): number {
+        const L = EnvironmentSystem.LIGHTNING;
+        const stormy = state.weatherCategory === 'rain' && state.weatherGrade >= 1;
+
+        if (stormy) {
+            this.strikeTimer += dt;
+            const interval = L.baseInterval / state.weatherGrade; // heavier storm → more strikes
+            if (this.strikeTimer >= interval) {
+                this.strikeTimer = 0;
+                this.flashLevel = 1; // STRIKE
+            }
+        } else {
+            this.strikeTimer = 0;
+        }
+
+        if (this.flashLevel > 0) {
+            this.flashLevel = Math.max(0, this.flashLevel - dt / L.decay);
+        }
+        state.lightning = this.flashLevel;
+        return this.flashLevel;
     }
 }

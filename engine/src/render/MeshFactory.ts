@@ -58,6 +58,15 @@ export class MeshFactory {
                     this.getMaterial(material)
                 );
                 break;
+            case 'tube':
+                // Catmull-Rom sweep through params.path — rails / pipes / coaster
+                // track. Path-dependent, so NOT cached (and NOT tagged shared, so
+                // removeHandle disposes it). size[0]=radius, size[1]=radial segs.
+                object = new THREE.Mesh(
+                    this.buildTube(params.path, w, params.size[1], params.closed),
+                    this.getMaterial(material)
+                );
+                break;
             case 'light':
                 object = this.createLight(data as any);
                 break;
@@ -126,6 +135,32 @@ export class MeshFactory {
             this._geoCache.set(key, geo);
         }
         return geo;
+    }
+
+    /**
+     * Build a tube geometry by sweeping a Catmull-Rom curve through `path`
+     * (object-local control points). Used for rails, pipes, and coaster track.
+     * Path-dependent → built fresh per instance (not cached); a degenerate path
+     * (<2 points) falls back to a tiny box so a malformed adjunct never throws.
+     */
+    private static buildTube(
+        path: [number, number, number][] | undefined,
+        radius: number,
+        radialSegments: number,
+        closed?: boolean,
+    ): THREE.BufferGeometry {
+        const r = radius > 0 ? radius : 0.2;
+        if (!path || path.length < 2) {
+            return new THREE.BoxGeometry(r, r, r);
+        }
+        const pts = path.map(p => new THREE.Vector3(p[0], p[1], p[2]));
+        const curve = new THREE.CatmullRomCurve3(pts, !!closed, 'catmullrom', 0.5);
+        // Denser tubular sampling on longer paths keeps curves smooth; a closed
+        // loop has one extra (wrap-around) span to sample. Clamp radial segs.
+        const spans = closed ? path.length : path.length - 1;
+        const tubularSegments = Math.max(8, spans * 12);
+        const radial = Math.max(3, Math.floor(radialSegments) || 8);
+        return new THREE.TubeGeometry(curve, tubularSegments, r, radial, !!closed);
     }
 
     /**

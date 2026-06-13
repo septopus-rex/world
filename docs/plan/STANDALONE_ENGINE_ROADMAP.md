@@ -1,7 +1,7 @@
 # 独立创作引擎开发路线图（Standalone Engine Roadmap）
 
-> **状态**：链剥离已完成 ✅（2026-06，5 路审计确认）。本文档驱动**后续开发**。
-> **定位**：`engine/src`（TS ECS 引擎）+ `client/desktop`（无链 PWA）为唯一运行时;**链是可选的发布插件,不是主线**。
+> **状态**：链剥离已完成 ✅（2026-06，5 路审计确认）。**旧 JS 引擎已正式退役 ✅（2026-06，parity 补齐）**。本文档驱动**后续开发**。
+> **定位**：`engine/src`（TS ECS 引擎）+ `client/desktop`（无链 PWA）为唯一运行时与**唯一开发基准**；旧 JS 引擎（`engine/backup/`）只作历史/特性参考，不在其上开发、勿删归档；**链是可选的发布插件,不是主线**。
 > **历史**：链剥离的决策与实施过程见文末「附录 A · 链剥离记录」。原全链方案见 `chain/docs/ONCHAIN_ROADMAP.md`(已随链归档)。
 
 ---
@@ -13,6 +13,7 @@
 - `client/desktop` 纯 3D PWA,替代旧 `app/`。依赖只有 react/react-dom/three,构建产物零 `@solana`/anchor/web3(实测 `npm run build` + grep 验证)。
 - `app/`、`chain/`(含合约 + 钱包装配)已移出 git 追踪,封存在磁盘;`deploy/` 瘦身为无链客户端启动器,链上栈归档到 `chain/deploy/`;链相关文档归档到 `chain/docs/`。
 - 零钱包 / validator / RPC / IPFS / 网络即可 build + run。
+- **旧引擎退役（2026-06）**：完成旧 JS 引擎逐模块 parity 审计 + 补齐批次——新增 tube/挤出几何、SPP 动画 texture(UV)/morph 类型（并修复 opacity/color 覆盖此前不落地的潜伏 bug）、雷雨闪电、相机摔落抖屏+linger、link/QR adjunct（e1）、Observe 轨道相机模式（第 5 模式）。旧引擎中这些多为空壳 stub，新引擎为真正实现。验证：engine vitest 202 通过 + 全量 e2e 27 通过。**有意不移植**（非缺失，归档源码可参考）：多链 API（已解耦）、触屏/移动端输入、完整 2D 地图页（minimap 已覆盖导航）、card/news/manual 信息页（属 React 客户端层）。结论：新引擎覆盖或超越旧引擎全部真实能力，旧引擎 `engine/backup/` 转为只读历史参考。
 
 **引擎里已经成形的解耦接缝**(后续各 Phase 直接复用):
 

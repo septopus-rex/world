@@ -23,12 +23,18 @@ export interface STDObject {
     [key: string]: any;
 }
 
-export type MeshType = 'box' | 'sphere' | 'cylinder' | 'cone' | 'plane' | 'module';
+export type MeshType = 'box' | 'sphere' | 'cylinder' | 'cone' | 'plane' | 'tube' | 'module';
 
 export interface RenderParams {
     size: [number, number, number];
     position: [number, number, number];
     rotation: [number, number, number];
+    /** Tube/extrude control points in object-local engine space (type 'tube').
+     *  The mesh is a Catmull-Rom sweep through these points — rails, pipes,
+     *  coaster track. size[0]=radius, size[1]=radial segments (default 8). */
+    path?: [number, number, number][];
+    /** Close the swept curve into a loop (type 'tube'). */
+    closed?: boolean;
 }
 
 /** 

@@ -21,5 +21,13 @@ export enum SystemMode {
     /**
      * Read-only mode for visitors.
      */
-    Ghost = 'ghost'
+    Ghost = 'ghost',
+
+    /**
+     * Observe mode.
+     * Player control is suspended; the camera orbits a target (the player /
+     * current block) — drag to rotate, W/S to zoom. For inspecting a build from
+     * the outside (the standalone successor to the old "observe" renderer).
+     */
+    Observe = 'observe'
 }

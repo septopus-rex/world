@@ -15,9 +15,12 @@ export interface AnimationComponent {
     isPaused: boolean;
     loopCount: number;
 
-    // Overrides for non-transform properties (applied by AnimationSystem)
+    // Overrides for non-transform properties. AnimationSystem computes these;
+    // VisualSyncSystem applies them to the render handle each dirty frame.
     colorOverride?: number;
     opacityOverride?: number;
+    uvOffset?: [number, number];     // texture/UV scroll (type 'texture')
+    morphOverride?: number[];        // morph target influences (type 'morph')
 
     // Initial values captured when an animation starts or resets
     // Used for relative modes (set with array interpolation, multi, etc.)
@@ -27,5 +30,6 @@ export interface AnimationComponent {
         scale?: [number, number, number];
         color?: number;
         opacity?: number;
+        uvOffset?: [number, number];
     };
 }

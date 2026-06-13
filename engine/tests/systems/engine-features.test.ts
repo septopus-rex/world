@@ -3,6 +3,7 @@ import { makeHeadlessEngineWith, stepN } from '../helpers/make-world';
 import { InMemoryDraftBackend } from '../../src/core/services/DraftStore';
 import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 import { SystemMode } from '../../src/core/types/SystemMode';
+import { CharacterController } from '../../src/core/movement/CharacterController';
 
 // L3 — the "engine completeness" batch: modes (Game/Ghost reachable, ghost
 // noclip + hidden avatar), gameplay-session persistence (flags + oneTime),
@@ -110,6 +111,88 @@ describe('gameplay session persistence', () => {
         p2.position = [...comp(s2.world, trig2, 'TransformComponent').position];
         s2.engine.step(1 / 60);
         expect(s2.world.globalFlags.gate).toBe(false); // oneTime did NOT re-fire
+    });
+});
+
+// ─── Player location persistence ─────────────────────────────────────────────
+
+describe('player location persistence', () => {
+    it('restores the last walked-to spot on restart (engine meta channel)', async () => {
+        const backend = new InMemoryDraftBackend();
+
+        // Session 1: land, walk 6m east, settle — CharacterController persists the
+        // spot to the 'player' meta channel (Normal mode).
+        const s1 = await boot({ backend });
+        injectBlock(s1.engine, []);
+        stepN(s1.engine, 30);
+        const t1 = comp(s1.world, s1.player, 'TransformComponent');
+        t1.position[0] += 6;
+        t1.dirty = true;
+        stepN(s1.engine, 30);
+        const moved = s1.engine.getPlayerSppLocation()!;
+        await s1.world.draftStore.flush();          // flush drains the meta write
+
+        const saved = await backend.loadMeta(0, 'player');
+        expect(saved.version).toBe(1);
+        expect(saved.block).toEqual(moved.block);
+        expect(saved.position[0]).toBeCloseTo(moved.position[0], 0);
+
+        // Session 2: same backend, fresh engine — restored to the spot, not spawn.
+        const s2 = await boot({ backend });
+        await s2.engine.hydrateDrafts(0);
+        const restored = s2.engine.getPlayerSppLocation()!;
+        expect(restored.block).toEqual(moved.block);
+        expect(restored.position[0]).toBeCloseTo(moved.position[0], 1); // east kept
+        expect(restored.position[1]).toBeCloseTo(moved.position[1], 1); // north kept
+    });
+
+    it('ignores a void/malformed saved location — the player stays at spawn', async () => {
+        const backend = new InMemoryDraftBackend();
+        await backend.saveMeta(0, 'player', { version: 1, block: [2048, 2048], position: [8, 8, -999] });
+        const { engine } = await boot({ backend });
+        const before = engine.getPlayerSppLocation()!;
+        await engine.hydrateDrafts(0);                 // void guard rejects alt < -50
+        const after = engine.getPlayerSppLocation()!;
+        expect(after.position[0]).toBeCloseTo(before.position[0], 3);
+        expect(after.position[1]).toBeCloseTo(before.position[1], 3);
+        expect(after.position[2]).toBeCloseTo(before.position[2], 3);
+    });
+
+    it('does NOT persist Ghost-mode movement (no spawn pollution)', async () => {
+        const backend = new InMemoryDraftBackend();
+        const { engine, world, player } = await boot({ backend });
+        engine.setMode(SystemMode.Ghost);             // hover before any Normal step
+        const t = comp(world, player, 'TransformComponent');
+        t.position[0] += 20; t.position[1] = 40; t.dirty = true;
+        stepN(engine, 10);
+        await world.draftStore.flush();
+        expect(await backend.loadMeta(0, 'player')).toBeUndefined();
+    });
+});
+
+// ─── Camera impact shake (fall juice) ────────────────────────────────────────
+
+describe('camera impact shake', () => {
+    it('a hard landing jolts the camera, then the shake settles (linger)', async () => {
+        const { engine, world, player } = await boot();
+        const cc = world.systems.findSystem(CharacterController)!;
+        injectBlock(engine, []);                 // ground at elevation 0
+        stepN(engine, 60);                        // settle on the ground
+        expect(cc.getCameraShake()).toBe(0);
+
+        const trans = comp(world, player, 'TransformComponent');
+        trans.position[1] = 5;                    // lift ~4m (non-lethal drop)
+        trans.dirty = true;
+
+        let jolted = false;
+        for (let i = 0; i < 150 && !jolted; i++) {
+            engine.step(1 / 60);
+            if (cc.getCameraShake() > 0) jolted = true;
+        }
+        expect(jolted, 'landing set a camera shake').toBe(true);
+
+        stepN(engine, 40);                        // > SHAKE_DECAY (0.5s = 30 frames)
+        expect(cc.getCameraShake()).toBe(0);      // eased back to rest
     });
 });
 

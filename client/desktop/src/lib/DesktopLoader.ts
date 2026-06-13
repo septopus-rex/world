@@ -19,7 +19,7 @@ import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
 import { fetchMockBlock } from '@engine/core/mocks/BlockMocks';
 import { IDataSource } from '@engine/core/services/DataSource';
 
-import { DEFAULT_PLAYER_STATE, STORAGE_KEYS } from '../Constants';
+import { DEFAULT_PLAYER_STATE } from '../Constants';
 
 // Demo fixtures (client/desktop/public/assets) wired through the model/texture
 // pipeline so `npm run dev` shows real network-loaded models + textures. Each
@@ -50,7 +50,6 @@ export interface SPPPlayerState {
 
 export class DesktopLoader implements IDataSource {
     public engine: Engine | null = null;
-    private readonly STORAGE_KEY = STORAGE_KEYS.PLAYER_STATE;
 
     private loadedBlockKeys: Set<string> = new Set();
     private fetchingBlockKeys: Set<string> = new Set();
@@ -105,22 +104,39 @@ export class DesktopLoader implements IDataSource {
             this._saveState(state);
         });
 
-        // Restore persisted player state.
-        const saved = localStorage.getItem(this.STORAGE_KEY);
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                this.playerState = { ...this.playerState, ...parsed };
-                if (this.playerState.position[2] < -100) {
-                    console.log('[Failsafe] Resetting player altitude from void...');
-                    this.playerState.position[2] = 1.0;
-                }
-            } catch (e) {
-                console.error('[DesktopLoader] Failed to parse saved player state', e);
+        // Link/QR adjunct (e1): clicking one fires interact.primary with the hit
+        // entity; open its URL. The engine carries the data + interaction, the
+        // client performs the DOM action (window.open stays out of the engine).
+        this.engine.on('interact.primary', (_payload: any, ev: any) => {
+            const target = ev?.target;
+            if (target === undefined || !this.engine) return;
+            const adj = this.engine.getWorld()?.getComponent(target, 'AdjunctComponent') as any;
+            const url = adj?.stdData?.url;
+            if (typeof url === 'string' && /^https?:\/\//.test(url)) {
+                window.open(url, '_blank', 'noopener');
             }
-        }
+        });
 
+        // Boot at the demo spawn as the FALLBACK; durable persistence (player
+        // location, inventory, session) lives in the engine and is restored by
+        // hydrateDrafts below, overriding this when a saved location exists.
         await this.engine.bootWorld(0, this.playerState);
+
+        // P1 persistence: pull every saved draft into the sync cache BEFORE the
+        // first block materializes (BlockSystem swaps drafts in synchronously),
+        // and restore the player's persisted location/inventory/session.
+        await this.engine.hydrateDrafts(0);
+
+        // The engine now holds the authoritative player location (restored, or
+        // the fallback spawn). Mirror it locally and preload the neighborhood
+        // around the block the player will actually appear in.
+        const restored = this.engine.getPlayerSppLocation();
+        if (restored) {
+            this.playerState = {
+                ...this.playerState,
+                block: restored.block, position: restored.position, rotation: restored.rotation,
+            };
+        }
 
         const initialBKey = `${this.playerState.block[0]}_${this.playerState.block[1]}`;
         const blockReadyPromise = new Promise<void>((resolve) => {
@@ -130,10 +146,6 @@ export class DesktopLoader implements IDataSource {
             // Failsafe: proceed after 3s even if the ready signal never fires.
             setTimeout(resolve, 3000);
         });
-
-        // P1 persistence: pull every saved draft into the sync cache BEFORE the
-        // first block materializes — BlockSystem swaps drafts in synchronously.
-        await this.engine.hydrateDrafts(0);
 
         // Inject the initial neighborhood BEFORE starting physics (prevents falling).
         console.log(`[Loader] Pre-loading initial neighborhood for ${initialBKey}...`);
@@ -479,8 +491,8 @@ export class DesktopLoader implements IDataSource {
         this.engine?.setEditMode(active);
     }
 
-    /** Switch the world mode: normal / edit / game / ghost. */
-    public setMode(mode: 'normal' | 'edit' | 'game' | 'ghost') {
+    /** Switch the world mode: normal / edit / game / ghost / observe. */
+    public setMode(mode: 'normal' | 'edit' | 'game' | 'ghost' | 'observe') {
         this.engine?.setMode(mode as any);
     }
 
@@ -549,11 +561,13 @@ export class DesktopLoader implements IDataSource {
 
     // ── Persistence ──────────────────────────────────────────────────────────────
 
+    // Live mirror of the player's location for the minimap/HUD/extend bookkeeping.
+    // Durable persistence is engine-owned now (DraftStore meta 'player', restored
+    // by Engine.hydrateDrafts) — this no longer writes to localStorage.
     private _saveState(partial: Partial<SPPPlayerState>) {
         this.playerState = { ...this.playerState, ...partial };
         if (!this.playerState.extend || this.playerState.extend < 2) {
             this.playerState.extend = 2;
         }
-        localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.playerState));
     }
 }

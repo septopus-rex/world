@@ -64,6 +64,11 @@ export class DraftStore {
     private dirty = new Map<string, PendingOp>();
     private flushing: Promise<void> | null = null;
 
+    /** In-flight meta writes (player/inventory/session). Tracked so flush() can
+     *  await them too — saveMeta is fire-and-forget, but tests/exit paths need a
+     *  way to know the last write landed. */
+    private metaWrites = new Set<Promise<void>>();
+
     constructor(backend: IDraftBackend | null = null) {
         this.backend = backend;
     }
@@ -154,8 +159,10 @@ export class DraftStore {
             console.warn(`[DraftStore] saveMeta(${worldId}, ${key}): value not serializable, skipped`);
             return;
         }
-        this.backend.saveMeta(worldId, key, snapshot).catch(e =>
-            console.warn(`[DraftStore] saveMeta(${worldId}, ${key}) failed`, e));
+        const write: Promise<void> = this.backend.saveMeta(worldId, key, snapshot)
+            .catch(e => console.warn(`[DraftStore] saveMeta(${worldId}, ${key}) failed`, e))
+            .finally(() => this.metaWrites.delete(write));
+        this.metaWrites.add(write);
     }
 
     // ── write-behind ──────────────────────────────────────────────────────────
@@ -194,6 +201,10 @@ export class DraftStore {
                     }
                 }
                 if (!progressed) break;
+            }
+            // Drain in-flight meta writes too (loop: a write may enqueue another).
+            while (this.metaWrites.size > 0) {
+                await Promise.all([...this.metaWrites]);
             }
         })().finally(() => { this.flushing = null; });
 

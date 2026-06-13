@@ -31,6 +31,7 @@ export class DefaultUIProvider implements IUIProvider {
         .sept-ui-group.bottom-left { bottom: 0; left: 0; }
         .sept-ui-group.top-right { top: 0; right: 0; }
         .sept-ui-group.top-left { top: 0; left: 0; }
+        .sept-ui-group.mid-left { top: 50%; left: 0; transform: translateY(-50%); flex-direction: column; }
         .sept-ui-btn {
             background: var(--sept-color-bg); color: var(--sept-color-text);
             border: 1px solid rgba(255, 255, 255, 0.2); padding: 8px 16px;
@@ -91,7 +92,7 @@ export class DefaultUIProvider implements IUIProvider {
         parent.appendChild(this.container);
     }
 
-    public showGroup(id: string, items: UIButtonConfig[], position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | { x: number, y: number }): void {
+    public showGroup(id: string, items: UIButtonConfig[], position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'mid-left' | { x: number, y: number }): void {
         this.hide(id);
 
         const group = document.createElement('div');

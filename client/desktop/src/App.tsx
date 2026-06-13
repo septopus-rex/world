@@ -87,7 +87,8 @@ function App() {
       <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
 
       <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-start pointer-events-none">
-        <div className="pointer-events-auto select-none">
+        {/* Pure label — must NOT intercept clicks meant for engine UI beneath. */}
+        <div className="pointer-events-none select-none">
           <span className="text-[10px] font-black tracking-[0.3em] text-cyan-400/70 uppercase">Septopus · Desktop</span>
         </div>
         <div className="flex flex-col gap-4 items-end pointer-events-auto">
@@ -229,6 +230,7 @@ function App() {
             { key: 'normal', label: 'NORMAL', on: 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/60', dot: 'bg-cyan-400' },
             { key: 'game', label: 'GAME', on: 'bg-green-500/25 text-green-300 border border-green-400/60', dot: 'bg-green-400' },
             { key: 'ghost', label: 'GHOST', on: 'bg-purple-500/25 text-purple-300 border border-purple-400/60', dot: 'bg-purple-400' },
+            { key: 'observe', label: 'OBSERVE', on: 'bg-sky-500/25 text-sky-300 border border-sky-400/60', dot: 'bg-sky-400' },
             { key: 'edit', label: 'EDIT', on: 'bg-yellow-500/25 text-yellow-300 border border-yellow-400/60', dot: 'bg-yellow-400' },
           ] as const).map(({ key, label, on, dot }) => (
             <button

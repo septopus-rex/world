@@ -84,6 +84,63 @@ test("cell A's solid north wall blocks the player outside", async ({ page }) => 
   expect((await worldFlags(page)).spp_hut).toBeUndefined();
 });
 
+test('the hut is genuinely rendered: camera ray hits a visible derived wall whose pixels reach the screen', async ({ page }) => {
+  await bootDeterministic(page);
+  await teleportSpp(page, 3, 8.5);   // 1.5m north of cell A's solid wall
+
+  const probe = await page.evaluate(() => {
+    const loader = (window as any).loader;
+    const w = loader.engine.getWorld();
+    const re = w.renderEngine;
+
+    /** Render a frame facing (pitch, yaw), then read the canvas center pixel
+     *  IN THE SAME TASK (the WebGL back buffer is still intact pre-composite). */
+    const sample = (pitch: number, yaw: number) => {
+      re.setMainCameraRotation(pitch, yaw, 0);
+      loader.engine.step(1 / 60);
+      const gl: HTMLCanvasElement = re.domElement;
+      const c = document.createElement('canvas');
+      c.width = c.height = 1;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(gl, gl.width / 2, gl.height / 2, 1, 1, 0, 0, 1, 1);
+      const d = ctx.getImageData(0, 0, 1, 1).data;
+      return [d[0], d[1], d[2]];
+    };
+
+    // Face SOUTH at the wall (engine yaw π) — what entity does the center ray hit?
+    re.setMainCameraRotation(-0.15, Math.PI, 0);
+    loader.engine.step(1 / 60);
+    const hit = re.castRayFromCamera(0, 0);
+    let hitInfo: any = null;
+    if (hit) {
+      const adj = w.getComponent(hit.entityId, 'AdjunctComponent');
+      const mesh = w.getComponent(hit.entityId, 'MeshComponent');
+      hitInfo = {
+        adjunctId: adj?.adjunctId ?? null,
+        derivedFrom: adj?.stdData?.derivedFrom ?? null,
+        visible: mesh?.handle?.visible ?? null,
+        distance: +hit.distance.toFixed(2),
+      };
+    }
+
+    const wallPixel = sample(-0.15, Math.PI);  // looking at the wall
+    const skyPixel = sample(1.2, Math.PI);     // looking up at the sky
+    return { hitInfo, wallPixel, skyPixel };
+  });
+
+  // The center ray lands on an SPP-derived wall that is genuinely visible.
+  expect(probe.hitInfo, 'camera ray must hit something').not.toBeNull();
+  expect(String(probe.hitInfo.adjunctId)).toMatch(/^adj_2048_2048_182_0_d\d+$/);
+  expect(probe.hitInfo.derivedFrom).toBe('adj_2048_2048_182_0');
+  expect(probe.hitInfo.visible).toBe(true);
+  expect(probe.hitInfo.distance).toBeLessThan(12);
+
+  // And its pixels actually reach the screen: wall color ≠ sky color.
+  const [wr, wg, wb] = probe.wallPixel, [sr, sg, sb] = probe.skyPixel;
+  const colorDistance = Math.abs(wr - sr) + Math.abs(wg - sg) + Math.abs(wb - sb);
+  expect(colorDistance, `wall ${probe.wallPixel} vs sky ${probe.skyPixel}`).toBeGreaterThan(60);
+});
+
 test('reload fidelity: draft keeps only the b6 source; expansion is identical', async ({ page }) => {
   await bootDeterministic(page);
   const before = await sppCensus(page);

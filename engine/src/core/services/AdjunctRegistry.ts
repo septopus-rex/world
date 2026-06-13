@@ -10,6 +10,7 @@ import { AdjunctStop } from '../../plugins/adjunct/basic_stop';
 import { AdjunctItem } from '../../plugins/adjunct/adjunct_item';
 import { AdjunctParticle } from '../../plugins/adjunct/adjunct_particle';
 import { BasicWaterAdjunct } from '../../plugins/adjunct/basic_water';
+import { AdjunctLink } from '../../plugins/adjunct/adjunct_link';
 
 /**
  * Registry of built-in (native) adjunct types, keyed by on-chain type-id.
@@ -20,6 +21,7 @@ import { BasicWaterAdjunct } from '../../plugins/adjunct/basic_water';
  *   a1 wall · a2 box · a3 light · a4 module(3D model) · a5 water · a6 cone
  *   · a7 ball(sphere) · b4 stop(collider) · b5 item(pickable)
  *   · b6 particle(SPP, expands to standard adjuncts) · b8 trigger
+ *   · e1 link(clickable URL / QR panel)
  */
 export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<number, AdjunctDefinition>([
     [0x00a1, BasicWallAdjunct as unknown as AdjunctDefinition],   // wall
@@ -33,6 +35,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [0x00b5, AdjunctItem as unknown as AdjunctDefinition],        // item (pickable)
     [0x00b6, AdjunctParticle as unknown as AdjunctDefinition],    // string particle (SPP)
     [0x00b8, AdjunctTrigger as unknown as AdjunctDefinition],     // trigger
+    [0x00e1, AdjunctLink as unknown as AdjunctDefinition],        // link / QR panel (clickable)
 ]);
 
 export function getBuiltinAdjunct(typeId: number): AdjunctDefinition | undefined {

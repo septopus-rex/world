@@ -20,4 +20,8 @@ export interface EnvironmentStateComponent {
     // Converted In-Game Weather State
     weatherCategory: WeatherCategory;
     weatherGrade: number; // 0 (light) to N (heavy)
+
+    // Transient lightning flash level [0..1] during a thunderstorm; decays each
+    // frame after a strike. Folded into the scene's ambient/sun brightness.
+    lightning?: number;
 }
