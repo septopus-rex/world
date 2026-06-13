@@ -89,7 +89,8 @@ cd engine && yarn build                            # tsc
 
 ## 文档索引
 
-- `docs/plan/STANDALONE_ENGINE_ROADMAP.md` — 开发路线图（链剥离记录 + 后续 P1–P5）。
+- `docs/plan/STANDALONE_ENGINE_ROADMAP.md` — 开发路线图（链剥离记录 + 旧引擎退役 + 后续 P1–P5）。
+- `docs/plan/PLAYABLE_CHECKLIST.md` — **可玩化落地清单**（从技术 demo 到用户可玩的 gap 追踪 + 首迭代）。
 - `docs/plan/specs/phase0-engine-consolidation.md` — 引擎收敛规格。
 - `docs/architecture/{overview,ecs,coordinate,pipeline,performance}.md`、`docs/systems/*.md`、`docs/features/spp*.md`（弦粒子 SPP）。
 

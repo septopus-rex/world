@@ -88,7 +88,6 @@ Septopus World 的独创功能和协议设计。
 | 目录 | 面向读者 | 说明 |
 |------|---------|------|
 | [`/protocol/`](../protocol/README.md) | 生态开发者 | SPP 协议规范（中英双语） |
-| [`/backup/document/`](../backup/document/) | 非技术参与者 | 合约说明、治理文档（原始备份） |
 
 ---
 

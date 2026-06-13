@@ -44,7 +44,7 @@ client/*/dist/
 client/*/dev-dist/
 
 # Playwright (e2e) artifacts
-client/*/test-results/
+**/test-results/
 client/*/playwright-report/
 client/*/e2e/__screenshots__/
 **/.last-run.json
