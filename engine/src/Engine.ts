@@ -398,6 +398,13 @@ export class Engine {
         return this.world?.mode;
     }
 
+    /** Register the available 3D models for the editor palette's module picker.
+     *  The client owns the resource catalog; the engine just lists them so a
+     *  creator can place a model (a4) and pick which one. */
+    public setModuleCatalog(models: ReadonlyArray<{ id: number | string; label: string }>): void {
+        if (this.world) this.world.moduleCatalog = models;
+    }
+
     public injectStyle(tokens: Record<string, string>) {
         this.services.ui?.injectStyle?.(tokens);
     }

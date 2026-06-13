@@ -127,6 +127,16 @@ export class DesktopLoader implements IDataSource {
         // and restore the player's persisted location/inventory/session.
         await this.engine.hydrateDrafts(0);
 
+        // Offer the demo 3D models to the editor palette's module picker.
+        this.engine.setModuleCatalog(
+            Object.entries(DEMO_MODELS)
+                .filter(([, m]) => m.type === 'module')
+                .map(([id, m]) => ({
+                    id: Number(id),
+                    label: (m.raw.split('/').pop() || `model ${id}`).replace(/\.[^.]+$/, ''),
+                })),
+        );
+
         // The engine now holds the authoritative player location (restored, or
         // the fallback spawn). Mirror it locally and preload the neighborhood
         // around the block the player will actually appear in.

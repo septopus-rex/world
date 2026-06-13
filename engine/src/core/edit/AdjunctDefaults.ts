@@ -6,12 +6,17 @@
  * new object sits ON the surface instead of straddling it. Creators refine
  * everything afterwards through the edit form.
  *
- * Module (a4) is intentionally absent: it needs a model-resource picker.
+ * Module (a4) is NOT in PLACEABLE_ADJUNCTS — it needs a resource. The editor
+ * palette appends one module button per registered model (world.moduleCatalog)
+ * and calls defaultRawFor(0x00a4, pos, { resource }) with the chosen id.
  */
 
 type Pos = [number, number, number];
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Per-type placement options (module needs a resource id). */
+export interface PlaceOpts { resource?: number | string; }
 
 export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }> = [
     { typeId: 0x00a1, label: 'Wall' },
@@ -23,11 +28,14 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: 0x00b4, label: 'Stop' },
     { typeId: 0x00b5, label: 'Item' },
     { typeId: 0x00b8, label: 'Trigger' },
+    { typeId: 0x00e1, label: 'Link' },
 ];
 
-export function defaultRawFor(typeId: number, pos: Pos): any[] | null {
+export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[] | null {
     const [x, y, z] = [r2(pos[0]), r2(pos[1]), r2(pos[2])];
     switch (typeId) {
+        case 0x00a4: // module: [size, pos, rot, resourceId] — picked model id
+            return [[2, 2, 2], [x, y, z + 1], [0, 0, 0], opts?.resource ?? 0];
         case 0x00a1: // wall: [size, pos, rot, texture, repeat, animation, stop]
             return [[2, 0.3, 2.5], [x, y, z + 1.25], [0, 0, 0], 0, [1, 1], 0, 1];
         case 0x00a2: // box
@@ -46,6 +54,8 @@ export function defaultRawFor(typeId: number, pos: Pos): any[] | null {
             return [[x, y, z + 0.4], 1, 0, 1, [0, 0, 0]];
         case 0x00b8: // trigger: [size, offset, rot, shape, gameOnly, events]
             return [[2, 2, 2], [x, y, z + 1], [0, 0, 0], 1, 0, []];
+        case 0x00e1: // link: [size, pos, rot, resource, repeat, animate, stop, url, texture?]
+            return [[2, 0.1, 2], [x, y, z + 1], [0, 0, 0], 0, [1, 1], null, null, 'https://example.com'];
         default:
             return null;
     }

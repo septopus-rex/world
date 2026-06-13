@@ -1,4 +1,5 @@
 import { STDObject, AdjunctAttribute } from '../../core/types/Adjunct';
+import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 
 /**
  * Standard Septopus adjunct (de)serialization, shared by the primitive adjuncts
@@ -29,5 +30,49 @@ export const standardAttribute: AdjunctAttribute = {
         std.material?.repeat,
         std.animate,
         std.stop,
+    ],
+};
+
+/**
+ * Shared edit menu for the standard primitives (wall / cone / ball / water).
+ * Size + Position are the universally-meaningful fields for every box-derived
+ * adjunct, so the place -> right-click -> Edit Properties loop works for all of
+ * them. (box keeps its own menu with a Material group, since only box maps the
+ * resource index to a colour; adding that control here would be a no-op.)
+ */
+export const standardMenu = {
+    sidebar: (std: STDObject) => ({
+        size: [
+            { type: "number", key: "x", value: std.x, label: "X" },
+            { type: "number", key: "y", value: std.y, label: "Y" },
+            { type: "number", key: "z", value: std.z, label: "Z" },
+        ],
+        position: [
+            { type: "number", key: "ox", value: std.ox, label: "X Offset" },
+            { type: "number", key: "oy", value: std.oy, label: "Y Offset" },
+            { type: "number", key: "oz", value: std.oz, label: "Z Offset" },
+        ],
+    }),
+    contextMenu: (_std: STDObject): ContextMenuItem[] => [
+        { label: "✏️ Edit Properties", action: "edit" },
+        { label: "🗑️ Delete", action: "delete", variant: "danger" as const },
+    ],
+    form: (std: STDObject): FormGroup[] => [
+        {
+            title: "Size",
+            fields: [
+                { key: "x", label: "Width (E)", type: "number" as const, value: std.x, min: 0.1, step: 0.1 },
+                { key: "y", label: "Depth (N)", type: "number" as const, value: std.y, min: 0.1, step: 0.1 },
+                { key: "z", label: "Height", type: "number" as const, value: std.z, min: 0.1, step: 0.1 },
+            ],
+        },
+        {
+            title: "Position",
+            fields: [
+                { key: "ox", label: "X Offset", type: "number" as const, value: std.ox, step: 0.5 },
+                { key: "oy", label: "Y Offset", type: "number" as const, value: std.oy, step: 0.5 },
+                { key: "oz", label: "Z Offset", type: "number" as const, value: std.oz, step: 0.5 },
+            ],
+        },
     ],
 };

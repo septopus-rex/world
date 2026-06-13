@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { ContextMenuItem, FormGroup } from '../../core/types/EditTask.js';
 import { Coords } from '../../core/utils/Coords.js';
 
 /**
@@ -82,11 +83,35 @@ const transform: AdjunctTransform = {
     }
 };
 
+const menu = {
+    contextMenu: (_std: STDObject): ContextMenuItem[] => [
+        { label: "✏️ Edit Properties", action: "edit" },
+        { label: "🗑️ Delete", action: "delete", variant: "danger" as const },
+    ],
+    form: (std: STDObject): FormGroup[] => [
+        {
+            title: "Link",
+            fields: [
+                { key: "url", label: "URL", type: "text" as const, value: std.url ?? '' },
+            ],
+        },
+        {
+            title: "Size",
+            fields: [
+                { key: "x", label: "Width (E)", type: "number" as const, value: std.x, min: 0.1, step: 0.1 },
+                { key: "y", label: "Depth (N)", type: "number" as const, value: std.y, min: 0.05, step: 0.05 },
+                { key: "z", label: "Height", type: "number" as const, value: std.z, min: 0.1, step: 0.1 },
+            ],
+        },
+    ],
+};
+
 export const AdjunctLink: AdjunctDefinition = {
     hooks: {
         reg: () => reg,
         init: () => ({ chain: "", value: null })
     },
     transform,
-    attribute
+    attribute,
+    menu: menu as any
 };

@@ -119,6 +119,10 @@ export class World {
     public isMovingObject: boolean = false;
     public activeEditBlockId: EntityId | null = null;
     public ui: IUIProvider | null = null;
+    /** Available 3D models for the editor palette's module picker. The client
+     *  pushes its resource catalog here (Engine.setModuleCatalog); EditSystem
+     *  renders one palette button per entry. Empty = no models offered. */
+    public moduleCatalog: ReadonlyArray<{ id: number | string; label: string }> = [];
     public config: FullWorldConfig;
 
     /**

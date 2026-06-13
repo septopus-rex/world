@@ -28,6 +28,8 @@ export class EditSystem implements ISystem {
     private hasBeenCleared: boolean = false;
     /** Palette placement: the armed adjunct typeId (next click places it). */
     private placingTypeId: number | null = null;
+    /** Armed module resource id (only set when placing a module / a4). */
+    private placingResource: number | string | null = null;
     private paletteDirty: boolean = false;
     private lastClickTime: number = 0;
     private readonly DOUBLE_CLICK_DELAY = 300;
@@ -331,15 +333,36 @@ export class EditSystem implements ISystem {
         if (!world.ui || this.activeBlockId === null) return;
         const buttons: UIButtonConfig[] = PLACEABLE_ADJUNCTS.map(entry => ({
             label: entry.label,
-            active: this.placingTypeId === entry.typeId,
+            active: this.placingTypeId === entry.typeId && this.placingResource === null,
             onClick: () => {
-                this.placingTypeId = this.placingTypeId === entry.typeId ? null : entry.typeId;
+                const same = this.placingTypeId === entry.typeId && this.placingResource === null;
+                this.placingTypeId = same ? null : entry.typeId;
+                this.placingResource = null;
                 this.paletteDirty = true;
                 if (this.placingTypeId !== null) {
                     world.ui?.showToast(`Place ${entry.label}: click a surface in the active block`);
                 }
             },
         }));
+
+        // Module (a4) needs a resource — append one button per registered model
+        // (world.moduleCatalog, pushed by the client). Picking one arms the module
+        // type with that resource id.
+        for (const model of world.moduleCatalog) {
+            buttons.push({
+                label: `▣ ${model.label}`,
+                active: this.placingTypeId === 0x00a4 && this.placingResource === model.id,
+                onClick: () => {
+                    const same = this.placingTypeId === 0x00a4 && this.placingResource === model.id;
+                    this.placingTypeId = same ? null : 0x00a4;
+                    this.placingResource = same ? null : model.id;
+                    this.paletteDirty = true;
+                    if (this.placingTypeId !== null) {
+                        world.ui?.showToast(`Place ${model.label}: click a surface in the active block`);
+                    }
+                },
+            });
+        }
         world.ui.showGroup("edit-palette", buttons, 'mid-left');
     }
 
@@ -357,7 +380,7 @@ export class EditSystem implements ISystem {
         }
         spp.pos[2] -= block.elevation || 0;   // raw altitudes are block-relative
 
-        const raw = defaultRawFor(typeId, spp.pos);
+        const raw = defaultRawFor(typeId, spp.pos, { resource: this.placingResource ?? undefined });
         if (!raw) { world.ui?.showToast('No placement defaults for this type'); return; }
 
         const task: EditTask = {
@@ -375,6 +398,7 @@ export class EditSystem implements ISystem {
         this.history.push({ task, snapshot: result.snapshot }); // undo = delete it
         this.dirty = true;
         this.placingTypeId = null;
+        this.placingResource = null;
         this.paletteDirty = true;
         this.selectedEntityId = task.entityId;
         this.lastUISelection = null;

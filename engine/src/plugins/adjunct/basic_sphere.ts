@@ -6,7 +6,7 @@ import {
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
 import { Coords } from '../../core/utils/Coords.js';
-import { standardAttribute } from './_shared.js';
+import { standardAttribute, standardMenu } from './_shared.js';
 
 /**
  * Basic Sphere Adjunct (Modernized)
@@ -42,5 +42,6 @@ export const BasicSphereAdjunct: AdjunctDefinition = {
             }));
         }
     },
-    attribute: standardAttribute
+    attribute: standardAttribute,
+    menu: standardMenu as any
 };

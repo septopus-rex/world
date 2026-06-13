@@ -5,7 +5,7 @@ import {
     AdjunctDefinition,
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
-import { standardAttribute } from './_shared.js';
+import { standardAttribute, standardMenu } from './_shared.js';
 
 /**
  * Basic Cone/Cylinder Adjunct (Modernized)
@@ -41,5 +41,6 @@ export const BasicConeAdjunct: AdjunctDefinition = {
             }));
         }
     },
-    attribute: standardAttribute
+    attribute: standardAttribute,
+    menu: standardMenu as any
 };

@@ -6,7 +6,7 @@ import {
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
 import { Coords } from '../../core/utils/Coords.js';
-import { standardAttribute } from './_shared.js';
+import { standardAttribute, standardMenu } from './_shared.js';
 
 /**
  * Adjunct - Wall (Modernized)
@@ -69,5 +69,6 @@ export const BasicWallAdjunct: AdjunctDefinition = {
         init: () => ({ chain: "", value: null })
     },
     transform,
-    attribute: standardAttribute
+    attribute: standardAttribute,
+    menu: standardMenu as any
 };

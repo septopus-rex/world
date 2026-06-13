@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getBuiltinAdjunct } from '../../src/core/services/AdjunctRegistry';
+import { PLACEABLE_ADJUNCTS, defaultRawFor } from '../../src/core/edit/AdjunctDefaults';
 
 // The link/QR adjunct (e1) — the working replacement for the old plug_link stub.
 // A clickable panel that carries an external URL; serialization round-trips it so
@@ -42,5 +43,24 @@ describe('link/QR adjunct (e1)', () => {
         const ro = def.transform.stdToRenderData([std], 0)[0];
         expect(ro.material!.color).toBe(0x2266cc);
         expect(std.material.texture).toBeUndefined();
+    });
+});
+
+describe('link authoring (palette + URL form)', () => {
+    const def = getBuiltinAdjunct(0x00e1)! as any;
+
+    it('is placeable from the palette with a sensible default url', () => {
+        expect(PLACEABLE_ADJUNCTS.some(e => e.typeId === 0x00e1)).toBe(true);
+        const raw = defaultRawFor(0x00e1, [5, 6, 1])!;
+        expect(raw[7]).toBe('https://example.com');
+        expect(def.attribute.deserialize(raw).url).toBe('https://example.com');
+    });
+
+    it('exposes an editable URL field (text), pre-filled from stdData', () => {
+        const groups = def.menu.form({ x: 2, y: 0.1, z: 2, url: 'https://septopus.world' });
+        const urlField = groups.flatMap((g: any) => g.fields).find((f: any) => f.key === 'url');
+        expect(urlField).toBeTruthy();
+        expect(urlField.type).toBe('text');
+        expect(urlField.value).toBe('https://septopus.world');
     });
 });
