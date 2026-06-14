@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { codeFromFace } from '../../core/spp/faceCodes.js';
 
 /**
  * String-particle adjunct (b6) — the SPP SOURCE row.
@@ -70,8 +71,38 @@ export const AdjunctParticle: AdjunctDefinition = {
         sidebar: (std: STDObject) => ({
             particle: [
                 { type: "string", key: "theme", value: std.theme, label: "Theme", desc: "Variant theme id" },
-                { type: "json", key: "cells", value: JSON.stringify(std.cells ?? []), label: "Cells", desc: "SppCell[] (edit collapses re-expand on reload)" },
+                { type: "json", key: "cells", value: JSON.stringify(std.cells ?? []), label: "Cells", desc: "SppCell[] (multi-cell editing)" },
             ],
-        })
+        }),
+        contextMenu: (_std: STDObject) => [
+            { label: "✏️ Edit Faces", action: "edit" },
+            { label: "🗑️ Delete", action: "delete", variant: "danger" as const },
+        ],
+        // Per-face state/variant editor for the first cell. Codes (open/solid/
+        // doorway/window) fold back into cells[0].faces in the edit path
+        // (normalizeParticleFaces) and re-expand live.
+        form: (std: STDObject) => {
+            const faces = (std.cells?.[0]?.faces) ?? [];
+            const options = [
+                { label: "Solid", value: "solid" },
+                { label: "Doorway", value: "doorway" },
+                { label: "Window", value: "window" },
+                { label: "Open", value: "open" },
+            ];
+            const face = (key: string, label: string, j: number) => ({
+                key, label, type: "select" as const, value: codeFromFace(faces[j]), options,
+            });
+            return [{
+                title: "Cell Faces",
+                fields: [
+                    face("faceTop", "Top", 0),
+                    face("faceBottom", "Bottom", 1),
+                    face("faceFront", "Front (S)", 2),
+                    face("faceBack", "Back (N)", 3),
+                    face("faceLeft", "Left (W)", 4),
+                    face("faceRight", "Right (E)", 5),
+                ],
+            }];
+        },
     } as any,
 };

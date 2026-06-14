@@ -28,6 +28,7 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: 0x00b4, label: 'Stop' },
     { typeId: 0x00b5, label: 'Item' },
     { typeId: 0x00b8, label: 'Trigger' },
+    { typeId: 0x00b6, label: 'SPP Cell' },
     { typeId: 0x00e1, label: 'Link' },
 ];
 
@@ -54,6 +55,10 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             return [[x, y, z + 0.4], 1, 0, 1, [0, 0, 0]];
         case 0x00b8: // trigger: [size, offset, rot, shape, gameOnly, events]
             return [[2, 2, 2], [x, y, z + 1], [0, 0, 0], 1, 0, []];
+        case 0x00b6: // SPP particle: [origin, cells, theme] — one solid 4m cell
+            // faces: [Top, Bottom, Front(S), Back(N), Left(W), Right(E)], [state, variant]
+            //   state 1=closed 0=open · closed variant 0=solid 1=doorway 2=window
+            return [[x, y, z], [{ position: [0, 0, 0], level: 0, faces: [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]] }], 'basic'];
         case 0x00e1: // link: [size, pos, rot, resource, repeat, animate, stop, url, texture?]
             return [[2, 0.1, 2], [x, y, z + 1], [0, 0, 0], 0, [1, 1], null, null, 'https://example.com'];
         default:

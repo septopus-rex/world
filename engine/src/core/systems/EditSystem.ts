@@ -30,6 +30,9 @@ export class EditSystem implements ISystem {
     private placingTypeId: number | null = null;
     /** Armed module resource id (only set when placing a module / a4). */
     private placingResource: number | string | null = null;
+    /** Held-key edge tracking for the rotate/scale transform keys + undo. */
+    private _prevTransformKeys: Set<string> = new Set();
+    private _prevZ: boolean = false;
     private paletteDirty: boolean = false;
     private lastClickTime: number = 0;
     private readonly DOUBLE_CLICK_DELAY = 300;
@@ -108,6 +111,9 @@ export class EditSystem implements ISystem {
         // 2. Undo/Redo keyboard shortcuts
         this.handleUndoRedo(world);
 
+        // 2b. Keyboard transform of the selected object (rotate / scale).
+        this.handleTransformKeys(world);
+
         // 3. Handle Movement
         if (this.movingEntityId !== null) {
             this.handleMovement(world);
@@ -135,10 +141,67 @@ export class EditSystem implements ISystem {
             ip.isKeyPressed('MetaLeft') || ip.isKeyPressed('MetaRight');
         const shiftHeld = ip.isKeyPressed('ShiftLeft') || ip.isKeyPressed('ShiftRight');
 
-        if (ctrlHeld && shiftHeld && ip.isKeyJustPressed('KeyZ')) {
+        // Edge-detect KeyZ off the held-key set: isKeyJustPressed is already
+        // cleared by CharacterController's flushDeltas before EditSystem runs
+        // (this is why Ctrl+Z previously never fired).
+        const zDown = ip.isKeyPressed('KeyZ');
+        const zJustPressed = zDown && !this._prevZ;
+        this._prevZ = zDown;
+
+        if (ctrlHeld && shiftHeld && zJustPressed) {
             this.redo(world);
-        } else if (ctrlHeld && ip.isKeyJustPressed('KeyZ')) {
+        } else if (ctrlHeld && zJustPressed) {
             this.undo(world);
+        }
+    }
+
+    /**
+     * Keyboard transform of the selected adjunct (the rotate/scale "gizmo"):
+     *   [ / ]   yaw -15° / +15°
+     *   - / =   uniform scale ×0.9 / ×1.1
+     * Each nudge is a 'set' task — undoable + persisted like any edit. Plane-drag
+     * already handles translation (handleMovement); a visual drag-handle gizmo is
+     * a separate render feature.
+     */
+    private handleTransformKeys(world: World): void {
+        const ip = (world.systems.findSystemByName("CharacterController") as any)?.inputProvider as InputProvider | null;
+        if (!ip) return;
+
+        // Edge-detect against the HELD-key set: CharacterController (which runs
+        // before EditSystem) calls flushDeltas() and clears justPressedKeys, so
+        // isKeyJustPressed is already empty here. The held `keys` survive, so we
+        // track our own previous state to fire once per press.
+        const CODES = ['BracketRight', 'BracketLeft', 'Equal', 'Minus'];
+        let pressed: string | null = null;
+        for (const c of CODES) {
+            if (ip.isKeyPressed(c) && !this._prevTransformKeys.has(c)) { pressed = c; break; }
+        }
+        this._prevTransformKeys = new Set(CODES.filter(c => ip.isKeyPressed(c)));
+
+        if (pressed === null || this.selectedEntityId === null || this.movingEntityId !== null) return;
+        const adj = world.getComponent<AdjunctComponent>(this.selectedEntityId, "AdjunctComponent");
+        if (!adj) return;
+        const std = adj.stdData as any;
+
+        const ROT = Math.PI / 12; // 15°
+        const r2 = (n: number) => Math.round(n * 1000) / 1000;
+        let param: Record<string, any> | null = null;
+
+        if (pressed === 'BracketRight') param = { ry: r2((std.ry ?? 0) + ROT) };
+        else if (pressed === 'BracketLeft') param = { ry: r2((std.ry ?? 0) - ROT) };
+        else if (pressed === 'Equal' && typeof std.x === 'number')
+            param = { x: r2(std.x * 1.1), y: r2(std.y * 1.1), z: r2(std.z * 1.1) };
+        else if (pressed === 'Minus' && typeof std.x === 'number')
+            param = { x: r2(std.x / 1.1), y: r2(std.y / 1.1), z: r2(std.z / 1.1) };
+
+        if (!param) return;
+        const task: EditTask = { entityId: this.selectedEntityId, adjunct: '', action: 'set', param };
+        const result = this.executor.execute(world, task);
+        if (result.success && result.snapshot) {
+            this.history.push({ task, snapshot: result.snapshot });
+            this.dirty = true;
+            this.lastUISelection = null;
+            this.syncUI(world);
         }
     }
 

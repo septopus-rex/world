@@ -202,13 +202,56 @@ export class BlockSystem implements ISystem {
         }
 
         const adjId = world.createEntity();
-        this.attachAdjunctComponents(
-            world, blockEid, adjId,
-            { ...std, typeId },
-            definition,
-            `adj_${block.x}_${block.y}_${typeId}_${idx}`
-        );
+        const sourceId = `adj_${block.x}_${block.y}_${typeId}_${idx}`;
+        this.attachAdjunctComponents(world, blockEid, adjId, { ...std, typeId }, definition, sourceId);
+
+        // SPP (b6): expand into standard derived pieces immediately so a palette-
+        // placed cell is visible without a reload (block-load does the same).
+        if (typeId === 0x00b6) {
+            this.expandParticleInto(world, blockEid, sourceId, rawRow);
+        }
         return adjId;
+    }
+
+    /** Expand a b6 source row into standard derived adjunct entities (a1/b8),
+     *  each tagged derivedFrom the source so BlockSerializer persists only the
+     *  source. Shared by palette placement and live re-expansion on edit. */
+    private expandParticleInto(world: World, blockEid: EntityId, sourceId: string, rawRow: any[]): void {
+        expandParticle(rawRow as any).forEach(([dType, dRow], k) => {
+            const dDef = getBuiltinAdjunct(dType);
+            const dStd = dDef?.attribute?.deserialize?.(dRow);
+            if (!dDef || !dStd) return;
+            const dId = world.createEntity();
+            this.attachAdjunctComponents(
+                world, blockEid, dId,
+                { ...dStd, typeId: dType, derivedFrom: sourceId },
+                dDef, `${sourceId}_d${k}`
+            );
+        });
+    }
+
+    /** Destroy every derived piece of a b6 source (free meshes + resources). */
+    public destroyDerived(world: World, sourceAdjunctId: string): void {
+        for (const eid of world.getEntitiesWith(["AdjunctComponent"])) {
+            const a = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
+            if (a?.stdData?.derivedFrom === sourceAdjunctId) {
+                this.releaseResources(world, eid);
+                this.freeMesh(world, eid);
+                world.destroyEntity(eid);
+            }
+        }
+    }
+
+    /** Re-expand a b6 source after its cells changed (edit): drop the old derived
+     *  pieces and rebuild from the source's current stdData. AdjunctSystem builds
+     *  the new meshes next frame. */
+    public reexpandParticle(world: World, sourceEid: EntityId): void {
+        const src = world.getComponent<AdjunctComponent>(sourceEid, "AdjunctComponent");
+        if (!src || (src.stdData?.typeId ?? -1) !== 0x00b6) return;
+        if (src.parentBlockEntityId == null) return;
+        this.destroyDerived(world, src.adjunctId);
+        const raw = getBuiltinAdjunct(0x00b6)?.attribute?.serialize?.(src.stdData);
+        if (raw) this.expandParticleInto(world, src.parentBlockEntityId, src.adjunctId, raw as any[]);
     }
 
     private attachAdjunctComponents(world: World, blockEid: EntityId, adjId: EntityId, data: any, logic: any, id: string) {

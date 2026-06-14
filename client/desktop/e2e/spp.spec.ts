@@ -93,6 +93,13 @@ test('the hut is genuinely rendered: camera ray hits a visible derived wall whos
     const w = loader.engine.getWorld();
     const re = w.renderEngine;
 
+    // First-person for the probe: the camera sits AT the player's eyes rather
+    // than ~4.5m behind (third-person), where the lift-ball at N12 lurks in a
+    // southward ray and was intermittently hit instead of the wall. Step a few
+    // frames to settle the camera into place.
+    w.systems.findSystemByName('CharacterController')?.setViewMode?.('first');
+    for (let i = 0; i < 6; i++) loader.engine.step(1 / 60);
+
     /** Render a frame facing (pitch, yaw), then read the canvas center pixel
      *  IN THE SAME TASK (the WebGL back buffer is still intact pre-composite). */
     const sample = (pitch: number, yaw: number) => {

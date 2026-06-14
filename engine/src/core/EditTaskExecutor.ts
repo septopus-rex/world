@@ -5,6 +5,8 @@ import { MeshComponent } from './components/VisualizationComponents';
 import { EditTask } from './types/EditTask';
 import { AdjunctFactory } from './factories/AdjunctFactory';
 import { STDObject } from './types/Adjunct';
+import { setByPath } from './edit/setByPath';
+import { normalizeParticleFaces } from './spp/faceCodes';
 
 /**
  * EditTaskExecutor
@@ -103,6 +105,11 @@ export class EditTaskExecutor {
         world.renderEngine.setRaycastable(result.handle, true);
         if (meshComp) meshComp.handle = result.handle;
 
+        // SPP source: re-expand derived pieces to match the restored cells.
+        if ((adjComp.stdData as any).typeId === 0x00b6) {
+            (world.systems.findSystemByName('BlockSystem') as any)?.reexpandParticle?.(world, entityId);
+        }
+
         return true;
     }
 
@@ -116,10 +123,11 @@ export class EditTaskExecutor {
     private executeSet(world: World, entityId: EntityId, adjComp: AdjunctComponent, param: Record<string, any>): boolean {
         const std = adjComp.stdData;
 
-        // Merge — flat key-value (e.g. { x: 5, oy: 200 }) into stdData
+        // Merge form values into stdData. Keys may be dotted paths so nested
+        // properties bind (box "material.resource", SPP "cells.0.faces.2").
         for (const key in param) {
             if (param[key] !== undefined && param[key] !== null) {
-                (std as any)[key] = param[key];
+                setByPath(std as any, key, param[key]);
             }
         }
 
@@ -154,6 +162,18 @@ export class EditTaskExecutor {
             trans.position[0] = std.ox ?? trans.position[0];
             trans.position[1] = std.oz ?? trans.position[1];
             trans.position[2] = -(std.oy ?? -trans.position[2]);
+            // Keep rotation in sync too, so keyboard/gizmo rotation holds (and a
+            // later VisualSync pass doesn't overwrite the rebuilt mesh's rotation).
+            if (std.rx != null) trans.rotation[0] = std.rx;
+            if (std.ry != null) trans.rotation[1] = std.ry;
+            if (std.rz != null) trans.rotation[2] = std.rz;
+        }
+
+        // SPP source: fold any face-code form fields into cells, then re-expand
+        // the derived pieces live (the b6's own mesh is just a hidden marker).
+        if ((std as any).typeId === 0x00b6) {
+            normalizeParticleFaces(std);
+            (world.systems.findSystemByName('BlockSystem') as any)?.reexpandParticle?.(world, entityId);
         }
 
         console.log(`[EditTaskExecutor] Set ${adjComp.adjunctId} on entity ${entityId}`, param);
@@ -161,6 +181,13 @@ export class EditTaskExecutor {
     }
 
     private executeDelete(world: World, entityId: EntityId): boolean {
+        // SPP source: also drop its derived pieces (else deleting/undoing a placed
+        // particle leaves orphan walls).
+        const adj = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
+        if (adj?.stdData?.typeId === 0x00b6) {
+            (world.systems.findSystemByName('BlockSystem') as any)?.destroyDerived?.(world, adj.adjunctId);
+        }
+
         const meshComp = world.getComponent<MeshComponent>(entityId, "MeshComponent");
         if (meshComp?.handle) {
             // Release model/texture refs this adjunct held BEFORE disposing its
