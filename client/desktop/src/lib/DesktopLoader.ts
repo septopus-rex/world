@@ -19,6 +19,7 @@ import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
 import { fetchMockBlock } from '@engine/core/mocks/BlockMocks';
 import { IDataSource } from '@engine/core/services/DataSource';
 import { buildParkourBlock, PARKOUR_START } from '@engine/core/levels/parkour';
+import { buildCoasterBlock, COASTER_START } from '@engine/core/levels/coaster';
 import { Coords } from '@engine/core/utils/Coords';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
@@ -53,9 +54,18 @@ export interface SPPPlayerState {
 export class DesktopLoader implements IDataSource {
     public engine: Engine | null = null;
 
-    /** `?level=parkour` serves the parkour course instead of the demo court. */
-    private isParkour = typeof window !== 'undefined'
-        && new URLSearchParams(window.location.search).get('level') === 'parkour';
+    /** `?level=<name>` selects an authored level instead of the demo court. */
+    private level = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('level') : null;
+    private isParkour = this.level === 'parkour';
+    private isCoaster = this.level === 'coaster';
+
+    /** Is the coaster level active? (ride it in Game mode). */
+    public get coasterActive(): boolean { return this.isCoaster; }
+    /** True once the coaster ride reaches the end. */
+    public get coasterComplete(): boolean {
+        return this.engine?.getWorld()?.globalFlags?.coaster_complete === true;
+    }
 
     /** Is the parkour level active? (drives the parkour HUD). */
     public get parkourActive(): boolean { return this.isParkour; }
@@ -152,6 +162,11 @@ export class DesktopLoader implements IDataSource {
                 ...this.playerState,
                 block: PARKOUR_START.block, position: PARKOUR_START.position, rotation: PARKOUR_START.rotation,
             };
+        } else if (this.isCoaster) {
+            this.playerState = {
+                ...this.playerState,
+                block: COASTER_START.block, position: COASTER_START.position, rotation: COASTER_START.rotation,
+            };
         }
 
         // Boot at the demo spawn as the FALLBACK; durable persistence (player
@@ -183,20 +198,21 @@ export class DesktopLoader implements IDataSource {
         // The engine now holds the authoritative player location (restored, or
         // the fallback spawn). Mirror it locally and preload the neighborhood
         // around the block the player will actually appear in.
+        const authored = this.isParkour ? PARKOUR_START : this.isCoaster ? COASTER_START : null;
         const restored = this.engine.getPlayerSppLocation();
-        if (restored && !this.isParkour) {
+        if (restored && !authored) {
             this.playerState = {
                 ...this.playerState,
                 block: restored.block, position: restored.position, rotation: restored.rotation,
             };
-        } else if (this.isParkour) {
-            // Restart the run on every load: force the start, ignoring any saved
-            // position hydrateDrafts may have restored.
+        } else if (authored) {
+            // Authored levels restart at their start on every load — force it,
+            // ignoring any saved position hydrateDrafts may have restored.
             const w = this.engine.getWorld() as any;
             const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
             const t = pid !== undefined ? w.getComponent(pid, 'TransformComponent') : null;
             if (t) {
-                const e = Coords.sppToEngine(PARKOUR_START.position, PARKOUR_START.block);
+                const e = Coords.sppToEngine(authored.position, authored.block);
                 t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;
             }
         }
@@ -308,10 +324,15 @@ export class DesktopLoader implements IDataSource {
     // LocalDataSource so edited blocks persist.)
     private async fetchBlock(x: number, y: number): Promise<any> {
         // Parkour mode: serve the course segment for course blocks (and an empty
-        // block elsewhere) — the course spans 3 blocks, so the streamed
-        // neighborhood is all parkour data. Match the mock's { x, y, raw } shape.
+        // block elsewhere). Match the mock's { x, y, raw } shape.
         if (this.isParkour) {
             return { x, y, raw: buildParkourBlock(x, y) };
+        }
+        // Coaster mode: the spawn block holds the b6 coaster source; elsewhere empty.
+        if (this.isCoaster) {
+            const raw = (x === COASTER_START.block[0] && y === COASTER_START.block[1])
+                ? buildCoasterBlock() : [0, 1, [], []];
+            return { x, y, raw };
         }
         const data = await fetchMockBlock(x, y);
         if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) this.injectDemoAssets(data);

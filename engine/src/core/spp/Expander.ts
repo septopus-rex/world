@@ -15,6 +15,7 @@
  */
 import { ParticleFace, FaceState, SubdivisionLevel } from '../types/ParticleCell';
 import { getSppTheme, getVariant, VariantPiece } from './Variants';
+import './CoasterTheme'; // side-effect: registers the 'coaster' theme (cells → c1 track)
 import type { TriggerLogicNode } from '../types/Trigger';
 
 /** Compact authored cell (raw form — see spec §数据格式). */
@@ -105,26 +106,31 @@ export function expandParticle(raw: SppRaw): ExpandedRow[] {
             origin[2] + gz * s,
         ];
 
-        for (const face of FACES) {
-            // Shared planes belong to the lower-coordinate cell's positive face:
-            // a NEGATIVE face is skipped whenever a same-level neighbour adjoins it.
-            const dir = NEGATIVE_FACE_DIR[face];
-            if (dir) {
-                const key = `${cell.level}:${gx + dir[0]},${gy + dir[1]},${gz + dir[2]}`;
-                if (occupied.has(key)) continue;
-            }
+        if (theme.expandCell) {
+            // Theme owns the geometry (e.g. coaster track) — bypass walls/adjacency.
+            rows.push(...theme.expandCell(cell, cellOrigin, s));
+        } else {
+            for (const face of FACES) {
+                // Shared planes belong to the lower-coordinate cell's positive face:
+                // a NEGATIVE face is skipped whenever a same-level neighbour adjoins it.
+                const dir = NEGATIVE_FACE_DIR[face];
+                if (dir) {
+                    const key = `${cell.level}:${gx + dir[0]},${gy + dir[1]},${gz + dir[2]}`;
+                    if (occupied.has(key)) continue;
+                }
 
-            const [state, variantId] = faceConfig(cell, face);
-            const variant = getVariant(theme, state, variantId);
-            if (!variant) continue;
+                const [state, variantId] = faceConfig(cell, face);
+                const variant = getVariant(theme, state, variantId);
+                if (!variant) continue;
 
-            for (const piece of variant.pieces) {
-                const { size, center } = pieceToBox(face, piece, s, theme.thickness);
-                rows.push([0x00a1, [
-                    size,
-                    [cellOrigin[0] + center[0], cellOrigin[1] + center[1], cellOrigin[2] + center[2]],
-                    [0, 0, 0], 0, [1, 1], 0, 1,
-                ]]);
+                for (const piece of variant.pieces) {
+                    const { size, center } = pieceToBox(face, piece, s, theme.thickness);
+                    rows.push([0x00a1, [
+                        size,
+                        [cellOrigin[0] + center[0], cellOrigin[1] + center[1], cellOrigin[2] + center[2]],
+                        [0, 0, 0], 0, [1, 1], 0, 1,
+                    ]]);
+                }
             }
         }
 

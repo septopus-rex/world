@@ -30,6 +30,18 @@ export interface SppTheme {
     /** Variants by face state; a face config indexes into these. */
     closed: FaceVariant[];
     open: FaceVariant[];
+    /**
+     * Optional per-cell geometry override. When present, the expander calls this
+     * for each cell INSTEAD of the face/wall/adjacency logic, and uses whatever
+     * rows it returns. Lets a theme emit non-wall geometry (e.g. the coaster
+     * theme emits a c1 tube track piece per cell). Triggers are still emitted by
+     * the expander regardless. Returns [typeId, raw][].
+     */
+    expandCell?: (
+        cell: { position: [number, number, number]; level: number; faces: Array<[number, number]> },
+        cellOrigin: [number, number, number],
+        cellSizeMeters: number,
+    ) => Array<[number, any[]]>;
 }
 
 const themes = new Map<string, SppTheme>();

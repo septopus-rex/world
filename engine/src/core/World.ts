@@ -14,6 +14,7 @@ import { InputProvider } from './systems/InputProvider';
 import { BlockSystem } from './systems/BlockSystem';
 import { EnvironmentSystem } from './systems/EnvironmentSystem';
 import { VisualSyncSystem } from './systems/VisualSyncSystem';
+import { CoasterSystem } from './systems/CoasterSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
@@ -218,6 +219,10 @@ export class World {
         // AFTER every item.pickup/item.consume emitter (Trigger bag actions,
         // ItemSystem, ItemDropSystem) — pickups land in the bag the SAME frame.
         this.systems.addSystem(new InventorySystem());
+
+        // Coaster ride: overrides the player position along the rail (Game mode),
+        // after movement/physics and before the presentation sync.
+        this.systems.addSystem(new CoasterSystem());
 
         // Final Sync: Presentation Layer
         this.systems.addSystem(new VisualSyncSystem());
