@@ -170,6 +170,36 @@ describe('player location persistence', () => {
     });
 });
 
+// ─── Checkpoint respawn (player.setSpawn) ────────────────────────────────────
+
+describe('checkpoint respawn', () => {
+    it('player.setSpawn moves the respawn point; a lethal fall returns there, not spawn', async () => {
+        const { engine, world, player } = await boot();
+        injectBlock(engine, []);
+        stepN(engine, 30);                       // land at the world spawn
+        const trans = comp(world, player, 'TransformComponent');
+        const spawnX = trans.position[0], spawnZ = trans.position[2];
+
+        // A checkpoint 4m east + 4m along Z (still over the loaded block).
+        const checkpoint = world.createEntity();
+        world.addComponent(checkpoint, 'TransformComponent', {
+            position: [spawnX + 4, trans.position[1] + 2, spawnZ + 4], rotation: [0, 0, 0], scale: [1, 1, 1],
+        });
+        (world as any).actuator.execute(
+            { type: 'player', method: 'setSpawn', params: [] },
+            { world, playerId: player, mode: world.mode, sourceEntity: checkpoint },
+        );
+        expect(world.respawnPoint).toEqual([spawnX + 4, trans.position[1] + 2.5, spawnZ + 4]);
+
+        // A lethal fall respawns at the checkpoint, not the world spawn.
+        world.emitSimple('player:fell', { drop: 99 }, player);
+        stepN(engine, 10);                       // process + settle
+        expect(trans.position[0]).toBeCloseTo(spawnX + 4, 1);
+        expect(trans.position[2]).toBeCloseTo(spawnZ + 4, 1);
+        expect(Math.abs(trans.position[0] - spawnX)).toBeGreaterThan(3); // not the world spawn
+    });
+});
+
 // ─── Camera impact shake (fall juice) ────────────────────────────────────────
 
 describe('camera impact shake', () => {

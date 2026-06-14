@@ -119,6 +119,10 @@ export class World {
     public isMovingObject: boolean = false;
     public activeEditBlockId: EntityId | null = null;
     public ui: IUIProvider | null = null;
+    /** Runtime respawn override (engine coords) set by checkpoint triggers
+     *  (player.setSpawn). HealthSystem respawns here instead of the world spawn
+     *  when set. Session-only — a reload restarts at the world spawn. */
+    public respawnPoint: [number, number, number] | null = null;
     /** Available 3D models for the editor palette's module picker. The client
      *  pushes its resource catalog here (Engine.setModuleCatalog); EditSystem
      *  renders one palette button per entry. Empty = no models offered. */

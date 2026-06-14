@@ -57,15 +57,15 @@ export class HealthSystem implements ISystem {
         const world = this.world;
         world.emitSimple('player:died', { cause }, eid);
 
-        // Respawn at the world spawn point (config.player.start is already in
-        // engine coords after bootWorld's conversion).
-        const start = (world.config as any)?.player?.start;
+        // Respawn at the last checkpoint (player.setSpawn) if one was reached,
+        // else the world spawn (config.player.start, already in engine coords).
+        const startPos = world.respawnPoint ?? (world.config as any)?.player?.start?.position;
         const trans = world.getComponent<TransformComponent>(eid, "TransformComponent");
         const body = world.getComponent<RigidBodyComponent>(eid, "RigidBodyComponent");
-        if (trans && Array.isArray(start?.position)) {
-            trans.position[0] = start.position[0];
-            trans.position[1] = start.position[1];
-            trans.position[2] = start.position[2];
+        if (trans && Array.isArray(startPos)) {
+            trans.position[0] = startPos[0];
+            trans.position[1] = startPos[1];
+            trans.position[2] = startPos[2];
             trans.dirty = true;
         }
         if (body) {

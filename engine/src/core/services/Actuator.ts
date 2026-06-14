@@ -98,6 +98,13 @@ export class LocalActuator implements IActuator {
     // ── player vitals (Game mode only — game.md permission matrix) ───────────
 
     private execPlayer(action: TriggerAction, ctx: ActuatorContext): void {
+        // setSpawn (checkpoint) is allowed in any mode — it's not a cheat like
+        // damage/heal, and parkour runs in Normal or Game.
+        if (action.method === 'setSpawn') {
+            this.execSetSpawn(ctx);
+            return;
+        }
+
         if (ctx.mode !== SystemMode.Game) {
             console.warn(`[Actuator] player action '${action.method}' ignored outside Game mode`);
             return;
@@ -109,6 +116,17 @@ export class LocalActuator implements IActuator {
         } else {
             console.warn(`[Actuator] unknown player method '${action.method}'`);
         }
+    }
+
+    /** Move the respawn point to the checkpoint (the firing trigger), lifted a
+     *  little so the player lands on the platform rather than inside it. */
+    private execSetSpawn(ctx: ActuatorContext): void {
+        if (ctx.sourceEntity == null) return;
+        const trans = ctx.world.getComponent<TransformComponent>(ctx.sourceEntity, "TransformComponent");
+        if (!trans) return;
+        const pos: [number, number, number] = [trans.position[0], trans.position[1] + 0.5, trans.position[2]];
+        ctx.world.respawnPoint = pos;
+        ctx.world.emitSimple('player:checkpoint', { position: pos }, ctx.playerId ?? undefined);
     }
 
     // ── sound (3D one-shot via the render layer) ─────────────────────────────

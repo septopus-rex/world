@@ -18,6 +18,8 @@ import { TransformComponent } from '@engine/core/components/PlayerComponents';
 import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
 import { fetchMockBlock } from '@engine/core/mocks/BlockMocks';
 import { IDataSource } from '@engine/core/services/DataSource';
+import { buildParkourBlock, PARKOUR_START } from '@engine/core/levels/parkour';
+import { Coords } from '@engine/core/utils/Coords';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
 
@@ -50,6 +52,33 @@ export interface SPPPlayerState {
 
 export class DesktopLoader implements IDataSource {
     public engine: Engine | null = null;
+
+    /** `?level=parkour` serves the parkour course instead of the demo court. */
+    private isParkour = typeof window !== 'undefined'
+        && new URLSearchParams(window.location.search).get('level') === 'parkour';
+
+    /** Is the parkour level active? (drives the parkour HUD). */
+    public get parkourActive(): boolean { return this.isParkour; }
+
+    /** True once the player reaches the finish (the level-complete flag). */
+    public get levelComplete(): boolean {
+        return this.engine?.getWorld()?.globalFlags?.level_complete === true;
+    }
+
+    /** Best parkour completion time (seconds), persisted in DraftStore meta;
+     *  loaded at boot, null until a run is finished. */
+    private parkourBestTime: number | null = null;
+    public get parkourBest(): number | null { return this.parkourBestTime; }
+
+    /** Record a finishing time; persists + returns true if it's a new best. */
+    public recordParkourTime(seconds: number): boolean {
+        const isRecord = this.parkourBestTime === null || seconds < this.parkourBestTime;
+        if (isRecord) {
+            this.parkourBestTime = seconds;
+            this.engine?.getWorld()?.draftStore.saveMeta(0, 'parkour_best', seconds);
+        }
+        return isRecord;
+    }
 
     private loadedBlockKeys: Set<string> = new Set();
     private fetchingBlockKeys: Set<string> = new Set();
@@ -117,6 +146,14 @@ export class DesktopLoader implements IDataSource {
             }
         });
 
+        // Parkour starts on the course's start platform (not the demo/saved spawn).
+        if (this.isParkour) {
+            this.playerState = {
+                ...this.playerState,
+                block: PARKOUR_START.block, position: PARKOUR_START.position, rotation: PARKOUR_START.rotation,
+            };
+        }
+
         // Boot at the demo spawn as the FALLBACK; durable persistence (player
         // location, inventory, session) lives in the engine and is restored by
         // hydrateDrafts below, overriding this when a saved location exists.
@@ -126,6 +163,12 @@ export class DesktopLoader implements IDataSource {
         // first block materializes (BlockSystem swaps drafts in synchronously),
         // and restore the player's persisted location/inventory/session.
         await this.engine.hydrateDrafts(0);
+
+        // Parkour: load the persisted best time for the HUD.
+        if (this.isParkour) {
+            const best = await this.engine.getWorld()?.draftStore.loadMeta(0, 'parkour_best');
+            if (typeof best === 'number') this.parkourBestTime = best;
+        }
 
         // Offer the demo 3D models to the editor palette's module picker.
         this.engine.setModuleCatalog(
@@ -141,11 +184,21 @@ export class DesktopLoader implements IDataSource {
         // the fallback spawn). Mirror it locally and preload the neighborhood
         // around the block the player will actually appear in.
         const restored = this.engine.getPlayerSppLocation();
-        if (restored) {
+        if (restored && !this.isParkour) {
             this.playerState = {
                 ...this.playerState,
                 block: restored.block, position: restored.position, rotation: restored.rotation,
             };
+        } else if (this.isParkour) {
+            // Restart the run on every load: force the start, ignoring any saved
+            // position hydrateDrafts may have restored.
+            const w = this.engine.getWorld() as any;
+            const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
+            const t = pid !== undefined ? w.getComponent(pid, 'TransformComponent') : null;
+            if (t) {
+                const e = Coords.sppToEngine(PARKOUR_START.position, PARKOUR_START.block);
+                t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;
+            }
         }
 
         const initialBKey = `${this.playerState.block[0]}_${this.playerState.block[1]}`;
@@ -254,6 +307,12 @@ export class DesktopLoader implements IDataSource {
     // (Phase 1 of the decoupling plan replaces this with a DraftStorage-backed
     // LocalDataSource so edited blocks persist.)
     private async fetchBlock(x: number, y: number): Promise<any> {
+        // Parkour mode: serve the course segment for course blocks (and an empty
+        // block elsewhere) — the course spans 3 blocks, so the streamed
+        // neighborhood is all parkour data. Match the mock's { x, y, raw } shape.
+        if (this.isParkour) {
+            return { x, y, raw: buildParkourBlock(x, y) };
+        }
         const data = await fetchMockBlock(x, y);
         if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) this.injectDemoAssets(data);
         return data;

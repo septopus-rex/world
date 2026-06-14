@@ -6,6 +6,7 @@ import { Joystick } from './components/Joystick';
 import { Compass, TelemetryReadout } from './components/HUD';
 import { InventoryPanel } from './components/InventoryPanel';
 import { HealthBar } from './components/HealthBar';
+import { ParkourHUD } from './components/ParkourHUD';
 
 function App() {
   const isMobile = useIsMobile();
@@ -102,6 +103,7 @@ function App() {
 
       {ready && <InventoryPanel loader={loader} />}
       {ready && <HealthBar loader={loader} />}
+      <ParkourHUD loader={loader} ready={ready} />
 
       {isMobile && (
         <>
