@@ -24,8 +24,21 @@ command -v npm  &>/dev/null || error "npm 未安装"
 [ -d "$CLIENT" ] || error "找不到 $CLIENT"
 
 # ── deps ────────────────────────────────────────────────────────────────────────
+# Reinstall not just when node_modules is MISSING, but also when it is INCOMPLETE
+# (an interrupted install — the vite binary is the tell-tale) or STALE (the
+# lockfile changed since the last install, e.g. after a git pull added a dep).
+# The old check only tested directory existence, so a half-installed or outdated
+# node_modules silently skipped install and vite then failed with "Cannot find module".
+deps_reason=
 if [ ! -d "$CLIENT/node_modules" ]; then
-    info "首次运行：安装依赖 (npm install)..."
+    deps_reason="缺少 node_modules"
+elif [ ! -x "$CLIENT/node_modules/.bin/vite" ]; then
+    deps_reason="依赖不完整（vite 未安装，可能上次安装中断）"
+elif [ -f "$CLIENT/package-lock.json" ] && [ "$CLIENT/package-lock.json" -nt "$CLIENT/node_modules/.package-lock.json" ]; then
+    deps_reason="依赖已过期（package-lock.json 比上次安装新）"
+fi
+if [ -n "$deps_reason" ]; then
+    info "安装/更新依赖（$deps_reason）：npm install..."
     ( cd "$CLIENT" && npm install )
 fi
 
