@@ -175,7 +175,7 @@ describe('trigger full pipeline (raw → TriggerSystem)', () => {
         stepN(engine, 3);
         expect(world.globalFlags['game_gate']).toBeUndefined(); // Normal mode: inert
 
-        world.setMode(SystemMode.Game);
+        world.setMode(SystemMode.Game, { force: true }); // testing trigger gating, not zone entry
         stepN(engine, 3);
         expect(world.globalFlags['game_gate']).toBe(true);
     });

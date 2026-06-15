@@ -10,7 +10,7 @@ import { ParkourHUD } from './components/ParkourHUD';
 
 function App() {
   const isMobile = useIsMobile();
-  const { loader, ready, mode, setMode, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
+  const { loader, ready, mode, setMode, gameZoneActive, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -104,6 +104,34 @@ function App() {
       {ready && <InventoryPanel loader={loader} />}
       {ready && <HealthBar loader={loader} />}
       <ParkourHUD loader={loader} ready={ready} />
+
+      {/* Game-mode entry is ZONE-GATED: this prompt appears only while the player
+          stands in a playable block (block.game, surfaced via game.zone_enter).
+          Clicking is the explicit player action that funnels into the engine's
+          zone-gated setMode(Game). Leaving the block auto-reverts to Normal. */}
+      {ready && gameZoneActive && mode !== 'game' && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-2">
+          <span className="text-[10px] font-black tracking-[0.3em] text-green-300/80 uppercase animate-pulse">Playable Zone</span>
+          <button
+            data-testid="enter-game"
+            onClick={() => setMode('game')}
+            className="px-6 py-2.5 rounded-2xl text-sm font-black tracking-widest uppercase text-green-200 bg-green-500/25 border border-green-400/60 hover:bg-green-500/40 active:scale-95 transition-all shadow-2xl flex items-center gap-2"
+          >
+            <span className="text-base leading-none">▶</span> 进入游戏 · Enter Game
+          </button>
+        </div>
+      )}
+      {ready && mode === 'game' && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+          <button
+            data-testid="exit-game"
+            onClick={() => setMode('normal')}
+            className="px-5 py-2 rounded-2xl text-xs font-black tracking-widest uppercase text-red-200 bg-red-500/20 border border-red-400/50 hover:bg-red-500/35 active:scale-95 transition-all shadow-2xl flex items-center gap-2"
+          >
+            <span className="text-sm leading-none">■</span> 退出游戏 · Exit Game
+          </button>
+        </div>
+      )}
 
       {isMobile && (
         <>
@@ -228,9 +256,11 @@ function App() {
         </button>
         <div className="flex flex-col gap-1 p-1.5 border border-cyan-500/30 bg-black/40 backdrop-blur-md rounded-2xl shadow-2xl">
           <span className="text-[8px] font-black tracking-[0.25em] text-cyan-500/60 uppercase text-center">Mode</span>
+          {/* GAME is intentionally NOT a free toggle here — Game mode is entered
+              only from inside a playable block via the zone prompt (below), the
+              data-driven, interpreter-agnostic entry contract. */}
           {([
             { key: 'normal', label: 'NORMAL', on: 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/60', dot: 'bg-cyan-400' },
-            { key: 'game', label: 'GAME', on: 'bg-green-500/25 text-green-300 border border-green-400/60', dot: 'bg-green-400' },
             { key: 'ghost', label: 'GHOST', on: 'bg-purple-500/25 text-purple-300 border border-purple-400/60', dot: 'bg-purple-400' },
             { key: 'observe', label: 'OBSERVE', on: 'bg-sky-500/25 text-sky-300 border border-sky-400/60', dot: 'bg-sky-400' },
             { key: 'edit', label: 'EDIT', on: 'bg-yellow-500/25 text-yellow-300 border border-yellow-400/60', dot: 'bg-yellow-400' },

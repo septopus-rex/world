@@ -18,6 +18,7 @@ import { CoasterSystem } from './systems/CoasterSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
+import { GameZoneSystem } from './systems/GameZoneSystem';
 import { AdjunctSystem } from './systems/AdjunctSystem';
 import { RaycastInteractionSystem } from './systems/RaycastInteractionSystem';
 import { TriggerSystem } from './systems/TriggerSystem';
@@ -109,6 +110,21 @@ export class World {
     public time: number = 0.5;
     public weather: string = 'clear';
     public mode: SystemMode = SystemMode.Normal;
+    /**
+     * True while the player stands inside a game-enabled block (block.game >= 1).
+     * Derived every tick by GameZoneSystem from the block-level game flag — the
+     * single canonical signal Game-mode entry gates on (so any interpreter
+     * reaches the same verdict from the same on-chain data). setMode(Game)
+     * refuses unless this is true (or force).
+     */
+    public gameZoneActive: boolean = false;
+    /**
+     * True while a ride (CoasterSystem) is carrying the player along a fixed path.
+     * The ride is the authority over the player's position, so GameZoneSystem
+     * freezes zone tracking while set — a rail that crosses a block boundary must
+     * not auto-exit Game mode out from under the rider.
+     */
+    public rideActive: boolean = false;
     /** Key/value store for trigger conditions and actions (set_flag / flag checks). */
     public globalFlags: Record<string, any> = {};
     /**
@@ -208,6 +224,9 @@ export class World {
         this.systems.addSystem(new HealthSystem());
         this.systems.addSystem(new PhysicsSystem());
         this.systems.addSystem(new GridSystem());
+        // Derives gameZoneActive from the block.game flag of the block the player
+        // stands in, and emits game.zone_enter/exit — the gate Game-mode entry uses.
+        this.systems.addSystem(new GameZoneSystem());
         this.systems.addSystem(new BlockSystem());
         this.systems.addSystem(new AdjunctSystem());
         this.systems.addSystem(new BlockLODSystem());
@@ -297,9 +316,21 @@ export class World {
 
     public stop(): void { this.isRunning = false; }
 
-    public setMode(mode: SystemMode): void {
+    /**
+     * Switch world mode. Entering Game is ZONE-GATED: it only succeeds while the
+     * player stands in a game-enabled block (gameZoneActive, derived by
+     * GameZoneSystem from the block.game flag) — the canonical, data-driven,
+     * interpreter-agnostic entry contract (docs/systems/game-mode-entry.md).
+     * `force` bypasses the gate for engine-internal/test use. Returns whether the
+     * transition happened.
+     */
+    public setMode(mode: SystemMode, opts?: { force?: boolean }): boolean {
         const oldMode = this.mode;
-        if (oldMode === mode) return;
+        if (oldMode === mode) return false;
+        if (mode === SystemMode.Game && !opts?.force && !this.gameZoneActive) {
+            console.warn('[World] Game-mode entry refused: player is not in a game zone (block.game). Walk into a playable block first.');
+            return false;
+        }
         this.mode = mode;
         this.events.emit("system.mode", { mode, oldMode });
         // (world:save_request was a dead line — exit-Edit saving runs through
@@ -307,6 +338,7 @@ export class World {
         if (mode === SystemMode.Game) {
             this.events.emit("system.preload", { scope: 'all' });
         }
+        return true;
     }
 
     public setEditMode(active: boolean): void {

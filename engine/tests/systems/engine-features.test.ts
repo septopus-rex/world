@@ -44,7 +44,9 @@ const comp = (world: any, eid: number, type: string) => world.getComponent(eid, 
 describe('mode system (Engine.setMode)', () => {
     it('Game and Ghost are reachable through the Engine facade', async () => {
         const { engine, world } = await boot();
-        engine.setMode(SystemMode.Game);
+        // force: Game entry is otherwise zone-gated (block.game); this asserts the
+        // facade reaches the mode, not the gate (covered by game-zone-entry.test).
+        engine.setMode(SystemMode.Game, { force: true });
         expect(world.mode).toBe(SystemMode.Game);
         expect(engine.getMode()).toBe(SystemMode.Game);
         engine.setMode(SystemMode.Ghost);
@@ -322,7 +324,7 @@ describe('health & respawn', () => {
         damage(30);                                   // Normal mode → refused
         expect(health.hp).toBe(100);
 
-        engine.setMode(SystemMode.Game);
+        engine.setMode(SystemMode.Game, { force: true }); // testing vitals gating, not zone entry
         damage(30);
         expect(health.hp).toBe(70);
 

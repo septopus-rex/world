@@ -284,7 +284,7 @@ describe('bag actions (P2)', () => {
         // Game mode, re-enter: key granted.
         player.position[0] += 100;
         world.step(1 / 60);
-        world.setMode(SystemMode.Game);
+        world.setMode(SystemMode.Game, { force: true }); // testing bag gating, not zone entry
         player.position[0] -= 100;
         world.step(1 / 60);
         expect(bagOf(world).items).toEqual([{ id: 'tpl_2', quantity: 1, metadata: undefined }]);

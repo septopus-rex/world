@@ -21,8 +21,11 @@ test('enter Game mode and ride an SPP-collapsed coaster to the finish', async ({
     });
     expect(c1, 'b6 coaster collapsed into c1 track pieces').toBeGreaterThanOrEqual(5);
 
-    // Enter Game mode through the real switcher.
-    await page.locator('[data-testid="mode-game"]').click();
+    // Game mode is ZONE-GATED — there is no free GAME toggle. The player spawned
+    // in the coaster's playable block (block.game=1), so GameZoneSystem opened the
+    // zone and the entry prompt appeared. Click it (the explicit player action).
+    await expect(page.locator('[data-testid="enter-game"]')).toBeVisible();
+    await page.locator('[data-testid="enter-game"]').click();
     await page.waitForFunction(() => (window as any).loader.engine.getWorld().mode === 'game');
     await stepEngine(page, 3); // mount (snap to the rail start)
 

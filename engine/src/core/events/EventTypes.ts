@@ -29,6 +29,9 @@ export interface EventMap {
     'stop.on': { face: 'top'; adjunctId?: string };
     'stop.leave': { adjunctId?: string };
     'stop.beside': { axis: 0 | 2; adjunctId?: string };
+    // ── game (zone gating: derived from block.game; see GameZoneSystem) ──
+    'game.zone_enter': { block: [number, number]; key: string; game: number };
+    'game.zone_exit': { block: [number, number]; key: string };
     // ── player ──
     'player.state': { block: [number, number]; position: number[]; rotation: number[] };
     'player.fall': { drop: number; position: [number, number, number] };

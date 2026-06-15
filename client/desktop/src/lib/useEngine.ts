@@ -10,7 +10,11 @@ export type WorldMode = 'normal' | 'edit' | 'game' | 'ghost' | 'observe';
 export function useEngine(containerId: string) {
     const loaderRef = useRef<DesktopLoader | null>(null);
     const [ready, setReady] = useState(false);
-    const [mode, setMode] = useState<WorldMode>('normal');
+    // The ENGINE is the source of truth for mode: it can refuse a switch (Game
+    // outside a zone) or auto-revert (leaving the zone). We mirror its
+    // system.mode event into React rather than driving it from React state.
+    const [mode, setModeState] = useState<WorldMode>('normal');
+    const [gameZoneActive, setGameZoneActive] = useState(false);
     const [showMinimap, setShowMinimap] = useState(false);
     // Default third-person so the avatar is visible (matches CharacterController default).
     const [view, setView] = useState<'first' | 'third'>('third');
@@ -19,6 +23,8 @@ export function useEngine(containerId: string) {
         if (!loaderRef.current) {
             loaderRef.current = new DesktopLoader();
             (window as any).loader = loaderRef.current;
+            loaderRef.current.onModeChange((m) => setModeState(m as WorldMode));
+            loaderRef.current.onZoneChange((active) => setGameZoneActive(active));
             loaderRef.current
                 .init(containerId)
                 .then(() => setReady(true))
@@ -29,8 +35,11 @@ export function useEngine(containerId: string) {
     }, [containerId]);
 
     useEffect(() => { loaderRef.current?.toggleMinimap(showMinimap); }, [showMinimap]);
-    useEffect(() => { if (ready) loaderRef.current?.setMode(mode); }, [mode, ready]);
     useEffect(() => { if (ready) loaderRef.current?.setCameraView(view); }, [view, ready]);
+
+    // Request a mode switch; the engine confirms (or refuses) via system.mode,
+    // which flows back into `mode` above. Returns the engine's verdict.
+    const setMode = (m: WorldMode): boolean => loaderRef.current?.setMode(m) ?? false;
 
     return {
         loader: loaderRef.current,
@@ -38,6 +47,7 @@ export function useEngine(containerId: string) {
         mode,
         setMode,
         isEditMode: mode === 'edit',
+        gameZoneActive,
         showMinimap,
         setShowMinimap,
         view,

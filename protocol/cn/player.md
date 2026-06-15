@@ -119,21 +119,27 @@ load-once + instance-many 通道，不存在并行的资产路径。
    时只加载一次、各自克隆实例——为未来多人做好了去重）。
 3. 加载成功后**等比缩放到身体高度**（保持比例，不拉伸），swap 替换占位盒；
    失败则保留占位盒。
-4. 模型内嵌的骨骼动画剪辑（`AnimationClip`）经渲染层
-   `RenderEngine.startAnimation` 自动播放**第一条剪辑**，每帧由
-   `CharacterController` 推进 mixer。
+4. 模型内嵌的骨骼动画剪辑（`AnimationClip`）经 `RenderEngine.startAnimation` 注册到 mixer，
+   `CharacterController` 每帧按运动状态调 `setAnimationState`（idle/walk/run/air + crossfade）
+   并经 `RenderEngine.updateAnimation` 推进 mixer——**内嵌剪辑确实在播**。
+   ⚠️ 但状态→剪辑映射靠剪辑名正则启发式 + 回退首条；**形象/动作未分离**（动作绑死在 avatar GLB 里，
+   无共享可重定向动作库），且无标准骨架契约。完整数据契约（形象/动作/状态三层分离、VRM humanoid
+   骨架、状态集、重定向、现状与分期）见 **[虚拟化身动画协议](./avatar-animation.md)**。
 
-**支持格式**：GLTF/GLB、FBX、OBJ、DAE（`ModelLoader`）。**VRM 暂不支持**。
+**支持格式**：GLTF/GLB、FBX、OBJ、DAE（`ModelLoader`）。**VRM 暂不支持**（见动画协议 §7 v3）。
 
 **可见性**：Avatar 仅在第三人称视角下渲染（第一人称时相机位于体内，强制隐藏）。
 
 ### 未实现 / 规划中
 
-以下为旧版协议的目标态描述，**当前均未实现**，列出以免误引：
+以下为目标态描述，**当前均未实现**，列出以免误引（完整规范见
+[虚拟化身动画协议](./avatar-animation.md)）：
 
-- **姿态动画集**：按 `posture` 绑定 Stand/Walk/Run/Squat/Prone/Climb 标准剪辑、
-  随移动状态切换（当前只自动播第一条内嵌剪辑）。
-- **表情系统**：Normal/Happy/Angry/Sad 混合变形（blendshape）及强度渐变。
+- **姿态动画集 + 形象/动作分离**：动作做成独立于形象、可重定向的动作集（`avatar.motion`），
+  按 idle/walk/run/air 等标准状态切换（当前只注册了内嵌剪辑、且 mixer 未推进）。
+  规范基准 = VRM 1.0 humanoid 骨架 + VRMA 动作格式。
+- **表情系统**：沿用 VRM expression presets（happy/angry/sad/relaxed/surprised + 口型）
+  的混合变形（blendshape）及强度渐变。
 - **独立 Avatar 元数据文件**（`{body, action, emotion, datasource, format}`）：
   当前没有元数据层，avatar 仅是"一个模型资源 id"。如未来需要骨架重定向、
   动画集声明、碰撞体格匹配，可引入专门的 `IDataSource.avatar()` 元数据接口。

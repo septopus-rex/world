@@ -60,6 +60,22 @@ export class DesktopLoader implements IDataSource {
     private isParkour = this.level === 'parkour';
     private isCoaster = this.level === 'coaster';
 
+    /** True while the player stands in a playable (game-enabled) block — the
+     *  precondition the UI gates Game-mode entry on (set by game.zone_enter/exit). */
+    private _gameZone = false;
+    public get gameZoneActive(): boolean { return this._gameZone; }
+    private _onZone: ((active: boolean) => void) | null = null;
+    /** Subscribe to game-zone enter/exit (one consumer: useEngine). */
+    public onZoneChange(cb: (active: boolean) => void): void { this._onZone = cb; }
+
+    /** Active world mode, mirrored from the engine's system.mode event (the engine
+     *  is the source of truth — it can refuse/auto-revert a requested switch). */
+    private _mode: 'normal' | 'edit' | 'game' | 'ghost' | 'observe' = 'normal';
+    public get currentMode() { return this._mode; }
+    private _onMode: ((m: string) => void) | null = null;
+    /** Subscribe to engine-confirmed mode changes (one consumer: useEngine). */
+    public onModeChange(cb: (m: string) => void): void { this._onMode = cb; }
+
     /** Is the coaster level active? (ride it in Game mode). */
     public get coasterActive(): boolean { return this.isCoaster; }
     /** True once the coaster ride reaches the end. */
@@ -141,6 +157,19 @@ export class DesktopLoader implements IDataSource {
         });
         this.engine.on('player.state', (state) => {
             this._saveState(state);
+        });
+
+        // Game-zone gating: the engine derives "player is in a playable block"
+        // from the block.game flag and announces it here. The UI uses this to
+        // offer Game-mode entry only inside a playable zone (no free toggle).
+        this.engine.on('game.zone_enter', () => { this._gameZone = true; this._onZone?.(true); });
+        this.engine.on('game.zone_exit', () => { this._gameZone = false; this._onZone?.(false); });
+
+        // Engine is the source of truth for the active mode (it can refuse a
+        // requested switch — e.g. Game outside a zone, or an auto zone-exit).
+        this.engine.on('system.mode', (p: any) => {
+            this._mode = p?.mode ?? this._mode;
+            this._onMode?.(this._mode);
         });
 
         // Link/QR adjunct (e1): clicking one fires interact.primary with the hit
@@ -581,9 +610,11 @@ export class DesktopLoader implements IDataSource {
         this.engine?.setEditMode(active);
     }
 
-    /** Switch the world mode: normal / edit / game / ghost / observe. */
-    public setMode(mode: 'normal' | 'edit' | 'game' | 'ghost' | 'observe') {
-        this.engine?.setMode(mode as any);
+    /** Request a world-mode switch: normal / edit / game / ghost / observe.
+     *  Returns whether the engine accepted it (Game is refused outside a zone).
+     *  The actual UI state follows the engine's system.mode event, not this call. */
+    public setMode(mode: 'normal' | 'edit' | 'game' | 'ghost' | 'observe'): boolean {
+        return this.engine?.setMode(mode as any) ?? false;
     }
 
     public setCameraView(mode: 'first' | 'third') {

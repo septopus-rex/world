@@ -66,13 +66,15 @@
 3. **相机与化身同步**：
    - 相机移到眼位（第三人称时退后并抬高，跟随视角偏航）。
    - Avatar 句柄同步到玩家位置/朝向，**仅第三人称可见**（第一人称强制隐藏），
-     并推进骨骼动画 mixer（`renderEngine.updateAnimation`）。
+     并按运动状态调 `setAnimationState`（idle/walk/run/air）+ `updateAnimation` 每帧推进
+     mixer——内嵌剪辑确实在播；完整契约见[虚拟化身动画协议](../../protocol/cn/avatar-animation.md)。
 4. **状态上报**：超过阈值时发 `player:state`（见 §1）。
 
 ## 4. 虚拟化身 (Avatar)
 
 Avatar 是一个**模型资源 id**（路径 / IPFS CID），复用 module 的模型管线
 （`ResourceManager` load-once + instance-many）：出生先显示占位盒，模型加载完
-等比缩放到身体高度后 swap 替换；内嵌动画剪辑自动播放第一条。支持
-GLTF/GLB/FBX/OBJ/DAE，VRM 暂不支持。姿态动画切换（走/跑/跳分剪辑）与表情系统
-未实现——完整字段与规划见 [玩家协议 §3](../../protocol/cn/player.md)。
+等比缩放到身体高度后 swap 替换；内嵌剪辑注册到 mixer 并每帧推进、确实在播（见上）。支持
+GLTF/GLB/FBX/OBJ/DAE，VRM 暂不支持。**形象/动作分离、姿态动画集（idle/walk/run/air）、
+重定向、表情系统**的完整数据契约见 [虚拟化身动画协议](../../protocol/cn/avatar-animation.md)
+（规范基准 VRM humanoid + VRMA）；avatar 资源字段见 [玩家协议 §3](../../protocol/cn/player.md)。

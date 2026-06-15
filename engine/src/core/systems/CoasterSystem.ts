@@ -32,17 +32,21 @@ export class CoasterSystem implements ISystem {
         if (world.mode !== SystemMode.Game) {
             this.mounted = false;
             this.cartS = 0;
+            world.rideActive = false;
             return;
         }
         if (!this.path) this.buildPath(world);
-        if (!this.path || this.path.length < 2) return;
+        if (!this.path || this.path.length < 2) { world.rideActive = false; return; }
 
         const player = world.queryEntities('TransformComponent', 'InputStateComponent')[0];
-        if (player === undefined) return;
+        if (player === undefined) { world.rideActive = false; return; }
         const trans = world.getComponent<TransformComponent>(player, 'TransformComponent');
-        if (!trans) return;
+        if (!trans) { world.rideActive = false; return; }
 
         if (!this.mounted) { this.cartS = 0; this.mounted = true; } // snap to start
+        // The rail now owns the player's position — freeze zone tracking so a rail
+        // that leaves the block doesn't auto-exit Game (see GameZoneSystem).
+        world.rideActive = true;
 
         this.cartS = Math.min(this.total, this.cartS + RIDE_SPEED * dt);
         const p = this.pointAt(this.cartS);

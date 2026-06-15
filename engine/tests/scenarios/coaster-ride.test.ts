@@ -29,8 +29,11 @@ describe('coaster ride from SPP (C2)', () => {
         // A 5-cell straight rail north, floating at alt ~14.
         const cells = [0, 1, 2, 3, 4].map(n => ({ position: [0, n, 0], level: 0, faces: straightNS }));
         const coaster = [[2, 2, 14], cells, 'coaster'];
-        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: [0, 1, [[0x00b6, [coaster]]], []] });
-        stepN(engine, 6); // build + collapse
+        // raw[4]=1 marks this a PLAYABLE block: the player spawns here (default
+        // headless spawn [2048,2048]), so GameZoneSystem activates the zone and
+        // Game-mode entry is permitted — the real, zone-gated path (no force).
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: [0, 1, [[0x00b6, [coaster]]], [], 1] });
+        stepN(engine, 6); // build + collapse + GameZoneSystem detects the zone
 
         // The SPP source collapsed into c1 track pieces (the visible rail).
         let c1 = 0, source = 0;
@@ -49,8 +52,11 @@ describe('coaster ride from SPP (C2)', () => {
         // Not riding outside Game mode.
         expect(cc.getRideState().mounted).toBe(false);
 
-        // Enter Game mode → mount (snap to start) + build path.
-        engine.setMode(SystemMode.Game);
+        // The player stands in the playable block, so the zone gate is open.
+        expect(world.gameZoneActive).toBe(true);
+
+        // Enter Game mode through the zone gate (no force) → mount + build path.
+        expect(engine.setMode(SystemMode.Game)).toBe(true);
         stepN(engine, 2);
         expect(cc.getRideState().mounted).toBe(true);
         expect(cc.getRideState().total).toBeGreaterThan(10); // ~4 segments * 4m

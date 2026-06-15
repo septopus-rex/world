@@ -389,9 +389,19 @@ export class Engine {
         this.world?.setEditMode(active);
     }
 
-    /** Switch the world mode (Normal / Edit / Game / Ghost). setEditMode is sugar. */
-    public setMode(mode: SystemMode) {
-        this.world?.setMode(mode);
+    /**
+     * Switch the world mode (Normal / Edit / Game / Ghost / Observe). setEditMode
+     * is sugar. Entering Game is zone-gated (only inside a block.game block) —
+     * returns false if refused. `force` bypasses the gate (engine-internal/tests).
+     */
+    public setMode(mode: SystemMode, opts?: { force?: boolean }): boolean {
+        return this.world?.setMode(mode, opts) ?? false;
+    }
+
+    /** Whether the player currently stands in a playable (game-enabled) block —
+     *  the precondition for entering Game mode. Driven by GameZoneSystem. */
+    public isGameZoneActive(): boolean {
+        return this.world?.gameZoneActive ?? false;
     }
 
     public getMode(): SystemMode | undefined {

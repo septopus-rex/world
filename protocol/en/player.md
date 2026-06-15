@@ -130,25 +130,33 @@ Loading flow (`EntityFactory.loadAvatarModel`):
 3. On success the model is **uniformly scaled to body height** (aspect preserved,
    never stretched) and swapped in for the placeholder; on failure the placeholder
    stays.
-4. Skeletal animation clips embedded in the model (`AnimationClip`) auto-play via
-   the render layer's `RenderEngine.startAnimation` — **the first clip** — with the
-   mixer advanced each frame by `CharacterController`.
+4. Skeletal animation clips embedded in the model (`AnimationClip`) are registered to a
+   mixer via `RenderEngine.startAnimation`; `CharacterController` calls `setAnimationState`
+   each frame per movement state (idle/walk/run/air + crossfade) and advances the mixer via
+   `RenderEngine.updateAnimation` — **embedded clips do play**.
+   ⚠️ But the state→clip mapping is a clip-name regex heuristic + fallback to the first clip;
+   **form and motion are not separated** (motion is welded into the avatar GLB, no shared
+   retargetable library), and there is no standard skeleton contract. The full data contract
+   (form/motion/state separation, VRM humanoid skeleton, state set, retargeting, status &
+   phasing) is in the **[Avatar Animation Protocol](./avatar-animation.md)**.
 
 **Supported formats**: GLTF/GLB, FBX, OBJ, DAE (`ModelLoader`). **VRM is not
-supported yet.**
+supported yet** (see animation protocol §7 v3).
 
 **Visibility**: the avatar renders only in third-person view (in first-person the
 camera sits inside it, so it is force-hidden).
 
 ### Not implemented / planned
 
-The following are legacy-protocol target-state descriptions — **none are
-implemented**; listed to prevent mis-citation:
+The following are target-state descriptions — **none are implemented**; listed to
+prevent mis-citation (full spec in the [Avatar Animation Protocol](./avatar-animation.md)):
 
-- **Posture animation set**: Stand/Walk/Run/Squat/Prone/Climb clips bound to
-  `posture` and switched by movement state (currently only the first embedded clip
-  auto-plays).
-- **Emote system**: Normal/Happy/Angry/Sad blendshapes with intensity ramps.
+- **Posture animation set + form/motion separation**: motion as a form-independent,
+  retargetable motion set (`avatar.motion`), switched by standard states idle/walk/run/air
+  (currently only embedded clips are registered, and the mixer is not advanced). Normative
+  basis = VRM 1.0 humanoid skeleton + VRMA motion format.
+- **Emote system**: VRM expression presets (happy/angry/sad/relaxed/surprised + visemes)
+  via blendshapes with intensity ramps.
 - **Standalone avatar metadata file** (`{body, action, emotion, datasource,
   format}`): there is no metadata layer today — an avatar is just "a model
   resource id". If rig retargeting, animation-set declarations, or collision body

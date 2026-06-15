@@ -88,6 +88,8 @@ export class BlockSystem implements ISystem {
         if (Array.isArray(block.adjuncts) && typeof block.adjuncts[0] === 'number') {
             const raw = block.adjuncts;
             block.elevation = raw[0];
+            // raw[4] = game-zone flag (block-level playable signal); see BlockComponent.game.
+            block.game = raw[4] ?? 0;
             const rawAdjuncts = raw[2] || [];
             animations = raw[3] || [];
             block.animations = animations;

@@ -34,7 +34,8 @@ export interface IActuator {
  *   adjunct  target=adjunctId          moveZ [m] / rotateY [rad]
  *   flag     target=key                params[0] = value (default true)
  *   bag      target=itemId             give/take [count]   — GAME MODE ONLY
- *   player   (target unused)           damage/heal [amount] — GAME MODE ONLY
+ *   player   (target unused)           damage/heal [amount] — GAME MODE ONLY;
+ *            setSpawn (any mode); enterGame/exitGame — zone-gated Game entry
  *   sound    target=audio resource id  play [volume] — 3D positional at the
  *            firing trigger (sourceEntity); flat 2D when it has no transform
  *   system   method=log                console passthrough
@@ -102,6 +103,20 @@ export class LocalActuator implements IActuator {
         // damage/heal, and parkour runs in Normal or Game.
         if (action.method === 'setSpawn') {
             this.execSetSpawn(ctx);
+            return;
+        }
+
+        // enterGame / exitGame — the DATA-DRIVEN Game-mode entry contract: a
+        // trigger placed inside a playable block requests the mode switch, which
+        // funnels into the zone-gated World.setMode (so it can only succeed where
+        // a block declares game>=1). The mirror of a client confirm button; both
+        // honour the same gate. enterGame runs OUTSIDE Game by design.
+        if (action.method === 'enterGame') {
+            ctx.world.setMode(SystemMode.Game);
+            return;
+        }
+        if (action.method === 'exitGame') {
+            ctx.world.setMode(SystemMode.Normal);
             return;
         }
 

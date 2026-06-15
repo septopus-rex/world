@@ -4,8 +4,10 @@ import { BlockComponent } from '../components/BlockComponent';
 
 /**
  * Re-serialize a block's LIVE adjunct entities back into block raw format
- * [elevation, status, adjunctsRaw, animations] via each adjunct's
- * logicModule.attribute.serialize.
+ * [elevation, status, adjunctsRaw, animations, game] via each adjunct's
+ * logicModule.attribute.serialize. raw[4] is the block-level game-zone flag
+ * (BlockComponent.game) — it round-trips so an authored playable block stays
+ * playable across a save/reload (and, eventually, on-chain).
  *
  * Shared by EditSystem (save-on-exit-edit) and ItemSystem (atomic pickup/drop)
  * — any runtime mutation that must survive a reload funnels through here into
@@ -43,7 +45,8 @@ export function serializeBlockToRaw(world: World, blockEntityId: EntityId): any[
         block.elevation || 0,
         1, // status: active
         adjunctsRaw,
-        block.animations || []
+        block.animations || [],
+        block.game || 0 // raw[4]: game-zone flag (playable block)
     ];
 }
 

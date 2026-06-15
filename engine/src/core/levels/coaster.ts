@@ -43,5 +43,8 @@ export function buildCoasterBlock(): any[] {
         cell([2, 1, 0], FB),   // down the east side
         cell([2, 0, 0], FB),   // end
     ];
-    return [0, 1, [[0x00b6, [[origin, cells, 'coaster']]]], []];
+    // raw[4] = 1: this block is a PLAYABLE game zone. Standing here lets the
+    // player enter Game mode (GameZoneSystem → confirm) to ride the coaster;
+    // leaving the block drops back to Normal. See docs/systems/game-mode-entry.md.
+    return [0, 1, [[0x00b6, [[origin, cells, 'coaster']]]], [], 1];
 }

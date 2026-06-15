@@ -89,7 +89,10 @@ test('touch button: sound action fires; session flags survive a reload', async (
 
 test('Game mode: damage shows the HP bar; lethal damage respawns at spawn', async ({ page }) => {
   await bootDeterministic(page);
-  await page.locator('[data-testid="mode-game"]').click();
+  // Game entry is zone-gated (block.game) and the demo court has no playable
+  // zone — force the mode here; this test covers vitals, not the entry gate
+  // (that's e2e/coaster.spec.ts + engine game-zone-entry.test.ts).
+  await page.evaluate(() => (window as any).loader.engine.setMode('game', { force: true }));
   await stepEngine(page, 2);
 
   const damage = (n: number) => page.evaluate((amount: number) => {
