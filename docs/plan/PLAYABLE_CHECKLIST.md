@@ -112,7 +112,7 @@
 ## 3. 有意不做 ❌（非缺失，归档源码可参考）
 
 - [x] ❌ 多链 API（Solana/Bitcoin/Sui）—— 链已解耦，作可选发布插件
-- [x] ❌ 旧引擎完整 2D 地图页 —— minimap（PiP 俯视 + 缩放 + 选块）已覆盖导航需求
+- [ ] 🔄 完整 2D 世界地图 —— **原列"有意不做"，现重新纳入计划**（3D 迁移确认成功后解除）。与 minimap（PiP 3D 俯视小窗）是两回事：2D 地图是独立 canvas/SVG 的可平移世界地图，视口窗口化按需流式（复用 `block.need` 块通道，非全局索引）。设计规格 `specs/2d-map.md`，参考旧引擎 `control_2d.js`+`render_2d.js`。**规划中、未实现**
 - [x] ❌ card/news/manual 信息页 —— 属 React 客户端层，按需在客户端做
 
 ---

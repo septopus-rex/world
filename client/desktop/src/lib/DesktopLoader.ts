@@ -41,6 +41,16 @@ const DEMO_MODELS: Record<number, { type: string; format: string; raw: string }>
     31: { type: 'audio', format: 'wav', raw: '/assets/ding.wav' },
 };
 
+/** A block's 2D-map summary (render-layer only; see DesktopLoader.fetchMapCell). */
+export interface MapCell {
+    x: number;
+    y: number;
+    occupied: boolean;   // has any adjunct content
+    count: number;       // adjunct instance count
+    game: number;        // block.game flag (playable zone) — raw[4]
+    elevation: number;   // block elevation — raw[0]
+}
+
 export interface SPPPlayerState {
     block: [number, number];
     world: string | number;
@@ -678,6 +688,39 @@ export class DesktopLoader implements IDataSource {
 
     public resetMinimapFollow() {
         if (this.engine) (this.engine.getWorld() as any)?.minimap.setFollow(true);
+    }
+
+    // ── 2D map (data seam) ────────────────────────────────────────────────────────
+    // The 2D world map is a pure RENDER-layer feature: it reads block summaries
+    // straight off the SAME data source the 3D world streams from (fetchBlock),
+    // WITHOUT building any 3D entities. The map's viewport drives which cells get
+    // fetched (dynamic region loading), mirroring the old engine's render_2d
+    // loadDetails window — just decoupled from the player's position.
+
+    /** World grid dimensions (block count per axis); cells outside are void. */
+    public get worldRange(): [number, number] {
+        const r = (this.engine?.getWorld() as any)?.config?.world?.range;
+        return Array.isArray(r) && r.length === 2 ? [r[0], r[1]] : [4096, 4096];
+    }
+
+    /** Lightweight 2D summary of one block, derived from its raw — no meshes,
+     *  no ECS entities. raw = [elevation, status, adjunctsRaw, animations, game]. */
+    public async fetchMapCell(x: number, y: number): Promise<MapCell> {
+        try {
+            const data = await this.fetchBlock(x, y);
+            const raw: any[] = data?.raw ?? [];
+            const groups: any[] = Array.isArray(raw[2]) ? raw[2] : [];
+            let count = 0;
+            for (const g of groups) count += Array.isArray(g?.[1]) ? g[1].length : 0;
+            return {
+                x, y, count,
+                occupied: count > 0,
+                game: typeof raw[4] === 'number' ? raw[4] : 0,
+                elevation: typeof raw[0] === 'number' ? raw[0] : 0,
+            };
+        } catch {
+            return { x, y, count: 0, occupied: false, game: 0, elevation: 0 };
+        }
     }
 
     // ── Persistence ──────────────────────────────────────────────────────────────

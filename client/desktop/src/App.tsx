@@ -7,6 +7,7 @@ import { Compass, TelemetryReadout } from './components/HUD';
 import { InventoryPanel } from './components/InventoryPanel';
 import { HealthBar } from './components/HealthBar';
 import { ParkourHUD } from './components/ParkourHUD';
+import { WorldMap2D } from './components/WorldMap2D';
 
 function App() {
   const isMobile = useIsMobile();
@@ -14,6 +15,7 @@ function App() {
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
+  const [show2DMap, setShow2DMap] = useState(false);
 
   const currentBlockRef = useRef<[number, number]>([0, 0]);
 
@@ -104,6 +106,7 @@ function App() {
       {ready && <InventoryPanel loader={loader} />}
       {ready && <HealthBar loader={loader} />}
       <ParkourHUD loader={loader} ready={ready} />
+      <WorldMap2D loader={loader} open={show2DMap} onClose={() => setShow2DMap(false)} />
 
       {/* Game-mode entry is ZONE-GATED: this prompt appears only while the player
           stands in a playable block (block.game, surfaced via game.zone_enter).
@@ -253,6 +256,15 @@ function App() {
         >
           <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
           {view === 'third' ? '3RD PERSON' : '1ST PERSON'}
+        </button>
+        <button
+          data-testid="map2d-toggle"
+          onClick={() => setShow2DMap(true)}
+          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
+          title="Open the 2D world map"
+        >
+          <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
+          2D MAP
         </button>
         <div className="flex flex-col gap-1 p-1.5 border border-cyan-500/30 bg-black/40 backdrop-blur-md rounded-2xl shadow-2xl">
           <span className="text-[8px] font-black tracking-[0.25em] text-cyan-500/60 uppercase text-center">Mode</span>

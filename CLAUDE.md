@@ -4,7 +4,7 @@
 
 > 链剥离已完成（2026-06，审计确认），详见 `docs/plan/STANDALONE_ENGINE_ROADMAP.md`。
 > `chain/`（Solana 合约）与旧 `app/`（链耦合前端）已移出 git 追踪、封存在磁盘；旧 JS 引擎已归档到 `engine/backup/`。
-> **旧引擎 parity 已补齐（2026-06）：可退役。** 新引擎覆盖或超越旧 JS 引擎全部能力；旧引擎中 tube 几何 / texture·morph 动画 / lightning / linger 实为空壳 stub，已在新引擎真正实现。**有意不移植**（非缺失）：多链 API（已解耦）、触屏/移动端输入与完整 2D 地图页（超出桌面 PWA 声明范围）、card/news/manual 信息页（属 React 客户端层）。
+> **旧引擎 parity 已补齐（2026-06）：可退役。** 新引擎覆盖或超越旧 JS 引擎全部能力；旧引擎中 tube 几何 / texture·morph 动画 / lightning / linger 实为空壳 stub，已在新引擎真正实现。**有意不移植**（非缺失）：多链 API（已解耦）、触屏/移动端输入（超出桌面 PWA 声明范围）、card/news/manual 信息页（属 React 客户端层）。**完整 2D 地图页**原列"有意不移植"，**现已解除**（3D 迁移确认成功后重新纳入计划，视口窗口化流式、复用块数据通道，非全局索引；设计规格见 `docs/plan/specs/2d-map.md`，参考旧引擎 `control_2d.js`+`render_2d.js`）。
 
 ## 项目结构
 
@@ -93,6 +93,7 @@ cd engine && yarn build                            # tsc
 - `docs/plan/PLAYABLE_CHECKLIST.md` — **可玩化落地清单**（从技术 demo 到用户可玩的 gap 追踪 + 首迭代）。
 - `docs/plan/specs/phase0-engine-consolidation.md` — 引擎收敛规格。
 - `docs/plan/specs/coaster-via-spp.md` — **用 SPP 搭过山车**设计稿（连通→theme 几何 + CoasterSystem 运动；未落地）。
+- `docs/plan/specs/2d-map.md` — **2D 世界地图**设计规格（解除"有意不移植"；视口窗口化按需流式、复用 `block.need` 块通道、非全局索引；参考旧引擎 `control_2d.js`+`render_2d.js` 的逐块顶面俯视投影；**规划中**）。
 - `protocol/cn|en/avatar-animation.md` — **虚拟化身动画协议**（形象/动作/状态三层分离；规范基准 VRM 1.0 humanoid 骨架 + VRMA；状态集 idle/walk/run/air + 重定向契约）。**现状**：内嵌剪辑链路已通、确实在播（`RenderEngine.updateAnimation` 每帧推进），但状态映射靠剪辑名启发式、**形象/动作未分离**（动作绑死在 avatar GLB）、无标准骨架契约；分期 v1 规范化状态契约 / v2 动作分离+重定向 / v3 VRM 原生。
 - `docs/architecture/{overview,ecs,coordinate,pipeline,performance}.md`、`docs/systems/*.md`、`docs/features/spp*.md`（弦粒子 SPP）。
 
