@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Coords } from '@engine/core/utils/Coords';
 import type { DesktopLoader, MapCell } from '../lib/DesktopLoader';
 
 /**
@@ -171,10 +172,13 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
             const [px, py] = loader.playerState.position; // rel metres in the 16m block
             const ux = pbx + px / 16, uy = pby + py / 16;
             const mx = sx(ux), my = sy(uy);
-            const yaw = loader.getPlayerRotationY?.() ?? 0; // engine yaw, 0 = north(up)
+            // Heading via the single Coords conversion (engine yaw → Septopus
+            // heading, CW-from-North). North-up canvas: rotate the north-pointing
+            // marker clockwise by the heading. Same source the HUD compass uses.
+            const yaw = loader.getPlayerRotationY?.() ?? 0;
             ctx.save();
             ctx.translate(mx, my);
-            ctx.rotate(yaw);
+            ctx.rotate(Coords.engineYawToHeading(yaw));
             ctx.fillStyle = '#ffd23f';
             ctx.beginPath();
             ctx.moveTo(0, -7); ctx.lineTo(5, 6); ctx.lineTo(0, 3); ctx.lineTo(-5, 6);

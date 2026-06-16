@@ -65,24 +65,50 @@ export class Coords {
     }
 
     /**
-     * SPP Rotation [X=Pitch, Y=Yaw, Z=Roll] -> Engine [X=Pitch, Y=Yaw, Z=Roll]
+     * Heading axis conversion — the SINGLE definition of the yaw↔heading mapping
+     * between the engine (Three) frame and the canonical Septopus frame. EVERY
+     * consumer (compass, 2D map, persistence) goes through here so the sign can
+     * never drift again (this used to be hand-rolled per-renderer — a recurring bug).
+     *
+     * Septopus heading: radians, **0 = facing NORTH, increasing CLOCKWISE toward
+     * EAST** (compass / navigation convention). Engine yaw ψ is rotation about
+     * engine +Y; the facing vector in (East, North) is (-sinψ, cosψ), so the
+     * compass heading H (CW from North) satisfies (sinH, cosH) = (-sinψ, cosψ)
+     * ⇒ **H = -ψ**. On a north-up / east-right 2D view, rotate a north-pointing
+     * marker CLOCKWISE by the heading. See docs/architecture/coordinate.md.
+     * NOTE: engine-space 3D renderers (avatar mesh, minimap marker) keep using the
+     * raw engine yaw — they live in the engine frame; only SPP/screen-space
+     * consumers convert.
+     */
+    public static engineYawToHeading(engineYaw: number): number {
+        return -engineYaw;
+    }
+    public static headingToEngineYaw(heading: number): number {
+        return -heading;
+    }
+
+    /**
+     * SPP Rotation [Pitch, Heading, Roll] -> Engine [Pitch, Yaw, Roll]. Inverse of
+     * engineRotationToSpp — the spawn/restore round-trip relies on this pair. Only
+     * the heading/yaw axis is reframed; pitch (about East=X, shared by both frames)
+     * and roll (≈0 for the player body) pass through.
      */
     public static sppRotationToEngine(sppRot: [number, number, number]): [number, number, number] {
         return [
-            sppRot[0], // Pitch
-            sppRot[1], // Yaw
-            sppRot[2]  // Roll
+            sppRot[0],                          // Pitch
+            this.headingToEngineYaw(sppRot[1]), // Heading -> engine Yaw
+            sppRot[2]                           // Roll
         ];
     }
 
     /**
-     * Engine Rotation [X=Pitch, Y=Yaw, Z=Roll] -> SPP [X=Pitch, Y=Yaw, Z=Roll]
+     * Engine Rotation [Pitch, Yaw, Roll] -> SPP [Pitch, Heading, Roll].
      */
     public static engineRotationToSpp(engineRot: [number, number, number]): [number, number, number] {
         return [
-            engineRot[0], // Pitch
-            engineRot[1], // Yaw
-            engineRot[2]  // Roll
+            engineRot[0],                          // Pitch
+            this.engineYawToHeading(engineRot[1]), // engine Yaw -> Heading
+            engineRot[2]                           // Roll
         ];
     }
     /**

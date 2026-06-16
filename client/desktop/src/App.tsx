@@ -45,8 +45,10 @@ function App() {
       if (loader) {
         if (compassNeedleRef.current) {
           const yawRad = loader.getPlayerRotationY();
-          const degrees = (yawRad * 180) / Math.PI;
-          compassNeedleRef.current.style.transform = `rotate(${-degrees}deg)`;
+          // Heading via the single Coords conversion (engine yaw → Septopus heading,
+          // CW-from-North) — same source the 2D map uses, no hand-rolled sign.
+          const headingDeg = (Coords.engineYawToHeading(yawRad) * 180) / Math.PI;
+          compassNeedleRef.current.style.transform = `rotate(${headingDeg}deg)`;
         }
         if (compassBlockDisplayRef.current || minimapBlockDisplayRef.current) {
           const state = loader.playerState;

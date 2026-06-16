@@ -74,6 +74,17 @@
 
 二者**不同实现、不同用途**，并存。
 
+## 3.5 方向约定（必须与 3D 一致）
+
+方向基准见 [坐标协议](../../architecture/coordinate.md)：Septopus **+X=东、+Y=北**（"常规
+真实世界地图理解"），引擎 **North = −Z**。2D 地图据此：
+
+- **东 = 屏幕右**（`sx(u)=W/2+(u-cx)·cell`）、**北 = 屏幕上**（`sy(v)=H/2-(v-cy)·cell`，
+  北上即 y 取负）。与 3D 世界一致。
+- **玩家朝向标记**：经统一的 `Coords.engineYawToHeading(yaw)`（= `-yaw`，Septopus heading，
+  CW-from-North）旋转——HUD 罗盘、2D 地图同走这一个 `Coords` 真相源，签名不再各处手写
+  （详见 [坐标协议 §1.1 朝向](../../architecture/coordinate.md)）。`yaw=0` 面朝北=指上。
+
 ## 4. 层级边界
 
 建议 2D 渲染放在**客户端层**（`client/desktop`，纯 canvas/SVG + DOM，**不碰 Three.js**），
