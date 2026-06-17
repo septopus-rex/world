@@ -118,9 +118,6 @@ export class DesktopLoader implements IDataSource {
 
     private loadedBlockKeys: Set<string> = new Set();
     private fetchingBlockKeys: Set<string> = new Set();
-    private blockLastSeen: Map<string, number> = new Map();
-    /** Evict blocks that have been outside the view window longer than this (ms). */
-    private static readonly EVICT_TTL_MS = 10_000;
 
     public playerState: SPPPlayerState = { ...DEFAULT_PLAYER_STATE };
 
@@ -324,20 +321,19 @@ export class DesktopLoader implements IDataSource {
 
         (this.engine.getWorld() as any)?.blocks.syncVisibility(requiredKeys);
 
-        // Hide-then-timestamp-then-evict: in-window blocks are kept fresh; blocks
-        // that have been OUT of the window past the TTL are destroyed to bound memory
-        // (recently-left blocks stay loaded+hidden for instant re-entry).
-        const now = Date.now();
+        // Bounded window — match the old engine's cross() algorithm: any loaded
+        // block OUTSIDE the required window is evicted IMMEDIATELY, so the resident
+        // set stays exactly (2*extend+1)^2 regardless of how far/fast the player
+        // roams. A wall-clock TTL grace used to live here ("keep recently-left
+        // blocks for instant re-entry"); under fast traversal (running, coaster
+        // rides, teleport) the player crosses many blocks within the grace, so the
+        // set ballooned into the hundreds — which is what tanked the frame rate.
         const required = new Set(requiredKeys);
-        for (const k of requiredKeys) this.blockLastSeen.set(k, now);
         for (const k of [...this.loadedBlockKeys]) {
             if (required.has(k)) continue;
-            if (now - (this.blockLastSeen.get(k) ?? now) > DesktopLoader.EVICT_TTL_MS) {
-                const [ex, ey] = k.split('_').map(Number);
-                this.engine.removeBlock(ex, ey);
-                this.loadedBlockKeys.delete(k);
-                this.blockLastSeen.delete(k);
-            }
+            const [ex, ey] = k.split('_').map(Number);
+            this.engine.removeBlock(ex, ey);
+            this.loadedBlockKeys.delete(k);
         }
 
         const missing = requiredKeys.filter(k => !this.loadedBlockKeys.has(k) && !this.fetchingBlockKeys.has(k));

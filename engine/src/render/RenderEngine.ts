@@ -85,9 +85,16 @@ export class RenderEngine {
         this.mainCamera.layers.enable(1);
 
         // 4. Initialize Renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        // powerPreference: ask the OS for the discrete GPU on dual-GPU machines
+        // (a MacBook left on its integrated GPU is a common cause of a trivial
+        // scene running at ~15 FPS).
+        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
         this.renderer.setSize(Math.max(1, this.container.clientWidth), Math.max(1, this.container.clientHeight));
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        // Cap the device-pixel-ratio: the per-frame cost here is fragment/fill-bound
+        // (PBR + shadows over the whole viewport), which scales with pixel COUNT. On
+        // a Retina display devicePixelRatio=2 quadruples the pixels for marginal
+        // sharpness; cap at 1.5 so a weak/integrated GPU isn't fill-bound.
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
         this.renderer.autoClear = true;
         // Color management: render in sRGB so albedo textures aren't gamma-wrong
         // (linear-treated-as-sRGB). Color textures are tagged SRGBColorSpace on load.
