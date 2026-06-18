@@ -32,6 +32,22 @@ export class RenderEngine {
     // Reusable raycaster — never instantiated per-frame
     private raycaster: THREE.Raycaster = new THREE.Raycaster();
 
+    // ── Floating origin ────────────────────────────────────────────────────────
+    // The Septopus world spans tens of kilometres (4096 blocks × 16 m, spawn at the
+    // CENTRE ≈ 32 km from origin). At those magnitudes float32 — what the GPU uses —
+    // resolves to ~4 mm, which wrecks the shadow-coordinate maths and produces
+    // distance-dependent shadow acne ("waves"). Fix: all WORLD content lives under
+    // `worldRoot`, offset by −renderOrigin, and the cameras are offset to match, so
+    // everything the GPU sees sits near 0. The ECS keeps absolute float64 coords
+    // (physics/triggers untouched); this layer translates at the render boundary.
+    // renderOrigin is rebased (O(1) — just move the root + cameras) when the player
+    // strays past REBASE_THRESHOLD, keeping render-space coords always small.
+    private worldRoot!: THREE.Group;
+    private renderOrigin = new THREE.Vector3(0, 0, 0);
+    private _cameraAbs = new THREE.Vector3();   // last ABSOLUTE main-camera position
+    private _minimapAbs = new THREE.Vector3();  // last ABSOLUTE minimap-camera position
+    private static readonly REBASE_THRESHOLD = 1024;
+
     // Reusable scratch objects to avoid per-call allocations
     private _tmpBox3 = new THREE.Box3();
     private _tmpSize = new THREE.Vector3();
@@ -62,6 +78,12 @@ export class RenderEngine {
         // 1. Initialize Scene
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(config.clearColor ?? 0x87ceeb);
+
+        // All world content hangs off worldRoot (offset by −renderOrigin); only the
+        // cameras and the global lights are direct scene children. See the floating
+        // origin notes above.
+        this.worldRoot = new THREE.Group();
+        this.scene.add(this.worldRoot);
 
         // 2. Initialize Main Camera
         const aspect = this.container.clientWidth > 0 ? (this.container.clientWidth / this.container.clientHeight) : 1;
@@ -132,7 +154,10 @@ export class RenderEngine {
      * Camera Abstraction
      */
     public setMainCameraPosition(x: number, y: number, z: number): void {
-        this.mainCamera.position.set(x, y, z);
+        // Caller passes ABSOLUTE world coords; the camera renders in origin-relative
+        // space (see floating origin).
+        this._cameraAbs.set(x, y, z);
+        this.mainCamera.position.set(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
     }
 
     public getMainCameraRotation(): [number, number, number] {
@@ -146,7 +171,7 @@ export class RenderEngine {
     /** Point the main camera at a world target (Observe mode orbit). Three derives
      *  the orientation; getMainCameraRotation stays consistent afterwards. */
     public setMainCameraLookAt(x: number, y: number, z: number): void {
-        this.mainCamera.lookAt(x, y, z);
+        this.mainCamera.lookAt(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
     }
 
     public updateMainCameraProjection(): void {
@@ -162,15 +187,21 @@ export class RenderEngine {
     }
 
     public setMinimapPosition(x: number, y: number, z: number): void {
-        this.minimapCamera.position.set(x, y, z);
+        this._minimapAbs.set(x, y, z);
+        this.minimapCamera.position.set(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
     }
 
     public setMinimapLookAt(x: number, y: number, z: number): void {
-        this.minimapCamera.lookAt(x, y, z);
+        this.minimapCamera.lookAt(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
     }
 
     public getMinimapPosition(): [number, number, number] {
-        return [this.minimapCamera.position.x, this.minimapCamera.position.y, this.minimapCamera.position.z];
+        // Return ABSOLUTE world coords (undo the origin offset).
+        return [
+            this.minimapCamera.position.x + this.renderOrigin.x,
+            this.minimapCamera.position.y + this.renderOrigin.y,
+            this.minimapCamera.position.z + this.renderOrigin.z,
+        ];
     }
 
     /**
@@ -196,7 +227,10 @@ export class RenderEngine {
     public worldToLocal(handle: RenderHandle, x: number, y: number, z: number): [number, number, number] {
         const obj = handle as THREE.Object3D;
         if (obj.parent && obj.parent.type !== 'Scene') {
-            this._tmpLocal.set(x, y, z);
+            // (x,y,z) is ABSOLUTE world; Three works in origin-relative render space.
+            // The origin cancels in the parent transform (worldRoot stores absolute
+            // local coords; nested parents return within-parent offsets either way).
+            this._tmpLocal.set(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
             obj.parent.worldToLocal(this._tmpLocal);
             return [this._tmpLocal.x, this._tmpLocal.y, this._tmpLocal.z];
         }
@@ -226,7 +260,7 @@ export class RenderEngine {
         if (parent) {
             (parent as THREE.Object3D).add(group);
         } else {
-            this.scene.add(group);
+            this.worldRoot.add(group);
         }
         return group;
     }
@@ -283,7 +317,9 @@ export class RenderEngine {
     }
 
     public add(object: THREE.Object3D): void {
-        this.scene.add(object);
+        // World content (e.g. loaded models posed each frame) → worldRoot so the
+        // floating origin applies.
+        this.worldRoot.add(object);
     }
 
     public remove(object: THREE.Object3D): void {
@@ -291,15 +327,11 @@ export class RenderEngine {
     }
 
     public clearScene(): void {
-        const toRemove: THREE.Object3D[] = [];
-        this.scene.traverse((child) => {
-            if ((child as any).isMesh || child instanceof THREE.Group || child instanceof THREE.Light) {
-                // Keep lights if we want persistent environment, or clear them too
-                toRemove.push(child);
-            }
-        });
+        // World content all hangs off worldRoot — clear its direct children (lights
+        // and cameras live on the scene and are preserved).
+        const toRemove = [...this.worldRoot.children];
         for (const child of toRemove) {
-            this.scene.remove(child);
+            this.worldRoot.remove(child);
             // Same shared-resource guard as removeHandle (don't dispose cached/shared).
             RenderEngine.disposeMeshResources(child);
         }
@@ -312,6 +344,19 @@ export class RenderEngine {
         const light = new THREE.AmbientLight(color, intensity);
         this.scene.add(light);
         return light;
+    }
+
+    /**
+     * Distance fog matching the sky. Blocks stream in a bounded window, so the far
+     * edge of the loaded region is a hard chunk boundary against the sky; fading it
+     * into the sky colour hides that staircase. `near`/`far` are sized to the load
+     * window by the caller. Colour defaults to the scene background so terrain
+     * dissolves seamlessly. (Distance is camera-relative → unaffected by the
+     * floating origin.)
+     */
+    public setFog(near: number, far: number, color?: number): void {
+        const c = color ?? (this.scene.background instanceof THREE.Color ? this.scene.background.getHex() : 0x87ceeb);
+        this.scene.fog = new THREE.Fog(c, near, far);
     }
 
     public setDirectionalLight(color: number, intensity: number, x: number, y: number, z: number): RenderHandle {
@@ -372,10 +417,27 @@ export class RenderEngine {
     }
 
     /**
+     * If the main camera has strayed past REBASE_THRESHOLD from the current render
+     * origin, re-base the origin onto it: move worldRoot and re-derive the cameras
+     * so render-space coords stay small (and float32-safe). O(1) — worldRoot holds
+     * all world content, so one move rebases everything; the rendered image is
+     * unchanged because the cameras shift by the same delta.
+     */
+    private maybeRebaseOrigin(): void {
+        if (this._cameraAbs.distanceToSquared(this.renderOrigin) <= RenderEngine.REBASE_THRESHOLD * RenderEngine.REBASE_THRESHOLD) return;
+        this.renderOrigin.copy(this._cameraAbs);
+        this.worldRoot.position.set(-this.renderOrigin.x, -this.renderOrigin.y, -this.renderOrigin.z);
+        this.worldRoot.updateMatrixWorld(true);
+        this.mainCamera.position.set(this._cameraAbs.x - this.renderOrigin.x, this._cameraAbs.y - this.renderOrigin.y, this._cameraAbs.z - this.renderOrigin.z);
+        this.minimapCamera.position.set(this._minimapAbs.x - this.renderOrigin.x, this._minimapAbs.y - this.renderOrigin.y, this._minimapAbs.z - this.renderOrigin.z);
+    }
+
+    /**
      * Rendering Logic
      */
     public render(isMinimapActive: boolean): void {
         this.stats?.begin();
+        this.maybeRebaseOrigin();
         this.anchorSunShadow();
         if (!isMinimapActive) {
             this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
@@ -434,7 +496,7 @@ export class RenderEngine {
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(0, 0.9, 0); // Position it so feet are at origin
         mesh.raycast = () => { }; // Ignore for raycasting
-        this.scene.add(mesh);
+        this.worldRoot.add(mesh);
         return mesh;
     }
 
@@ -448,7 +510,7 @@ export class RenderEngine {
         mesh.renderOrder = 999;
         mesh.position.y = 100;
 
-        this.scene.add(mesh);
+        this.worldRoot.add(mesh);
         return mesh;
     }
 
@@ -464,7 +526,7 @@ export class RenderEngine {
             material: { color: color, opacity: 1.0 }
         });
         helper.raycast = () => { }; // Ignore selection rays
-        this.scene.add(helper);
+        this.worldRoot.add(helper);
         return helper;
     }
 
@@ -527,7 +589,7 @@ export class RenderEngine {
             material: { color: color2 } // Using color2 as primary for factory logic simplicity
         });
         grid.raycast = () => { };
-        this.scene.add(grid);
+        this.worldRoot.add(grid);
         return grid;
     }
 
@@ -561,7 +623,8 @@ export class RenderEngine {
                     return {
                         entityId: current.userData.entityId,
                         distance: hit.distance,
-                        point: [hit.point.x, hit.point.y, hit.point.z]
+                        // hit.point is render space → back to ABSOLUTE world for callers.
+                        point: [hit.point.x + this.renderOrigin.x, hit.point.y + this.renderOrigin.y, hit.point.z + this.renderOrigin.z]
                     };
                 }
                 current = current.parent;
@@ -583,7 +646,8 @@ export class RenderEngine {
                     return {
                         entityId: current.userData.entityId,
                         distance: hit.distance,
-                        point: [hit.point.x, hit.point.y, hit.point.z]
+                        // hit.point is render space → back to ABSOLUTE world for callers.
+                        point: [hit.point.x + this.renderOrigin.x, hit.point.y + this.renderOrigin.y, hit.point.z + this.renderOrigin.z]
                     };
                 }
                 current = current.parent;
@@ -600,20 +664,23 @@ export class RenderEngine {
         this._tmpVec2.set(ndcX, ndcY);
         this.raycaster.setFromCamera(this._tmpVec2, this.mainCamera);
 
+        // planePoint is ABSOLUTE world; the ray is in render space. Define the plane
+        // in render space (shift the point by −origin), then shift the hit back.
         this._tmpPlaneNormal.set(planeNormal[0], planeNormal[1], planeNormal[2]);
-        this._tmpPlanePoint.set(planePoint[0], planePoint[1], planePoint[2]);
+        this._tmpPlanePoint.set(planePoint[0] - this.renderOrigin.x, planePoint[1] - this.renderOrigin.y, planePoint[2] - this.renderOrigin.z);
         this._tmpPlane.normal.copy(this._tmpPlaneNormal);
         this._tmpPlane.constant = -this._tmpPlaneNormal.dot(this._tmpPlanePoint);
 
         const result = this.raycaster.ray.intersectPlane(this._tmpPlane, this._tmpPlaneTarget);
-        return result ? [result.x, result.y, result.z] : null;
+        return result ? [result.x + this.renderOrigin.x, result.y + this.renderOrigin.y, result.z + this.renderOrigin.z] : null;
     }
 
     /**
      * Projects a 3D world point to 2D screen coordinates (Normalized 0-1 range)
      */
     public worldToScreen(x: number, y: number, z: number): { x: number, y: number } {
-        this._tmpSize.set(x, y, z);
+        // (x,y,z) is ABSOLUTE world; project from render space.
+        this._tmpSize.set(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
         this._tmpSize.project(this.mainCamera);
         const vector = this._tmpSize;
 
@@ -646,7 +713,7 @@ export class RenderEngine {
 
         const points = new THREE.Points(geometry, material);
         points.visible = false;
-        this.scene.add(points);
+        this.worldRoot.add(points);
         return points;
     }
 
@@ -684,7 +751,7 @@ export class RenderEngine {
         });
 
         const points = new THREE.Points(geometry, material);
-        this.scene.add(points);
+        this.worldRoot.add(points);
 
         return { handle: points, velocities };
     }
@@ -751,8 +818,8 @@ export class RenderEngine {
                 sound.setRefDistance(8);
                 sound.setVolume(volume);
                 sound.position.set(position[0], position[1], position[2]);
-                this.scene.add(sound);
-                sound.onEnded = () => { sound.isPlaying = false; this.scene.remove(sound); };
+                this.worldRoot.add(sound); // absolute local pos; worldRoot offset puts it in render space (relative to the listener on the camera)
+                sound.onEnded = () => { sound.isPlaying = false; this.worldRoot.remove(sound); };
                 sound.play();
             } else {
                 const sound = new THREE.Audio(listener);

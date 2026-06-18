@@ -46,3 +46,20 @@ test('block window stays bounded as the player roams (eviction)', async ({ page 
   expect(afterRoam.loadedBlocks).toBeLessThanOrEqual(25);
   expect(afterRoam.blockEntities).toBe(afterRoam.loadedBlocks);
 });
+
+test('sky-matched fog hides the bounded-window chunk boundary', async ({ page }) => {
+  await bootDeterministic(page);
+  const fog = await page.evaluate(() => {
+    const re: any = (window as any).loader.engine.getWorld().renderEngine;
+    const f = re.sceneInstance.fog;
+    const bg = re.sceneInstance.background;
+    return f ? { near: f.near, far: f.far, color: f.color.getHex(), bg: bg.getHex() } : null;
+  });
+  expect(fog).not.toBeNull();
+  // Fog colour must equal the sky so terrain dissolves into the horizon (no hard
+  // jagged void edge at the load boundary).
+  expect(fog!.color).toBe(fog!.bg);
+  // Opaque around the window radius (extend=2 → ~32 m) so the boundary is hidden.
+  expect(fog!.far).toBeGreaterThan(0);
+  expect(fog!.far).toBeLessThan(64);
+});

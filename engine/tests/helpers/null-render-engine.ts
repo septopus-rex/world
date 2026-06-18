@@ -101,6 +101,7 @@ export function createNullRenderEngine() {
     setAmbientLight: () => handle(),
     setDirectionalLight: () => handle(),
     setHemisphereLight: () => handle(),
+    setFog: () => {},
     updateAmbientLight: (_h: Handle, _c: number, intensity: number) => { counts.lastAmbient = intensity; },
     updateDirectionalLight: (_h: Handle, _c: number, intensity: number) => { counts.lastSunIntensity = intensity; },
 

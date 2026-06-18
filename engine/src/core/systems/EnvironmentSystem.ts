@@ -1,6 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { RenderHandle } from '../types/Adjunct';
 import { EnvironmentStateComponent } from '../components/EnvironmentComponents';
+import { Coords } from '../utils/Coords';
 
 import { GlobalConfig } from '../GlobalConfig';
 
@@ -61,6 +62,14 @@ export class EnvironmentSystem implements ISystem {
         this.sunLight = world.renderEngine.setDirectionalLight(0xffffff, 1.0, 50, 100, 50);
         this.ambientLight = world.renderEngine.setAmbientLight(0xffffff, 0.4);
         this.particleSystem = world.renderEngine.createWeatherParticles();
+
+        // Sky-matched distance fog sized to the block-streaming window: blocks load
+        // in a bounded (2*extend+1)² square, so the region's far edge is a hard chunk
+        // boundary against the sky. Fade it out (opaque ~ the window radius) so the
+        // staircase silhouette dissolves instead of showing a jagged void edge.
+        const ext = (world.config.player as any)?.extend ?? 2;
+        const radius = ext * Coords.BLOCK_SIZE;                 // nearest boundary ≈ this
+        world.renderEngine.setFog(radius * 0.5, radius * 1.2);
     }
 
     public onNewBlock(world: World, height: number, hash: string, intervalSeconds: number): void {
