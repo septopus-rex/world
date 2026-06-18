@@ -376,6 +376,15 @@ export class RenderEngine {
             const cam = light.shadow.camera;
             cam.left = -80; cam.right = 80; cam.top = 80; cam.bottom = -80;
             cam.near = 1; cam.far = 400;
+            // Shadow bias — WITHOUT this the flat ground self-shadows. It looks fine
+            // when the sun is overhead (noon) but as the sun arcs to a grazing angle
+            // each shadow texel smears across the ground and the surface shadows
+            // itself, producing regular moiré "waves". normalBias offsets the sample
+            // along the surface normal (the right fix for grazing angles); the small
+            // constant bias handles the residual depth-compare acne. Kept modest so
+            // the avatar's contact shadow doesn't peter-pan off its feet.
+            light.shadow.bias = -0.0005;
+            light.shadow.normalBias = 0.05;
             this.scene.add(light.target);
         }
         return light;

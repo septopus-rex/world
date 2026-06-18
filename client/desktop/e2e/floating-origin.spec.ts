@@ -42,3 +42,23 @@ test('far from origin, rendered world content is rebased near zero', async ({ pa
   // The block the GPU shades sits near zero — NOT at ~32 km. This is the fix.
   expect(r.blockWorldDist).toBeLessThan(1200);
 });
+
+// A SECOND source of "waves": the sun arcs across the sky (mock clock advances the
+// day every ~2 min). With zero shadow bias the flat ground self-shadows — invisible
+// at noon, but as the sun drops to a grazing angle each shadow texel smears across
+// the ground into regular moiré bands. The sun's shadow must carry a normalBias +
+// constant bias so it stays clean at all sun angles.
+test('the sun shadow has bias configured (no grazing-angle ground acne)', async ({ page }) => {
+  await bootDeterministic(page);
+  const shadow = await page.evaluate(() => {
+    const re: any = (window as any).loader.engine.getWorld().renderEngine;
+    const s = re.sunLight?.shadow;
+    return s ? { bias: s.bias, normalBias: s.normalBias, castShadow: re.sunLight.castShadow } : null;
+  });
+  expect(shadow).not.toBeNull();
+  expect(shadow!.castShadow).toBe(true);
+  // normalBias is the primary grazing-angle fix; must be a real positive offset.
+  expect(shadow!.normalBias).toBeGreaterThan(0);
+  // Small negative constant bias for the residual depth-compare acne.
+  expect(shadow!.bias).toBeLessThan(0);
+});
