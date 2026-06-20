@@ -7,17 +7,19 @@
  * the engine's local mocks.
  *
  * Roadmap (see docs/plan/STANDALONE_ENGINE_ROADMAP.md):
- *   - `fetchBlock` is the single data seam. Today it returns local mocks;
- *     Phase 1 swaps in a LocalDataSource backed by DraftStorage so locally
- *     edited blocks persist and reload.
+ *   - `LocalDataSource` is the single block-data seam: a mode-dispatched scene
+ *     seed (mock/parkour/coaster + demo via sceneBlock) overlaid with the local
+ *     draft store, so locally edited blocks persist and reload. Streaming and the
+ *     2D map both read through it.
  *   - "Publish selected block on-chain" stays out of this client; it belongs
  *     to an optional chain plugin (IChainPublisher) that the editor build adds.
  */
 import { Engine } from '@engine/Engine';
 import { TransformComponent } from '@engine/core/components/PlayerComponents';
 import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
-import { fetchMockBlock } from '@engine/core/mocks/BlockMocks';
+import { MockBlockData } from '@engine/core/mocks/BlockMocks';
 import { IDataSource } from '@engine/core/services/DataSource';
+import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataSource';
 import { buildParkourBlock, PARKOUR_START } from '@engine/core/levels/parkour';
 import { buildCoasterBlock, COASTER_START } from '@engine/core/levels/coaster';
 import { Coords } from '@engine/core/utils/Coords';
@@ -117,7 +119,9 @@ export class DesktopLoader implements IDataSource {
     }
 
     private loadedBlockKeys: Set<string> = new Set();
-    private fetchingBlockKeys: Set<string> = new Set();
+    /** Block-data seam: unifies the scene seed (mock/parkour/coaster + demo) with
+     *  the local draft overlay. Built once draftStore is hydrated (see init). */
+    private localData: LocalDataSource | null = null;
 
     public playerState: SPPPlayerState = { ...DEFAULT_PLAYER_STATE };
 
@@ -131,9 +135,12 @@ export class DesktopLoader implements IDataSource {
         return cfg;
     }
 
-    public async view(_x: number, _y: number, _ext: number, _worldIndex: number): Promise<any> {
-        // Neighborhood fetching is driven by handleGridRequest below.
-        return null;
+    public async view(x: number, y: number, ext: number, _worldIndex: number): Promise<any> {
+        // Effective neighbourhood window (scene seed + local draft overlay) from
+        // the unified block seam. handleGridRequest drives streaming through the
+        // same LocalDataSource; this method makes the IDataSource seam callable
+        // too (e.g. the 2D map / tooling), no longer dead.
+        return this.localData ? this.localData.view(x, y, ext) : null;
     }
 
     public async module(ids: number[]): Promise<any> {
@@ -214,6 +221,14 @@ export class DesktopLoader implements IDataSource {
         // first block materializes (BlockSystem swaps drafts in synchronously),
         // and restore the player's persisted location/inventory/session.
         await this.engine.hydrateDrafts(0);
+
+        // The unified block seam: one SceneProvider (mode-dispatched seed) + the
+        // now-hydrated DraftStore. All block streaming flows through this.
+        this.localData = new LocalDataSource(
+            { block: (x, y) => this.sceneBlock(x, y) } as SceneProvider,
+            this.engine.getWorld()!.draftStore,
+            0,
+        );
 
         // Parkour: load the persisted best time for the HUD.
         if (this.isParkour) {
@@ -336,42 +351,38 @@ export class DesktopLoader implements IDataSource {
             this.loadedBlockKeys.delete(k);
         }
 
-        const missing = requiredKeys.filter(k => !this.loadedBlockKeys.has(k) && !this.fetchingBlockKeys.has(k));
-        if (missing.length === 0) return;
+        const missing = requiredKeys.filter(k => !this.loadedBlockKeys.has(k));
+        if (missing.length === 0 || !this.localData) return;
 
-        missing.forEach(k => this.fetchingBlockKeys.add(k));
-
-        const results = await Promise.all(missing.map(k => {
-            const [cx, cy] = k.split('_').map(Number);
-            return this.fetchBlock(cx, cy);
-        }));
-
-        results.forEach(data => {
-            this.engine?.injectBlock({ ...data, adjuncts: data.raw });
-            const key = `${data.x}_${data.y}`;
+        // Pull the effective window (scene seed + draft overlay) from the unified
+        // seam in ONE call, then inject only the not-yet-resident blocks. Wiring
+        // view() this way retires the inline three-source fetch dispatch.
+        const missingSet = new Set(missing);
+        for (const block of this.localData.view(center[0], center[1], extend)) {
+            const key = `${block.x}_${block.y}`;
+            if (!missingSet.has(key)) continue;
+            this.engine.injectBlock({ x: block.x, y: block.y, adjuncts: block.raw, elevation: block.raw[0] });
             this.loadedBlockKeys.add(key);
-            this.fetchingBlockKeys.delete(key);
-        });
+        }
     }
 
-    // The single data seam. Chain-free: always local mock.
-    // (Phase 1 of the decoupling plan replaces this with a DraftStorage-backed
-    // LocalDataSource so edited blocks persist.)
-    private async fetchBlock(x: number, y: number): Promise<any> {
-        // Parkour mode: serve the course segment for course blocks (and an empty
-        // block elsewhere). Match the mock's { x, y, raw } shape.
-        if (this.isParkour) {
-            return { x, y, raw: buildParkourBlock(x, y) };
-        }
-        // Coaster mode: the spawn block holds the b6 coaster source; elsewhere empty.
+    /**
+     * SceneProvider seed: the base (authored/procedural) raw for a block, BEFORE
+     * local drafts (LocalDataSource overlays those). Dispatches the three base
+     * sources by the world's fixed level — the former fetchBlock body, sync.
+     */
+    private sceneBlock(x: number, y: number): any[] {
+        // Parkour: course segment for course blocks, empty block elsewhere.
+        if (this.isParkour) return buildParkourBlock(x, y);
+        // Coaster: the spawn block holds the b6 coaster source; elsewhere empty.
         if (this.isCoaster) {
-            const raw = (x === COASTER_START.block[0] && y === COASTER_START.block[1])
+            return (x === COASTER_START.block[0] && y === COASTER_START.block[1])
                 ? buildCoasterBlock() : [0, 1, [], []];
-            return { x, y, raw };
         }
-        const data = await fetchMockBlock(x, y);
+        // Normal world: procedural mock + (spawn only) the demo showcase splice.
+        const data = MockBlockData(x, y);
         if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) this.injectDemoAssets(data);
-        return data;
+        return data.raw;
     }
 
     /**
@@ -688,10 +699,11 @@ export class DesktopLoader implements IDataSource {
 
     // ── 2D map (data seam) ────────────────────────────────────────────────────────
     // The 2D world map is a pure RENDER-layer feature: it reads block summaries
-    // straight off the SAME data source the 3D world streams from (fetchBlock),
+    // straight off the SAME data seam the 3D world streams from (LocalDataSource),
     // WITHOUT building any 3D entities. The map's viewport drives which cells get
     // fetched (dynamic region loading), mirroring the old engine's render_2d
-    // loadDetails window — just decoupled from the player's position.
+    // loadDetails window — just decoupled from the player's position. Reading
+    // through the unified seam means the map also reflects local edits (drafts).
 
     /** World grid dimensions (block count per axis); cells outside are void. */
     public get worldRange(): [number, number] {
@@ -703,8 +715,9 @@ export class DesktopLoader implements IDataSource {
      *  no ECS entities. raw = [elevation, status, adjunctsRaw, animations, game]. */
     public async fetchMapCell(x: number, y: number): Promise<MapCell> {
         try {
-            const data = await this.fetchBlock(x, y);
-            const raw: any[] = data?.raw ?? [];
+            // Effective block (seed + draft overlay) when the seam is up; before
+            // boot fall back to the raw seed.
+            const raw: any[] = this.localData ? this.localData.blockAt(x, y).raw : this.sceneBlock(x, y);
             const groups: any[] = Array.isArray(raw[2]) ? raw[2] : [];
             let count = 0;
             for (const g of groups) count += Array.isArray(g?.[1]) ? g[1].length : 0;
