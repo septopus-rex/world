@@ -61,6 +61,15 @@ export class IdbDraftBackend implements IDraftBackend {
         await db.delete('drafts', `${worldId}:${blockKey}`);
     }
 
+    /** Wipe every block draft for the world + its metadata row (RESET STATE). */
+    async clearWorld(worldId: number): Promise<void> {
+        const db = await this.open();
+        const keys = await db.getAllKeysFromIndex('drafts', 'byWorld', worldId);
+        const tx = db.transaction('drafts', 'readwrite');
+        await Promise.all([...keys.map(k => tx.store.delete(k)), tx.done]);
+        await db.delete('worlds', worldId);
+    }
+
     /** World-scoped metadata, stored in the (P1-reserved) `worlds` store as
      *  one row per world: { worldId, meta: { [key]: value } }. */
     async loadMeta(worldId: number, key: string): Promise<any> {

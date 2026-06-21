@@ -244,7 +244,17 @@ function App() {
 
       <div className="absolute bottom-4 right-4 z-40 p-2 flex flex-col gap-2 pointer-events-auto">
         <button
-          onClick={() => { if (confirm("Reset player position and state?")) { localStorage.removeItem("spp_player_state"); window.location.reload(); } }}
+          data-testid="stamp-scene"
+          onClick={() => { const b = loader?.playerState?.block; if (b) loader?.stampTestScene(b[0], b[1]); }}
+          className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 backdrop-blur-md rounded-lg text-[10px] font-bold text-amber-300 tracking-widest uppercase transition-all flex items-center gap-2 group"
+          title="Stamp the demo test scene onto the current block (persisted draft)"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 group-hover:animate-pulse"></span>
+          导入测试场景
+        </button>
+        <button
+          data-testid="reset-state"
+          onClick={() => { if (confirm("Reset ALL local edits (blocks, position, inventory) to the pristine seed?")) loader?.resetWorld(); }}
           className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 backdrop-blur-md rounded-lg text-[10px] font-bold text-red-400 tracking-widest uppercase transition-all flex items-center gap-2 group"
           title="Reset Saved State"
         >

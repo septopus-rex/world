@@ -177,6 +177,15 @@ export class Engine {
     }
 
     /**
+     * Wipe ALL local drafts + metadata for a world (RESET STATE). Awaitable so
+     * the client can reload only once durable storage is actually cleared; after
+     * the reload, hydrate finds nothing and blocks fall back to the scene seed.
+     */
+    public async clearDrafts(worldId: number = 0): Promise<void> {
+        await this.world?.draftStore.clearWorld(worldId);
+    }
+
+    /**
      * Load every persisted draft for a world into the DraftStore's sync cache,
      * and restore the player's persisted inventory. Call AFTER bootWorld and
      * BEFORE injecting the first block — BlockSystem reads drafts synchronously

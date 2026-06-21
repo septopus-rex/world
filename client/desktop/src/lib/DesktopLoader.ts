@@ -401,6 +401,12 @@ export class DesktopLoader implements IDataSource {
         // view each from a different side. Applied AFTER scale-to-fit, so an
         // aspect-matched (≈uniform) model rotates cleanly with no shear.
         const Y = Math.PI;
+        // Adjunct action targets are block-absolute stable ids
+        // (adj_{x}_{y}_{typeIdDec}_{idx}). Derive them from THIS block so the
+        // scene's triggers/doors work wherever it is stamped — not just the spawn
+        // block. (Stamping the demo elsewhere is the "import test scene" tool.)
+        const bx = data.x, by = data.y;
+        const aid = (typeDec: number, idx: number) => `adj_${bx}_${by}_${typeDec}_${idx}`;
         const modules = [
             // 3 pyramids share one .gltf (load-once, instance-many) — south row,
             // keeping the north half of the block clear for the trigger court.
@@ -512,13 +518,13 @@ export class DesktopLoader implements IDataSource {
             [[4, 4.5, 6], [8, 11.25, 3], [0, 0, 0], 1, 0, [
                 {
                     type: 'in', actions: [
-                        { type: 'adjunct', target: 'adj_2048_2048_161_0', method: 'moveZ', params: [3.2] },
+                        { type: 'adjunct', target: aid(161, 0), method: 'moveZ', params: [3.2] },
                         { type: 'flag', method: '', target: 'demo_gate', params: [true] },
                     ]
                 },
                 {
                     type: 'out', actions: [
-                        { type: 'adjunct', target: 'adj_2048_2048_161_0', method: 'moveZ', params: [-3.2] },
+                        { type: 'adjunct', target: aid(161, 0), method: 'moveZ', params: [-3.2] },
                         { type: 'flag', method: '', target: 'demo_gate', params: [false] },
                     ]
                 },
@@ -536,7 +542,7 @@ export class DesktopLoader implements IDataSource {
             [[2, 2, 3.2], [12, 10.5, 1.6], [0, 0, 0], 1, 0, [
                 {
                     type: 'touch', actions: [
-                        { type: 'adjunct', target: 'adj_2048_2048_166_0', method: 'rotateY', params: [0.8] },
+                        { type: 'adjunct', target: aid(166, 0), method: 'rotateY', params: [0.8] },
                         { type: 'flag', method: '', target: 'demo_touch', params: [true] },
                         { type: 'sound', target: 31, method: 'play', params: [0.8] },
                     ]
@@ -547,7 +553,7 @@ export class DesktopLoader implements IDataSource {
             [[3, 3, 4], [3, 10.5, 2], [0, 0, 0], 1, 0, [
                 {
                     type: 'hold', holdDuration: 1500, actions: [
-                        { type: 'adjunct', target: 'adj_2048_2048_167_0', method: 'moveZ', params: [0.8] },
+                        { type: 'adjunct', target: aid(167, 0), method: 'moveZ', params: [0.8] },
                         { type: 'flag', method: '', target: 'demo_lift', params: [true] },
                     ]
                 },
@@ -559,7 +565,7 @@ export class DesktopLoader implements IDataSource {
                     type: 'in', oneTime: true,
                     conditions: { '==': [{ var: 'flags.demo_touch' }, true] },
                     actions: [
-                        { type: 'adjunct', target: 'adj_2048_2048_161_1', method: 'moveZ', params: [3.2] },
+                        { type: 'adjunct', target: aid(161, 1), method: 'moveZ', params: [3.2] },
                         { type: 'flag', method: '', target: 'demo_chain', params: [true] },
                     ],
                     fallbackActions: [
@@ -574,7 +580,7 @@ export class DesktopLoader implements IDataSource {
                     type: 'in', oneTime: true,
                     conditions: { '>=': [{ var: 'inventory.tpl_2' }, 1] },
                     actions: [
-                        { type: 'adjunct', target: 'adj_2048_2048_161_2', method: 'moveZ', params: [3.2] },
+                        { type: 'adjunct', target: aid(161, 2), method: 'moveZ', params: [3.2] },
                         { type: 'flag', method: '', target: 'demo_key_door', params: [true] },
                     ],
                     fallbackActions: [
@@ -584,6 +590,46 @@ export class DesktopLoader implements IDataSource {
             ]],
         ];
         data.raw[2].push([0x00b8, triggers]);
+    }
+
+    /** Full standalone block raw for the demo showcase, authored for ANY block
+     *  (adjunct ids rebased to bx,by). Shared by the spawn block and the
+     *  "import test scene" stamp below. */
+    private buildDemoScene(bx: number, by: number): any[] {
+        const data = MockBlockData(bx, by);
+        this.injectDemoAssets(data);
+        return data.raw;
+    }
+
+    /**
+     * DEV TOOL — stamp the demo test scene onto a block as a PERSISTENT draft, so
+     * it survives reload and can be edited/tested. Lets you jump to any empty
+     * block and drop a fresh, fully-wired scene (doors/triggers/items/SPP) to
+     * iterate on. Rebuilds the live block from the new draft immediately.
+     */
+    public stampTestScene(bx: number, by: number): void {
+        if (!this.engine || !this.localData) return;
+        const raw = this.buildDemoScene(bx, by);
+        this.engine.getWorld()!.draftStore.save(0, bx, by, raw);   // persist
+        // Re-materialise FROM the draft: BlockSystem reads the raw at inject time,
+        // so swap the live block by remove + re-inject the now-merged content.
+        this.engine.removeBlock(bx, by);
+        const merged = this.localData.blockAt(bx, by);
+        this.engine.injectBlock({ x: bx, y: by, adjuncts: merged.raw, elevation: merged.raw[0] });
+        this.loadedBlockKeys.add(`${bx}_${by}`);
+        console.log(`[Loader] stamped test scene onto block ${bx}_${by} (persisted)`);
+    }
+
+    /**
+     * DEV TOOL — RESET STATE: wipe ALL local drafts + metadata (block edits,
+     * player position, inventory, session) then reload, so the world falls back
+     * to the pristine scene seed. Awaits the durable wipe before reloading, else
+     * the IndexedDB delete could be interrupted by the navigation.
+     */
+    public async resetWorld(): Promise<void> {
+        if (this.engine) await this.engine.clearDrafts(0);
+        try { localStorage.removeItem('spp_player_state'); } catch { /* non-browser */ }
+        window.location.reload();
     }
 
     /** Drop one of an inventory item at the player's feet (atomic, see ItemSystem). */

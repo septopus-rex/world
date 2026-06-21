@@ -28,6 +28,8 @@ export interface IDraftBackend {
     hydrate(worldId: number): Promise<BlockDraft[]>;
     put(draft: BlockDraft): Promise<void>;
     remove(worldId: number, blockKey: string): Promise<void>;
+    /** Wipe every draft AND metadata row for a world (RESET STATE). Optional. */
+    clearWorld?(worldId: number): Promise<void>;
     /** World-scoped key/value metadata (player inventory, etc.). Optional. */
     loadMeta?(worldId: number, key: string): Promise<any>;
     saveMeta?(worldId: number, key: string, value: any): Promise<void>;
@@ -45,6 +47,11 @@ export class InMemoryDraftBackend implements IDraftBackend {
     }
     async remove(worldId: number, blockKey: string): Promise<void> {
         this.rows.delete(`${worldId}:${blockKey}`);
+    }
+    async clearWorld(worldId: number): Promise<void> {
+        const pfx = `${worldId}:`;
+        for (const k of [...this.rows.keys()]) if (k.startsWith(pfx)) this.rows.delete(k);
+        for (const k of [...this.meta.keys()]) if (k.startsWith(pfx)) this.meta.delete(k);
     }
     async loadMeta(worldId: number, key: string): Promise<any> {
         return this.meta.get(`${worldId}:${key}`);
@@ -131,6 +138,23 @@ export class DraftStore {
         this.cache.delete(k);
         this.dirty.set(k, { op: 'remove', worldId, blockKey });
         this.kick();
+    }
+
+    /**
+     * Wipe ALL local edits + metadata for a world — a true "reset state". Clears
+     * the sync cache and drops any pending write-behind ops for the world (so a
+     * queued put can't resurrect a just-cleared block), then deletes the durable
+     * rows. After this + a reload, hydrate finds nothing and blocks fall back to
+     * the scene seed. Awaitable so the caller can reload only once IDB is wiped.
+     */
+    public async clearWorld(worldId: number): Promise<void> {
+        const pfx = `${worldId}:`;
+        for (const k of [...this.cache.keys()]) if (k.startsWith(pfx)) this.cache.delete(k);
+        for (const k of [...this.dirty.keys()]) if (k.startsWith(pfx)) this.dirty.delete(k);
+        if (this.backend?.clearWorld) {
+            try { await this.backend.clearWorld(worldId); }
+            catch (e) { console.warn(`[DraftStore] clearWorld(${worldId}) failed`, e); }
+        }
     }
 
     // ── world metadata (player inventory, etc.) ───────────────────────────────

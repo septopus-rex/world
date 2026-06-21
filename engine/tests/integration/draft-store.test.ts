@@ -223,3 +223,47 @@ describe('BlockSystem — builds blocks from hydrated drafts', () => {
         expect(adjuncts.some(a => a.stdData.oz === 9)).toBe(true);  // marker tag
     });
 });
+
+describe('DraftStore.clearWorld — RESET STATE wipes drafts + metadata', () => {
+    afterEach(cleanupIdb);
+
+    it('clears the sync cache, pending writes, and metadata (InMemory)', async () => {
+        const store = new DraftStore(new InMemoryDraftBackend());
+        store.save(0, 2048, 2048, markerRaw(1));
+        store.save(0, 2049, 2048, markerRaw(2));
+        store.saveMeta(0, 'player', { block: [2049, 2048] });
+        expect(store.list(0)).toHaveLength(2);
+
+        await store.clearWorld(0);
+
+        expect(store.list(0)).toHaveLength(0);
+        expect(store.hasDraft(0, 2048, 2048)).toBe(false);
+        expect(store.pendingWrites).toBe(0);          // dirty queue dropped too
+        expect(await store.loadMeta(0, 'player')).toBeUndefined();
+    });
+
+    it('scopes the wipe to one world', async () => {
+        const store = new DraftStore(new InMemoryDraftBackend());
+        store.save(0, 1, 1, markerRaw(1));
+        store.save(1, 1, 1, markerRaw(2));     // a different world
+        await store.clearWorld(0);
+        expect(store.hasDraft(0, 1, 1)).toBe(false);
+        expect(store.hasDraft(1, 1, 1)).toBe(true);   // untouched
+    });
+
+    it('deletes durably so a re-opened DB hydrates empty (IndexedDB)', async () => {
+        const writer = new DraftStore(idb());
+        writer.save(0, 5, 6, markerRaw(7));
+        writer.saveMeta(0, 'inventory', [{ id: 'x' }]);
+        await writer.flush();
+
+        await writer.clearWorld(0);
+        await writer.flush();
+
+        // Fresh store over the SAME DB (simulated page reload after reset).
+        const reopened = new DraftStore(idb());
+        await reopened.hydrate(0);
+        expect(reopened.list(0)).toHaveLength(0);
+        expect(await reopened.loadMeta(0, 'inventory')).toBeUndefined();
+    });
+});
