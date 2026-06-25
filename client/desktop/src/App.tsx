@@ -8,11 +8,12 @@ import { InventoryPanel } from './components/InventoryPanel';
 import { HealthBar } from './components/HealthBar';
 import { ParkourHUD } from './components/ParkourHUD';
 import { MahjongHUD } from './components/MahjongHUD';
+import { PoolHUD } from './components/PoolHUD';
 import { WorldMap2D } from './components/WorldMap2D';
 
 function App() {
   const isMobile = useIsMobile();
-  const { loader, ready, mode, setMode, gameZoneActive, mahjongState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
+  const { loader, ready, mode, setMode, gameZoneActive, activeGame, gameState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -127,12 +128,14 @@ function App() {
           </button>
         </div>
       )}
-      {/* In-world mahjong: when a game session is live the board overlay drives it
-          (game.md external-API runtime). Its own "Leave" exits Game mode, so the
-          generic exit button is hidden while it's up. */}
-      {ready && mahjongState && loader && <MahjongHUD state={mahjongState} loader={loader} />}
+      {/* In-world games: when a session is live, the active game's HUD drives it
+          (game.md external-API runtime). The HUD is picked by the active game name
+          (engine = source of truth); each HUD's "Leave" exits Game mode, so the
+          generic exit button is hidden while any game HUD is up. */}
+      {ready && loader && activeGame === 'mahjong' && gameState && <MahjongHUD state={gameState} loader={loader} />}
+      {ready && loader && activeGame === 'pool' && gameState && <PoolHUD state={gameState} loader={loader} />}
 
-      {ready && mode === 'game' && !mahjongState && (
+      {ready && mode === 'game' && !activeGame && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
           <button
             data-testid="exit-game"

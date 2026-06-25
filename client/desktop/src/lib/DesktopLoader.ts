@@ -24,13 +24,13 @@ import { buildParkourBlock, PARKOUR_START } from '@engine/core/levels/parkour';
 import { buildCoasterBlock, COASTER_START } from '@engine/core/levels/coaster';
 import { Coords } from '@engine/core/utils/Coords';
 import type { GameSetting } from '@engine/core/types/GameSetting';
-import { MahjongGameApi } from '../games/mahjong/MahjongGameApi';
-import { FetchGameApi } from '../games/mahjong/FetchGameApi';
-import { MAHJONG_SETTING, MAHJONG_GAME_ID } from '../games/mahjong/setting';
-import type { MahjongState } from '../games/mahjong/MahjongGame';
 import type { IGameApi } from '@engine/core/services/IGameApi';
+import { GAMES, gameById } from '../games/registry';
+import { GameApiRouter } from '../games/GameApiRouter';
+import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_TEXTURE_ID, DEMO_AVATAR_ID, DEMO_MODELS, buildDemoScene } from '../scenes/demoScene';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
+import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
 
@@ -79,17 +79,23 @@ export class DesktopLoader implements IDataSource {
     /** Subscribe to engine-confirmed mode changes (one consumer: useEngine). */
     public onModeChange(cb: (m: string) => void): void { this._onMode = cb; }
 
-    /** The host's transport to the mahjong game (the Game Setting `methods` whitelist
-     *  is enforced by the engine before a call reaches this). Injected as gameApi.
-     *  Default = in-page loopback mock; `?mjserver` opts into the real networked
-     *  FetchGameApi that dials the Game Setting baseurl. Set in init(). */
-    private mahjongApi: IGameApi = new MahjongGameApi();
-    /** Latest mahjong board state (null when no game is running). Mirrored to the HUD. */
-    private _gameState: MahjongState | null = null;
-    public get mahjongState(): MahjongState | null { return this._gameState; }
-    private _onGameState: ((s: MahjongState | null) => void) | null = null;
-    /** Subscribe to mahjong board updates (one consumer: useEngine → MahjongHUD). */
-    public onGameStateChange(cb: (s: MahjongState | null) => void): void { this._onGameState = cb; }
+    /** One IGameApi injected into the engine, dispatching by game name to per-game
+     *  backends (loopback mock, or networked FetchGameApi under `?mjserver`). The
+     *  Game Setting `methods` whitelist is enforced by the engine before a call
+     *  reaches it. Built in init() from the game registry. */
+    private gameApi: IGameApi = new GameApiRouter({});
+    /** Active game name + its latest state (null when no game is running). The engine
+     *  is the source of truth (game.started/ended carry the name). Generic — each
+     *  game's HUD reads/casts gameState as it needs. */
+    private _activeGame: string | null = null;
+    private _gameState: any = null;
+    public get activeGame(): string | null { return this._activeGame; }
+    public get gameState(): any { return this._gameState; }
+    /** Back-compat alias for the mahjong HUD/e2e. */
+    public get mahjongState(): any { return this._activeGame === 'mahjong' ? this._gameState : null; }
+    private _onGameState: ((game: string | null, s: any) => void) | null = null;
+    /** Subscribe to active-game state updates (consumer: useEngine → GameHUD). */
+    public onGameStateChange(cb: (game: string | null, s: any) => void): void { this._onGameState = cb; }
 
     /** Is the coaster level active? (ride it in Game mode). */
     public get coasterActive(): boolean { return this.isCoaster; }
@@ -162,10 +168,10 @@ export class DesktopLoader implements IDataSource {
         return out;
     }
 
-    /** Resolve a Game Setting resource (game.md §2). The mahjong table block carries
-     *  MAHJONG_GAME_ID in its `game` field; any other id has no game. */
+    /** Resolve a Game Setting resource (game.md §2): a playable block carries a
+     *  registered game's id in its `game` field. Looked up in the game registry. */
     public async gameSetting(id: number): Promise<GameSetting | null> {
-        return id === MAHJONG_GAME_ID ? MAHJONG_SETTING : null;
+        return gameById(id)?.setting ?? null;
     }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
@@ -173,15 +179,20 @@ export class DesktopLoader implements IDataSource {
     public async init(containerId: string, ui?: any) {
         if (this.engine) return;
 
-        // Transport selection: `?mjserver` dials the real game server (FetchGameApi
-        // → MAHJONG_SETTING.baseurl); otherwise the in-page loopback mock (offline).
+        // Build one transport per registered game and route by name. `?mjserver`
+        // dials each game's real server (FetchGameApi → its baseurl); otherwise the
+        // in-page loopback mock (offline). Existing demo/e2e behaviour preserved.
         const useServer = typeof location !== 'undefined'
             && new URLSearchParams(location.search).has('mjserver');
-        this.mahjongApi = useServer
-            ? new FetchGameApi(MAHJONG_SETTING.baseurl ?? '/api/mahjong')
-            : new MahjongGameApi();
+        const backends: Record<string, IGameApi> = {};
+        for (const g of GAMES) {
+            backends[g.name] = useServer
+                ? new FetchGameApi(g.setting.baseurl ?? `/api/${g.name}`)
+                : g.makeLoopback();
+        }
+        this.gameApi = new GameApiRouter(backends);
 
-        this.engine = new Engine(containerId, { api: this, ui, gameApi: this.mahjongApi });
+        this.engine = new Engine(containerId, { api: this, ui, gameApi: this.gameApi });
 
         this.engine.on('block.need', (payload) => {
             this.handleGridRequest(payload.center);
@@ -208,12 +219,14 @@ export class DesktopLoader implements IDataSource {
         // opening board. `end` (on leaving) tears the session down. The HUD
         // mirrors `_gameState` and drives moves through world.gameRuntime.call.
         this.engine.on('game.started', (p: any) => {
-            this._gameState = (p?.session ?? null) as MahjongState | null;
-            this._onGameState?.(this._gameState);
+            this._activeGame = p?.game ?? null;
+            this._gameState = p?.session ?? null;
+            this._onGameState?.(this._activeGame, this._gameState);
         });
         this.engine.on('game.ended', () => {
+            this._activeGame = null;
             this._gameState = null;
-            this._onGameState?.(null);
+            this._onGameState?.(null, null);
         });
 
         // Link/QR adjunct (e1): clicking one fires interact.primary with the hit
@@ -412,6 +425,7 @@ export class DesktopLoader implements IDataSource {
         // The mahjong table block (game zone) and the demo showcase block are
         // authored in scenes/; the loader just dispatches.
         if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);
+        if (x === POOL_BLOCK[0] && y === POOL_BLOCK[1]) return buildPoolScene(x, y);
         if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) return buildDemoScene(x, y);
         return MockBlockData(x, y).raw;
     }
@@ -482,32 +496,28 @@ export class DesktopLoader implements IDataSource {
     // All routed through world.gameRuntime.call, which enforces the Game Setting
     // `methods` whitelist (game.md §3) before the call reaches the game transport.
 
-    /** Discard `tile` (0..26); the engine returns the next board state. */
-    public async mahjongDiscard(tile: number): Promise<void> {
-        await this.callGameMethod('discard', [tile]);
-    }
-
-    /** Declare a self-draw win (only valid when the board reports canWin). */
-    public async mahjongWin(): Promise<void> {
-        await this.callGameMethod('win', []);
-    }
-
-    /** Leave the table: exit Game mode → engine calls the whitelisted `end`. */
-    public mahjongLeave(): void {
-        this.setMode('normal');
-    }
-
-    private async callGameMethod(method: string, params: any[]): Promise<void> {
+    /** Generic game move: call a whitelisted method on the active game and mirror
+     *  the returned state. Any game's HUD uses this (mahjong discard, pool shoot…).
+     *  The engine's GameRuntime enforces the methods whitelist before the transport. */
+    public async gameAction(method: string, params: any[] = []): Promise<void> {
         const rt = this.engine?.getWorld()?.gameRuntime;
         if (!rt) return;
         try {
-            const s = (await rt.call(method, params)) as MahjongState;
+            const s = await rt.call(method, params);
             this._gameState = s;
-            this._onGameState?.(s);
+            this._onGameState?.(this._activeGame, s);
         } catch (e) {
-            console.warn('[mahjong] move refused/failed', method, e);
+            console.warn('[game] move refused/failed', this._activeGame, method, e);
         }
     }
+
+    /** Leave the active table: exit Game mode → engine calls the whitelisted `end`. */
+    public leaveGame(): void { this.setMode('normal'); }
+
+    // Back-compat thin aliases used by the mahjong HUD/e2e.
+    public mahjongDiscard(tile: number): Promise<void> { return this.gameAction('discard', [tile]); }
+    public mahjongWin(): Promise<void> { return this.gameAction('win', []); }
+    public mahjongLeave(): void { this.leaveGame(); }
 
     // ── Player / view controls ─────────────────────────────────────────────────
 
