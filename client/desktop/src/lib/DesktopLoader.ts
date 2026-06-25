@@ -23,8 +23,16 @@ import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataS
 import { buildParkourBlock, PARKOUR_START } from '@engine/core/levels/parkour';
 import { buildCoasterBlock, COASTER_START } from '@engine/core/levels/coaster';
 import { Coords } from '@engine/core/utils/Coords';
+import type { GameSetting } from '@engine/core/types/GameSetting';
+import { MahjongGameApi } from '../games/mahjong/MahjongGameApi';
+import { MAHJONG_SETTING, MAHJONG_GAME_ID } from '../games/mahjong/setting';
+import type { MahjongState } from '../games/mahjong/MahjongGame';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
+
+/** Block that carries the mahjong table — one block east of the demo spawn so the
+ *  player can walk straight to it. Its raw[4] = MAHJONG_GAME_ID makes it a game zone. */
+const MAHJONG_BLOCK: [number, number] = [2049, 2048];
 
 // Demo fixtures (client/desktop/public/assets) wired through the model/texture
 // pipeline so `npm run dev` shows real network-loaded models + textures. Each
@@ -87,6 +95,16 @@ export class DesktopLoader implements IDataSource {
     private _onMode: ((m: string) => void) | null = null;
     /** Subscribe to engine-confirmed mode changes (one consumer: useEngine). */
     public onModeChange(cb: (m: string) => void): void { this._onMode = cb; }
+
+    /** The host's transport to the mahjong game (the Game Setting `methods` whitelist
+     *  is enforced by the engine before a call reaches this). Injected as gameApi. */
+    private mahjongApi = new MahjongGameApi();
+    /** Latest mahjong board state (null when no game is running). Mirrored to the HUD. */
+    private _gameState: MahjongState | null = null;
+    public get mahjongState(): MahjongState | null { return this._gameState; }
+    private _onGameState: ((s: MahjongState | null) => void) | null = null;
+    /** Subscribe to mahjong board updates (one consumer: useEngine → MahjongHUD). */
+    public onGameStateChange(cb: (s: MahjongState | null) => void): void { this._onGameState = cb; }
 
     /** Is the coaster level active? (ride it in Game mode). */
     public get coasterActive(): boolean { return this.isCoaster; }
@@ -159,12 +177,18 @@ export class DesktopLoader implements IDataSource {
         return out;
     }
 
+    /** Resolve a Game Setting resource (game.md §2). The mahjong table block carries
+     *  MAHJONG_GAME_ID in its `game` field; any other id has no game. */
+    public async gameSetting(id: number): Promise<GameSetting | null> {
+        return id === MAHJONG_GAME_ID ? MAHJONG_SETTING : null;
+    }
+
     // ── Boot ──────────────────────────────────────────────────────────────────
 
     public async init(containerId: string, ui?: any) {
         if (this.engine) return;
 
-        this.engine = new Engine(containerId, { api: this, ui });
+        this.engine = new Engine(containerId, { api: this, ui, gameApi: this.mahjongApi });
 
         this.engine.on('block.need', (payload) => {
             this.handleGridRequest(payload.center);
@@ -184,6 +208,19 @@ export class DesktopLoader implements IDataSource {
         this.engine.on('system.mode', (p: any) => {
             this._mode = p?.mode ?? this._mode;
             this._onMode?.(this._mode);
+        });
+
+        // Game runtime lifecycle (game.md §5): the engine resolved the block's
+        // Game Setting and called the whitelisted `start`; its response is the
+        // opening board. `end` (on leaving) tears the session down. The HUD
+        // mirrors `_gameState` and drives moves through world.gameRuntime.call.
+        this.engine.on('game.started', (p: any) => {
+            this._gameState = (p?.session ?? null) as MahjongState | null;
+            this._onGameState?.(this._gameState);
+        });
+        this.engine.on('game.ended', () => {
+            this._gameState = null;
+            this._onGameState?.(null);
         });
 
         // Link/QR adjunct (e1): clicking one fires interact.primary with the hit
@@ -379,9 +416,42 @@ export class DesktopLoader implements IDataSource {
             return (x === COASTER_START.block[0] && y === COASTER_START.block[1])
                 ? buildCoasterBlock() : [0, 1, [], []];
         }
+        // The mahjong table block: procedural ground + a table, marked as a game
+        // zone (raw[4] = MAHJONG_GAME_ID) so walking onto it offers Game entry.
+        if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return this.buildMahjongScene(x, y);
         // Normal world: procedural mock + (spawn only) the demo showcase splice.
         const data = MockBlockData(x, y);
         if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) this.injectDemoAssets(data);
+        return data.raw;
+    }
+
+    /**
+     * The in-world mahjong table: a green felt table + 4 stools on procedural
+     * ground, with the block flagged as a game zone. This is the entire "rich 3D
+     * app" footprint in the world data — the game itself is the external mahjong
+     * mock, reached only through the Game Setting (game.md). Walk onto this block
+     * → "Enter Game" → the engine resolves MAHJONG_SETTING and calls `start`.
+     */
+    private buildMahjongScene(bx: number, by: number): any[] {
+        const data = MockBlockData(bx, by);
+        // a2 box rows: [size, pos, rot, colorIdx, repeat, animate, stop]. SPP coords
+        // X=East Y=North Z=Alt. Table centred at E8/N8; stop=1 makes pieces solid.
+        const C = [8, 8]; // block-centre
+        const table = [
+            [[3, 3, 0.35], [C[0], C[1], 0.95], [0, 0, 0], 2, [1, 1], 0, 1], // felt top (blue palette)
+            [[0.3, 0.3, 0.9], [C[0] - 1.3, C[1] - 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1], // legs
+            [[0.3, 0.3, 0.9], [C[0] + 1.3, C[1] - 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1],
+            [[0.3, 0.3, 0.9], [C[0] - 1.3, C[1] + 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1],
+            [[0.3, 0.3, 0.9], [C[0] + 1.3, C[1] + 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1],
+        ];
+        const stools = [
+            [[0.7, 0.7, 0.5], [C[0], C[1] - 2.4, 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // S
+            [[0.7, 0.7, 0.5], [C[0], C[1] + 2.4, 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // N
+            [[0.7, 0.7, 0.5], [C[0] - 2.4, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // W
+            [[0.7, 0.7, 0.5], [C[0] + 2.4, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // E
+        ];
+        data.raw[2].push([0x00a2, [...table, ...stools]]);
+        data.raw[4] = MAHJONG_GAME_ID; // block-level game flag = the Game Setting resource id
         return data.raw;
     }
 
@@ -663,10 +733,54 @@ export class DesktopLoader implements IDataSource {
         URL.revokeObjectURL(url);
     }
 
+    // ── Mahjong moves ───────────────────────────────────────────────────────────
+    // All routed through world.gameRuntime.call, which enforces the Game Setting
+    // `methods` whitelist (game.md §3) before the call reaches the game transport.
+
+    /** Discard `tile` (0..26); the engine returns the next board state. */
+    public async mahjongDiscard(tile: number): Promise<void> {
+        await this.callGameMethod('discard', [tile]);
+    }
+
+    /** Declare a self-draw win (only valid when the board reports canWin). */
+    public async mahjongWin(): Promise<void> {
+        await this.callGameMethod('win', []);
+    }
+
+    /** Leave the table: exit Game mode → engine calls the whitelisted `end`. */
+    public mahjongLeave(): void {
+        this.setMode('normal');
+    }
+
+    private async callGameMethod(method: string, params: any[]): Promise<void> {
+        const rt = this.engine?.getWorld()?.gameRuntime;
+        if (!rt) return;
+        try {
+            const s = (await rt.call(method, params)) as MahjongState;
+            this._gameState = s;
+            this._onGameState?.(s);
+        } catch (e) {
+            console.warn('[mahjong] move refused/failed', method, e);
+        }
+    }
+
     // ── Player / view controls ─────────────────────────────────────────────────
 
     public setPlayerMoveIntent(x: number, y: number) {
         this.engine?.setMoveIntent(x, y);
+    }
+
+    /** Teleport the player to an SPP block + local offset (fast-travel / testing
+     *  seam). Sets the live transform directly; the next step settles physics. */
+    public teleportSpp(block: [number, number], pos: [number, number, number] = [8, 8, 3]): void {
+        const w = this.engine?.getWorld();
+        if (!w) return;
+        const ids = w.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
+        const t = w.getComponent(ids[0], 'TransformComponent') as any;
+        if (!t) return;
+        const e = Coords.sppToEngine(pos, block);
+        t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
+        t.dirty = true;
     }
 
     public toggleEditMode(active: boolean) {

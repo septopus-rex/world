@@ -19,6 +19,7 @@ import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
 import { GameZoneSystem } from './systems/GameZoneSystem';
+import { GameRuntimeSystem } from './systems/GameRuntimeSystem';
 import { AdjunctSystem } from './systems/AdjunctSystem';
 import { RaycastInteractionSystem } from './systems/RaycastInteractionSystem';
 import { TriggerSystem } from './systems/TriggerSystem';
@@ -36,6 +37,9 @@ import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
 import { DraftStore, IDraftBackend, InMemoryDraftBackend } from './services/DraftStore';
 import { IActuator, LocalActuator } from './services/Actuator';
+import { IGameApi, NullGameApi } from './services/IGameApi';
+import { GameSetting } from './types/GameSetting';
+import { GameRuntime } from './services/GameRuntime';
 import { EventQueue } from './events/EventQueue';
 import { IdbDraftBackend, hasIndexedDB } from './services/IdbDraftBackend';
 import { ResourceManager, ResourceManagerConfig } from '../render/ResourceManager';
@@ -71,6 +75,8 @@ export interface WorldDeps {
     draftBackend?: IDraftBackend | null;
     /** Trigger-action executor. Default: LocalActuator (pure local mutation). */
     actuator?: IActuator;
+    /** Game-Setting external-API transport. Default: NullGameApi (no external API). */
+    gameApi?: IGameApi;
 }
 
 /** Inert data source so a World constructed without one never crashes on resource calls. */
@@ -161,6 +167,29 @@ export class World {
      */
     public readonly actuator: IActuator;
 
+    /** Data source (block/resource/game-setting fetch). Engine passes its api. */
+    public readonly dataSource: IDataSource;
+
+    /**
+     * Game-Setting external-API transport (game.md §3). The engine never performs
+     * the network/DOM call itself; GameRuntime hands a whitelisted call here.
+     */
+    public readonly gameApi: IGameApi;
+
+    /**
+     * The Game Setting resolved for the playable block the player is standing in
+     * (null when not in a zone, or a bare playable zone with no setting). Resolved
+     * by GameRuntimeSystem from the block `game` field (a resource id).
+     */
+    public gameSetting: GameSetting | null = null;
+
+    /**
+     * The live game session, created on entering Game mode on a zone that resolved
+     * a setting, disposed on leaving. The single choke point for external API
+     * calls (enforces the methods whitelist). Drive moves via gameRuntime.call().
+     */
+    public gameRuntime: GameRuntime | null = null;
+
     // 4. Events
     private listeners: Map<string, Function[]> = new Map();
 
@@ -192,6 +221,8 @@ export class World {
                 : (hasIndexedDB() ? new IdbDraftBackend() : new InMemoryDraftBackend())
         );
         this.actuator = deps.actuator ?? new LocalActuator();
+        this.dataSource = deps.dataSource ?? NULL_DATA_SOURCE;
+        this.gameApi = deps.gameApi ?? new NullGameApi();
 
         // 1. Rendering Setup — injectable. Default = real WebGL engine; tests pass
         //    a headless NullRenderEngine so a World can boot+tick without a GPU/DOM.
@@ -227,6 +258,9 @@ export class World {
         // Derives gameZoneActive from the block.game flag of the block the player
         // stands in, and emits game.zone_enter/exit — the gate Game-mode entry uses.
         this.systems.addSystem(new GameZoneSystem());
+        // Runs the Game Mode Protocol lifecycle on top of the zone gate: resolves
+        // the block's Game Setting and drives start/end through the methods whitelist.
+        this.systems.addSystem(new GameRuntimeSystem());
         this.systems.addSystem(new BlockSystem());
         this.systems.addSystem(new AdjunctSystem());
         this.systems.addSystem(new BlockLODSystem());

@@ -32,6 +32,10 @@ export interface EventMap {
     // ── game (zone gating: derived from block.game; see GameZoneSystem) ──
     'game.zone_enter': { block: [number, number]; key: string; game: number };
     'game.zone_exit': { block: [number, number]; key: string };
+    /** A game session opened (entered Game mode + `start` resolved). */
+    'game.started': { game: string; session: any };
+    /** A game session closed (left Game mode + `end` resolved). */
+    'game.ended': { game: string; result: any };
     // ── player ──
     'player.state': { block: [number, number]; position: number[]; rotation: number[] };
     'player.fall': { drop: number; position: [number, number, number] };

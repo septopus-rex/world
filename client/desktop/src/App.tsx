@@ -7,11 +7,12 @@ import { Compass, TelemetryReadout } from './components/HUD';
 import { InventoryPanel } from './components/InventoryPanel';
 import { HealthBar } from './components/HealthBar';
 import { ParkourHUD } from './components/ParkourHUD';
+import { MahjongHUD } from './components/MahjongHUD';
 import { WorldMap2D } from './components/WorldMap2D';
 
 function App() {
   const isMobile = useIsMobile();
-  const { loader, ready, mode, setMode, gameZoneActive, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
+  const { loader, ready, mode, setMode, gameZoneActive, mahjongState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -126,7 +127,12 @@ function App() {
           </button>
         </div>
       )}
-      {ready && mode === 'game' && (
+      {/* In-world mahjong: when a game session is live the board overlay drives it
+          (game.md external-API runtime). Its own "Leave" exits Game mode, so the
+          generic exit button is hidden while it's up. */}
+      {ready && mahjongState && loader && <MahjongHUD state={mahjongState} loader={loader} />}
+
+      {ready && mode === 'game' && !mahjongState && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
           <button
             data-testid="exit-game"

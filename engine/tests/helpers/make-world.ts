@@ -53,6 +53,7 @@ export async function makeHeadlessEngineWith(opts: {
   resources?: any;
   nullEngine?: any;
   draftBackend?: any;
+  gameApi?: any;
   playerStart?: { block: [number, number]; position: [number, number, number]; rotation?: [number, number, number] };
 }): Promise<{ engine: Engine; nullEngine: any }> {
   const nullEngine = opts.nullEngine ?? createNullRenderEngine();
@@ -62,6 +63,7 @@ export async function makeHeadlessEngineWith(opts: {
     uiMode: 'events',
     resources: opts.resources,
     draftBackend: opts.draftBackend,
+    gameApi: opts.gameApi,
   });
   await engine.bootWorld(0, opts.playerStart ?? {
     block: [2048, 2048],

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DesktopLoader } from './DesktopLoader';
+import type { MahjongState } from '../games/mahjong/MahjongGame';
 
 /**
  * Boots the chain-free engine loader and exposes UI-facing state.
@@ -18,6 +19,8 @@ export function useEngine(containerId: string) {
     const [showMinimap, setShowMinimap] = useState(false);
     // Default third-person so the avatar is visible (matches CharacterController default).
     const [view, setView] = useState<'first' | 'third'>('third');
+    // Mahjong board state, mirrored from the engine's game.started/ended + moves.
+    const [mahjongState, setMahjongState] = useState<MahjongState | null>(null);
 
     useEffect(() => {
         if (!loaderRef.current) {
@@ -25,6 +28,7 @@ export function useEngine(containerId: string) {
             (window as any).loader = loaderRef.current;
             loaderRef.current.onModeChange((m) => setModeState(m as WorldMode));
             loaderRef.current.onZoneChange((active) => setGameZoneActive(active));
+            loaderRef.current.onGameStateChange((s) => setMahjongState(s));
             loaderRef.current
                 .init(containerId)
                 .then(() => setReady(true))
@@ -48,6 +52,7 @@ export function useEngine(containerId: string) {
         setMode,
         isEditMode: mode === 'edit',
         gameZoneActive,
+        mahjongState,
         showMinimap,
         setShowMinimap,
         view,

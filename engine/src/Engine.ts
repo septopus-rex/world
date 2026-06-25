@@ -36,6 +36,8 @@ export interface EngineServices {
     draftBackend?: import('./core/services/DraftStore').IDraftBackend | null;
     /** Trigger-action executor (default: LocalActuator; chain builds inject their own). */
     actuator?: import('./core/services/Actuator').IActuator;
+    /** Game-Setting external-API transport (default: NullGameApi; host injects its own). */
+    gameApi?: import('./core/services/IGameApi').IGameApi;
     config?: any;
 }
 
@@ -108,7 +110,8 @@ export class Engine {
             dataSource: this.services.api,
             resources: this.services.resources,
             draftBackend: this.services.draftBackend,
-            actuator: this.services.actuator
+            actuator: this.services.actuator,
+            gameApi: this.services.gameApi
         });
 
         // 3.5 UI Orchestration
