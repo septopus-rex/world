@@ -25,8 +25,10 @@ import { buildCoasterBlock, COASTER_START } from '@engine/core/levels/coaster';
 import { Coords } from '@engine/core/utils/Coords';
 import type { GameSetting } from '@engine/core/types/GameSetting';
 import { MahjongGameApi } from '../games/mahjong/MahjongGameApi';
+import { FetchGameApi } from '../games/mahjong/FetchGameApi';
 import { MAHJONG_SETTING, MAHJONG_GAME_ID } from '../games/mahjong/setting';
 import type { MahjongState } from '../games/mahjong/MahjongGame';
+import type { IGameApi } from '@engine/core/services/IGameApi';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
 
@@ -97,8 +99,10 @@ export class DesktopLoader implements IDataSource {
     public onModeChange(cb: (m: string) => void): void { this._onMode = cb; }
 
     /** The host's transport to the mahjong game (the Game Setting `methods` whitelist
-     *  is enforced by the engine before a call reaches this). Injected as gameApi. */
-    private mahjongApi = new MahjongGameApi();
+     *  is enforced by the engine before a call reaches this). Injected as gameApi.
+     *  Default = in-page loopback mock; `?mjserver` opts into the real networked
+     *  FetchGameApi that dials the Game Setting baseurl. Set in init(). */
+    private mahjongApi: IGameApi = new MahjongGameApi();
     /** Latest mahjong board state (null when no game is running). Mirrored to the HUD. */
     private _gameState: MahjongState | null = null;
     public get mahjongState(): MahjongState | null { return this._gameState; }
@@ -187,6 +191,14 @@ export class DesktopLoader implements IDataSource {
 
     public async init(containerId: string, ui?: any) {
         if (this.engine) return;
+
+        // Transport selection: `?mjserver` dials the real game server (FetchGameApi
+        // → MAHJONG_SETTING.baseurl); otherwise the in-page loopback mock (offline).
+        const useServer = typeof location !== 'undefined'
+            && new URLSearchParams(location.search).has('mjserver');
+        this.mahjongApi = useServer
+            ? new FetchGameApi(MAHJONG_SETTING.baseurl ?? '/api/mahjong')
+            : new MahjongGameApi();
 
         this.engine = new Engine(containerId, { api: this, ui, gameApi: this.mahjongApi });
 

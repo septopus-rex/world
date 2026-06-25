@@ -15,7 +15,10 @@ export const MAHJONG_GAME_ID = 42; // resource id carried by the playable block'
 
 export const MAHJONG_SETTING: GameSetting = {
     game: 'mahjong',
-    baseurl: 'https://mahjong.mock.septopus.local',
+    // The specified game server endpoint. FetchGameApi POSTs {baseurl}/{method}.
+    // Relative to the PWA origin so it works in dev/e2e; a deployment points it
+    // at a real backend host.
+    baseurl: '/api/mahjong',
     homepage: '',
     version: '1.0.0',
     // Single playable block (the table sits on it). Absolute coords filled at
