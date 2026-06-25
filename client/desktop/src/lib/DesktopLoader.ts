@@ -29,29 +29,10 @@ import { FetchGameApi } from '../games/mahjong/FetchGameApi';
 import { MAHJONG_SETTING, MAHJONG_GAME_ID } from '../games/mahjong/setting';
 import type { MahjongState } from '../games/mahjong/MahjongGame';
 import type { IGameApi } from '@engine/core/services/IGameApi';
+import { DEMO_BLOCK, DEMO_TEXTURE_ID, DEMO_AVATAR_ID, DEMO_MODELS, buildDemoScene } from '../scenes/demoScene';
+import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
-
-/** Block that carries the mahjong table — one block east of the demo spawn so the
- *  player can walk straight to it. Its raw[4] = MAHJONG_GAME_ID makes it a game zone. */
-const MAHJONG_BLOCK: [number, number] = [2049, 2048];
-
-// Demo fixtures (client/desktop/public/assets) wired through the model/texture
-// pipeline so `npm run dev` shows real network-loaded models + textures. Each
-// model file is loaded ONCE and instanced per placement; textures are shared.
-const DEMO_BLOCK: [number, number] = [2048, 2048];
-const DEMO_TEXTURE_ID = 7;  // → /assets/checker.png
-
-// Resource id → model record. Real Khronos sample assets (helmet = complex PBR
-// with baked textures; fox = rigged + animated, exercises SkeletonUtils.clone).
-const DEMO_AVATAR_ID = 30;  // → /assets/avatar.glb (rigged human)
-const DEMO_MODELS: Record<number, { type: string; format: string; raw: string }> = {
-    27: { type: 'module', format: 'gltf', raw: '/assets/pyramid.gltf' },
-    28: { type: 'module', format: 'glb', raw: '/assets/helmet.glb' },
-    29: { type: 'module', format: 'glb', raw: '/assets/fox.glb' },
-    30: { type: 'avatar', format: 'glb', raw: '/assets/avatar.glb' },
-    31: { type: 'audio', format: 'wav', raw: '/assets/ding.wav' },
-};
 
 /** A block's 2D-map summary (render-layer only; see DesktopLoader.fetchMapCell). */
 export interface MapCell {
@@ -428,259 +409,11 @@ export class DesktopLoader implements IDataSource {
             return (x === COASTER_START.block[0] && y === COASTER_START.block[1])
                 ? buildCoasterBlock() : [0, 1, [], []];
         }
-        // The mahjong table block: procedural ground + a table, marked as a game
-        // zone (raw[4] = MAHJONG_GAME_ID) so walking onto it offers Game entry.
-        if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return this.buildMahjongScene(x, y);
-        // Normal world: procedural mock + (spawn only) the demo showcase splice.
-        const data = MockBlockData(x, y);
-        if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) this.injectDemoAssets(data);
-        return data.raw;
-    }
-
-    /**
-     * The in-world mahjong table: a green felt table + 4 stools on procedural
-     * ground, with the block flagged as a game zone. This is the entire "rich 3D
-     * app" footprint in the world data — the game itself is the external mahjong
-     * mock, reached only through the Game Setting (game.md). Walk onto this block
-     * → "Enter Game" → the engine resolves MAHJONG_SETTING and calls `start`.
-     */
-    private buildMahjongScene(bx: number, by: number): any[] {
-        const data = MockBlockData(bx, by);
-        // a2 box rows: [size, pos, rot, colorIdx, repeat, animate, stop]. SPP coords
-        // X=East Y=North Z=Alt. Table centred at E8/N8; stop=1 makes pieces solid.
-        const C = [8, 8]; // block-centre
-        const table = [
-            [[3, 3, 0.35], [C[0], C[1], 0.95], [0, 0, 0], 2, [1, 1], 0, 1], // felt top (blue palette)
-            [[0.3, 0.3, 0.9], [C[0] - 1.3, C[1] - 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1], // legs
-            [[0.3, 0.3, 0.9], [C[0] + 1.3, C[1] - 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1],
-            [[0.3, 0.3, 0.9], [C[0] - 1.3, C[1] + 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1],
-            [[0.3, 0.3, 0.9], [C[0] + 1.3, C[1] + 1.3, 0.45], [0, 0, 0], 1, [1, 1], 0, 1],
-        ];
-        const stools = [
-            [[0.7, 0.7, 0.5], [C[0], C[1] - 2.4, 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // S
-            [[0.7, 0.7, 0.5], [C[0], C[1] + 2.4, 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // N
-            [[0.7, 0.7, 0.5], [C[0] - 2.4, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // W
-            [[0.7, 0.7, 0.5], [C[0] + 2.4, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // E
-        ];
-        data.raw[2].push([0x00a2, [...table, ...stools]]);
-        data.raw[4] = MAHJONG_GAME_ID; // block-level game flag = the Game Setting resource id
-        return data.raw;
-    }
-
-    /**
-     * Demo only: splice a few model instances + textured boxes into the spawn
-     * block so the model/texture pipeline is visible in `npm run dev`. The 3
-     * pyramids share ONE model file (load-once, instance-many); the wall + floor
-     * slab share ONE texture (shared by reference, tiled by size-derived UVs).
-     */
-    private injectDemoAssets(data: any) {
-        // [size, offset, rot, RESOURCE_ID, animate, stop]. oz lifts the base just
-        // above ground (avoids coplanar z-fighting). Box size is matched to each
-        // model's natural aspect so the per-axis scale-to-fit stays ~uniform (no
-        // stretching) — pyramids are symmetric; helmet ≈ cubic; fox is elongated.
-        // rot = [pitch(x), YAW(y, around vertical), roll(z)] — distinct yaw per
-        // instance so you can see rotation correctly applied to loaded models and
-        // view each from a different side. Applied AFTER scale-to-fit, so an
-        // aspect-matched (≈uniform) model rotates cleanly with no shear.
-        const Y = Math.PI;
-        // Adjunct action targets are block-absolute stable ids
-        // (adj_{x}_{y}_{typeIdDec}_{idx}). Derive them from THIS block so the
-        // scene's triggers/doors work wherever it is stamped — not just the spawn
-        // block. (Stamping the demo elsewhere is the "import test scene" tool.)
-        const bx = data.x, by = data.y;
-        const aid = (typeDec: number, idx: number) => `adj_${bx}_${by}_${typeDec}_${idx}`;
-        const modules = [
-            // 3 pyramids share one .gltf (load-once, instance-many) — south row,
-            // keeping the north half of the block clear for the trigger court.
-            [[2, 2, 3], [3, 1.2, 1.55], [0, 0.4, 0], 27, 0, 0],
-            [[2, 2, 3], [8, 1.2, 1.55], [0, Y / 4, 0], 27, 0, 0],
-            [[2, 2, 3], [13, 1.2, 1.55], [0, -0.6, 0], 27, 0, 0],
-            // 2 damaged helmets (complex PBR) share one .glb — aspect ≈ cubic
-            [[3.15, 3.33, 3.0], [6, 3, 1.55], [0, 0.6, 0], 28, 0, 0],
-            [[3.15, 3.33, 3.0], [10, 3, 1.55], [0, -Y / 3, 0], 28, 0, 0],
-            // 2 foxes (rigged) share one .glb — aspect ~1 : 6 : 3 (W:N:Alt)
-            [[0.64, 3.92, 2.0], [2, 6, 1.05], [0, Y / 2, 0], 29, 0, 0],
-            [[0.64, 3.92, 2.0], [14, 8, 1.05], [0, Y, 0], 29, 0, 0],
-        ];
-        const texturedBoxes = [
-            // [size, pos, rot, colorIdx, repeat, animate, stop, TEXTURE_ID]
-            [[6, 0.3, 4], [12, 5, 2], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],     // wall
-            [[6, 6, 0.3], [3, 4, 0.15], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],   // floor slab
-        ];
-        // Stop adjuncts (colliders). Format: [size, offset, rot, mode, animate]
-        // SPP coords: X=East Y=North Z=Alt. This wall sits at N=5, E=1..15,
-        // south of the spawn pillar — the southern showcase stays fenced off.
-        const stops = [
-            [[14, 0.4, 2.5], [8, 5, 1.25], [0, 0, 0], 1, 0],
-        ];
-        data.raw[2].push([0x00a4, modules]);
-        data.raw[2].push([0x00a2, texturedBoxes]);
-        data.raw[2].push([0x00b4, stops]);
-
-        // ── Trigger court (north half of the spawn block) ────────────────────
-        // Interactive trigger test scene; everything gives VISIBLE feedback via
-        // adjunct actions and writes a flag the e2e suite can assert.
-        // gameOnly=0 everywhere so it runs in Normal (browse) mode.
-        //
-        // adjunct action targets use the stable id adj_{x}_{y}_{typeIdDec}_{idx}:
-        // a1 wall=161, a6 cone=166, a7 ball=167.
-
-        // Reactors (visible objects the triggers manipulate):
-        const walls = [
-            // #0 auto door (adj_2048_2048_161_0): slides up when the player stands
-            //    on the blue pad, slides back when they leave (airlock feel).
-            [[4, 0.4, 3], [8, 13, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
-            // #1 conditional door (adj_2048_2048_161_1): only opens if the cone
-            //    button was touched first (flags.demo_touch) — opens once.
-            [[3, 0.4, 3], [14, 14, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
-            // #2 key door (adj_2048_2048_161_2): opens once when the player walks
-            //    up CARRYING the key item (inventory.tpl_2 — pick it up first).
-            [[3, 0.4, 3], [2, 14, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
-        ];
-        // Pickable items (b5): [pos, templateId, seed, count, rot]. Click to pick
-        // up (Normal/Game mode); the bag panel lists them; drop puts them back.
-        const items = [
-            [[5, 8, 0.6], 1, 9347, 1, [0, 0, 0]],     // gem (unique, seed-derived rarity)
-            [[6.5, 8, 0.6], 1, 777, 1, [0, 0, 0]],    // another gem, different roll
-            [[12, 8, 0.5], 2, 0, 1, [0, 0, 0]],       // the KEY for door #2
-            [[13.5, 8, 0.5], 3, 41, 2, [0, 0, 0]],    // 2 potions (stackable)
-        ];
-        const cones = [
-            // touch button (adj_2048_2048_166_0): each click spins it visibly.
-            [[1.2, 1.2, 1.6], [12, 10.5, 0.8], [0, 0, 0], 0, [1, 1], 0, 0],
-        ];
-        const balls = [
-            // hold-lift ball (adj_2048_2048_167_0): rises while you camp the pad.
-            // stop=1: standable — jump on and ride it up (moving-platform carry).
-            [[1, 1, 1], [3, 12, 3], [0, 0, 0], 0, [1, 1], 0, 1],
-        ];
-        // Floor pads marking each invisible volume (colors from basic_box palette:
-        // 1 dark-gray, 2 blue, 3 red).
-        const markers = [
-            [[4, 4.5, 0.05], [8, 11.25, 0.1], [0, 0, 0], 2, [1, 1], 0, 0],   // blue: auto door
-            [[3, 3, 0.05], [3, 10.5, 0.1], [0, 0, 0], 3, [1, 1], 0, 0],      // red: hold lift
-            [[2.2, 2, 0.05], [14.2, 12, 0.1], [0, 0, 0], 1, [1, 1], 0, 0],   // gray: conditional door
-        ];
-        data.raw[2].push([0x00a1, walls]);
-        data.raw[2].push([0x00b5, items]);
-
-        // String-particle hut (b6): two 4m cells expanded by the engine into
-        // standard walls + a cell trigger. Faces are [state, variant] in
-        // ParticleFace order [Top, Bottom, Front(S), Back(N), Left(W), Right(E)];
-        // state 1=Closed 0=Open; closed variants: 0 solid · 1 doorway · 2 window.
-        // Cell A: window south, sealed elsewhere, open passage east to B.
-        // Cell B: doorway north (player side), interior trigger sets spp_hut.
-        const particles = [
-            [[1, 2.5, 0], [
-                {
-                    position: [0, 0, 0], level: 0,
-                    faces: [[1, 0], [0, 0], [1, 2], [1, 0], [1, 0], [0, 0]],
-                },
-                {
-                    position: [1, 0, 0], level: 0,
-                    faces: [[1, 0], [0, 0], [1, 0], [1, 1], [0, 0], [1, 0]],
-                    trigger: [
-                        { type: 'in', actions: [{ type: 'flag', method: '', target: 'spp_hut', params: [true] }] },
-                    ],
-                },
-            ], 'basic'],
-        ];
-        data.raw[2].push([0x00b6, particles]);
-        data.raw[2].push([0x00a6, cones]);
-        data.raw[2].push([0x00a7, balls]);
-        data.raw[2].push([0x00a2, markers]);
-
-        // Trigger volumes (b8). Row format: [size, offset, rot, shape, gameOnly, events].
-        const triggers = [
-            // ① auto door pad (blue): in→open+demo_gate, out→close, hold 800ms→demo_hold.
-            //    Tall (alt 0..6): the player descends from the 6m spawn pillar while
-            //    walking north, so the volume must catch a falling crossing too.
-            //    Deep (N 9..13.5): reaches past the door line so it stays open
-            //    while you walk through.
-            [[4, 4.5, 6], [8, 11.25, 3], [0, 0, 0], 1, 0, [
-                {
-                    type: 'in', actions: [
-                        { type: 'adjunct', target: aid(161, 0), method: 'moveZ', params: [3.2] },
-                        { type: 'flag', method: '', target: 'demo_gate', params: [true] },
-                    ]
-                },
-                {
-                    type: 'out', actions: [
-                        { type: 'adjunct', target: aid(161, 0), method: 'moveZ', params: [-3.2] },
-                        { type: 'flag', method: '', target: 'demo_gate', params: [false] },
-                    ]
-                },
-                {
-                    type: 'hold', holdDuration: 800, actions: [
-                        { type: 'flag', method: '', target: 'demo_hold', params: [true] },
-                    ]
-                },
-            ]],
-            // ② touch button: clicking the (invisible) volume around the cone spins
-            //    it and sets demo_touch — which also arms the conditional door.
-            //    Top at alt 3.2: the first-person eye ray sits at ~2.6 (player
-            //    0.9 + 1.7), so the volume must reach above it to catch a level
-            //    center-screen click.
-            [[2, 2, 3.2], [12, 10.5, 1.6], [0, 0, 0], 1, 0, [
-                {
-                    type: 'touch', actions: [
-                        { type: 'adjunct', target: aid(166, 0), method: 'rotateY', params: [0.8] },
-                        { type: 'flag', method: '', target: 'demo_touch', params: [true] },
-                        { type: 'sound', target: 31, method: 'play', params: [0.8] },
-                    ]
-                },
-            ]],
-            // ③ hold-lift pad (red): camp 1.5s and the ball rises one notch;
-            //    leave + re-enter to lift again (hold re-arms per stay).
-            [[3, 3, 4], [3, 10.5, 2], [0, 0, 0], 1, 0, [
-                {
-                    type: 'hold', holdDuration: 1500, actions: [
-                        { type: 'adjunct', target: aid(167, 0), method: 'moveZ', params: [0.8] },
-                        { type: 'flag', method: '', target: 'demo_lift', params: [true] },
-                    ]
-                },
-            ]],
-            // ④ conditional door pad (gray): JSONLogic gate on demo_touch; opens the
-            //    far door ONCE (oneTime) — fallback just logs until the button is hit.
-            [[2.2, 2, 4], [14.2, 12, 2], [0, 0, 0], 1, 0, [
-                {
-                    type: 'in', oneTime: true,
-                    conditions: { '==': [{ var: 'flags.demo_touch' }, true] },
-                    actions: [
-                        { type: 'adjunct', target: aid(161, 1), method: 'moveZ', params: [3.2] },
-                        { type: 'flag', method: '', target: 'demo_chain', params: [true] },
-                    ],
-                    fallbackActions: [
-                        { type: 'system', method: 'log', target: '', params: ['conditional door: touch the cone button first (demo_touch)'] },
-                    ]
-                },
-            ]],
-            // ⑤ key door pad: opens door #2 ONCE if the player carries the key
-            //    item (inventory.tpl_2 ≥ 1 — pick it up at [12, 8] first).
-            [[3, 2.5, 4], [2, 12.5, 2], [0, 0, 0], 1, 0, [
-                {
-                    type: 'in', oneTime: true,
-                    conditions: { '>=': [{ var: 'inventory.tpl_2' }, 1] },
-                    actions: [
-                        { type: 'adjunct', target: aid(161, 2), method: 'moveZ', params: [3.2] },
-                        { type: 'flag', method: '', target: 'demo_key_door', params: [true] },
-                    ],
-                    fallbackActions: [
-                        { type: 'system', method: 'log', target: '', params: ['key door: pick up the key first (inventory.tpl_2)'] },
-                    ]
-                },
-            ]],
-        ];
-        data.raw[2].push([0x00b8, triggers]);
-    }
-
-    /** Full standalone block raw for the demo showcase, authored for ANY block
-     *  (adjunct ids rebased to bx,by). Shared by the spawn block and the
-     *  "import test scene" stamp below. */
-    private buildDemoScene(bx: number, by: number): any[] {
-        const data = MockBlockData(bx, by);
-        this.injectDemoAssets(data);
-        return data.raw;
+        // The mahjong table block (game zone) and the demo showcase block are
+        // authored in scenes/; the loader just dispatches.
+        if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);
+        if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) return buildDemoScene(x, y);
+        return MockBlockData(x, y).raw;
     }
 
     /**
@@ -691,7 +424,7 @@ export class DesktopLoader implements IDataSource {
      */
     public stampTestScene(bx: number, by: number): void {
         if (!this.engine || !this.localData) return;
-        const raw = this.buildDemoScene(bx, by);
+        const raw = buildDemoScene(bx, by);
         this.engine.getWorld()!.draftStore.save(0, bx, by, raw);   // persist
         // Re-materialise FROM the draft: BlockSystem reads the raw at inject time,
         // so swap the live block by remove + re-inject the now-merged content.
