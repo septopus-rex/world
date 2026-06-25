@@ -170,6 +170,7 @@ export class DefaultUIProvider implements IUIProvider {
 
         const modal = document.createElement('div');
         modal.className = 'sept-ui-modal';
+        modal.id = id;
         modal.style.width = '380px';
 
         // Header
@@ -218,7 +219,9 @@ export class DefaultUIProvider implements IUIProvider {
                 } else {
                     const input = document.createElement('input');
                     input.className = 'sept-ui-form-input';
-                    input.type = field.type === 'color' ? 'color' : 'number';
+                    // color → color picker; number → numeric; everything else
+                    // (text/json) → text, so string fields like a Link's URL work.
+                    input.type = field.type === 'color' ? 'color' : field.type === 'number' ? 'number' : 'text';
                     input.value = String(field.value ?? '');
                     if (field.min !== undefined) input.min = String(field.min);
                     if (field.max !== undefined) input.max = String(field.max);
@@ -258,16 +261,30 @@ export class DefaultUIProvider implements IUIProvider {
         footer.appendChild(submitBtn);
         modal.appendChild(footer);
 
-        backdrop.appendChild(modal);
-        backdrop.onclick = (e) => {
-            if (e.target === backdrop) {
-                this.hide(id);
-                config.onClose?.();
-            }
-        };
+        if (config.modal === false) {
+            // Non-blocking side panel: no backdrop, so the 3D canvas stays
+            // clickable (you tweak params here, then click a surface to place).
+            // Parked top-centre, clear of the mid-left palette and the centred
+            // placement target.
+            modal.style.position = 'absolute';
+            modal.style.top = '12px';
+            modal.style.left = '50%';
+            modal.style.transform = 'translateX(-50%)';
+            modal.style.pointerEvents = 'auto';
+            this.container.appendChild(modal);
+            this.overlays.set(id, modal);
+        } else {
+            backdrop.appendChild(modal);
+            backdrop.onclick = (e) => {
+                if (e.target === backdrop) {
+                    this.hide(id);
+                    config.onClose?.();
+                }
+            };
 
-        this.container.appendChild(backdrop);
-        this.overlays.set(id, backdrop);
+            this.container.appendChild(backdrop);
+            this.overlays.set(id, backdrop);
+        }
     }
 
     public showToast(message: string, duration: number = 3000): void {

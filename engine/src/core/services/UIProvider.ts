@@ -22,6 +22,12 @@ export interface UIFormConfig {
     groups: FormGroup[];
     onSubmit: (values: Record<string, any>) => void;
     onClose?: () => void;
+    /**
+     * Modal (default true) dims + blocks the rest of the screen. Set false for a
+     * non-blocking side panel — e.g. the pre-placement params form, where you tweak
+     * here and still need to click the 3D canvas to place.
+     */
+    modal?: boolean;
 }
 
 export interface IUIProvider {

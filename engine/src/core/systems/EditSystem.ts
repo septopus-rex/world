@@ -14,6 +14,11 @@ import { EditHistory } from '../EditHistory';
 import { InputProvider } from './InputProvider';
 import { saveBlockDraft } from '../utils/BlockSerializer';
 import { PLACEABLE_ADJUNCTS, defaultRawFor } from '../edit/AdjunctDefaults';
+import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
+
+/** Placement form drops these STD keys: position/rotation are set in 3D space
+ *  (click to place, [ ] to rotate, drag to move), not pre-entered in a form. */
+const PLACEMENT_FILTERED_KEYS = new Set(['ox', 'oy', 'oz', 'rx', 'ry', 'rz']);
 
 /**
  * EditSystem
@@ -30,6 +35,9 @@ export class EditSystem implements ISystem {
     private placingTypeId: number | null = null;
     /** Armed module resource id (only set when placing a module / a4). */
     private placingResource: number | string | null = null;
+    /** Pre-placement params (non-positional) set via the placement form; applied
+     *  to the default raw when the armed type is placed. Null = use defaults. */
+    private placingParams: Record<string, any> | null = null;
     /** Held-key edge tracking for the rotate/scale transform keys + undo. */
     private _prevTransformKeys: Set<string> = new Set();
     private _prevZ: boolean = false;
@@ -401,9 +409,13 @@ export class EditSystem implements ISystem {
                 const same = this.placingTypeId === entry.typeId && this.placingResource === null;
                 this.placingTypeId = same ? null : entry.typeId;
                 this.placingResource = null;
+                this.placingParams = null;       // re-arm resets any prior tweaks
                 this.paletteDirty = true;
                 if (this.placingTypeId !== null) {
-                    world.ui?.showToast(`Place ${entry.label}: click a surface in the active block`);
+                    this.showPlacementForm(world, entry.typeId, entry.label);
+                    world.ui?.showToast(`Place ${entry.label}: tweak params (optional), then click a surface`);
+                } else {
+                    world.ui?.hide("place-form");
                 }
             },
         }));
@@ -419,7 +431,10 @@ export class EditSystem implements ISystem {
                     const same = this.placingTypeId === 0x00a4 && this.placingResource === model.id;
                     this.placingTypeId = same ? null : 0x00a4;
                     this.placingResource = same ? null : model.id;
+                    this.placingParams = null;
                     this.paletteDirty = true;
+                    // Modules carry only a resource (already chosen here) — no pre-form.
+                    world.ui?.hide("place-form");
                     if (this.placingTypeId !== null) {
                         world.ui?.showToast(`Place ${model.label}: click a surface in the active block`);
                     }
@@ -427,6 +442,54 @@ export class EditSystem implements ISystem {
             });
         }
         world.ui.showGroup("edit-palette", buttons, 'mid-left');
+    }
+
+    /**
+     * Pre-placement params: when a type is armed, show its edit form pre-filled
+     * with the placement defaults, MINUS position/rotation (those are set in 3D
+     * space — click to place, [ ] to rotate, drag to move). Submitting captures
+     * the tweaks into placingParams; they're applied to the default raw when the
+     * surface is clicked. No editable non-positional fields ⇒ no form (just arm).
+     */
+    private showPlacementForm(world: World, typeId: number, label: string): void {
+        if (!world.ui) return;
+        const def = getBuiltinAdjunct(typeId);
+        if (!def?.menu?.form || !def.attribute?.deserialize) { world.ui.hide("place-form"); return; }
+
+        // Default STD (dummy position — filtered out anyway) to seed the form.
+        const std = def.attribute.deserialize(defaultRawFor(typeId, [8, 8, 0]) ?? []);
+        const groups = def.menu.form(std)
+            .map(g => ({ ...g, fields: g.fields.filter((f: any) => !PLACEMENT_FILTERED_KEYS.has(f.key)) }))
+            .filter(g => g.fields.length > 0);
+        if (groups.length === 0) { world.ui.hide("place-form"); return; } // nothing tweakable
+
+        world.ui.showForm("place-form", {
+            title: `New ${label} — set params, then click a surface`,
+            groups,
+            modal: false, // non-blocking: the canvas must stay clickable to place
+            onSubmit: (values) => {
+                this.placingParams = values;
+                world.ui?.showToast(`${label} params set · click a surface to place`);
+            },
+            onClose: () => { /* keep armed; placement uses last-submitted params */ },
+        });
+    }
+
+    /** Apply submitted form values onto an STD object (handles dotted keys like
+     *  "material.resource"); never touches position/rotation (those win from the
+     *  clicked point / defaults). */
+    private applyValuesToStd(std: any, values: Record<string, any>): void {
+        for (const key in values) {
+            if (PLACEMENT_FILTERED_KEYS.has(key)) continue;
+            if (key.includes('.')) {
+                const parts = key.split('.');
+                let t = std;
+                for (let i = 0; i < parts.length - 1; i++) { if (!t[parts[i]]) t[parts[i]] = {}; t = t[parts[i]]; }
+                t[parts[parts.length - 1]] = values[key];
+            } else {
+                std[key] = values[key];
+            }
+        }
     }
 
     /** Place the armed palette type at a clicked surface point (engine coords). */
@@ -443,8 +506,21 @@ export class EditSystem implements ISystem {
         }
         spp.pos[2] -= block.elevation || 0;   // raw altitudes are block-relative
 
-        const raw = defaultRawFor(typeId, spp.pos, { resource: this.placingResource ?? undefined });
+        let raw = defaultRawFor(typeId, spp.pos, { resource: this.placingResource ?? undefined });
         if (!raw) { world.ui?.showToast('No placement defaults for this type'); return; }
+
+        // Overlay any pre-placement param tweaks onto the default raw (size/color/
+        // url/intensity/…); position & rotation always come from the click/defaults.
+        if (this.placingParams) {
+            const def = getBuiltinAdjunct(typeId);
+            if (def?.attribute?.deserialize && def?.attribute?.serialize) {
+                try {
+                    const std = def.attribute.deserialize(raw);
+                    this.applyValuesToStd(std, this.placingParams);
+                    raw = def.attribute.serialize(std);
+                } catch (e) { console.warn('[EditSystem] pre-placement params failed; using defaults', e); }
+            }
+        }
 
         const task: EditTask = {
             entityId: -1,
@@ -462,7 +538,9 @@ export class EditSystem implements ISystem {
         this.dirty = true;
         this.placingTypeId = null;
         this.placingResource = null;
+        this.placingParams = null;
         this.paletteDirty = true;
+        world.ui?.hide("place-form");
         this.selectedEntityId = task.entityId;
         this.lastUISelection = null;
         this.syncUI(world);
