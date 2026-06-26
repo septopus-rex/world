@@ -33,6 +33,7 @@ import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, nextFace } from '../scenes/sandboxScene';
+import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
 
@@ -628,6 +629,24 @@ export class DesktopLoader implements IDataSource {
         cell.faces[pick.face] = nextFace(cell.faces[pick.face]);
         w.systems.findSystemByName('BlockSystem')?.reexpandParticle?.(w, src.eid);
         return true;
+    }
+
+    /** Persist the sculpted sandbox INTO its block draft so it survives a reload.
+     *  Re-serializes the live block (keeps the b6 SOURCE, drops derived pieces)
+     *  into the DraftStore + flushes to IndexedDB. Display is already live; this
+     *  only makes the structure durable. Returns whether it was written. */
+    public async saveSandbox(): Promise<boolean> {
+        const w = this.engine?.getWorld() as any;
+        if (!w) return false;
+        let blockEid: any = null;
+        for (const eid of w.queryEntities('BlockComponent')) {
+            const b = w.getComponent(eid, 'BlockComponent');
+            if (b?.x === SANDBOX_BLOCK[0] && b?.y === SANDBOX_BLOCK[1]) { blockEid = eid; break; }
+        }
+        if (blockEid == null) return false;
+        const ok = saveBlockDraft(w, blockEid);
+        if (ok) await w.draftStore?.flush?.();
+        return ok;
     }
 
     private findSandboxSource(w: any): { eid: any; std: any } | null {

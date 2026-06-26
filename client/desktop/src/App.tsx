@@ -20,6 +20,7 @@ function App() {
   const [isFollowing, setIsFollowing] = useState(true);
   const [show2DMap, setShow2DMap] = useState(false);
   const [sandbox, setSandbox] = useState(false);
+  const [sandboxSaved, setSandboxSaved] = useState(false);
 
   const currentBlockRef = useRef<[number, number]>([0, 0]);
 
@@ -100,6 +101,11 @@ function App() {
         <div data-testid="sandbox-bar" className="absolute top-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-4 px-5 py-2.5 rounded-2xl bg-amber-950/80 border border-amber-400/30 backdrop-blur-md shadow-2xl">
           <span className="text-amber-200 text-sm font-bold tracking-wide">🏖️ SPP 沙盘</span>
           <span className="text-amber-100/70 text-[11px]">点格子的面 → 实/门/窗/空 · 拖拽旋转 · W/S 缩放</span>
+          <button
+            data-testid="save-sandbox"
+            onClick={async () => { const ok = await loader?.saveSandbox(); if (ok) { setSandboxSaved(true); setTimeout(() => setSandboxSaved(false), 1800); } }}
+            className="px-3 py-1 rounded-lg bg-emerald-400/20 hover:bg-emerald-400/30 border border-emerald-300/40 text-emerald-100 text-xs font-bold"
+          >{sandboxSaved ? '✓ 已写入' : '写入 Save'}</button>
           <button
             data-testid="exit-sandbox"
             onClick={() => { loader?.exitSandbox(); setSandbox(false); }}
