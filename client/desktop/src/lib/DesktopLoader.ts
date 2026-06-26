@@ -31,6 +31,8 @@ import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_TEXTURE_ID, DEMO_AVATAR_ID, DEMO_MODELS, buildDemoScene } from '../scenes/demoScene';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
+import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
+import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, nextFace } from '../scenes/sandboxScene';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
 
@@ -426,6 +428,8 @@ export class DesktopLoader implements IDataSource {
         // authored in scenes/; the loader just dispatches.
         if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);
         if (x === POOL_BLOCK[0] && y === POOL_BLOCK[1]) return buildPoolScene(x, y);
+        if (x === MAZE_BLOCK[0] && y === MAZE_BLOCK[1]) return buildMazeScene(x, y);
+        if (x === SANDBOX_BLOCK[0] && y === SANDBOX_BLOCK[1]) return buildSandboxScene(x, y);
         if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) return buildDemoScene(x, y);
         return MockBlockData(x, y).raw;
     }
@@ -536,6 +540,105 @@ export class DesktopLoader implements IDataSource {
         const e = Coords.sppToEngine(pos, block);
         t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
         t.dirty = true;
+    }
+
+    // ── SPP sandbox (fixed-camera diorama) ───────────────────────────────────
+    private _sandboxActive = false;
+    private _sandboxDetach: (() => void) | null = null;
+    private _sandboxDown: { x: number; y: number; t: number } | null = null;
+
+    public get sandboxActive(): boolean { return this._sandboxActive; }
+
+    /** Enter the SPP sandbox: teleport onto the diorama block, hide the avatar,
+     *  orbit (Observe) the grid centre, and listen for taps to sculpt cell faces. */
+    public enterSandbox(): void {
+        if (this._sandboxActive) return;
+        const w = this.engine?.getWorld() as any;
+        if (!w) return;
+        this.teleportSpp(SANDBOX_BLOCK, SANDBOX_CENTER);
+        // Hide the avatar — it would sit in the middle of the diorama.
+        const pid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const av = pid != null ? w.getComponent(pid, 'AvatarComponent') : null;
+        if (av) av.visible = false;
+        this.setMode('observe');
+        // A 3/4 orbit framing the 12 m grid.
+        const cc = w.systems.findSystemByName('CharacterController') as any;
+        if (cc) { cc._obsAzimuth = 0.7; cc._obsElevation = 0.7; cc._obsRadius = 22; }
+        // Tap (not drag) on the canvas → sculpt the targeted face.
+        const canvas = document.querySelector('canvas[data-engine]') as HTMLCanvasElement | null;
+        if (canvas) {
+            const onDown = (e: MouseEvent) => { this._sandboxDown = { x: e.clientX, y: e.clientY, t: Date.now() }; };
+            const onUp = (e: MouseEvent) => {
+                const d = this._sandboxDown; this._sandboxDown = null;
+                if (!d) return;
+                if (Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6 || Date.now() - d.t > 500) return; // drag/hold = orbit
+                const rect = canvas.getBoundingClientRect();
+                const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                const ndcY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
+                this.sandboxPick(ndcX, ndcY);
+            };
+            canvas.addEventListener('mousedown', onDown);
+            canvas.addEventListener('mouseup', onUp);
+            this._sandboxDetach = () => { canvas.removeEventListener('mousedown', onDown); canvas.removeEventListener('mouseup', onUp); };
+        }
+        this._sandboxActive = true;
+    }
+
+    public exitSandbox(): void {
+        if (!this._sandboxActive) return;
+        this._sandboxActive = false;
+        this._sandboxDetach?.(); this._sandboxDetach = null;
+        const w = this.engine?.getWorld() as any;
+        const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const av = pid != null ? w.getComponent(pid, 'AvatarComponent') : null;
+        if (av) av.visible = true;
+        this.setMode('normal');
+    }
+
+    /** Cast a ray through the click, decide which cell-face it targets, cycle that
+     *  face on the shared b6 source, and re-expand live. Pure picking lives in
+     *  scenes/sandboxScene.ts; here we only supply the camera ray. Returns whether
+     *  a face was cycled. */
+    public sandboxPick(ndcX: number, ndcY: number): boolean {
+        const w = this.engine?.getWorld() as any;
+        if (!w) return false;
+        const hit = w.renderEngine?.castRayFromCamera?.(ndcX, ndcY);
+        if (!hit) return false;
+        // Reconstruct the camera world position from the Observe orbit state.
+        const pid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const t = w.getComponent(pid, 'TransformComponent');
+        const cc = w.systems.findSystemByName('CharacterController') as any;
+        const obs = cc?.getObserveState?.();
+        if (!t || !obs) return false;
+        const tx = t.position[0], ty = t.position[1] + 1, tz = t.position[2];
+        const ce = Math.cos(obs.elevation), se = Math.sin(obs.elevation), r = obs.radius;
+        const cam = [tx + r * ce * Math.sin(obs.azimuth), ty + r * se, tz + r * ce * Math.cos(obs.azimuth)];
+        const dirE = [hit.point[0] - cam[0], hit.point[1] - cam[1], hit.point[2] - cam[2]];
+        // Engine(abs) → SPP-local of the sandbox block. A point maps as
+        // (x-bxoff, -z-byoff, y); a direction drops the offset: (dx, -dz, dy).
+        const B = Coords.BLOCK_SIZE;
+        const camSpp = [cam[0] - (SANDBOX_BLOCK[0] - 1) * B, -cam[2] - (SANDBOX_BLOCK[1] - 1) * B, cam[1]];
+        const dirSpp = [dirE[0], -dirE[2], dirE[1]];
+        const pick = pickFace(camSpp, dirSpp);
+        if (!pick) return false;
+        const src = this.findSandboxSource(w);
+        if (!src) return false;
+        const cell = src.std.cells?.[pick.cellIndex];
+        if (!cell?.faces) return false;
+        cell.faces[pick.face] = nextFace(cell.faces[pick.face]);
+        w.systems.findSystemByName('BlockSystem')?.reexpandParticle?.(w, src.eid);
+        return true;
+    }
+
+    private findSandboxSource(w: any): { eid: any; std: any } | null {
+        const tag = `${SANDBOX_BLOCK[0]}_${SANDBOX_BLOCK[1]}`;
+        for (const eid of w.queryEntities('AdjunctComponent')) {
+            const adj = w.getComponent(eid, 'AdjunctComponent');
+            if (adj?.stdData?.typeId === 0x00b6 && String(adj.adjunctId ?? '').includes(tag)) {
+                return { eid, std: adj.stdData };
+            }
+        }
+        return null;
     }
 
     public toggleEditMode(active: boolean) {

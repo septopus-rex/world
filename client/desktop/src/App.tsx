@@ -10,6 +10,7 @@ import { ParkourHUD } from './components/ParkourHUD';
 import { MahjongHUD } from './components/MahjongHUD';
 import { PoolHUD } from './components/PoolHUD';
 import { WorldMap2D } from './components/WorldMap2D';
+import { MAZE_BLOCK, MAZE_ENTRY } from './scenes/mazeScene';
 
 function App() {
   const isMobile = useIsMobile();
@@ -18,6 +19,7 @@ function App() {
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
   const [show2DMap, setShow2DMap] = useState(false);
+  const [sandbox, setSandbox] = useState(false);
 
   const currentBlockRef = useRef<[number, number]>([0, 0]);
 
@@ -92,6 +94,19 @@ function App() {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
+
+      {/* SPP sandbox: a fixed-camera diorama. Tap a cell face to cycle it. */}
+      {sandbox && (
+        <div data-testid="sandbox-bar" className="absolute top-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-4 px-5 py-2.5 rounded-2xl bg-amber-950/80 border border-amber-400/30 backdrop-blur-md shadow-2xl">
+          <span className="text-amber-200 text-sm font-bold tracking-wide">🏖️ SPP 沙盘</span>
+          <span className="text-amber-100/70 text-[11px]">点格子的面 → 实/门/窗/空 · 拖拽旋转 · W/S 缩放</span>
+          <button
+            data-testid="exit-sandbox"
+            onClick={() => { loader?.exitSandbox(); setSandbox(false); }}
+            className="px-3 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 border border-amber-300/40 text-amber-100 text-xs font-bold"
+          >退出 Exit</button>
+        </div>
+      )}
 
       <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-start pointer-events-none">
         {/* Pure label — must NOT intercept clicks meant for engine UI beneath. */}
@@ -277,6 +292,24 @@ function App() {
         >
           <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
           {view === 'third' ? '3RD PERSON' : '1ST PERSON'}
+        </button>
+        <button
+          data-testid="enter-sandbox"
+          onClick={() => { loader?.enterSandbox(); setSandbox(true); }}
+          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-amber-400/10 border-amber-400/30 text-amber-200 hover:bg-amber-400/20"
+          title="Open the SPP sandbox (fixed-camera diorama)"
+        >
+          <div className="w-2 h-2 rounded-full bg-amber-300"></div>
+          🏖️ SPP 沙盘
+        </button>
+        <button
+          data-testid="goto-maze"
+          onClick={() => loader?.teleportSpp(MAZE_BLOCK, MAZE_ENTRY)}
+          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-stone-300/10 border-stone-300/30 text-stone-200 hover:bg-stone-300/20"
+          title="Teleport to the Athenian labyrinth"
+        >
+          <div className="w-2 h-2 rounded-full bg-stone-200"></div>
+          🏛️ 迷宫
         </button>
         <button
           data-testid="map2d-toggle"
