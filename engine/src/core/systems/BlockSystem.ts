@@ -7,7 +7,7 @@ import { MeshComponent } from '../components/VisualizationComponents';
 import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctFactory } from '../factories/AdjunctFactory';
-import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
+import { getBuiltinAdjunct, getAdjunct } from '../services/AdjunctRegistry';
 import { expandParticle } from '../spp/Expander';
 import { RenderHandle } from '../types/Adjunct';
 
@@ -98,7 +98,7 @@ export class BlockSystem implements ISystem {
                 if (Array.isArray(adjData) && typeof adjData[0] === 'number') {
                     const typeId = adjData[0];
                     const instances = adjData[1];
-                    const definition = getBuiltinAdjunct(typeId);
+                    const definition = getAdjunct(typeId);
 
                     if (definition) {
                         instances.forEach((rawInst: any[], idx: number) => {
@@ -192,7 +192,7 @@ export class BlockSystem implements ISystem {
      */
     public spawnAdjunct(world: World, blockEid: EntityId, typeId: number, rawRow: any[]): EntityId | null {
         const block = world.getComponent<BlockComponent>(blockEid, "BlockComponent");
-        const definition = getBuiltinAdjunct(typeId);
+        const definition = getAdjunct(typeId);
         const std = definition?.attribute?.deserialize?.(rawRow);
         if (!block || !definition || !std) return null;
 

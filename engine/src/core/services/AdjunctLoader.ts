@@ -58,6 +58,18 @@ export class AdjunctLoader {
         });
     }
 
+    /**
+     * Execute a LOCAL code string in the sandbox and return its `hooks` (no
+     * network). The transport-free path for injected / dev adjuncts and tests:
+     * the IPFS fetch in loadFromIPFS is decoupled from sandbox execution, so the
+     * code here is exactly what runs once a CID resolves. Browser-only (Worker).
+     */
+    async loadFromCode(code: string): Promise<any> {
+        await this.sandbox.validate(code);
+        const { hooks } = await this.sandbox.executeAdjunct(code);
+        return hooks;
+    }
+
     /** Chain-stored adjunct code — deferred with chain integration (0C). */
     async loadFromChain(_contractAddress: string, _adjunctId: string | number): Promise<any> {
         throw new Error('Chain-based adjunct loading not implemented (deferred with chain integration).');

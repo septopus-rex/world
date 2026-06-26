@@ -6,6 +6,9 @@ import { DefaultUIProvider } from './core/services/DefaultUIProvider';
 import { EventUIProxy } from './core/services/EventUIProxy';
 import { IChainPublisher } from './core/services/IChainPublisher';
 import { ExportService } from './core/services/ExportService';
+import { AdjunctLoader } from './core/services/AdjunctLoader';
+import { descriptorToDefinition } from './core/services/DynamicAdjunct';
+import { registerDynamicAdjunct, clearDynamicAdjuncts } from './core/services/AdjunctRegistry';
 import { Coords } from './core/utils/Coords';
 import { GlobalConfig } from './core/GlobalConfig';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
@@ -72,6 +75,8 @@ export class Engine {
      *  fixing the old eventWrappers single-key clobber. */
     private subscriptions = new Map<string, Map<Function, () => void>>();
     private warnedLegacy = new Set<string>();
+    /** Lazily-created sandboxed loader for dynamic adjuncts (browser-only Worker). */
+    private adjunctLoader: AdjunctLoader | null = null;
 
     constructor(containerId: string, services: EngineServices) {
         this.containerId = containerId;
@@ -326,6 +331,34 @@ export class Engine {
 
     public getWorld(): World | null {
         return this.world;
+    }
+
+    /**
+     * Load a DYNAMIC adjunct from sandboxed code and register it by the type-id it
+     * declares, so any block referencing that id materializes it like a built-in.
+     *
+     * v1 is DECLARATIVE: `code` runs in the AdjunctSandbox (Web Worker, static
+     * filter + shadowed globals) and must assign a plain-data descriptor
+     * `hooks = { meta, render }` — the engine builds meshes via MeshFactory, so
+     * dynamic code never touches Three.js. (Function-style hooks can't cross the
+     * worker boundary and are rejected; imperative transforms are a future v2.)
+     *
+     * Async (fetch/worker); call BEFORE the referencing block streams in. Returns
+     * the registered type-id. `code` may be a local string (dev/injection) or the
+     * text fetched from a CID — same sandbox path either way.
+     */
+    public async loadDynamicAdjunct(code: string): Promise<number> {
+        if (!this.adjunctLoader) this.adjunctLoader = new AdjunctLoader();
+        const descriptor = await this.adjunctLoader.loadFromCode(code);
+        const definition = descriptorToDefinition(descriptor);
+        const typeId = definition.hooks.reg().typeId;
+        registerDynamicAdjunct(typeId, definition);
+        return typeId;
+    }
+
+    /** Forget all dynamically-loaded adjunct definitions (reload / test isolation). */
+    public clearDynamicAdjuncts(): void {
+        clearDynamicAdjuncts();
     }
 
     /**

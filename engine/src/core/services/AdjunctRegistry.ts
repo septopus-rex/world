@@ -45,15 +45,49 @@ export function getBuiltinAdjunct(typeId: number): AdjunctDefinition | undefined
 }
 
 /**
- * Resolve the logic module for an adjunct type-id:
- *   1. built-in registry, else
- *   2. dynamic chain/IPFS load — stubbed to null until dynamic adjuncts ship
- *      (see AdjunctLoader; gated with chain integration), else
- *   3. caller falls back (BlockSystem renders a placeholder box).
+ * Dynamically-loaded adjunct definitions, keyed by the type-id they declare.
+ * Populated at runtime by Engine.loadDynamicAdjunct (sandboxed code → descriptor
+ * → AdjunctDefinition; see DynamicAdjunct.ts). Separate from BUILTIN_ADJUNCTS so
+ * native types are immutable and a dynamic adjunct can never shadow one.
+ */
+const DYNAMIC_ADJUNCTS = new Map<number, AdjunctDefinition>();
+
+/** Register a dynamic adjunct under its declared type-id. Refuses to override a
+ *  built-in (those are the immutable native set). Last write wins for re-loads. */
+export function registerDynamicAdjunct(typeId: number, definition: AdjunctDefinition): void {
+    if (BUILTIN_ADJUNCTS.has(typeId)) {
+        throw new Error(`[AdjunctRegistry] type-id 0x${typeId.toString(16)} is a built-in adjunct; dynamic adjuncts cannot override it`);
+    }
+    DYNAMIC_ADJUNCTS.set(typeId, definition);
+}
+
+export function getDynamicAdjunct(typeId: number): AdjunctDefinition | undefined {
+    return DYNAMIC_ADJUNCTS.get(typeId);
+}
+
+/** Forget all dynamically-loaded definitions (reload / test isolation). */
+export function clearDynamicAdjuncts(): void {
+    DYNAMIC_ADJUNCTS.clear();
+}
+
+/**
+ * Resolve an adjunct definition for a type-id: built-in first, then the dynamic
+ * registry. This is the single dispatch entry point — BlockSystem / EditSystem
+ * call it so block materialization reaches dynamic adjuncts identically to native
+ * ones. Returns undefined when neither knows the type (caller falls back).
+ */
+export function getAdjunct(typeId: number): AdjunctDefinition | undefined {
+    return BUILTIN_ADJUNCTS.get(typeId) ?? DYNAMIC_ADJUNCTS.get(typeId);
+}
+
+/**
+ * Resolve the logic module for an adjunct type-id (built-in → dynamic).
+ * Dynamic/chain-loaded code is registered via registerDynamicAdjunct after
+ * sandboxed execution; before that a type resolves only if it is built-in.
  *
  * The phase-0 spec frames this as `AdjunctSystem.resolveLogicModule`; dispatch
  * actually happens at block-init time, so the resolver lives with the registry.
  */
 export function resolveLogicModule(typeId: number): AdjunctDefinition | null {
-    return getBuiltinAdjunct(typeId) ?? null;
+    return getAdjunct(typeId) ?? null;
 }

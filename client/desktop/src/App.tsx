@@ -11,6 +11,7 @@ import { MahjongHUD } from './components/MahjongHUD';
 import { PoolHUD } from './components/PoolHUD';
 import { WorldMap2D } from './components/WorldMap2D';
 import { MAZE_BLOCK, MAZE_ENTRY } from './scenes/mazeScene';
+import { DYN_BLOCK, DYN_VIEW } from './scenes/dynamicAdjunctScene';
 
 function App() {
   const isMobile = useIsMobile();
@@ -316,6 +317,15 @@ function App() {
         >
           <div className="w-2 h-2 rounded-full bg-stone-200"></div>
           🏛️ 迷宫
+        </button>
+        <button
+          data-testid="goto-dynamic"
+          onClick={() => loader?.teleportSpp(DYN_BLOCK, DYN_VIEW)}
+          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-violet-400/10 border-violet-400/30 text-violet-200 hover:bg-violet-400/20"
+          title="Teleport to the dynamically-loaded adjunct showcase"
+        >
+          <div className="w-2 h-2 rounded-full bg-violet-300"></div>
+          🧩 动态 adjunct
         </button>
         <button
           data-testid="map2d-toggle"

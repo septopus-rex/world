@@ -33,6 +33,7 @@ import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, nextFace } from '../scenes/sandboxScene';
+import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
@@ -263,6 +264,16 @@ export class DesktopLoader implements IDataSource {
         // hydrateDrafts below, overriding this when a saved location exists.
         await this.engine.bootWorld(0, this.playerState);
 
+        // Dynamic adjuncts: run the sandboxed declarative code and register it by
+        // type-id BEFORE any block streams in, so a block authoring that id can
+        // resolve it. Browser-only (Web Worker) — guarded so a failure here never
+        // blocks boot for the built-in scenes.
+        try {
+            await this.engine.loadDynamicAdjunct(DYNAMIC_ADJUNCT_CODE);
+        } catch (e) {
+            console.warn('[Loader] dynamic adjunct load failed (sandbox unavailable?):', e);
+        }
+
         // P1 persistence: pull every saved draft into the sync cache BEFORE the
         // first block materializes (BlockSystem swaps drafts in synchronously),
         // and restore the player's persisted location/inventory/session.
@@ -431,6 +442,7 @@ export class DesktopLoader implements IDataSource {
         if (x === POOL_BLOCK[0] && y === POOL_BLOCK[1]) return buildPoolScene(x, y);
         if (x === MAZE_BLOCK[0] && y === MAZE_BLOCK[1]) return buildMazeScene(x, y);
         if (x === SANDBOX_BLOCK[0] && y === SANDBOX_BLOCK[1]) return buildSandboxScene(x, y);
+        if (x === DYN_BLOCK[0] && y === DYN_BLOCK[1]) return buildDynamicAdjunctScene(x, y);
         if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) return buildDemoScene(x, y);
         return MockBlockData(x, y).raw;
     }
