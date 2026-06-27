@@ -191,6 +191,10 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
     // ── interaction ──────────────────────────────────────────────────────────────
 
     function onPointerDown(e: React.PointerEvent) {
+        // Stop the browser's native selection/drag: without this, a drag selects the
+        // surrounding DOM text and shows a translucent drag-image ghost anchored at
+        // the page origin (the "arrow drifting in from the top-left").
+        e.preventDefault();
         (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
         drag.current = { on: true, lastX: e.clientX, lastY: e.clientY, moved: 0 };
     }
@@ -240,7 +244,7 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
     if (!open) return null;
 
     return (
-        <div className="absolute inset-0 z-40 bg-black/85 flex flex-col" data-testid="map2d">
+        <div className="absolute inset-0 z-40 bg-black/85 flex flex-col select-none" data-testid="map2d">
             <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/30">
                 <span className="text-[11px] font-black tracking-[0.3em] text-cyan-300/80 uppercase">2D World Map</span>
                 <div className="flex items-center gap-2">

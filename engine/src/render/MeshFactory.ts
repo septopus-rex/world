@@ -177,7 +177,14 @@ export class MeshFactory {
         // would dangle (pointing at a freed texture) after its texture is released.
         if (config?.texture) {
             return new THREE.MeshStandardMaterial({
-                color, transparent: opacity < 1, opacity, side: THREE.DoubleSide
+                color, transparent: opacity < 1, opacity, side: THREE.DoubleSide,
+                // Cast shadows from BACK faces only. With side=DoubleSide, Three would
+                // otherwise default shadowSide=DoubleSide → a surface's own FRONT face
+                // lands in the shadow map and self-shadows it, producing grazing-angle
+                // moiré "waves" on flat ground/walls. Back-face-only depth is the
+                // textbook cure (geometry here is solid/closed), so the bias can stay
+                // small without peter-panning.
+                shadowSide: THREE.BackSide,
             });
         }
 
@@ -191,7 +198,11 @@ export class MeshFactory {
                 color,
                 transparent: opacity < 1,
                 opacity,
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                // Back-face-only shadow casting — see the textured branch above: kills
+                // the flat-surface self-shadow moiré that side=DoubleSide otherwise
+                // bakes into the shadow map.
+                shadowSide: THREE.BackSide,
             });
             mat.userData.shared = true;
             this._matCache.set(key, mat);

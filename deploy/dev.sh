@@ -11,6 +11,7 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLIENT="$ROOT/client/desktop"
+ENGINE="$ROOT/engine"
 PORT=7777
 
 # ── colors ────────────────────────────────────────────────────────────────────
@@ -23,7 +24,7 @@ command -v node &>/dev/null || error "node 未安装"
 command -v npm  &>/dev/null || error "npm 未安装"
 [ -d "$CLIENT" ] || error "找不到 $CLIENT"
 
-# ── deps ────────────────────────────────────────────────────────────────────────
+# ── client deps ───────────────────────────────────────────────────────────────
 # Reinstall not just when node_modules is MISSING, but also when it is INCOMPLETE
 # (an interrupted install — the vite binary is the tell-tale) or STALE (the
 # lockfile changed since the last install, e.g. after a git pull added a dep).
@@ -40,6 +41,30 @@ fi
 if [ -n "$deps_reason" ]; then
     info "安装/更新依赖（$deps_reason）：npm install..."
     ( cd "$CLIENT" && npm install )
+fi
+
+# ── engine deps ───────────────────────────────────────────────────────────────
+# The client imports the engine SOURCE (vite alias @engine → ../../engine/src), so
+# the engine's OWN deps (idb, three, json-logic-js) must resolve from engine/node_modules
+# at dev/build time — a stale engine/node_modules makes vite 500 with e.g.
+# "Failed to resolve import 'idb'". The engine uses yarn (yarn.lock); yarn v1 writes
+# node_modules/.yarn-integrity, which we use as the install marker (existence = complete,
+# mtime = freshness vs yarn.lock). The client deps check above never covers this.
+engine_reason=
+if [ ! -d "$ENGINE/node_modules" ]; then
+    engine_reason="缺少 node_modules"
+elif [ ! -f "$ENGINE/node_modules/.yarn-integrity" ]; then
+    engine_reason="依赖不完整（.yarn-integrity 缺失，可能上次安装中断）"
+elif [ -f "$ENGINE/yarn.lock" ] && [ "$ENGINE/yarn.lock" -nt "$ENGINE/node_modules/.yarn-integrity" ]; then
+    engine_reason="依赖已过期（yarn.lock 比上次安装新）"
+fi
+if [ -n "$engine_reason" ]; then
+    if command -v yarn &>/dev/null; then
+        info "安装/更新 engine 依赖（$engine_reason）：yarn install..."
+        ( cd "$ENGINE" && yarn install )
+    else
+        warn "engine 依赖需要更新（$engine_reason），但未找到 yarn —— 请手动执行：cd engine && yarn install"
+    fi
 fi
 
 # ── free the dev port (vite is configured strictPort) ───────────────────────────

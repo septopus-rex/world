@@ -3,7 +3,7 @@ import { Coords } from '@engine/core/utils/Coords';
 import { useIsMobile } from './lib/useIsMobile';
 import { useEngine } from './lib/useEngine';
 import { Joystick } from './components/Joystick';
-import { Compass, TelemetryReadout } from './components/HUD';
+import { Compass } from './components/HUD';
 import { InventoryPanel } from './components/InventoryPanel';
 import { HealthBar } from './components/HealthBar';
 import { ParkourHUD } from './components/ParkourHUD';
@@ -23,15 +23,13 @@ function App() {
   const [sandbox, setSandbox] = useState(false);
   const [sandboxSaved, setSandboxSaved] = useState(false);
 
-  const currentBlockRef = useRef<[number, number]>([0, 0]);
-
   // Minimap drag state
   const isDraggingMap = useRef(false);
   const lastMapPos = useRef({ x: 0, y: 0 });
 
   // Refs for high-performance direct DOM updates
   const compassNeedleRef = useRef<HTMLDivElement>(null);
-  const compassBlockDisplayRef = useRef<HTMLDivElement>(null);
+  const compassCoordRef = useRef<HTMLSpanElement>(null);
   const minimapBlockDisplayRef = useRef<HTMLSpanElement>(null);
 
   // Fade out the boot splash once the world is ready.
@@ -56,32 +54,20 @@ function App() {
           const headingDeg = (Coords.engineYawToHeading(yawRad) * 180) / Math.PI;
           compassNeedleRef.current.style.transform = `rotate(${headingDeg}deg)`;
         }
-        if (compassBlockDisplayRef.current || minimapBlockDisplayRef.current) {
+        if (compassCoordRef.current || minimapBlockDisplayRef.current) {
           const state = loader.playerState;
           const [bx, by] = state.block;
 
-          if (bx !== currentBlockRef.current[0] || by !== currentBlockRef.current[1]) {
-            currentBlockRef.current = [bx, by];
+          // Compass centre shows just the block coord; update textContent in place
+          // (never innerHTML) and only when it changed.
+          if (compassCoordRef.current) {
+            const coord = `${bx}, ${by}`;
+            if (compassCoordRef.current.textContent !== coord) compassCoordRef.current.textContent = coord;
           }
-          const [rx, ry, rz] = state.position;
-          const text = `BLOCK [${bx}, ${by}]`;
-          const subText = `REL X:${rx.toFixed(1)} Y:${ry.toFixed(1)} Z:${rz.toFixed(1)}`;
-          const blockSize = Coords.BLOCK_SIZE;
-          const gx = (bx - 1) * blockSize + rx;
-          const gy = (by - 1) * blockSize + ry;
-          const worldText = `WORLD X:${gx.toFixed(1)} Y:${gy.toFixed(1)}`;
-
-          if (compassBlockDisplayRef.current) {
-            compassBlockDisplayRef.current.innerHTML = `
-              <span class="text-[8px] text-cyan-500/50 font-bold uppercase tracking-[0.2em]">Live Telemetry</span>
-              <div class="flex flex-col items-center -space-y-0.5">
-                <span class="text-[13px] text-cyan-300 font-black tracking-wide">${text}</span>
-                <span class="text-[11px] text-white font-bold font-mono tracking-tight">${worldText}</span>
-                <span class="text-[10px] text-cyan-400/90 font-mono font-medium">${subText}</span>
-              </div>
-            `;
+          if (minimapBlockDisplayRef.current) {
+            const text = `BLOCK [${bx}, ${by}] | world: ${state.world}`;
+            if (minimapBlockDisplayRef.current.textContent !== text) minimapBlockDisplayRef.current.textContent = text;
           }
-          if (minimapBlockDisplayRef.current) minimapBlockDisplayRef.current.innerText = `${text} | world: ${state.world}`;
         }
       }
       animationId = requestAnimationFrame(updateHUD);
@@ -120,13 +106,13 @@ function App() {
         <div className="pointer-events-none select-none">
           <span className="text-[10px] font-black tracking-[0.3em] text-cyan-400/70 uppercase">Septopus · Desktop</span>
         </div>
-        <div className="flex flex-col gap-4 items-end pointer-events-auto">
-          <Compass ref={compassNeedleRef} />
-          <TelemetryReadout
-            ref={compassBlockDisplayRef}
-            onClick={() => setShowMinimap(!showMinimap)}
-          />
-        </div>
+        {/* Compass = heading + block coord in its centre, and the entry to the 3D
+            region preview (satellite view). The big telemetry panel is gone. */}
+        <Compass
+          ref={compassNeedleRef}
+          coordRef={compassCoordRef}
+          onClick={() => setShowMinimap(true)}
+        />
       </div>
 
       {ready && <InventoryPanel loader={loader} />}
@@ -191,9 +177,12 @@ function App() {
 
       {showMinimap && (
         <div
-          className="absolute inset-0 z-30 pointer-events-auto bg-black/80 flex flex-col items-center justify-center"
+          className="absolute inset-0 z-30 pointer-events-auto bg-black/80 flex flex-col items-center justify-center select-none"
           onWheel={(e) => loader?.applyMinimapZoom(e.deltaY > 0 ? -0.1 : 0.1)}
           onMouseDown={(e) => {
+            // preventDefault stops the native selection/drag ghost (an arrow drifting
+            // in from the page's top-left) while panning the satellite view.
+            e.preventDefault();
             isDraggingMap.current = true;
             lastMapPos.current = { x: e.clientX, y: e.clientY };
             setIsFollowing(false);
@@ -228,138 +217,104 @@ function App() {
           }}
         >
           <div className="w-[600px] max-w-[90vw] h-[600px] max-h-[90vh] border-2 border-cyan-500/50 shadow-[0_0_30px_rgba(0,255,255,0.2)] rounded-lg relative overflow-hidden flex items-center justify-center pointer-events-none">
-            <div className="absolute top-4 bg-black/50 text-cyan-300 text-xs px-3 py-1 rounded font-mono border border-cyan-500/30 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-              SATELLITE ORBITAL VIEW ACTIVATED
-            </div>
-            {selectedBlock && (
-              <div className="absolute top-12 left-4 right-4 bg-cyan-900/80 backdrop-blur-md border border-cyan-400/50 p-3 rounded shadow-2xl">
-                <p className="text-[10px] text-cyan-300 font-bold uppercase mb-1">Block Inspection</p>
-                <p className="text-white font-mono text-sm text-center">
-                  Coord: <span className="text-cyan-400">[{selectedBlock.metadata.x}, {selectedBlock.metadata.y}]</span>
-                </p>
-                <button
-                  className="mt-2 w-full py-1 text-[10px] bg-red-400/20 text-red-300 rounded border border-red-500/30 pointer-events-auto"
-                  onClick={(e) => { e.stopPropagation(); setSelectedBlock(null); }}
-                >
-                  CLEAR SELECTION
-                </button>
-              </div>
-            )}
-            <div className="absolute bottom-4 bg-black/70 backdrop-blur-md text-white px-4 py-2 rounded-lg font-mono border border-white/20 shadow-xl flex flex-col items-center">
-              <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">
-                {isFollowing ? "Tracking Player" : "Detached View"}
-              </span>
-              <span ref={minimapBlockDisplayRef} className="text-sm font-bold text-cyan-400">
-                Block [----, ---] | main
-              </span>
-            </div>
-          </div>
-
-          {!isFollowing && (
-            <button
-              className="mt-6 px-6 py-2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 rounded-full hover:bg-cyan-500/40 transition-all font-bold tracking-widest text-xs z-50 pointer-events-auto"
-              onClick={(e) => { e.stopPropagation(); setIsFollowing(true); loader?.resetMinimapFollow(); }}
+            {/* One integrated control bar (the only chrome over the map): the player
+                block doubles as the recenter button — a dot shows follow state
+                (green=following / amber=detached) and clicking it while detached
+                recenters; the selected block sits beside it with its own clear. This
+                folds the old status line + RECENTER button + keymap legend into one. */}
+            <div
+              className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 pointer-events-auto"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
-              RECENTER ON PLAYER
-            </button>
-          )}
-
-          <div className="mt-4 text-[10px] text-gray-400/60 font-bold tracking-widest uppercase flex gap-4">
-            <span>Wheel: Zoom</span>
-            <span>Drag: Pan</span>
-            <span>Click: Inspect</span>
+              <button
+                disabled={isFollowing}
+                onClick={() => { setIsFollowing(true); loader?.resetMinimapFollow(); }}
+                title={isFollowing ? 'Following player' : 'Recenter on player'}
+                className="flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full font-mono border border-white/15 shadow-lg text-[11px] font-bold text-cyan-300 transition-all enabled:hover:border-cyan-400/60 disabled:cursor-default"
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${isFollowing ? 'bg-green-400' : 'bg-amber-400'}`}></span>
+                <span ref={minimapBlockDisplayRef}>Block [----, ---] | main</span>
+                {!isFollowing && <span className="text-cyan-400/80 leading-none">⟲</span>}
+              </button>
+              {selectedBlock?.metadata && (
+                <span className="flex items-center gap-1.5 bg-cyan-900/70 backdrop-blur-md px-3 py-1 rounded-full font-mono border border-cyan-400/50 shadow-lg text-[11px] font-bold text-white">
+                  <span className="text-cyan-300/60">SEL</span>
+                  <span className="text-cyan-300">[{selectedBlock.metadata.x}, {selectedBlock.metadata.y}]</span>
+                  <button onClick={() => setSelectedBlock(null)} title="Clear selection" className="text-cyan-300/60 hover:text-red-300 leading-none">✕</button>
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      <div className="absolute bottom-4 right-4 z-40 p-2 flex flex-col gap-2 pointer-events-auto">
+      {/* Icon action rail — ONE vertical, icon-only column (tooltip = meaning).
+          Data-driven so adding/reordering an action is a single array entry, and
+          icon squares stay finger-sized for mobile. Order: scene/dev actions →
+          view toggle → modes → reset. data-testid values are kept verbatim (e2e). */}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 p-1.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
+        {([
+          { id: 'stamp-scene', icon: '🧪', title: '导入测试场景 · Stamp test scene onto current block', onClick: () => { const b = loader?.playerState?.block; if (b) loader?.stampTestScene(b[0], b[1]); } },
+          { id: 'enter-sandbox', icon: '🏖️', title: 'SPP 沙盘 · Sandbox diorama', onClick: () => { loader?.enterSandbox(); setSandbox(true); } },
+          { id: 'goto-maze', icon: '🏛️', title: '迷宫 · Athenian labyrinth', onClick: () => loader?.teleportSpp(MAZE_BLOCK, MAZE_ENTRY) },
+          { id: 'goto-dynamic', icon: '🧩', title: '动态 Adjunct · Dynamic showcase', onClick: () => loader?.teleportSpp(DYN_BLOCK, DYN_VIEW) },
+          { id: 'map2d-toggle', icon: '🗺️', title: '2D 地图 · World map', onClick: () => setShow2DMap(true) },
+        ] as const).map((a) => (
+          <button
+            key={a.id}
+            data-testid={a.id}
+            title={a.title}
+            onClick={a.onClick}
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-white/5 hover:bg-white/15 border border-white/10 transition-all active:scale-95"
+          >
+            {a.icon}
+          </button>
+        ))}
+
+        {/* first/third-person view toggle (stateful icon) */}
         <button
-          data-testid="stamp-scene"
-          onClick={() => { const b = loader?.playerState?.block; if (b) loader?.stampTestScene(b[0], b[1]); }}
-          className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 backdrop-blur-md rounded-lg text-[10px] font-bold text-amber-300 tracking-widest uppercase transition-all flex items-center gap-2 group"
-          title="Stamp the demo test scene onto the current block (persisted draft)"
+          title={view === 'third' ? '第三人称 → 切第一人称' : '第一人称 → 切第三人称'}
+          onClick={() => setView(view === 'third' ? 'first' : 'third')}
+          className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-all active:scale-95"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 group-hover:animate-pulse"></span>
-          导入测试场景
+          {view === 'third' ? '🎥' : '👁️'}
         </button>
+
+        <div className="w-6 h-px bg-white/15 my-0.5" />
+
+        {/* Modes. GAME is intentionally NOT here — it is entered only from inside a
+            playable block via the zone prompt (the interpreter-agnostic contract). */}
+        {([
+          { key: 'normal', icon: '🚶', label: 'NORMAL', on: 'bg-cyan-500/25 border-cyan-400/60' },
+          { key: 'ghost', icon: '👻', label: 'GHOST', on: 'bg-purple-500/25 border-purple-400/60' },
+          { key: 'observe', icon: '🛰️', label: 'OBSERVE', on: 'bg-sky-500/25 border-sky-400/60' },
+          { key: 'edit', icon: '✏️', label: 'EDIT', on: 'bg-yellow-500/25 border-yellow-400/60' },
+        ] as const).map((m) => (
+          <button
+            key={m.key}
+            data-testid={`mode-${m.key}`}
+            title={`模式 · ${m.label}`}
+            onClick={() => setMode(m.key)}
+            className={`w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none border transition-all active:scale-95 ${
+              mode === m.key ? m.on : 'bg-white/5 border-white/10 hover:bg-white/15'
+            }`}
+          >
+            {m.icon}
+          </button>
+        ))}
+
+        <div className="w-6 h-px bg-white/15 my-0.5" />
+
+        {/* Reset (destructive) — kept apart at the bottom. */}
         <button
           data-testid="reset-state"
+          title="Reset State · 重置本地存档（方块/位置/背包 → 种子）"
           onClick={() => { if (confirm("Reset ALL local edits (blocks, position, inventory) to the pristine seed?")) loader?.resetWorld(); }}
-          className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 backdrop-blur-md rounded-lg text-[10px] font-bold text-red-400 tracking-widest uppercase transition-all flex items-center gap-2 group"
-          title="Reset Saved State"
+          className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-all active:scale-95"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-red-500 group-hover:animate-pulse"></span>
-          Reset State
+          ♻️
         </button>
-        <button
-          onClick={() => setView(view === 'third' ? 'first' : 'third')}
-          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20"
-          title="Switch first/third-person view"
-        >
-          <div className="w-2 h-2 rounded-full bg-cyan-500"></div>
-          {view === 'third' ? '3RD PERSON' : '1ST PERSON'}
-        </button>
-        <button
-          data-testid="enter-sandbox"
-          onClick={() => { loader?.enterSandbox(); setSandbox(true); }}
-          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-amber-400/10 border-amber-400/30 text-amber-200 hover:bg-amber-400/20"
-          title="Open the SPP sandbox (fixed-camera diorama)"
-        >
-          <div className="w-2 h-2 rounded-full bg-amber-300"></div>
-          🏖️ SPP 沙盘
-        </button>
-        <button
-          data-testid="goto-maze"
-          onClick={() => loader?.teleportSpp(MAZE_BLOCK, MAZE_ENTRY)}
-          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-stone-300/10 border-stone-300/30 text-stone-200 hover:bg-stone-300/20"
-          title="Teleport to the Athenian labyrinth"
-        >
-          <div className="w-2 h-2 rounded-full bg-stone-200"></div>
-          🏛️ 迷宫
-        </button>
-        <button
-          data-testid="goto-dynamic"
-          onClick={() => loader?.teleportSpp(DYN_BLOCK, DYN_VIEW)}
-          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-violet-400/10 border-violet-400/30 text-violet-200 hover:bg-violet-400/20"
-          title="Teleport to the dynamically-loaded adjunct showcase"
-        >
-          <div className="w-2 h-2 rounded-full bg-violet-300"></div>
-          🧩 动态 adjunct
-        </button>
-        <button
-          data-testid="map2d-toggle"
-          onClick={() => setShow2DMap(true)}
-          className="px-4 py-3 border backdrop-blur-md rounded-2xl text-xs font-black tracking-widest uppercase transition-all flex items-center gap-3 shadow-2xl bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20"
-          title="Open the 2D world map"
-        >
-          <div className="w-2 h-2 rounded-full bg-emerald-400"></div>
-          2D MAP
-        </button>
-        <div className="flex flex-col gap-1 p-1.5 border border-cyan-500/30 bg-black/40 backdrop-blur-md rounded-2xl shadow-2xl">
-          <span className="text-[8px] font-black tracking-[0.25em] text-cyan-500/60 uppercase text-center">Mode</span>
-          {/* GAME is intentionally NOT a free toggle here — Game mode is entered
-              only from inside a playable block via the zone prompt (below), the
-              data-driven, interpreter-agnostic entry contract. */}
-          {([
-            { key: 'normal', label: 'NORMAL', on: 'bg-cyan-500/25 text-cyan-300 border border-cyan-400/60', dot: 'bg-cyan-400' },
-            { key: 'ghost', label: 'GHOST', on: 'bg-purple-500/25 text-purple-300 border border-purple-400/60', dot: 'bg-purple-400' },
-            { key: 'observe', label: 'OBSERVE', on: 'bg-sky-500/25 text-sky-300 border border-sky-400/60', dot: 'bg-sky-400' },
-            { key: 'edit', label: 'EDIT', on: 'bg-yellow-500/25 text-yellow-300 border border-yellow-400/60', dot: 'bg-yellow-400' },
-          ] as const).map(({ key, label, on, dot }) => (
-            <button
-              key={key}
-              data-testid={`mode-${key}`}
-              onClick={() => setMode(key)}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-black tracking-widest uppercase transition-all flex items-center gap-2 ${
-                mode === key ? on : 'text-gray-400 hover:bg-white/10 border border-transparent'
-              }`}
-            >
-              <div className={`w-1.5 h-1.5 rounded-full ${mode === key ? `${dot} animate-pulse` : 'bg-gray-600'}`}></div>
-              {label}
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

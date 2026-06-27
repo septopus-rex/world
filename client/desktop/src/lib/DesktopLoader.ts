@@ -740,7 +740,13 @@ export class DesktopLoader implements IDataSource {
 
     public pickMinimapBlock(ndcX: number, ndcY: number) {
         if (!this.engine) return null;
-        return (this.engine.getWorld() as any)?.minimap.pickBlockFromMinimap(ndcX, ndcY);
+        // castRayFromMinimap returns { entityId, distance, point } where point is the
+        // ABSOLUTE engine-space hit. Derive the BLOCK coords the inspect panel needs;
+        // returning the raw hit (no .metadata) is what crashed App on click-to-inspect.
+        const hit = (this.engine.getWorld() as any)?.minimap.pickBlockFromMinimap(ndcX, ndcY);
+        if (!hit?.point) return null;
+        const { block } = Coords.engineToSpp(hit.point);
+        return { metadata: { x: block[0], y: block[1] }, entityId: hit.entityId };
     }
 
     public resetMinimapFollow() {

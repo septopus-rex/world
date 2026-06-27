@@ -468,11 +468,20 @@ export class RenderEngine {
             this.renderer.setScissor(mapX, mapY, mapSize, mapSize);
             this.renderer.setScissorTest(true);
 
+            // Disable the sky distance fog for the top-down pass. scene.fog is global
+            // to every camera; the minimap's orthographic camera sits ~500 m up, far
+            // beyond the fog's few-block far plane, so the fog would paint the ENTIRE
+            // minimap solid sky colour (the map looked blank). Fog is a first-person
+            // roaming-horizon effect only — restore it right after.
+            const savedFog = this.scene.fog;
+            this.scene.fog = null;
+
             this.renderer.setClearColor(0x111111, 0.9);
             this.renderer.clearColor();
             this.renderer.render(this.scene, this.minimapCamera);
 
             // Restore
+            this.scene.fog = savedFog;
             this.renderer.setClearColor(0xf0f0f0, 0);
         }
         this.stats?.end();
