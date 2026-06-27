@@ -121,8 +121,11 @@ export class RenderEngine {
         // Color management: render in sRGB so albedo textures aren't gamma-wrong
         // (linear-treated-as-sRGB). Color textures are tagged SRGBColorSpace on load.
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        // Shadows: one shadow-casting sun (see setDirectionalLight), soft PCF.
-        this.renderer.shadowMap.enabled = true;
+        // Shadows: TEMPORARILY OFF — the grazing-angle moiré made them unstable and
+        // distracting. The sun's castShadow + bias/back-face setup in
+        // setDirectionalLight is left intact; flip this back to true (and
+        // EnvironmentSystem.FLAT_LIGHTING to false) to restore lighting + shadows.
+        this.renderer.shadowMap.enabled = false;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
 

@@ -120,15 +120,25 @@ export class EntityFactory {
             const k = Number.isFinite(h) && h > 1e-4 ? bodyHeight / h : 1;
             model.scale.set(k, k, k);
 
+            // Plant the feet on the ground: a GLTF pivot is often at the model's
+            // feet, so placing the origin at the body CENTRE (as the centred box
+            // placeholder is) left the avatar floating ~half its height. Record the
+            // scaled bbox-bottom so the controller can offset by it each frame.
+            av.footOffset = (Number.isFinite(entry.bounds.min.y) ? entry.bounds.min.y : 0) * k;
+
             // Skinned avatars near the camera: disable frustum culling — a cloned/
             // scaled SkinnedMesh keeps a stale bind-pose bounding sphere and three
             // would wrongly cull it (invisible). Cheap for a single avatar.
             model.traverse?.((o: any) => { if (o.isMesh) o.frustumCulled = false; });
 
             // Place it at the player immediately (the per-frame sync would otherwise
-            // leave it at world origin for one frame).
-            const t = world.getComponent<any>(player, "TransformComponent");
-            if (t) model.position?.set?.(t.position[0], t.position[1], t.position[2]);
+            // leave it at world origin for one frame) — feet on the ground.
+            const t = world.getComponent<TransformComponent>(player, "TransformComponent");
+            const rb = world.getComponent<RigidBodyComponent>(player, "RigidBodyComponent");
+            if (t) {
+                const feetY = rb ? t.position[1] + rb.offset[1] - rb.size[1] / 2 : t.position[1];
+                model.position?.set?.(t.position[0], feetY - (av.footOffset ?? 0), t.position[2]);
+            }
 
             world.renderEngine.add(model);          // into the scene; posed each frame by the controller
             world.renderEngine.removeHandle(placeholder);

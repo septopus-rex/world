@@ -46,6 +46,13 @@ export class EnvironmentSystem implements ISystem {
         sunBoost: 2.0,     // added to directional intensity at full flash
     };
 
+    // TEMPORARY: freeze lighting to an even, constant flat light — no day/night
+    // swing, no lightning flashes (and shadows are off in RenderEngine). The
+    // dynamic lighting was distractingly unstable; this parks it so other work can
+    // proceed. Flip to false to restore the full day/night + weather cycle.
+    static readonly FLAT_LIGHTING = true;
+    private static readonly FLAT = { sun: 0.55, ambient: 0.9 };
+
     constructor(world: World) {
         // Create singleton Environment Entity
         this.envEntity = world.createEntity();
@@ -112,25 +119,33 @@ export class EnvironmentSystem implements ISystem {
 
         // 1. Time progression Visuals (+ lightning flash folded in)
         if (this.sunLight && this.ambientLight) {
-            const timePercent = (state.hour * 60 + state.minute) / (24 * 60);
-            const angle = timePercent * Math.PI * 2 - Math.PI / 2;
+            if (EnvironmentSystem.FLAT_LIGHTING) {
+                // Parked: constant, even light from a fixed sun — no swing, no flash.
+                world.renderEngine.updateDirectionalLight(
+                    this.sunLight, 0xffffff, EnvironmentSystem.FLAT.sun, 50, 100, 50);
+                world.renderEngine.updateAmbientLight(
+                    this.ambientLight, 0xffffff, EnvironmentSystem.FLAT.ambient);
+            } else {
+                const timePercent = (state.hour * 60 + state.minute) / (24 * 60);
+                const angle = timePercent * Math.PI * 2 - Math.PI / 2;
 
-            const sunX = Math.cos(angle) * 100;
-            const sunY = Math.sin(angle) * 100;
-            const sunZ = 50;
+                const sunX = Math.cos(angle) * 100;
+                const sunY = Math.sin(angle) * 100;
+                const sunZ = 50;
 
-            const isDay = sunY > 0;
-            const baseIntensity = isDay ? 1.0 : 0.1;
-            this.baseAmbient = isDay ? 0.4 : 0.1;
+                const isDay = sunY > 0;
+                const baseIntensity = isDay ? 1.0 : 0.1;
+                this.baseAmbient = isDay ? 0.4 : 0.1;
 
-            // Advance the lightning envelope BEFORE applying lights so a strike
-            // brightens the same frame.
-            const flash = this.updateLightning(state, dt);
+                // Advance the lightning envelope BEFORE applying lights so a strike
+                // brightens the same frame.
+                const flash = this.updateLightning(state, dt);
 
-            world.renderEngine.updateDirectionalLight(
-                this.sunLight, 0xffffff, baseIntensity + flash * EnvironmentSystem.LIGHTNING.sunBoost, sunX, sunY, sunZ);
-            world.renderEngine.updateAmbientLight(
-                this.ambientLight, 0xffffff, this.baseAmbient + flash * EnvironmentSystem.LIGHTNING.ambientBoost);
+                world.renderEngine.updateDirectionalLight(
+                    this.sunLight, 0xffffff, baseIntensity + flash * EnvironmentSystem.LIGHTNING.sunBoost, sunX, sunY, sunZ);
+                world.renderEngine.updateAmbientLight(
+                    this.ambientLight, 0xffffff, this.baseAmbient + flash * EnvironmentSystem.LIGHTNING.ambientBoost);
+            }
         }
 
         // 2. Weather Visuals

@@ -1,34 +1,29 @@
 import { World, ISystem, EntityId } from '../World';
 import {
     InputStateComponent, TransformComponent, RigidBodyComponent,
-    CameraComponent, AvatarComponent, SolidComponent, PlayerBodyComponent,
+    CameraComponent, PlayerBodyComponent,
 } from '../components/PlayerComponents';
-import { Vector3, Box3 } from '../utils/Math';
+import { Vector3 } from '../utils/Math';
 import { Coords } from '../utils/Coords';
-import { CONTROL_CONSTANTS, ENGINE_CONSTANTS, PHYSICS_CONSTANTS } from '../Constants';
+import { CONTROL_CONSTANTS, ENGINE_CONSTANTS } from '../Constants';
 import { SystemMode } from '../types/SystemMode';
 import { InputProvider } from '../systems/InputProvider';
-
-/** Pre-computed solid AABB for fast, allocation-free collision.
- *  (ox/oy/oz = the SolidComponent offset, kept for in-place position refresh.) */
-interface SolidEntry {
-    px: number; py: number; pz: number;
-    ox: number; oy: number; oz: number;
-    hx: number; hy: number; hz: number;
-}
+import { MovementCollider } from './MovementCollider';
+import { CameraRig } from './CameraRig';
 
 /**
- * CharacterController — the single, consolidated home for the controlled
- * player's movement. Absorbs what used to be split across PlayerIntentSystem
- * (look + intent + camera + persistence) and PhysicsSystem (integrate + collide)
- * so step-over, ground, gravity and intent all live in one place.
+ * CharacterController — the ISystem that orchestrates the controlled player's
+ * movement each frame. It owns input, the desired-velocity intent, gravity +
+ * jump, fall/void recovery and state persistence, and delegates the two heavy,
+ * cohesive halves to helpers it composes:
+ *   • MovementCollider — substepped AABB integration, step-over, ground probe,
+ *     moving-platform carry.
+ *   • CameraRig — look rotation, follow/observe camera, fall-impact shake,
+ *     avatar pose + animation.
+ * (Used to be one ~680-line class; split for readability — behaviour unchanged.)
  *
- * STABILITY: collision uses continuous physics (gravity + AABB) but is
- * SUBSTEPPED — each integration step moves at most STEP_CLAMP metres, so a fast
- * fall or a large frame dt can never tunnel through the thin ground (the bug
- * the old discrete single-endpoint check had). Low obstacles (<= body.stepHeight)
- * are auto-stepped onto instead of hard-blocking.
- *
+ * STABILITY: collision is continuous (gravity + AABB) but SUBSTEPPED in the
+ * collider so a fast fall or large dt can never tunnel through thin ground.
  * Non-player rigid bodies are still handled by PhysicsSystem (which skips the
  * controlled player).
  */
@@ -36,92 +31,46 @@ export class CharacterController implements ISystem {
     private inputProvider: InputProvider;
     private controlledEntity: EntityId | null = null;
 
-    // scratch
+    private readonly collider = new MovementCollider();
+    private readonly camera: CameraRig;
+
+    // scratch / movement intent
     private _dir = new Vector3();
-    private _playerBox = new Box3();
-    private _wallBox = new Box3();
-    private _pPos = new Vector3();
-    private _wPos = new Vector3();
+
+    // fall tracking + anti-void recovery net
     private _lastPos = new Vector3();
     private _lastRot = [0, 0, 0];
-    private _isPitchLocked = false;
     private _fallStartY = 0;
     private _wasGrounded = true;
     private _safe: [number, number, number] | null = null;
-
-    // ── camera impact shake (fall "juice") ───────────────────────────────────
-    /** Decaying [0..1] shake magnitude, set on a hard landing. Folded into the
-     *  camera position each frame — never touches the player transform. The old
-     *  engine's effects/camera/fall did the dip; linger (the eased recovery) was
-     *  an empty stub — both live here now as one decaying envelope. */
-    private _camShake = 0;
-    private _shakePhase = 0;
-    private static readonly SHAKE_MIN_DROP = 1.5;   // m: below this, no shake
-    private static readonly SHAKE_FULL_DROP = 8;    // m: full-strength shake
-    private static readonly SHAKE_DECAY = 0.5;      // s to fade to zero (the "linger")
-    private static readonly SHAKE_DIP = 0.35;       // m the camera dips at full impact
-    private static readonly SHAKE_AMP = 0.08;       // m lateral jitter at full impact
-    private static readonly SHAKE_FREQ = 38;        // jitter oscillation rate
-
-    // ── observe-mode orbit camera ─────────────────────────────────────────────
-    /** Spherical orbit around the player/target: drag rotates, W/S zooms. */
-    private _obsAzimuth = 0;
-    private _obsElevation = 0.5;
-    private _obsRadius = 8;
-    private static readonly OBS_ZOOM_SPEED = 12;    // m/s via forward/back
-    private static readonly OBS_MIN_RADIUS = 1.5;
-    private static readonly OBS_MAX_RADIUS = 40;
-
-    // solid cache (rebuilt when solid count changes)
-    private _solids: SolidEntry[] = [];
-    private _solidIds: EntityId[] = [];
-
-    // ── moving-platform carry ────────────────────────────────────────────────
-    /** The solid entity under the player's feet; its frame-to-frame transform
-     *  delta is applied to the player (ride lifts, doors, future movers). */
-    private _supportEid: EntityId | null = null;
-    private _supportLast: [number, number, number] | null = null;
     /** Grounded-flag flicker tolerance (standing still alternates the flag). */
     private _airFrames = 0;
-    private _lastSolidCount = -1;
 
-    /** Max metres moved per collision substep (< thinnest ground -> no tunneling). */
-    private static readonly STEP_CLAMP = 0.08;
-    private static readonly MAX_SUBSTEPS = 48;
     /** Fall this far (m) below the last grounded spot -> treat as a void fall and recover. */
     private static readonly VOID_RECOVER = 20;
-
-    /** Camera view: first-person (at the eyes) or third-person (behind + slightly above). */
-    private viewMode: 'first' | 'third' = 'third';
-    private static readonly TP_DISTANCE = 4.5;  // metres the follow-cam sits behind
-    private static readonly TP_HEIGHT = 1.2;    // metres above the eye
-    /** Idle rest pitch in third-person: a slight downward tilt so the avatar is framed. */
-    private static readonly TP_REST_PITCH = -0.34; // rad ≈ -19.5°
-    /** Most GLTF characters face +Z; engine forward is -Z, so flip the avatar to face away. */
-    private static readonly AVATAR_FACING = Math.PI;
     /** Ghost-mode vertical fly speed (m/s). */
     private static readonly GHOST_FLY_SPEED = 6;
 
-    public setViewMode(mode: 'first' | 'third'): void { this.viewMode = mode; }
-    public getViewMode(): 'first' | 'third' { return this.viewMode; }
-    /** Current camera-impact shake level [0..1] (diagnostics/tests). */
-    public getCameraShake(): number { return this._camShake; }
-    /** Current observe-orbit state (diagnostics/tests). */
-    public getObserveState(): { azimuth: number; elevation: number; radius: number } {
-        return { azimuth: this._obsAzimuth, elevation: this._obsElevation, radius: this._obsRadius };
-    }
-    public toggleViewMode(): 'first' | 'third' {
-        this.viewMode = this.viewMode === 'first' ? 'third' : 'first';
-        return this.viewMode;
-    }
-
     constructor(_world: World, inputProvider: InputProvider) {
         this.inputProvider = inputProvider;
+        this.camera = new CameraRig(inputProvider);
     }
 
     public attachToEntity(entity: EntityId): void {
         this.controlledEntity = entity;
+        this.collider.setControlledEntity(entity);
     }
+
+    // ── camera / view delegates (preserved public surface) ───────────────────
+    public setViewMode(mode: 'first' | 'third'): void { this.camera.setViewMode(mode); }
+    public getViewMode(): 'first' | 'third' { return this.camera.getViewMode(); }
+    public toggleViewMode(): 'first' | 'third' { return this.camera.toggleViewMode(); }
+    public getCameraShake(): number { return this.camera.getCameraShake(); }
+    public getObserveState(): { azimuth: number; elevation: number; radius: number } {
+        return this.camera.getObserveState();
+    }
+    /** Forces a solid-cache rebuild (e.g. after an editor moves an adjunct). */
+    public invalidateSolidCache(): void { this.collider.invalidateSolidCache(); }
 
     public update(world: World, dt: number): void {
         if (!this.controlledEntity) return;
@@ -145,12 +94,12 @@ export class CharacterController implements ISystem {
         // Observe mode: player frozen, camera orbits the target. Owns the camera
         // itself (skips processLook) — drag to rotate, W/S to zoom.
         if (world.mode === SystemMode.Observe) {
-            this.processObserve(world, eid, trans, input, dt);
+            this.camera.processObserve(world, eid, trans, input, dt);
             this.inputProvider.flushDeltas();
             return;
         }
 
-        this.processLook(world, input, dt);
+        this.camera.processLook(world, input, dt);
 
         // Ghost mode: incorporeal free-roam — no gravity, no collision, fly
         // vertically with Space (up) / Shift (down). Skips fall events and
@@ -164,7 +113,7 @@ export class CharacterController implements ISystem {
             trans.position[1] += body.velocity[1] * dt;
             trans.position[2] += body.velocity[2] * dt;
             body.isGrounded = false;
-            this.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
+            this.camera.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
             this.processPersistence(world, trans);
             this.inputProvider.flushDeltas();
             return;
@@ -176,8 +125,7 @@ export class CharacterController implements ISystem {
         if (input.jump && body.isGrounded) {
             body.velocity[1] = body.jumpForce;
             body.isGrounded = false;
-            this._supportEid = null;
-            this._supportLast = null;
+            this.collider.clearSupport();
         }
         input.jump = false;
 
@@ -186,17 +134,17 @@ export class CharacterController implements ISystem {
         // or a true void), HOVER instead of free-falling. This is the key stability
         // guarantee: the player never sinks through ground that hasn't streamed in
         // yet (the "walking along, fell below the block" symptom).
-        this.ensureSolidCache(world);
-        this.carrySupport(world, body, trans);
+        this.collider.ensureSolidCache(world);
+        this.collider.carrySupport(world, body, trans);
         if (!this._safe) this._safe = [trans.position[0], trans.position[1], trans.position[2]];
-        const groundBelow = this.hasGroundBelow(trans, body);
+        const groundBelow = this.collider.hasGroundBelow(trans, body);
         if (!groundBelow) {
             body.velocity[1] = 0;            // over unloaded/void area -> wait for ground
         } else if (!body.isGrounded) {
             body.velocity[1] += ENGINE_CONSTANTS.GRAVITY * dt;
         }
 
-        this.integrateAndCollide(world, body, trans, dt, stepHeight);
+        this.collider.integrateAndCollide(world, body, trans, dt, stepHeight);
         this.voidRecovery(world, body, trans);
 
         // Drop the platform attachment after a SUSTAINED airborne streak — the
@@ -205,12 +153,11 @@ export class CharacterController implements ISystem {
         if (body.isGrounded) {
             this._airFrames = 0;
         } else if (++this._airFrames > 2) {
-            this._supportEid = null;
-            this._supportLast = null;
+            this.collider.clearSupport();
         }
 
         this.processFallEvents(world, body, trans, pbody);
-        this.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
+        this.camera.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
         this.processPersistence(world, trans);
 
         this.inputProvider.flushDeltas();
@@ -235,44 +182,6 @@ export class CharacterController implements ISystem {
         input.mouseNDC = [...ip.mouseNDC];
     }
 
-    // ── look (camera rotation) ──────────────────────────────────────────────
-    private processLook(world: World, input: InputStateComponent, dt: number): void {
-        const ip = this.inputProvider;
-        const pad = ip.getGamepadState();
-        const camRot = world.renderEngine.getMainCameraRotation();
-        const canRotate = !(world.mode === SystemMode.Edit && world.isMovingObject);
-
-        if (canRotate) {
-            const dx = ip.mouseDeltaX + ip.touchDeltaX;
-            const dy = ip.mouseDeltaY + ip.touchDeltaY;
-            const sens = ip.touchDeltaX !== 0 ? CONTROL_CONSTANTS.TOUCH_SENSITIVITY : CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
-            camRot[1] -= dx * sens;
-            camRot[0] -= dy * sens;
-            if (input.lookLeft) camRot[1] += CONTROL_CONSTANTS.TURN_SPEED * dt;
-            if (input.lookRight) camRot[1] -= CONTROL_CONSTANTS.TURN_SPEED * dt;
-            if (input.lookUp || input.lookDown) {
-                camRot[0] += (Number(input.lookUp) - Number(input.lookDown)) * CONTROL_CONSTANTS.TURN_SPEED * dt;
-            }
-            if (pad.connected) { camRot[1] -= pad.axes[2] * dt * 2.0; camRot[0] -= pad.axes[3] * dt * 2.0; }
-            camRot[0] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camRot[0]));
-        }
-
-        const keyboardPitch = input.lookUp || input.lookDown;
-        const pitchActive = keyboardPitch || ip.isMouseDown || ip.touchLookActive || (pad.connected && pad.axes[3] !== 0);
-        if (keyboardPitch && input.modifierAlt) this._isPitchLocked = true;
-        else if (pitchActive) this._isPitchLocked = false;
-        // Idle auto-level: ease pitch toward a rest angle — horizontal in first-person,
-        // a slight downward tilt in third-person so the avatar stays framed (otherwise
-        // the raised follow-cam looks straight over the avatar's head).
-        const restPitch = this.viewMode === 'third' ? CharacterController.TP_REST_PITCH : 0;
-        if (!pitchActive && !this._isPitchLocked && Math.abs(camRot[0] - restPitch) > 0.001) {
-            camRot[0] -= (camRot[0] - restPitch) * CONTROL_CONSTANTS.AUTO_LEVEL_SPEED * dt;
-            if (Math.abs(camRot[0] - restPitch) < 0.001) camRot[0] = restPitch;
-        }
-        world.renderEngine.setMainCameraRotation(camRot[0], camRot[1], camRot[2]);
-        if (world.ui) world.ui.updateCompass(camRot[1]);
-    }
-
     // ── desired horizontal velocity from intent + camera yaw ────────────────
     private computeDesiredVelocity(world: World, input: InputStateComponent, body: RigidBodyComponent): void {
         const pad = this.inputProvider.getGamepadState();
@@ -294,197 +203,6 @@ export class CharacterController implements ISystem {
         const localZ = -this._dir.z * speed;
         body.velocity[0] = localX * Math.cos(yaw) + localZ * Math.sin(yaw);
         body.velocity[2] = -localX * Math.sin(yaw) + localZ * Math.cos(yaw);
-    }
-
-    // ── integrate + collide (SUBSTEPPED, with step-over) ────────────────────
-    private integrateAndCollide(world: World, body: RigidBodyComponent, trans: TransformComponent, dt: number, stepHeight: number): void {
-        this.ensureSolidCache(world);
-
-        const dxTotal = body.velocity[0] * dt;
-        const dyTotal = body.velocity[1] * dt;
-        const dzTotal = body.velocity[2] * dt;
-
-        const maxComp = Math.max(Math.abs(dxTotal), Math.abs(dyTotal), Math.abs(dzTotal));
-        const n = Math.min(CharacterController.MAX_SUBSTEPS, Math.max(1, Math.ceil(maxComp / CharacterController.STEP_CLAMP)));
-        const sx = dxTotal / n, sy = dyTotal / n, sz = dzTotal / n;
-
-        body.isGrounded = false;
-        for (let i = 0; i < n; i++) {
-            this.resolveY(body, trans, sy);
-            this.resolveHorizontal(body, trans, sx, 0, stepHeight); // X
-            this.resolveHorizontal(body, trans, 0, sz, stepHeight); // Z
-        }
-        trans.dirty = true;
-
-        // friction on horizontal velocity
-        body.velocity[0] *= body.friction;
-        body.velocity[2] *= body.friction;
-    }
-
-    private resolveY(body: RigidBodyComponent, trans: TransformComponent, sy: number): void {
-        if (sy === 0) return;
-        const nextY = trans.position[1] + sy;
-        this._pPos.set(trans.position[0] + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
-        this._playerBox.setFromCenterAndSize(this._pPos, { x: body.size[0], y: body.size[1], z: body.size[2] });
-
-        for (let si = 0; si < this._solids.length; si++) {
-            if (this._solidIds[si] === this.controlledEntity) continue;
-            const w = this._solids[si];
-            this._wPos.set(w.px, w.py, w.pz);
-            this._wallBox.setFromCenterAndSize(this._wPos, { x: w.hx * 2, y: w.hy * 2, z: w.hz * 2 });
-            if (this._playerBox.intersectsBox(this._wallBox)) {
-                if (sy < 0) { // landing
-                    trans.position[1] = (w.py + w.hy) + body.size[1] / 2 - body.offset[1];
-                    body.velocity[1] = 0;
-                    body.isGrounded = true;
-                    this.setSupport(this._solidIds[si]);
-                } else { // ceiling
-                    trans.position[1] = (w.py - w.hy) - body.size[1] / 2 - body.offset[1];
-                    body.velocity[1] = 0;
-                }
-                return;
-            }
-        }
-        trans.position[1] = nextY;
-    }
-
-    private resolveHorizontal(body: RigidBodyComponent, trans: TransformComponent, sx: number, sz: number, stepHeight: number): void {
-        const move = sx !== 0 ? sx : sz;
-        if (move === 0) return;
-        const axis = sx !== 0 ? 0 : 2;
-        const nextX = trans.position[0] + sx;
-        const nextZ = trans.position[2] + sz;
-        const margin = PHYSICS_CONSTANTS.MARGIN, eps = PHYSICS_CONSTANTS.EPSILON;
-
-        this._pPos.set(nextX + body.offset[0], trans.position[1] + body.offset[1], nextZ + body.offset[2]);
-        this._playerBox.setFromCenterAndSize(this._pPos, {
-            x: body.size[0] - margin * 2, y: body.size[1] - eps * 2, z: body.size[2] - margin * 2,
-        });
-
-        const feetY = trans.position[1] + body.offset[1] - body.size[1] / 2;
-
-        for (let si = 0; si < this._solids.length; si++) {
-            if (this._solidIds[si] === this.controlledEntity) continue;
-            const w = this._solids[si];
-            this._wPos.set(w.px, w.py, w.pz);
-            this._wallBox.setFromCenterAndSize(this._wPos, { x: w.hx * 2, y: w.hy * 2, z: w.hz * 2 });
-            if (!this._playerBox.intersectsBox(this._wallBox)) continue;
-
-            // Step-over: if the obstacle's top is within stepHeight of the feet,
-            // climb onto it instead of blocking (low curbs / stop volumes).
-            const stepUp = (w.py + w.hy) - feetY;
-            if (stepUp > 0.001 && stepUp <= stepHeight) {
-                trans.position[1] = (w.py + w.hy) + body.size[1] / 2 - body.offset[1];
-                if (body.velocity[1] < 0) body.velocity[1] = 0;
-                body.isGrounded = true;
-                this.setSupport(this._solidIds[si]);
-                continue; // allow the horizontal move
-            }
-
-            // Block: snap to the NEAREST face on this axis (minimum penetration).
-            // Using velocity direction instead would teleport the player to the far
-            // face when they clip inside the solid from a corner or thin wall.
-            if (axis === 0) {
-                const toPos = (w.px + w.hx) + body.size[0] / 2 - trans.position[0]; // → east face
-                const toNeg = (w.px - w.hx) - body.size[0] / 2 - trans.position[0]; // → west face
-                trans.position[0] += Math.abs(toPos) <= Math.abs(toNeg) ? toPos : toNeg;
-                body.velocity[0] = 0;
-            } else {
-                const toPos = (w.pz + w.hz) + body.size[2] / 2 - trans.position[2]; // → south face
-                const toNeg = (w.pz - w.hz) - body.size[2] / 2 - trans.position[2]; // → north face
-                trans.position[2] += Math.abs(toPos) <= Math.abs(toNeg) ? toPos : toNeg;
-                body.velocity[2] = 0;
-            }
-            return;
-        }
-        trans.position[0] = nextX;
-        trans.position[2] = nextZ;
-    }
-
-    /** Record (or switch) the solid under the player's feet. */
-    private setSupport(eid: EntityId): void {
-        if (this._supportEid !== eid) {
-            this._supportEid = eid;
-            this._supportLast = null;    // snapshot on the next carry pass
-        }
-    }
-
-    /**
-     * Moving-platform carry: apply the support solid's frame-to-frame transform
-     * delta to the player BEFORE integration, so standing on a trigger-driven
-     * lift/door rides it instead of having it slide out from underfoot.
-     */
-    private carrySupport(world: World, body: RigidBodyComponent, trans: TransformComponent): void {
-        const eid = this._supportEid;
-        if (eid === null) return;
-        const t = world.getComponent<TransformComponent>(eid, 'TransformComponent');
-        if (!t) { this._supportEid = null; this._supportLast = null; return; } // support despawned
-        if (this._supportLast) {
-            const dx = t.position[0] - this._supportLast[0];
-            const dy = t.position[1] - this._supportLast[1];
-            const dz = t.position[2] - this._supportLast[2];
-            if (dx !== 0 || dy !== 0 || dz !== 0) {
-                trans.position[0] += dx;
-                trans.position[1] += dy;
-                trans.position[2] += dz;
-                trans.dirty = true;
-            }
-        }
-        this._supportLast = [t.position[0], t.position[1], t.position[2]];
-    }
-
-    private ensureSolidCache(world: World): void {
-        const solids = world.queryEntities('SolidComponent');
-        if (solids.length === this._lastSolidCount) {
-            // Same population: refresh POSITIONS in place. Adjuncts move at
-            // runtime (trigger moveZ doors/lifts) and a stale cache would keep
-            // colliding at the old pose — the bug that made "open" doors still
-            // block until block streaming happened to rebuild the cache.
-            for (let i = 0; i < this._solidIds.length; i++) {
-                const t = world.getComponent<TransformComponent>(this._solidIds[i], 'TransformComponent');
-                if (!t) { this._lastSolidCount = -1; this.ensureSolidCache(world); return; } // entity churn → rebuild
-                const entry = this._solids[i];
-                entry.px = t.position[0] + entry.ox;
-                entry.py = t.position[1] + entry.oy;
-                entry.pz = t.position[2] + entry.oz;
-            }
-            return;
-        }
-        this._lastSolidCount = solids.length;
-        this._solidIds = solids;
-        this._solids = solids.map((sid) => {
-            const s = world.getComponent<SolidComponent>(sid, 'SolidComponent')!;
-            const t = world.getComponent<TransformComponent>(sid, 'TransformComponent');
-            const p = t?.position ?? [0, 0, 0];
-            return {
-                px: p[0] + s.offset[0], py: p[1] + s.offset[1], pz: p[2] + s.offset[2],
-                ox: s.offset[0], oy: s.offset[1], oz: s.offset[2],
-                hx: s.size[0] / 2, hy: s.size[1] / 2, hz: s.size[2] / 2,
-            };
-        });
-    }
-
-    /** Forces a solid-cache rebuild (e.g. after an editor moves an adjunct). */
-    public invalidateSolidCache(): void { this._lastSolidCount = -1; }
-
-    /**
-     * True if any solid sits in the player's X/Z column at or below the feet —
-     * i.e. there IS ground to fall onto. False over an unloaded/streaming block
-     * or a genuine void (so the controller hovers instead of free-falling).
-     */
-    private hasGroundBelow(trans: TransformComponent, body: RigidBodyComponent): boolean {
-        const px = trans.position[0] + body.offset[0];
-        const pz = trans.position[2] + body.offset[2];
-        const feet = trans.position[1] + body.offset[1] - body.size[1] / 2;
-        const hx = body.size[0] / 2, hz = body.size[2] / 2;
-        for (let si = 0; si < this._solids.length; si++) {
-            if (this._solidIds[si] === this.controlledEntity) continue;
-            const w = this._solids[si];
-            if (Math.abs(px - w.px) <= w.hx + hx && Math.abs(pz - w.pz) <= w.hz + hz) {
-                if (w.py + w.hy <= feet + 0.2) return true; // a surface at/below the feet
-            }
-        }
-        return false;
     }
 
     // ── anti-void recovery net ───────────────────────────────────────────────
@@ -518,112 +236,9 @@ export class CharacterController implements ISystem {
             if (drop >= deathH) world.emitSimple('player:fell', { drop });
             // Camera impact shake on any non-trivial landing (independent of the
             // lethal-fall threshold) — bigger drop, bigger jolt.
-            if (drop > CharacterController.SHAKE_MIN_DROP) {
-                const t = Math.min(1, (drop - CharacterController.SHAKE_MIN_DROP) /
-                    (CharacterController.SHAKE_FULL_DROP - CharacterController.SHAKE_MIN_DROP));
-                this._camShake = Math.max(this._camShake, t);
-            }
+            this.camera.addImpactShake(drop);
         }
         this._wasGrounded = body.isGrounded;
-    }
-
-    // ── camera + avatar sync ─────────────────────────────────────────────────
-    private syncCameraAndAvatar(world: World, eid: EntityId, trans: TransformComponent, body: RigidBodyComponent, dt: number, cam?: CameraComponent): void {
-        const ox = cam?.offset[0] ?? 0, oy = cam?.offset[1] ?? 1.7, oz = cam?.offset[2] ?? 0;
-        const eyeX = trans.position[0] + ox, eyeY = trans.position[1] + oy, eyeZ = trans.position[2] + oz;
-
-        // Look rotation is input-driven on the camera; read it first so third-person
-        // can offset the camera by the current yaw.
-        const camRot = world.renderEngine.getMainCameraRotation();
-        const yaw = camRot[1];
-
-        // Camera base position by view mode.
-        let camX: number, camY: number, camZ: number;
-        if (this.viewMode === 'third') {
-            // Follow-cam: sit behind the player along the horizontal look direction and
-            // raised a little for a slight top-down angle. Camera keeps its input-driven
-            // rotation, so it still looks where the mouse points (player out front).
-            const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-            camX = eyeX - fx * CharacterController.TP_DISTANCE;
-            camY = eyeY + CharacterController.TP_HEIGHT;
-            camZ = eyeZ - fz * CharacterController.TP_DISTANCE;
-        } else {
-            camX = eyeX; camY = eyeY; camZ = eyeZ;
-        }
-
-        // Fold in the decaying impact shake — a downward dip + lateral jitter,
-        // applied to the camera ONLY (the player transform stays clean).
-        const shake = this.updateCameraShake(dt);
-        if (shake > 0) {
-            this._shakePhase += dt * CharacterController.SHAKE_FREQ;
-            const amp = CharacterController.SHAKE_AMP * shake;
-            camX += Math.sin(this._shakePhase) * amp;
-            camY += -CharacterController.SHAKE_DIP * shake + Math.cos(this._shakePhase * 1.3) * amp * 0.5;
-        }
-        world.renderEngine.setMainCameraPosition(camX, camY, camZ);
-
-        trans.rotation[0] = camRot[0];
-        trans.rotation[1] = camRot[1];
-
-        const avatar = world.getComponent<AvatarComponent>(eid, 'AvatarComponent');
-        if (avatar && avatar.handle) {
-            world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], trans.position[1], trans.position[2]);
-            world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + CharacterController.AVATAR_FACING, 0);
-            // Visible only in third-person — in first-person the camera is inside
-            // the avatar. Ghost mode always hides it (incorporeal).
-            const show = avatar.visible !== false && this.viewMode === 'third'
-                && world.mode !== SystemMode.Ghost;
-            world.renderEngine.setObjectVisible(avatar.handle, show);
-
-            // Movement state → animation (render layer crossfades; falls back
-            // run→walk→idle for models with fewer clips).
-            const hSpeedSq = body.velocity[0] * body.velocity[0] + body.velocity[2] * body.velocity[2];
-            const walkSq = body.maxSpeedWalk * body.maxSpeedWalk;
-            let animState = 'idle';
-            if (!body.isGrounded) animState = 'air';
-            else if (hSpeedSq > walkSq * 1.2) animState = 'run';
-            else if (hSpeedSq > 0.25) animState = 'walk';
-            (world.renderEngine as any).setAnimationState?.(avatar.handle, animState);
-            (world.renderEngine as any).updateAnimation(avatar.handle, dt);
-        }
-    }
-
-    // ── observe-mode orbit camera ─────────────────────────────────────────────
-    private processObserve(world: World, eid: EntityId, trans: TransformComponent, input: InputStateComponent, dt: number): void {
-        const ip = this.inputProvider;
-        const sens = CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
-        this._obsAzimuth -= (ip.mouseDeltaX + ip.touchDeltaX) * sens;
-        this._obsElevation -= (ip.mouseDeltaY + ip.touchDeltaY) * sens;
-        if (input.lookLeft) this._obsAzimuth += CONTROL_CONSTANTS.TURN_SPEED * dt;
-        if (input.lookRight) this._obsAzimuth -= CONTROL_CONSTANTS.TURN_SPEED * dt;
-        if (input.lookUp) this._obsElevation += CONTROL_CONSTANTS.TURN_SPEED * dt;
-        if (input.lookDown) this._obsElevation -= CONTROL_CONSTANTS.TURN_SPEED * dt;
-        this._obsElevation = Math.max(-1.4, Math.min(1.4, this._obsElevation));
-        // W/S zoom the orbit in/out.
-        if (input.forward) this._obsRadius = Math.max(CharacterController.OBS_MIN_RADIUS, this._obsRadius - CharacterController.OBS_ZOOM_SPEED * dt);
-        if (input.backward) this._obsRadius = Math.min(CharacterController.OBS_MAX_RADIUS, this._obsRadius + CharacterController.OBS_ZOOM_SPEED * dt);
-
-        // Orbit around the player's chest height; camera always faces the target.
-        const tx = trans.position[0], ty = trans.position[1] + 1, tz = trans.position[2];
-        const ce = Math.cos(this._obsElevation), se = Math.sin(this._obsElevation), r = this._obsRadius;
-        world.renderEngine.setMainCameraPosition(
-            tx + r * ce * Math.sin(this._obsAzimuth),
-            ty + r * se,
-            tz + r * ce * Math.cos(this._obsAzimuth),
-        );
-        world.renderEngine.setMainCameraLookAt(tx, ty, tz);
-
-        // The avatar stays visible — you're inspecting it from outside.
-        const avatar = world.getComponent<AvatarComponent>(eid, 'AvatarComponent');
-        if (avatar?.handle) world.renderEngine.setObjectVisible(avatar.handle, avatar.visible !== false);
-    }
-
-    /** Decay the camera-impact shake envelope one frame; returns the level. */
-    private updateCameraShake(dt: number): number {
-        if (this._camShake > 0) {
-            this._camShake = Math.max(0, this._camShake - dt / CharacterController.SHAKE_DECAY);
-        }
-        return this._camShake;
     }
 
     // ── state persistence (player:state event) ───────────────────────────────

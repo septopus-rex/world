@@ -114,4 +114,10 @@ export interface AvatarComponent {
     visible: boolean;
     /** Optional model resource id (IPFS CID / path) loaded via ResourceManager. */
     resource?: string;
+    /** SCALED Y of the model's bounding-box bottom relative to its origin
+     *  (= bounds.min.y * scale). The controller plants the avatar at
+     *  feetY − footOffset so its feet sit on the ground regardless of where the
+     *  GLTF's pivot is. Undefined for the centred box placeholder (placed at the
+     *  body centre, as before). */
+    footOffset?: number;
 }
