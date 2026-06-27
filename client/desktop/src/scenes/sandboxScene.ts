@@ -127,3 +127,46 @@ export function pickFace(origin: number[], dir: number[]): FacePick | null {
     if (!best) return null;
     return { cellIndex: cellIndex(best.gx, best.gy), gx: best.gx, gy: best.gy, face: faceFromAxis(best.axis, dir) };
 }
+
+// ── two-level (cell → face) selection helpers ────────────────────────────────
+// The editor works in two stages: first SELECT a cell, then edit only THAT
+// cell's faces. These let the loader pick within a chosen cell (no neighbour
+// ambiguity) and group derived wall/trigger pieces back to their owning cell so
+// non-selected cells can be dimmed.
+
+/** AABB (SPP-local, min/max corners) of grid cell `ci`. */
+export function cellAabb(ci: number): { min: number[]; max: number[] } {
+    const gx = Math.floor(ci / GRID.n), gy = ci % GRID.n;
+    const min = [GRID.origin[0] + gx * GRID.cell, GRID.origin[1] + gy * GRID.cell, GRID.origin[2]];
+    return { min, max: [min[0] + GRID.cell, min[1] + GRID.cell, min[2] + GRID.cell] };
+}
+
+/**
+ * Face of ONE chosen cell that the ray enters (selection-scoped picking). Ray is
+ * SPP-LOCAL. Returns the ParticleFace index, or null if the ray misses the cell
+ * — so a click outside the selected cell is a no-op, not an accidental edit of a
+ * neighbour. The complement of pickFace, which roams all cells.
+ */
+export function pickFaceInCell(origin: number[], dir: number[], ci: number): number | null {
+    const { min, max } = cellAabb(ci);
+    const hit = rayAABB(origin, dir, min, max);
+    return hit ? faceFromAxis(hit.axis, dir) : null;
+}
+
+/**
+ * Which cell owns an SPP-local point? Derived wall pieces sit thickness/2 INSIDE
+ * their owning cell and triggers at its centre, so the piece centre lands cleanly
+ * in exactly one cell — letting the loader colour pieces by cell. Returns the
+ * cell index, or -1 if the point is outside the grid (e.g. the base slab).
+ */
+export function cellOfPoint(p: number[], eps = 0.01): number {
+    for (let gx = 0; gx < GRID.n; gx++) {
+        for (let gy = 0; gy < GRID.n; gy++) {
+            const x0 = GRID.origin[0] + gx * GRID.cell, y0 = GRID.origin[1] + gy * GRID.cell, z0 = GRID.origin[2];
+            if (p[0] >= x0 - eps && p[0] <= x0 + GRID.cell + eps &&
+                p[1] >= y0 - eps && p[1] <= y0 + GRID.cell + eps &&
+                p[2] >= z0 - eps && p[2] <= z0 + GRID.cell + eps) return cellIndex(gx, gy);
+        }
+    }
+    return -1;
+}

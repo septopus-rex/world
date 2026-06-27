@@ -22,6 +22,7 @@ function App() {
   const [show2DMap, setShow2DMap] = useState(false);
   const [sandbox, setSandbox] = useState(false);
   const [sandboxSaved, setSandboxSaved] = useState(false);
+  const [sandboxCell, setSandboxCell] = useState<number | null>(null);
 
   // Minimap drag state
   const isDraggingMap = useRef(false);
@@ -69,6 +70,9 @@ function App() {
             if (minimapBlockDisplayRef.current.textContent !== text) minimapBlockDisplayRef.current.textContent = text;
           }
         }
+        // SPP craft: mirror the open-cell selection into the bar (two-level edit).
+        const sel = loader.sandboxActive ? loader.sandboxSelectedCell : null;
+        setSandboxCell((prev) => (prev === sel ? prev : sel));
       }
       animationId = requestAnimationFrame(updateHUD);
     };
@@ -83,11 +87,23 @@ function App() {
     >
       <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
 
-      {/* SPP sandbox: a fixed-camera diorama. Tap a cell face to cycle it. */}
+      {/* SPP craft: a held "magic ball" you orbit. Two-level edit — tap a cell to
+          open it, then tap its faces to cycle 实/门/窗/空; Esc closes the cell. */}
       {sandbox && (
         <div data-testid="sandbox-bar" className="absolute top-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-4 px-5 py-2.5 rounded-2xl bg-amber-950/80 border border-amber-400/30 backdrop-blur-md shadow-2xl">
-          <span className="text-amber-200 text-sm font-bold tracking-wide">🏖️ SPP 沙盘</span>
-          <span className="text-amber-100/70 text-[11px]">点格子的面 → 实/门/窗/空 · 拖拽旋转 · W/S 缩放</span>
+          <span className="text-amber-200 text-sm font-bold tracking-wide">🪄 SPP 魔法球</span>
+          {sandboxCell == null ? (
+            <span data-testid="sandbox-hint" className="text-amber-100/70 text-[11px]">点一个格子 → 选中编辑 · 拖拽旋转 · W/S 缩放</span>
+          ) : (
+            <>
+              <span data-testid="sandbox-hint" className="text-cyan-200 text-[11px] font-semibold">编辑 cell {sandboxCell} · 点面切换 实/门/窗/空</span>
+              <button
+                data-testid="close-cell"
+                onClick={() => loader?.sandboxDeselect()}
+                className="px-3 py-1 rounded-lg bg-cyan-400/20 hover:bg-cyan-400/30 border border-cyan-300/40 text-cyan-100 text-xs font-bold"
+              >↩︎ 退出该格 (Esc)</button>
+            </>
+          )}
           <button
             data-testid="save-sandbox"
             onClick={async () => { const ok = await loader?.saveSandbox(); if (ok) { setSandboxSaved(true); setTimeout(() => setSandboxSaved(false), 1800); } }}

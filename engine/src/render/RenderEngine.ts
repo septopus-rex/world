@@ -293,6 +293,29 @@ export class RenderEngine {
         });
     }
 
+    /**
+     * Set opacity on ONE object without bleeding into the shared, cached
+     * materials MeshFactory hands out (many wall pieces reference one material —
+     * mutating it in place would dim them all). Clones each material ONCE per
+     * mesh, marks it, then mutates the owned copy — so per-object highlighting
+     * (e.g. the SPP editor dimming the cells that aren't open) stays local. The
+     * clone is freed with the mesh, so re-expanding a structure doesn't leak.
+     */
+    public setObjectOpacityIsolated(handle: RenderHandle, opacity: number): void {
+        (handle as THREE.Object3D).traverse((child) => {
+            if (!(child instanceof THREE.Mesh) || !child.material) return;
+            const cur = child.material as THREE.Material & { __isolated?: boolean };
+            if (!cur.__isolated) {
+                const cloned = cur.clone() as THREE.Material & { __isolated?: boolean };
+                cloned.__isolated = true;
+                child.material = cloned;
+            }
+            const mat = child.material as THREE.MeshStandardMaterial;
+            mat.opacity = opacity;
+            mat.transparent = opacity < 1.0;
+        });
+    }
+
     /** Animated texture scroll: set the material map's UV offset (type 'texture').
      *  Enables RepeatWrapping so the offset wraps instead of clamping. */
     public setTextureOffset(handle: RenderHandle, u: number, v: number): void {

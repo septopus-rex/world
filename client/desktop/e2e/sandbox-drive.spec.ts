@@ -59,24 +59,33 @@ test('drive the SPP sandbox through the real UI and capture each stage', async (
   expect((await faceTally(page)).nonSolid).toBe(9); // 9 cells start with their Top open, rest solid
   await page.screenshot({ path: 'test-results/drive-1-entered.png' });
 
-  // (3) Tap faces on the canvas (real mouse) to carve doorways/windows. NDC points
-  // near screen-centre land on the camera-facing walls; reps cycle 1×=doorway, 2×=window.
+  // (3) TWO-LEVEL edit through the real UI. First tap near centre OPENS a cell —
+  // the bar switches to its editing state (the "退出该格" button appears) and no
+  // face has changed yet.
   const canvas = page.locator('canvas[data-engine]');
   const b = (await canvas.boundingBox())!;
   const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
-  const toPx = (nx: number, ny: number): [number, number] => [b.x + ((nx + 1) / 2) * b.width, b.y + ((1 - ny) / 2) * b.height];
-  // Two rows sweeping the camera-facing front walls (lower on screen → ny ≈ -0.2/-0.32).
-  const ndcTaps: Array<[number, number]> = [
-    [-0.34, -0.20], [-0.12, -0.20], [0.10, -0.20], [0.32, -0.20],
-    [-0.30, -0.32], [-0.08, -0.32], [0.14, -0.32], [0.34, -0.32],
-  ];
-  for (const [nx, ny] of ndcTaps) {
-    const [px, py] = toPx(nx, ny);
-    await page.mouse.click(px, py); await stepEngine(page, 2);
-  }
+  const before = await faceTally(page);
+  await page.mouse.click(cx, cy); await stepEngine(page, 2);
+  await expect(page.getByTestId('close-cell'), 'first tap opened a cell for editing').toBeVisible();
+  expect(await page.evaluate(() => (window as any).loader.sandboxSelectedCell), 'a cell is open').not.toBeNull();
+  expect((await faceTally(page)).nonSolid, 'opening a cell does not edit it').toBe(before.nonSolid);
+  await page.screenshot({ path: 'test-results/drive-2a-selected.png' });
+
+  // (3b) Tap the open cell's camera-facing faces (a tight cluster around centre,
+  // since only THIS cell is editable now) → carve doorways/windows.
+  const cluster: Array<[number, number]> = [[-26, 18], [24, 16], [0, 30], [-22, 18], [22, 18]];
+  for (const [dx, dy] of cluster) { await page.mouse.click(cx + dx, cy + dy); await stepEngine(page, 2); }
   await stepEngine(page, 6);
-  expect((await faceTally(page)).doorsWindows, 'taps carved doorways/windows').toBeGreaterThanOrEqual(3);
+  const carved = await faceTally(page);
+  expect(carved.nonSolid, 'taps on the open cell carved its faces').toBeGreaterThan(before.nonSolid);
+  expect(carved.doorsWindows, 'at least one doorway/window appeared').toBeGreaterThanOrEqual(1);
   await page.screenshot({ path: 'test-results/drive-2-carved.png' });
+
+  // (3c) Close the cell (bar button) → back to cell-picking; the editing button goes.
+  await page.getByTestId('close-cell').click();
+  await expect(page.getByTestId('close-cell')).toBeHidden();
+  expect(await page.evaluate(() => (window as any).loader.sandboxSelectedCell), 'no cell open').toBeNull();
 
   // (4) Drag to orbit the camera (real mouse drag) → a new viewing angle.
   const az0 = await azimuth(page);

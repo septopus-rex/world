@@ -50,13 +50,15 @@ test('sculpt → write to block → reload → the block displays the persisted 
   await page.evaluate(() => (window as any).loader.enterSandbox());
   await pumpUntil(page, async () => (await sandboxCells(page)) !== null);
   await stepEngine(page, 20);
-  const ndc: Array<[number, number, number]> = [
-    [-0.32, -0.18, 1], [-0.10, -0.24, 2], [0.12, -0.24, 1], [0.34, -0.16, 2], [-0.22, -0.05, 1], [0.22, -0.05, 1],
-  ];
-  for (const [x, y, reps] of ndc) {
-    for (let r = 0; r < reps; r++) await page.evaluate(([cx, cy]) => (window as any).loader.sandboxPick(cx, cy), [x, y]);
-    await stepEngine(page, 2);
-  }
+  // Sculpt via the two-level API: open a cell, cycle some of its faces, move on.
+  // Deterministic (no ray aiming) so the reload comparison is byte-exact.
+  await page.evaluate(() => {
+    const L = (window as any).loader;
+    L.sandboxSelectCell(0); L.sandboxCycleFace(0, 2); L.sandboxCycleFace(0, 3);
+    L.sandboxSelectCell(4); L.sandboxCycleFace(4, 2); L.sandboxCycleFace(4, 4); L.sandboxCycleFace(4, 4);
+    L.sandboxSelectCell(5); L.sandboxCycleFace(5, 3);
+    L.sandboxDeselect();
+  });
   await stepEngine(page, 6);
 
   const sculpted = await sandboxCells(page);

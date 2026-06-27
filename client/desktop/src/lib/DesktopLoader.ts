@@ -33,7 +33,7 @@ import { DEMO_BLOCK, DEMO_TEXTURE_ID, DEMO_AVATAR_ID, DEMO_MODELS, buildDemoScen
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
-import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, nextFace } from '../scenes/sandboxScene';
+import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
 
@@ -556,12 +556,18 @@ export class DesktopLoader implements IDataSource {
         t.dirty = true;
     }
 
-    // ── SPP sandbox (fixed-camera diorama) ───────────────────────────────────
+    // ── SPP sandbox (held "magic ball" — orbit + two-level cell→face edit) ────
     private _sandboxActive = false;
     private _sandboxDetach: (() => void) | null = null;
     private _sandboxDown: { x: number; y: number; t: number } | null = null;
+    /** Two-level select: null = pick a cell; a number = that cell is open and
+     *  only ITS faces are editable. The other cells dim while one is open. */
+    private _sandboxCell: number | null = null;
+    private _focusRaf = 0;
 
     public get sandboxActive(): boolean { return this._sandboxActive; }
+    /** The cell currently open for face-editing, or null in cell-picking mode. */
+    public get sandboxSelectedCell(): number | null { return this._sandboxCell; }
 
     /** Enter the SPP sandbox: teleport onto the diorama block, hide the avatar,
      *  orbit (Observe) the grid centre, and listen for taps to sculpt cell faces. */
@@ -578,8 +584,10 @@ export class DesktopLoader implements IDataSource {
         // A 3/4 orbit framing the 12 m grid.
         const cc = w.systems.findSystemByName('CharacterController') as any;
         if (cc) { cc._obsAzimuth = 0.7; cc._obsElevation = 0.7; cc._obsRadius = 22; }
-        // Tap (not drag) on the canvas → sculpt the targeted face.
+        // Tap (not drag) on the canvas → select a cell, or edit the open cell's face.
         const canvas = document.querySelector('canvas[data-engine]') as HTMLCanvasElement | null;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') this.sandboxDeselect(); };
+        window.addEventListener('keydown', onKey);
         if (canvas) {
             const onDown = (e: MouseEvent) => { this._sandboxDown = { x: e.clientX, y: e.clientY, t: Date.now() }; };
             const onUp = (e: MouseEvent) => {
@@ -589,18 +597,34 @@ export class DesktopLoader implements IDataSource {
                 const rect = canvas.getBoundingClientRect();
                 const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
                 const ndcY = -(((e.clientY - rect.top) / rect.height) * 2 - 1);
-                this.sandboxPick(ndcX, ndcY);
+                this.sandboxClick(ndcX, ndcY);
             };
             canvas.addEventListener('mousedown', onDown);
             canvas.addEventListener('mouseup', onUp);
-            this._sandboxDetach = () => { canvas.removeEventListener('mousedown', onDown); canvas.removeEventListener('mouseup', onUp); };
+            this._sandboxDetach = () => {
+                canvas.removeEventListener('mousedown', onDown); canvas.removeEventListener('mouseup', onUp);
+                window.removeEventListener('keydown', onKey);
+            };
+        } else {
+            this._sandboxDetach = () => window.removeEventListener('keydown', onKey);
         }
+        // Re-assert per-cell dimming every frame: derived pieces are destroyed and
+        // rebuilt on each face edit, so the opacity has to be re-applied once the
+        // new meshes exist (AdjunctSystem builds them a frame after re-expand).
+        const focusTick = () => {
+            if (!this._sandboxActive) return;
+            if (this._sandboxCell != null) this.applyCellFocus();
+            this._focusRaf = requestAnimationFrame(focusTick);
+        };
+        this._focusRaf = requestAnimationFrame(focusTick);
         this._sandboxActive = true;
     }
 
     public exitSandbox(): void {
         if (!this._sandboxActive) return;
         this._sandboxActive = false;
+        if (this._focusRaf) { cancelAnimationFrame(this._focusRaf); this._focusRaf = 0; }
+        this.sandboxDeselect();
         this._sandboxDetach?.(); this._sandboxDetach = null;
         const w = this.engine?.getWorld() as any;
         const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
@@ -609,21 +633,17 @@ export class DesktopLoader implements IDataSource {
         this.setMode('normal');
     }
 
-    /** Cast a ray through the click, decide which cell-face it targets, cycle that
-     *  face on the shared b6 source, and re-expand live. Pure picking lives in
-     *  scenes/sandboxScene.ts; here we only supply the camera ray. Returns whether
-     *  a face was cycled. */
-    public sandboxPick(ndcX: number, ndcY: number): boolean {
-        const w = this.engine?.getWorld() as any;
-        if (!w) return false;
+    /** Reconstruct the SPP-local camera ray for an NDC click on the diorama. The
+     *  Observe orbit gives the camera world position; the picked surface point
+     *  gives the direction. Returns null if the click missed all geometry. */
+    private sandboxRay(w: any, ndcX: number, ndcY: number): { origin: number[]; dir: number[] } | null {
         const hit = w.renderEngine?.castRayFromCamera?.(ndcX, ndcY);
-        if (!hit) return false;
-        // Reconstruct the camera world position from the Observe orbit state.
+        if (!hit) return null;
         const pid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
         const t = w.getComponent(pid, 'TransformComponent');
         const cc = w.systems.findSystemByName('CharacterController') as any;
         const obs = cc?.getObserveState?.();
-        if (!t || !obs) return false;
+        if (!t || !obs) return null;
         const tx = t.position[0], ty = t.position[1] + 1, tz = t.position[2];
         const ce = Math.cos(obs.elevation), se = Math.sin(obs.elevation), r = obs.radius;
         const cam = [tx + r * ce * Math.sin(obs.azimuth), ty + r * se, tz + r * ce * Math.cos(obs.azimuth)];
@@ -631,17 +651,96 @@ export class DesktopLoader implements IDataSource {
         // Engine(abs) → SPP-local of the sandbox block. A point maps as
         // (x-bxoff, -z-byoff, y); a direction drops the offset: (dx, -dz, dy).
         const B = Coords.BLOCK_SIZE;
-        const camSpp = [cam[0] - (SANDBOX_BLOCK[0] - 1) * B, -cam[2] - (SANDBOX_BLOCK[1] - 1) * B, cam[1]];
-        const dirSpp = [dirE[0], -dirE[2], dirE[1]];
-        const pick = pickFace(camSpp, dirSpp);
-        if (!pick) return false;
+        return {
+            origin: [cam[0] - (SANDBOX_BLOCK[0] - 1) * B, -cam[2] - (SANDBOX_BLOCK[1] - 1) * B, cam[1]],
+            dir: [dirE[0], -dirE[2], dirE[1]],
+        };
+    }
+
+    /**
+     * One tap on the diorama, dispatched by the two-level edit state:
+     *   - No cell open → SELECT the cell under the ray (the others dim).
+     *   - A cell open  → cycle the face of THAT cell the ray enters; a tap that
+     *     misses the open cell is ignored (it never edits a neighbour).
+     * Returns what happened so the UI can reflect it. Pure picking lives in
+     * scenes/sandboxScene.ts; here we only supply the camera ray.
+     */
+    public sandboxClick(ndcX: number, ndcY: number): { kind: 'select' | 'cycle' | 'none'; cell?: number } {
+        const w = this.engine?.getWorld() as any;
+        if (!w) return { kind: 'none' };
+        const ray = this.sandboxRay(w, ndcX, ndcY);
+        if (!ray) return { kind: 'none' };
+
+        if (this._sandboxCell == null) {
+            const pick = pickFace(ray.origin, ray.dir);
+            if (!pick) return { kind: 'none' };
+            this._sandboxCell = pick.cellIndex;
+            this.applyCellFocus();
+            return { kind: 'select', cell: pick.cellIndex };
+        }
+
+        const face = pickFaceInCell(ray.origin, ray.dir, this._sandboxCell);
+        if (face == null) return { kind: 'none' }; // tap outside the open cell → keep it open
+        return this.sandboxCycleFace(this._sandboxCell, face)
+            ? { kind: 'cycle', cell: this._sandboxCell }
+            : { kind: 'none' };
+    }
+
+    /** Open a cell for face-editing without a ray (UI / tests). Pass null to close. */
+    public sandboxSelectCell(cell: number | null): void {
+        this._sandboxCell = cell;
+        if (cell == null) this.restoreCellFocus();
+        else this.applyCellFocus();
+    }
+
+    /** Cycle one face of one cell (实→门→窗→空) on the shared b6 source and
+     *  re-expand live. The deterministic seam the ray path and tests share. */
+    public sandboxCycleFace(cell: number, face: number): boolean {
+        const w = this.engine?.getWorld() as any;
+        if (!w) return false;
         const src = this.findSandboxSource(w);
-        if (!src) return false;
-        const cell = src.std.cells?.[pick.cellIndex];
-        if (!cell?.faces) return false;
-        cell.faces[pick.face] = nextFace(cell.faces[pick.face]);
+        const c = src?.std.cells?.[cell];
+        if (!src || !c?.faces) return false;
+        c.faces[face] = nextFace(c.faces[face]);
         w.systems.findSystemByName('BlockSystem')?.reexpandParticle?.(w, src.eid);
+        this.applyCellFocus(); // re-assert dim; the focus rAF keeps it as meshes rebuild
         return true;
+    }
+
+    /** Close the open cell: stop face-editing, restore every cell to full opacity. */
+    public sandboxDeselect(): void {
+        if (this._sandboxCell == null) return;
+        this._sandboxCell = null;
+        this.restoreCellFocus();
+    }
+
+    /** Dim every derived piece NOT in the open cell to read as background; the
+     *  open cell stays at full opacity so its faces are clearly the edit target. */
+    private applyCellFocus(): void {
+        const w = this.engine?.getWorld() as any;
+        const sel = this._sandboxCell;
+        if (!w || sel == null) return;
+        const tag = `${SANDBOX_BLOCK[0]}_${SANDBOX_BLOCK[1]}`;
+        for (const eid of w.queryEntities('AdjunctComponent')) {
+            const a = w.getComponent(eid, 'AdjunctComponent');
+            if (!a?.stdData?.derivedFrom || !String(a.stdData.derivedFrom).includes(tag)) continue;
+            const ci = cellOfPoint([a.stdData.ox, a.stdData.oy, a.stdData.oz]);
+            const mesh = w.getComponent(eid, 'MeshComponent');
+            if (mesh?.handle) w.renderEngine.setObjectOpacityIsolated(mesh.handle, ci === sel ? 1.0 : 0.22);
+        }
+    }
+
+    /** Lift the dim — every derived piece back to full opacity. */
+    private restoreCellFocus(): void {
+        const w = this.engine?.getWorld() as any;
+        if (!w) return;
+        const tag = `${SANDBOX_BLOCK[0]}_${SANDBOX_BLOCK[1]}`;
+        for (const eid of w.queryEntities('AdjunctComponent')) {
+            const a = w.getComponent(eid, 'AdjunctComponent');
+            if (!a?.stdData?.derivedFrom || !String(a.stdData.derivedFrom).includes(tag)) continue;
+            const mesh = w.getComponent(eid, 'MeshComponent');
+            if (mesh?.handle) w.renderEngine.setObjectOpacityIsolated(mesh.handle, 1.0);
+        }
     }
 
     /** Persist the sculpted sandbox INTO its block draft so it survives a reload.
