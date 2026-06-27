@@ -1,3 +1,4 @@
+import { AdjunctType } from '../types/AdjunctType';
 /**
  * Coaster level — a roller coaster COLLAPSED FROM SPP (PLAYABLE Path A, ride).
  *
@@ -46,5 +47,5 @@ export function buildCoasterBlock(): any[] {
     // raw[4] = 1: this block is a PLAYABLE game zone. Standing here lets the
     // player enter Game mode (GameZoneSystem → confirm) to ride the coaster;
     // leaving the block drops back to Normal. See docs/systems/game-mode-entry.md.
-    return [0, 1, [[0x00b6, [[origin, cells, 'coaster']]]], [], 1];
+    return [0, 1, [[AdjunctType.Particle, [[origin, cells, 'coaster']]]], [], 1];
 }

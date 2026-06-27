@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { codeFromFace } from '../../core/spp/faceCodes.js';
 
 /**
@@ -24,7 +25,7 @@ import { codeFromFace } from '../../core/spp/faceCodes.js';
 export const ParticleMeta: ComponentMeta = {
     name: "particle",
     short: "SP",
-    typeId: 0x00b6,
+    typeId: AdjunctType.Particle,
     desc: "String-particle spatial definition (expands to standard adjuncts)",
     version: "1.0.0"
 };

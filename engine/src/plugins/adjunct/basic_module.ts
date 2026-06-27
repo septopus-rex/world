@@ -7,6 +7,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { Coords } from '../../core/utils/Coords';
 import { MeshFactory } from '../../render/MeshFactory';
@@ -38,7 +39,7 @@ import { MeshFactory } from '../../render/MeshFactory';
 export const ModuleMeta: ComponentMeta = {
     name: "module",
     short: "MD",
-    typeId: 0x00a4,
+    typeId: AdjunctType.Module,
     desc: "3D model loaded from storage by resource id",
     version: "1.0.0"
 };

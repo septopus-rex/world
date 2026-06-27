@@ -1,4 +1,5 @@
 import { World, EntityId } from './World';
+import { AdjunctType } from './types/AdjunctType';
 import { AdjunctComponent } from './components/AdjunctComponents';
 import { TransformComponent } from './components/PlayerComponents';
 import { MeshComponent } from './components/VisualizationComponents';
@@ -106,7 +107,7 @@ export class EditTaskExecutor {
         if (meshComp) meshComp.handle = result.handle;
 
         // SPP source: re-expand derived pieces to match the restored cells.
-        if ((adjComp.stdData as any).typeId === 0x00b6) {
+        if ((adjComp.stdData as any).typeId === AdjunctType.Particle) {
             (world.systems.findSystemByName('BlockSystem') as any)?.reexpandParticle?.(world, entityId);
         }
 
@@ -171,7 +172,7 @@ export class EditTaskExecutor {
 
         // SPP source: fold any face-code form fields into cells, then re-expand
         // the derived pieces live (the b6's own mesh is just a hidden marker).
-        if ((std as any).typeId === 0x00b6) {
+        if ((std as any).typeId === AdjunctType.Particle) {
             normalizeParticleFaces(std);
             (world.systems.findSystemByName('BlockSystem') as any)?.reexpandParticle?.(world, entityId);
         }
@@ -184,7 +185,7 @@ export class EditTaskExecutor {
         // SPP source: also drop its derived pieces (else deleting/undoing a placed
         // particle leaves orphan walls).
         const adj = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
-        if (adj?.stdData?.typeId === 0x00b6) {
+        if (adj?.stdData?.typeId === AdjunctType.Particle) {
             (world.systems.findSystemByName('BlockSystem') as any)?.destroyDerived?.(world, adj.adjunctId);
         }
 

@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask.js';
 import { Coords } from '../../core/utils/Coords.js';
 
@@ -27,7 +28,7 @@ import { Coords } from '../../core/utils/Coords.js';
 const reg: ComponentMeta = {
     name: "link",
     short: "LK",
-    typeId: 0x00e1,
+    typeId: AdjunctType.Link,
     desc: "External link / QR panel (clickable).",
     version: "1.0.0",
 };

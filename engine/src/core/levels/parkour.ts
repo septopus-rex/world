@@ -1,3 +1,4 @@
+import { AdjunctType } from '../types/AdjunctType';
 /**
  * Parkour level — the first authored, goal-driven experience (PLAYABLE Path A).
  *
@@ -91,5 +92,5 @@ export function buildParkourBlock(bx: number = COURSE_BX, by: number = COURSE_BY
         boxes = [platform(8, 8, 3, 18)]; // strip N-1–17 (spans the whole block)
         triggers = [trigger(8, 8, [SET_SPAWN])];
     }
-    return [0, 1, [[0x00a2, boxes], [0x00b8, triggers]], []];
+    return [0, 1, [[AdjunctType.Box, boxes], [AdjunctType.Trigger, triggers]], []];
 }

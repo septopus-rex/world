@@ -1,4 +1,5 @@
 import { MockBlockData } from '@engine/core/mocks/BlockMocks';
+import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { MAHJONG_GAME_ID } from '../games/mahjong/setting';
 
 /**
@@ -31,7 +32,7 @@ export function buildMahjongScene(bx: number, by: number): any[] {
         [[0.7, 0.7, 0.5], [C[0] - 2.4, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // W
         [[0.7, 0.7, 0.5], [C[0] + 2.4, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // E
     ];
-    data.raw[2].push([0x00a2, [...table, ...stools]]);
+    data.raw[2].push([AdjunctType.Box, [...table, ...stools]]);
     data.raw[4] = MAHJONG_GAME_ID; // block-level game flag = the Game Setting resource id
     return data.raw;
 }

@@ -1,4 +1,5 @@
 import { World, ISystem, EntityId, GameEvent } from '../World';
+import { AdjunctType } from '../types/AdjunctType';
 import { TransformComponent, InputStateComponent } from '../components/PlayerComponents';
 import { BlockComponent } from '../components/BlockComponent';
 import { AdjunctComponent } from '../components/AdjunctComponents';
@@ -426,10 +427,10 @@ export class EditSystem implements ISystem {
         for (const model of world.moduleCatalog) {
             buttons.push({
                 label: `▣ ${model.label}`,
-                active: this.placingTypeId === 0x00a4 && this.placingResource === model.id,
+                active: this.placingTypeId === AdjunctType.Module && this.placingResource === model.id,
                 onClick: () => {
-                    const same = this.placingTypeId === 0x00a4 && this.placingResource === model.id;
-                    this.placingTypeId = same ? null : 0x00a4;
+                    const same = this.placingTypeId === AdjunctType.Module && this.placingResource === model.id;
+                    this.placingTypeId = same ? null : AdjunctType.Module;
                     this.placingResource = same ? null : model.id;
                     this.placingParams = null;
                     this.paletteDirty = true;

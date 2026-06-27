@@ -1,4 +1,5 @@
 import { World, ISystem, EntityId } from '../World';
+import { AdjunctType } from '../types/AdjunctType';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
 import { MeshComponent } from '../components/VisualizationComponents';
@@ -141,7 +142,7 @@ export class ItemSystem implements ISystem {
             [spp.pos[0], spp.pos[1], Math.max(0, spp.pos[2]) + 0.2],
             templateId, seed, count, [0, 0, 0],
         ];
-        const spawned = blockSystem.spawnAdjunct(world, blockEid, 0x00b5, rawRow);
+        const spawned = blockSystem.spawnAdjunct(world, blockEid, AdjunctType.Item, rawRow);
         if (spawned === null) {
             // Roll the debit back — never strand items in limbo.
             world.events.emit("item.pickup", { itemId, amount: count, metadata: entry.metadata }, { actor: playerId });

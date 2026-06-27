@@ -5,6 +5,7 @@ import {
     AdjunctDefinition,
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { standardAttribute, standardMenu } from './_shared.js';
 
 /**
@@ -14,7 +15,7 @@ import { standardAttribute, standardMenu } from './_shared.js';
 const reg: ComponentMeta = {
     name: "cone",
     short: "CN",
-    typeId: 0x00a6,
+    typeId: AdjunctType.Cone,
     desc: "Cone/Cylinder adjunct.",
     version: "1.0.0",
 };

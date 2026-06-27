@@ -1,4 +1,5 @@
 import { World, EntityId } from '../World';
+import { AdjunctType } from '../types/AdjunctType';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { BlockComponent } from '../components/BlockComponent';
 
@@ -30,7 +31,7 @@ export function serializeBlockToRaw(world: World, blockEntityId: EntityId): any[
         // derived pieces would freeze the particle into loose parts.
         if ((adj.stdData as any)?.derivedFrom) continue;
 
-        const typeId = adj.stdData.typeId ?? 0x00a2;
+        const typeId = adj.stdData.typeId ?? AdjunctType.Box;
         const serialize = adj.logicModule?.attribute?.serialize;
         if (!serialize) continue;
 

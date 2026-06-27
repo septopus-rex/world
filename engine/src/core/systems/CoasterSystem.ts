@@ -1,4 +1,5 @@
 import { World, ISystem, EntityId } from '../World';
+import { AdjunctType } from '../types/AdjunctType';
 import { Coords } from '../utils/Coords';
 import { SystemMode } from '../types/SystemMode';
 import { AdjunctComponent } from '../components/AdjunctComponents';
@@ -72,7 +73,7 @@ export class CoasterSystem implements ISystem {
         for (const eid of world.getEntitiesWith(['AdjunctComponent'])) {
             const a = world.getComponent<AdjunctComponent>(eid, 'AdjunctComponent');
             const std: any = a?.stdData;
-            if (!std || std.typeId !== 0x00b6 || std.theme !== 'coaster' || !Array.isArray(std.cells)) continue;
+            if (!std || std.typeId !== AdjunctType.Particle || std.theme !== 'coaster' || !Array.isArray(std.cells)) continue;
             const blockEid = a!.parentBlockEntityId;
             const block = blockEid != null ? world.getComponent<BlockComponent>(blockEid, 'BlockComponent') : null;
             if (!block) continue;

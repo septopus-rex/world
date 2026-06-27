@@ -1,4 +1,5 @@
 import { MockBlockData } from '@engine/core/mocks/BlockMocks';
+import { AdjunctType } from '@engine/core/types/AdjunctType';
 
 /**
  * mazeScene — a PLAYABLE LABYRINTH authored almost entirely as ONE SPP (b6) row.
@@ -137,7 +138,7 @@ export function buildMazeScene(bx: number, by: number): any[] {
     const data = MockBlockData(bx, by);
 
     // ── The maze itself: ONE b6 row → engine expands to ~100 a1 walls + goal b8.
-    data.raw[2].push([0x00b6, [[ORIGIN, mazeCells(), 'basic']]]);
+    data.raw[2].push([AdjunctType.Particle, [[ORIGIN, mazeCells(), 'basic']]]);
 
     // ── Athenian dressing (a2 boxes layered on the SPP skeleton).
     const maxXY = ORIGIN[0] + G * STRIDE; // 1 + 14 = 15 → maze spans local [1,15]
@@ -170,7 +171,7 @@ export function buildMazeScene(bx: number, by: number): any[] {
         [[0.6, 0.6, 0.25], [cx, cy, 4.6 + 0.125], [0, 0, 0], DARK, [1, 1], 0, 1], // finial
     );
 
-    data.raw[2].push([0x00a2, boxes]);
+    data.raw[2].push([AdjunctType.Box, boxes]);
     // No data.raw[4] — the maze is a normal explorable block, not a game zone.
     return data.raw;
 }

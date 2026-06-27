@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { Coords } from '../../core/utils/Coords';
 
@@ -15,7 +16,7 @@ import { Coords } from '../../core/utils/Coords';
 export const BoxMeta: ComponentMeta = {
     name: "box",
     short: "BX",
-    typeId: 0x00a2,
+    typeId: AdjunctType.Box,
     desc: "Basic 3D box primitive",
     version: "1.0.0"
 };

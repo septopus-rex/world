@@ -1,4 +1,5 @@
 import { MockBlockData } from '@engine/core/mocks/BlockMocks';
+import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { POOL_GAME_ID } from '../games/pool/setting';
 
 /**
@@ -31,7 +32,7 @@ export function buildPoolScene(bx: number, by: number): any[] {
         [[0.4, 0.4, bedTop], [C[0] - bedW / 2 + 0.5, C[1] + bedD / 2 - 0.5, bedTop / 2], [0, 0, 0], 1, [1, 1], 0, 1],
         [[0.4, 0.4, bedTop], [C[0] + bedW / 2 - 0.5, C[1] + bedD / 2 - 0.5, bedTop / 2], [0, 0, 0], 1, [1, 1], 0, 1],
     ];
-    data.raw[2].push([0x00a2, boxes]);
+    data.raw[2].push([AdjunctType.Box, boxes]);
     data.raw[4] = POOL_GAME_ID; // block-level game flag = the Game Setting resource id
     return data.raw;
 }

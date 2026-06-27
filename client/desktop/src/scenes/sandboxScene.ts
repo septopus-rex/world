@@ -1,4 +1,5 @@
 import { MockBlockData } from '@engine/core/mocks/BlockMocks';
+import { AdjunctType } from '@engine/core/types/AdjunctType';
 
 /**
  * sandboxScene — a fixed-camera DIORAMA for sculpting SPP visually.
@@ -71,11 +72,11 @@ function initialCells(): any[] {
 export function buildSandboxScene(bx: number, by: number): any[] {
     const data = MockBlockData(bx, by);
     // The shared SPP source — one b6 row holds the whole grid.
-    data.raw[2].push([0x00b6, [[GRID.origin, initialCells(), 'basic']]]);
+    data.raw[2].push([AdjunctType.Particle, [[GRID.origin, initialCells(), 'basic']]]);
     // A dark base slab so the white marble cells read as a tabletop diorama.
     const span = GRID.n * GRID.cell + 2;
     const c = GRID.origin[0] + (GRID.n * GRID.cell) / 2;
-    data.raw[2].push([0x00a2, [[[span, span, 0.4], [c, c, -0.2], [0, 0, 0], 1, [1, 1], 0, 0]]]);
+    data.raw[2].push([AdjunctType.Box, [[[span, span, 0.4], [c, c, -0.2], [0, 0, 0], 1, [1, 1], 0, 0]]]);
     return data.raw;
 }
 

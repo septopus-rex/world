@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 
 /**
@@ -25,7 +26,7 @@ import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 export const LightMeta: ComponentMeta = {
     name: "light",
     short: "LT",
-    typeId: 0x00a3,
+    typeId: AdjunctType.Light,
     desc: "Light source adjunct (point, spot, directional)",
     version: "1.0.0"
 };

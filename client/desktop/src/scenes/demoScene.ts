@@ -1,4 +1,5 @@
 import { MockBlockData } from '@engine/core/mocks/BlockMocks';
+import { AdjunctType } from '@engine/core/types/AdjunctType';
 
 /**
  * demoScene — the showcase world content (spawn block): model instances, textured
@@ -72,9 +73,9 @@ export function injectDemoAssets(data: any): void {
     const stops = [
         [[14, 0.4, 2.5], [8, 5, 1.25], [0, 0, 0], 1, 0],
     ];
-    data.raw[2].push([0x00a4, modules]);
-    data.raw[2].push([0x00a2, texturedBoxes]);
-    data.raw[2].push([0x00b4, stops]);
+    data.raw[2].push([AdjunctType.Module, modules]);
+    data.raw[2].push([AdjunctType.Box, texturedBoxes]);
+    data.raw[2].push([AdjunctType.Stop, stops]);
 
     // ── Trigger court (north half of the spawn block) ────────────────────
     // Interactive trigger test scene; everything gives VISIBLE feedback via
@@ -120,8 +121,8 @@ export function injectDemoAssets(data: any): void {
         [[3, 3, 0.05], [3, 10.5, 0.1], [0, 0, 0], 3, [1, 1], 0, 0],      // red: hold lift
         [[2.2, 2, 0.05], [14.2, 12, 0.1], [0, 0, 0], 1, [1, 1], 0, 0],   // gray: conditional door
     ];
-    data.raw[2].push([0x00a1, walls]);
-    data.raw[2].push([0x00b5, items]);
+    data.raw[2].push([AdjunctType.Wall, walls]);
+    data.raw[2].push([AdjunctType.Item, items]);
 
     // String-particle hut (b6): two 4m cells expanded by the engine into
     // standard walls + a cell trigger. Faces are [state, variant] in
@@ -144,10 +145,10 @@ export function injectDemoAssets(data: any): void {
             },
         ], 'basic'],
     ];
-    data.raw[2].push([0x00b6, particles]);
-    data.raw[2].push([0x00a6, cones]);
-    data.raw[2].push([0x00a7, balls]);
-    data.raw[2].push([0x00a2, markers]);
+    data.raw[2].push([AdjunctType.Particle, particles]);
+    data.raw[2].push([AdjunctType.Cone, cones]);
+    data.raw[2].push([AdjunctType.Ball, balls]);
+    data.raw[2].push([AdjunctType.Box, markers]);
 
     // Trigger volumes (b8). Row format: [size, offset, rot, shape, gameOnly, events].
     const triggers = [
@@ -230,7 +231,7 @@ export function injectDemoAssets(data: any): void {
             },
         ]],
     ];
-    data.raw[2].push([0x00b8, triggers]);
+    data.raw[2].push([AdjunctType.Trigger, triggers]);
 }
 
 /** Full standalone block raw for the demo showcase, authored for ANY block

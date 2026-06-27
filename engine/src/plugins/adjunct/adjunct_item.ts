@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { Coords } from '../../core/utils/Coords.js';
 import { getItemTemplate, deriveItemAttributes, rarityColor } from '../../core/services/ItemRegistry.js';
 
@@ -26,7 +27,7 @@ import { getItemTemplate, deriveItemAttributes, rarityColor } from '../../core/s
 export const ItemMeta: ComponentMeta = {
     name: "item",
     short: "IT",
-    typeId: 0x00b5,
+    typeId: AdjunctType.Item,
     desc: "Pickable world item (template + seed)",
     version: "1.0.0"
 };

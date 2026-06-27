@@ -1,4 +1,5 @@
 import { AdjunctDefinition } from '../types/Adjunct';
+import { AdjunctType } from '../types/AdjunctType';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctLight } from '../../plugins/adjunct/basic_light';
 import { AdjunctTrigger } from '../../plugins/adjunct/adjunct_trigger';
@@ -25,19 +26,19 @@ import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
  *   · c1 track(tube rail; coaster) · e1 link(clickable URL / QR panel)
  */
 export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<number, AdjunctDefinition>([
-    [0x00a1, BasicWallAdjunct as unknown as AdjunctDefinition],   // wall
-    [0x00a2, AdjunctBox as unknown as AdjunctDefinition],         // box
-    [0x00a3, AdjunctLight as unknown as AdjunctDefinition],       // light
-    [0x00a4, AdjunctModule as unknown as AdjunctDefinition],      // module (3D model)
-    [0x00a5, BasicWaterAdjunct as unknown as AdjunctDefinition],  // water (translucent)
-    [0x00a6, BasicConeAdjunct as unknown as AdjunctDefinition],   // cone
-    [0x00a7, BasicSphereAdjunct as unknown as AdjunctDefinition], // ball -> sphere
-    [0x00b4, AdjunctStop as unknown as AdjunctDefinition],        // stop (invisible collider)
-    [0x00b5, AdjunctItem as unknown as AdjunctDefinition],        // item (pickable)
-    [0x00b6, AdjunctParticle as unknown as AdjunctDefinition],    // string particle (SPP)
-    [0x00b8, AdjunctTrigger as unknown as AdjunctDefinition],     // trigger
-    [0x00c1, AdjunctTrack as unknown as AdjunctDefinition],       // track (tube rail; coaster)
-    [0x00e1, AdjunctLink as unknown as AdjunctDefinition],        // link / QR panel (clickable)
+    [AdjunctType.Wall, BasicWallAdjunct as unknown as AdjunctDefinition],     // wall
+    [AdjunctType.Box, AdjunctBox as unknown as AdjunctDefinition],            // box
+    [AdjunctType.Light, AdjunctLight as unknown as AdjunctDefinition],        // light
+    [AdjunctType.Module, AdjunctModule as unknown as AdjunctDefinition],      // module (3D model)
+    [AdjunctType.Water, BasicWaterAdjunct as unknown as AdjunctDefinition],   // water (translucent)
+    [AdjunctType.Cone, BasicConeAdjunct as unknown as AdjunctDefinition],     // cone
+    [AdjunctType.Ball, BasicSphereAdjunct as unknown as AdjunctDefinition],   // ball -> sphere
+    [AdjunctType.Stop, AdjunctStop as unknown as AdjunctDefinition],          // stop (invisible collider)
+    [AdjunctType.Item, AdjunctItem as unknown as AdjunctDefinition],          // item (pickable)
+    [AdjunctType.Particle, AdjunctParticle as unknown as AdjunctDefinition],  // string particle (SPP)
+    [AdjunctType.Trigger, AdjunctTrigger as unknown as AdjunctDefinition],    // trigger
+    [AdjunctType.Track, AdjunctTrack as unknown as AdjunctDefinition],        // track (tube rail; coaster)
+    [AdjunctType.Link, AdjunctLink as unknown as AdjunctDefinition],          // link / QR panel (clickable)
 ]);
 
 export function getBuiltinAdjunct(typeId: number): AdjunctDefinition | undefined {

@@ -8,6 +8,7 @@ import { Coords } from '../utils/Coords';
 import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctFactory } from '../factories/AdjunctFactory';
 import { getBuiltinAdjunct, getAdjunct } from '../services/AdjunctRegistry';
+import { AdjunctType } from '../types/AdjunctType';
 import { expandParticle } from '../spp/Expander';
 import { RenderHandle } from '../types/Adjunct';
 
@@ -123,7 +124,7 @@ export class BlockSystem implements ISystem {
                                 // rows — every piece is its own entity (collision /
                                 // triggers / LOD all native). Pieces carry derivedFrom
                                 // so BlockSerializer persists only the b6 source.
-                                if (typeId === 0x00b6) {
+                                if (typeId === AdjunctType.Particle) {
                                     expandParticle(rawInst as any).forEach(([dType, dRow], k) => {
                                         const dDef = getBuiltinAdjunct(dType);
                                         const dStd = dDef?.attribute?.deserialize(dRow);
@@ -159,7 +160,7 @@ export class BlockSystem implements ISystem {
             });
         }
 
-        const hasGround = adjunctsToInit.some(a => a.id?.startsWith('ground') || (a.typeId === 0x00a2 && a.oz < 0));
+        const hasGround = adjunctsToInit.some(a => a.id?.startsWith('ground') || (a.typeId === AdjunctType.Box && a.oz < 0));
 
         if (!hasGround) {
             const [bw, bl] = world.config.world.block;
@@ -209,7 +210,7 @@ export class BlockSystem implements ISystem {
 
         // SPP (b6): expand into standard derived pieces immediately so a palette-
         // placed cell is visible without a reload (block-load does the same).
-        if (typeId === 0x00b6) {
+        if (typeId === AdjunctType.Particle) {
             this.expandParticleInto(world, blockEid, sourceId, rawRow);
         }
         return adjId;
@@ -249,10 +250,10 @@ export class BlockSystem implements ISystem {
      *  the new meshes next frame. */
     public reexpandParticle(world: World, sourceEid: EntityId): void {
         const src = world.getComponent<AdjunctComponent>(sourceEid, "AdjunctComponent");
-        if (!src || (src.stdData?.typeId ?? -1) !== 0x00b6) return;
+        if (!src || (src.stdData?.typeId ?? -1) !== AdjunctType.Particle) return;
         if (src.parentBlockEntityId == null) return;
         this.destroyDerived(world, src.adjunctId);
-        const raw = getBuiltinAdjunct(0x00b6)?.attribute?.serialize?.(src.stdData);
+        const raw = getBuiltinAdjunct(AdjunctType.Particle)?.attribute?.serialize?.(src.stdData);
         if (raw) this.expandParticleInto(world, src.parentBlockEntityId, src.adjunctId, raw as any[]);
     }
 
@@ -279,7 +280,7 @@ export class BlockSystem implements ISystem {
             stdData: data
         });
 
-        const isSolid = data.type === 'box' || data.typeId === 0x00a2 || data.stop;
+        const isSolid = data.type === 'box' || data.typeId === AdjunctType.Box || data.stop;
         if (isSolid) {
             world.addComponent<SolidComponent>(adjId, "SolidComponent", {
                 shape: "box",

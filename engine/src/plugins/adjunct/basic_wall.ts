@@ -5,6 +5,7 @@ import {
     AdjunctDefinition,
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { Coords } from '../../core/utils/Coords.js';
 import { standardAttribute, standardMenu } from './_shared.js';
 
@@ -15,7 +16,7 @@ import { standardAttribute, standardMenu } from './_shared.js';
 const reg: ComponentMeta = {
     name: "wall",
     short: "WL",
-    typeId: 0x00a1,
+    typeId: AdjunctType.Wall,
     desc: "Wall with texture support.",
     version: "1.0.0",
 };

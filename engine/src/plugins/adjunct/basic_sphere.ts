@@ -5,6 +5,7 @@ import {
     AdjunctDefinition,
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { Coords } from '../../core/utils/Coords.js';
 import { standardAttribute, standardMenu } from './_shared.js';
 
@@ -16,7 +17,7 @@ import { standardAttribute, standardMenu } from './_shared.js';
 const reg: ComponentMeta = {
     name: "sphere",
     short: "SPH",
-    typeId: 0x00a7,
+    typeId: AdjunctType.Ball,
     desc: "Sphere adjunct (chain 'ball', 0x00a7).",
     version: "1.0.0",
 };

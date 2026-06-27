@@ -11,9 +11,10 @@
  * the SPP source.
  */
 import { ParticleFace, FaceState } from '../types/ParticleCell';
+import { AdjunctType } from '../types/AdjunctType';
 import { registerSppTheme, SppTheme } from './Variants';
 
-export const TRACK_TYPE = 0x00c1;
+export const TRACK_TYPE = AdjunctType.Track;
 export const TRACK_RADIUS = 0.3;
 
 const FACES: ParticleFace[] = [

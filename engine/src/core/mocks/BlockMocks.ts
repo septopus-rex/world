@@ -1,3 +1,4 @@
+import { AdjunctType } from '../types/AdjunctType';
 /**
  * BlockMocks.ts
  * 
@@ -89,7 +90,7 @@ export function MockBlockData(x: number, y: number): any {
                 0
             ]
         ];
-        adjunctsRaw.push([0x00a2, pillars]);
+        adjunctsRaw.push([AdjunctType.Box, pillars]);
     }
 
     // 2. Light sources — only on 2 blocks near spawn (2048,2048)
@@ -102,7 +103,7 @@ export function MockBlockData(x: number, y: number): any {
             // Cool spot light on the adjacent block
             lights[0] = [1, [8, 8, 10], [0, 0, 0], 0x4488ff, 3, 25, Math.PI / 4, 0];
         }
-        adjunctsRaw.push([0x00a3, lights]);
+        adjunctsRaw.push([AdjunctType.Light, lights]);
     }
 
     // 3. Solid Ground Block
@@ -117,7 +118,7 @@ export function MockBlockData(x: number, y: number): any {
         0,                    // Animation
         0                     // Stop
     ]);
-    adjunctsRaw.push([0x00a2, ground]);
+    adjunctsRaw.push([AdjunctType.Box, ground]);
 
     return {
         x,

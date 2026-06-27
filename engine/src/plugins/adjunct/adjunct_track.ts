@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { Coords } from '../../core/utils/Coords.js';
 
 /**
@@ -25,7 +26,7 @@ import { Coords } from '../../core/utils/Coords.js';
 const reg: ComponentMeta = {
     name: "track",
     short: "TK",
-    typeId: 0x00c1,
+    typeId: AdjunctType.Track,
     desc: "Tube track piece (coaster rail), swept along control points.",
     version: "1.0.0",
 };

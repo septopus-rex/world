@@ -14,6 +14,7 @@
  *   - adjacency elimination is same-level only
  */
 import { ParticleFace, FaceState, SubdivisionLevel } from '../types/ParticleCell';
+import { AdjunctType } from '../types/AdjunctType';
 import { getSppTheme, getVariant, VariantPiece } from './Variants';
 import './CoasterTheme'; // side-effect: registers the 'coaster' theme (cells → c1 track)
 import type { TriggerLogicNode } from '../types/Trigger';
@@ -125,7 +126,7 @@ export function expandParticle(raw: SppRaw): ExpandedRow[] {
 
                 for (const piece of variant.pieces) {
                     const { size, center } = pieceToBox(face, piece, s, theme.thickness);
-                    rows.push([0x00a1, [
+                    rows.push([AdjunctType.Wall, [
                         size,
                         [cellOrigin[0] + center[0], cellOrigin[1] + center[1], cellOrigin[2] + center[2]],
                         [0, 0, 0], 0, [1, 1], 0, 1,
@@ -135,7 +136,7 @@ export function expandParticle(raw: SppRaw): ExpandedRow[] {
         }
 
         if (cell.trigger && cell.trigger.length > 0) {
-            rows.push([0x00b8, [
+            rows.push([AdjunctType.Trigger, [
                 [s, s, s],
                 [cellOrigin[0] + s / 2, cellOrigin[1] + s / 2, cellOrigin[2] + s / 2],
                 [0, 0, 0], 1, 0, cell.trigger,

@@ -6,6 +6,7 @@ import {
     AdjunctTransform,
     AdjunctAttribute
 } from '../../core/types/Adjunct';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { Coords } from '../../core/utils/Coords';
 
@@ -35,7 +36,7 @@ export const STOP_MODE = { BODY: 1, FOOT: 2, HEAD: 3 } as const;
 export const StopMeta: ComponentMeta = {
     name: "stop",
     short: "ST",
-    typeId: 0x00b4,
+    typeId: AdjunctType.Stop,
     desc: "Invisible collider / standable barrier (stop the player crossing)",
     version: "1.0.0"
 };

@@ -15,6 +15,7 @@
  *     to an optional chain plugin (IChainPublisher) that the editor build adds.
  */
 import { Engine } from '@engine/Engine';
+import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { TransformComponent } from '@engine/core/components/PlayerComponents';
 import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
 import { MockBlockData } from '@engine/core/mocks/BlockMocks';
@@ -665,7 +666,7 @@ export class DesktopLoader implements IDataSource {
         const tag = `${SANDBOX_BLOCK[0]}_${SANDBOX_BLOCK[1]}`;
         for (const eid of w.queryEntities('AdjunctComponent')) {
             const adj = w.getComponent(eid, 'AdjunctComponent');
-            if (adj?.stdData?.typeId === 0x00b6 && String(adj.adjunctId ?? '').includes(tag)) {
+            if (adj?.stdData?.typeId === AdjunctType.Particle && String(adj.adjunctId ?? '').includes(tag)) {
                 return { eid, std: adj.stdData };
             }
         }

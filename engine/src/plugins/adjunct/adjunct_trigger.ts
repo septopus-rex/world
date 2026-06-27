@@ -7,6 +7,7 @@ import {
     AdjunctMenu,
     AdjunctAttribute
 } from '../../core/types/Adjunct.js';
+import { AdjunctType } from '../../core/types/AdjunctType';
 import { Coords } from '../../core/utils/Coords.js';
 import type { TriggerLogicNode } from '../../core/types/Trigger.js';
 
@@ -16,7 +17,7 @@ import type { TriggerLogicNode } from '../../core/types/Trigger.js';
 export const TriggerMeta: ComponentMeta = {
     name: "trigger",
     short: "TR",
-    typeId: 0x00b8, // chain type-id b8 (matches AdjunctRegistry dispatch key)
+    typeId: AdjunctType.Trigger, // chain type-id b8 (matches AdjunctRegistry dispatch key)
     binarySize: 24, // Assuming custom sizing if necessary
     desc: "Interactive spatial volume (No mesh rendered)",
     version: "2.0.0"
