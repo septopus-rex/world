@@ -41,6 +41,9 @@ export interface EngineServices {
     actuator?: import('./core/services/Actuator').IActuator;
     /** Game-Setting external-API transport (default: NullGameApi; host injects its own). */
     gameApi?: import('./core/services/IGameApi').IGameApi;
+    /** External realtime transport (WebSocket/SSE/…). Default: NullLiveSource;
+     *  the client implements it and owns the actual connection. */
+    liveSource?: import('./core/services/LiveSource').ILiveSource;
     config?: any;
 }
 
@@ -116,7 +119,8 @@ export class Engine {
             resources: this.services.resources,
             draftBackend: this.services.draftBackend,
             actuator: this.services.actuator,
-            gameApi: this.services.gameApi
+            gameApi: this.services.gameApi,
+            liveSource: this.services.liveSource
         });
 
         // 3.5 UI Orchestration
@@ -337,6 +341,13 @@ export class Engine {
      *  assets and register providers here. Null before bootWorld. */
     public get ipfs() {
         return this.world?.ipfs ?? null;
+    }
+
+    /** External realtime transport (ILiveSource) feeding world.events via
+     *  LiveSystem. The client subscribes()/pushes through its own implementation;
+     *  this exposes whatever was injected. Null before bootWorld. */
+    public get live() {
+        return this.world?.liveSource ?? null;
     }
 
     /**

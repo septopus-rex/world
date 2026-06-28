@@ -64,6 +64,9 @@ export interface EventMap {
     // ── actuator ──
     'actuator.requested': { reqId: number; action: unknown };
     'actuator.settled': { reqId: number; ok: boolean; result?: unknown; error?: string };
+    // ── live (external realtime transport → world.events; see LiveSystem) ──
+    'live.message': { topic: string; data: unknown; ts?: number };
+    'live.status': { transport: string; status: 'open' | 'closed' | 'error' };
     // ── ui (boundary-only: payloads may contain closures; never recorded) ──
     'ui.show_group': unknown; 'ui.show_button': unknown; 'ui.show_modal': unknown;
     'ui.show_form': unknown; 'ui.show_toast': unknown; 'ui.update_compass': unknown;

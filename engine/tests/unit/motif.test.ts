@@ -39,6 +39,21 @@ describe('motif (c2) generative adjunct', () => {
         }
     });
 
+    it('params.texture (an IPFS hash) lands in box slot 7 on every piece', () => {
+        const cid = 'bafytesthash';
+        const rows = expandMotif([[0, 0, 0], 'panel', 1, { texture: cid }]);
+        expect(rows.length).toBeGreaterThan(0);
+        for (const [, raw] of rows) expect(raw[7]).toBe(cid);
+        // No texture → no slot 7 (legacy 7-element box).
+        const plain = expandMotif([[0, 0, 0], 'panel', 1, null]);
+        expect(plain[0][1].length).toBe(7);
+    });
+
+    it('panel template is a single board (image canvas)', () => {
+        const rows = expandMotif([[0, 0, 0], 'panel', 1, null]);
+        expect(rows.length).toBe(1);
+    });
+
     it('unknown template → no rows (graceful)', () => {
         expect(expandMotif([[0, 0, 0], 'does-not-exist', 1, null])).toEqual([]);
     });

@@ -254,16 +254,28 @@ export class ResourceManager {
         if (existing) return existing;
 
         const promise = this.withSlot(async (): Promise<THREE.Texture> => {
-            const records = await this.datasource.texture([Number(id)]);
-            const rec = records?.[id] ?? records?.[Number(id)];
-            if (!rec || (!rec.raw && !rec.format)) {
-                throw new Error(`[ResourceManager] no texture record for id ${id}`);
+            // Direct locator: a content-addressed CID or an explicit URL is already
+            // the address — resolve it without a datasource id lookup (the id map is
+            // only for numeric resource ids). Lets a live/IPFS hash texture directly.
+            const direct = isCid(id) || /^(https?:|data:|blob:|file:)/.test(id);
+            let raw: string;
+            let recRepeat: [number, number] | undefined;
+            if (direct) {
+                raw = id;
+            } else {
+                const records = await this.datasource.texture([Number(id)]);
+                const rec = records?.[id] ?? records?.[Number(id)];
+                if (!rec || (!rec.raw && !rec.format)) {
+                    throw new Error(`[ResourceManager] no texture record for id ${id}`);
+                }
+                raw = rec.raw;
+                recRepeat = rec.repeat;
             }
-            const url = await this.resolveUrl(rec.raw);
+            const url = await this.resolveUrl(raw);
             const tex = await this.textureLoader.loadAsync(url);
 
             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            const rep = repeat ?? rec.repeat ?? [1, 1];
+            const rep = repeat ?? recRepeat ?? [1, 1];
             tex.repeat?.set?.(rep[0], rep[1]);
 
             // Anisotropic filtering — the main fix for grazing-angle shimmer on
@@ -275,7 +287,7 @@ export class ResourceManager {
             }
             // RepeatWrapping + mipmaps require power-of-two dimensions; three silently
             // clamps wrap + disables mipmaps for NPOT, degrading tiling/filtering.
-            this.warnIfNPOT(id, rec.raw, tex);
+            this.warnIfNPOT(id, raw, tex);
             tex.needsUpdate = true;
 
             this.textureEntries.set(id, { texture: tex, refCount: 0 });

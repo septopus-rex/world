@@ -81,6 +81,15 @@ registerMotifTemplate({
     },
 });
 
+/** panel — a single flat upright board: the canvas for an image. Pair with
+ *  params.texture (e.g. a live IPFS hash) for a live image board / billboard. */
+registerMotifTemplate({
+    id: 'panel',
+    build() {
+        return [{ size: [3, 0.15, 2], pos: [0, 0, 1.2], rot: [0, 0, 0], resource: 0 }];
+    },
+});
+
 /** arch — two pillars + a lintel (a recognizable gateway, seed-varied). */
 registerMotifTemplate({
     id: 'arch',

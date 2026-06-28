@@ -30,16 +30,24 @@ export function expandMotif(raw: MotifRaw): ExpandedRow[] {
 
     const rng = makeRng((seed ?? 0) >>> 0);
     const boxes = tpl.build(rng, params ?? undefined);
+    // Optional content-addressed texture (e.g. a live-pushed IPFS hash). When set
+    // it goes to box slot 7 → ResourceManager → IPFS, and the image updates simply
+    // by re-expanding with a new hash (LiveSystem → reexpandSource).
+    const texture = params?.texture != null ? String(params.texture) : null;
 
-    // a2 box raw: [size, pos, rot, resource(colour), repeat, animation, stop].
+    // a2 box raw: [size, pos, rot, resource(colour), repeat, animation, stop, texture?].
     // stop = 1 → generated content is solid (tangible in-world).
-    return boxes.map((b) => [AdjunctType.Box, [
-        b.size,
-        [origin[0] + b.pos[0], origin[1] + b.pos[1], origin[2] + b.pos[2]],
-        b.rot,
-        b.resource,
-        [1, 1],
-        0,
-        1,
-    ]]);
+    return boxes.map((b) => {
+        const row: any[] = [
+            b.size,
+            [origin[0] + b.pos[0], origin[1] + b.pos[1], origin[2] + b.pos[2]],
+            b.rot,
+            b.resource,
+            [1, 1],
+            0,
+            1,
+        ];
+        if (texture) row.push(texture);
+        return [AdjunctType.Box, row] as ExpandedRow;
+    });
 }

@@ -10,6 +10,7 @@ import { IpfsRouter, MemoryCasProvider } from './services/ipfs';
 
 // Systems (Imported only for registration in constructor or specialized logic)
 import { PhysicsSystem } from './systems/PhysicsSystem';
+import { LiveSystem } from './systems/LiveSystem';
 import { CharacterController } from './movement/CharacterController';
 import { InputProvider } from './systems/InputProvider';
 import { BlockSystem } from './systems/BlockSystem';
@@ -38,6 +39,7 @@ import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
 import { DraftStore, IDraftBackend, InMemoryDraftBackend } from './services/DraftStore';
 import { IActuator, LocalActuator } from './services/Actuator';
+import { ILiveSource, NullLiveSource } from './services/LiveSource';
 import { IGameApi, NullGameApi } from './services/IGameApi';
 import { GameSetting } from './types/GameSetting';
 import { GameRuntime } from './services/GameRuntime';
@@ -78,6 +80,8 @@ export interface WorldDeps {
     actuator?: IActuator;
     /** Game-Setting external-API transport. Default: NullGameApi (no external API). */
     gameApi?: IGameApi;
+    /** External realtime transport (WebSocket/SSE/…). Default: NullLiveSource. */
+    liveSource?: ILiveSource;
 }
 
 /** Inert data source so a World constructed without one never crashes on resource calls. */
@@ -175,6 +179,13 @@ export class World {
     public readonly dataSource: IDataSource;
 
     /**
+     * External realtime transport (P-live): the engine never opens a socket — the
+     * host implements ILiveSource and owns the connection; LiveSystem drains it
+     * each frame into world.events. Default: inert NullLiveSource.
+     */
+    public readonly liveSource: ILiveSource;
+
+    /**
      * Game-Setting external-API transport (game.md §3). The engine never performs
      * the network/DOM call itself; GameRuntime hands a whitelisted call here.
      */
@@ -227,6 +238,7 @@ export class World {
         this.actuator = deps.actuator ?? new LocalActuator();
         this.dataSource = deps.dataSource ?? NULL_DATA_SOURCE;
         this.gameApi = deps.gameApi ?? new NullGameApi();
+        this.liveSource = deps.liveSource ?? new NullLiveSource();
 
         // 1. Rendering Setup — injectable. Default = real WebGL engine; tests pass
         //    a headless NullRenderEngine so a World can boot+tick without a GPU/DOM.
@@ -258,6 +270,9 @@ export class World {
         // 2. System Bootstrap (Extractable to configuration in future)
         const inputProvider = deps.inputProvider ?? new InputProvider(this.renderEngine.getDomElement());
 
+        // LiveSystem first: external realtime messages enter here and become
+        // same-frame-visible to every system registered after it.
+        this.systems.addSystem(new LiveSystem());
         this.systems.addSystem(new CharacterController(this, inputProvider));
         this.systems.addSystem(new RaycastInteractionSystem());
         this.systems.addSystem(new TriggerSystem());

@@ -36,6 +36,8 @@ import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
+import { WebSocketLiveSource } from './live/WebSocketLiveSource';
+import { FakeWebSocket } from './live/FakeWebSocket';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
 
@@ -61,6 +63,10 @@ export interface SPPPlayerState {
 
 export class DesktopLoader implements IDataSource {
     public engine: Engine | null = null;
+
+    /** Realtime transport (simulated WebSocket) feeding the engine's live channel.
+     *  Also reachable as engine.live (the injected ILiveSource). */
+    private _live: WebSocketLiveSource | null = null;
 
     /** `?level=<name>` selects an authored level instead of the demo court. */
     private level = typeof window !== 'undefined'
@@ -222,7 +228,12 @@ export class DesktopLoader implements IDataSource {
         }
         this.gameApi = new GameApiRouter(backends);
 
-        this.engine = new Engine(containerId, { api: this, ui, gameApi: this.gameApi });
+        // Realtime transport: a (currently simulated) WebSocket implements the
+        // engine's ILiveSource. Swap FakeWebSocket → new WebSocket(url) to go live;
+        // the engine side (LiveSystem → world.events) is unchanged.
+        this._live = new WebSocketLiveSource(new FakeWebSocket());
+
+        this.engine = new Engine(containerId, { api: this, ui, gameApi: this.gameApi, liveSource: this._live });
 
         this.engine.on('block.need', (payload) => {
             this.handleGridRequest(payload.center);
@@ -230,6 +241,14 @@ export class DesktopLoader implements IDataSource {
         this.engine.on('player.state', (state) => {
             this._saveState(state);
         });
+
+        // Live content channel: the server pushes { adjunctId, hash } on the
+        // 'motif' topic → the motif swaps its texture to that IPFS hash and
+        // re-expands → the image updates live. The adjunct never touches a socket.
+        this._live.subscribe('motif');
+        this.engine.on('live.message', (payload: any) => {
+            this.applyLiveMotifUpdate(payload?.data);
+        }, { key: 'motif' });
 
         // Game-zone gating: the engine derives "player is in a playable block"
         // from the block.game flag and announces it here. The UI uses this to
@@ -921,6 +940,27 @@ export class DesktopLoader implements IDataSource {
         this.playerState = { ...this.playerState, ...partial };
         if (!this.playerState.extend || this.playerState.extend < 2) {
             this.playerState.extend = 2;
+        }
+    }
+
+    /**
+     * Live-content handler: a 'motif' message carries { adjunctId, hash }. Point
+     * the named motif's texture at that content hash (an IPFS CID) and re-expand
+     * it — the generated geometry rebuilds with the new image, resolved through
+     * the IPFS layer. This is the engine-side endpoint of the live pipeline:
+     *   (sim) WebSocket → ILiveSource → LiveSystem → world.events → here.
+     */
+    private applyLiveMotifUpdate(data: any): void {
+        const world = this.engine?.getWorld() as any;
+        if (!world || !data || data.adjunctId == null) return;
+        const targetId = String(data.adjunctId);
+        const hash = data.hash != null ? String(data.hash) : null;
+        for (const eid of world.getEntitiesWith(['AdjunctComponent'])) {
+            const a = world.getComponent(eid, 'AdjunctComponent');
+            if (a?.adjunctId !== targetId) continue;
+            a.stdData.params = { ...(a.stdData.params || {}), texture: hash };
+            world.systems.findSystemByName('BlockSystem')?.reexpandSource?.(world, eid);
+            break;
         }
     }
 }
