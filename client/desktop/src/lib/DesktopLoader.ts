@@ -29,7 +29,7 @@ import type { IGameApi } from '@engine/core/services/IGameApi';
 import { GAMES, gameById } from '../games/registry';
 import { GameApiRouter } from '../games/GameApiRouter';
 import { FetchGameApi } from '../games/FetchGameApi';
-import { DEMO_BLOCK, DEMO_TEXTURE_ID, DEMO_AVATAR_ID, DEMO_MODELS, buildDemoScene } from '../scenes/demoScene';
+import { DEMO_BLOCK, DEMO_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
@@ -160,7 +160,8 @@ export class DesktopLoader implements IDataSource {
     public async module(ids: number[]): Promise<any> {
         const out: Record<string, any> = {};
         for (const id of ids) {
-            if (DEMO_MODELS[id]) out[id] = DEMO_MODELS[id];
+            const rec = await this.ingestAsset(id);
+            if (rec && rec.type !== 'texture') out[id] = rec;
         }
         return out;
     }
@@ -168,9 +169,33 @@ export class DesktopLoader implements IDataSource {
     public async texture(ids: number[]): Promise<any> {
         const out: Record<string, any> = {};
         for (const id of ids) {
-            if (id === DEMO_TEXTURE_ID) out[id] = { type: 'texture', format: 'png', raw: '/assets/checker.png', repeat: [1, 1] };
+            const rec = await this.ingestAsset(id);
+            if (rec && rec.type === 'texture') out[id] = rec;
         }
         return out;
+    }
+
+    /** Resource record cache: resource id → { type, format, raw=CID, repeat? }. */
+    private _resCatalog = new Map<number, { type: string; format: string; raw: string; repeat?: [number, number] }>();
+
+    /**
+     * Resolve a resource id to a content-addressed record, ingesting it into the
+     * IPFS store on first use ("ipfs add"): fetch the seed file → put bytes into
+     * engine.ipfs → CID. Thereafter all bytes are fetched through the router by
+     * CID — no hardcoded path leaves this method. Returns null for unknown ids.
+     */
+    private async ingestAsset(id: number) {
+        const cached = this._resCatalog.get(id);
+        if (cached) return cached;
+        const asset = DEMO_ASSETS.find((a) => a.id === id);
+        const router = this.engine?.ipfs;
+        if (!asset || !router) return null;
+        const resp = await fetch(asset.src);
+        if (!resp.ok) throw new Error(`[DesktopLoader] asset fetch failed: ${asset.src} (${resp.status})`);
+        const cid = await router.put(new Uint8Array(await resp.arrayBuffer()));
+        const rec = { type: asset.type, format: asset.format, raw: cid, ...(asset.repeat ? { repeat: asset.repeat } : {}) };
+        this._resCatalog.set(id, rec);
+        return rec;
     }
 
     /** Resolve a Game Setting resource (game.md §2): a playable block carries a
@@ -296,11 +321,11 @@ export class DesktopLoader implements IDataSource {
 
         // Offer the demo 3D models to the editor palette's module picker.
         this.engine.setModuleCatalog(
-            Object.entries(DEMO_MODELS)
-                .filter(([, m]) => m.type === 'module')
-                .map(([id, m]) => ({
-                    id: Number(id),
-                    label: (m.raw.split('/').pop() || `model ${id}`).replace(/\.[^.]+$/, ''),
+            DEMO_ASSETS
+                .filter((a) => a.type === 'module')
+                .map((a) => ({
+                    id: a.id,
+                    label: (a.src.split('/').pop() || `model ${a.id}`).replace(/\.[^.]+$/, ''),
                 })),
         );
 

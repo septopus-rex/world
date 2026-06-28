@@ -116,7 +116,8 @@ export function MockBlockData(x: number, y: number): any {
         10,                   // ResId (Green)
         [4, 4],               // Repeat (Texture repeat for tiling look)
         0,                    // Animation
-        0                     // Stop
+        0,                    // Stop
+        1                     // Texture id (world block baseline) — resolved via IPFS
     ]);
     adjunctsRaw.push([AdjunctType.Box, ground]);
 

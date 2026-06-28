@@ -14,18 +14,35 @@ import { AdjunctType } from '@engine/core/types/AdjunctType';
  */
 
 export const DEMO_BLOCK: [number, number] = [2048, 2048];
-export const DEMO_TEXTURE_ID = 7;  // → /assets/checker.png
+export const DEMO_TEXTURE_ID = 7;  // checker texture
+export const DEMO_AVATAR_ID = 30;  // rigged human avatar
 
-// Resource id → model record. Real Khronos sample assets (helmet = complex PBR
-// with baked textures; fox = rigged + animated, exercises SkeletonUtils.clone).
-export const DEMO_AVATAR_ID = 30;  // → /assets/avatar.glb (rigged human)
-export const DEMO_MODELS: Record<number, { type: string; format: string; raw: string }> = {
-    27: { type: 'module', format: 'gltf', raw: '/assets/pyramid.gltf' },
-    28: { type: 'module', format: 'glb', raw: '/assets/helmet.glb' },
-    29: { type: 'module', format: 'glb', raw: '/assets/fox.glb' },
-    30: { type: 'avatar', format: 'glb', raw: '/assets/avatar.glb' },
-    31: { type: 'audio', format: 'wav', raw: '/assets/ding.wav' },
-};
+/**
+ * Demo content's source assets — the SEED for the IPFS content store (the mock
+ * "ipfs add ./file"). At boot these `src` files are ingested into the CAS and
+ * thereafter addressed by CID; module()/texture() serve those CIDs, never paths.
+ * So this is the content MANIFEST, not a resolution path baked into the
+ * datasource. Real Khronos samples (helmet = complex PBR; fox = rigged/animated).
+ */
+export interface DemoAsset {
+    id: number;
+    type: 'module' | 'avatar' | 'audio' | 'texture';
+    format: string;
+    src: string;                  // seed path under public/assets (CAS ingest source)
+    repeat?: [number, number];    // texture-only
+}
+export const DEMO_ASSETS: DemoAsset[] = [
+    // World block-ground baselines (WorldConfigs block.texture): 1 = forest (Normal),
+    // 5 = moon (GhostMoon). Tiled across the 16 m ground via the record repeat.
+    { id: 1, type: 'texture', format: 'png', src: '/assets/ground-forest.png', repeat: [8, 8] },
+    { id: 5, type: 'texture', format: 'png', src: '/assets/ground-moon.png', repeat: [8, 8] },
+    { id: DEMO_TEXTURE_ID, type: 'texture', format: 'png', src: '/assets/checker.png', repeat: [1, 1] },
+    { id: 27, type: 'module', format: 'gltf', src: '/assets/pyramid.gltf' },
+    { id: 28, type: 'module', format: 'glb', src: '/assets/helmet.glb' },
+    { id: 29, type: 'module', format: 'glb', src: '/assets/fox.glb' },
+    { id: DEMO_AVATAR_ID, type: 'avatar', format: 'glb', src: '/assets/avatar.glb' },
+    { id: 31, type: 'audio', format: 'wav', src: '/assets/ding.wav' },
+];
 
 /**
  * Splice a few model instances + textured boxes + the trigger court into a block.

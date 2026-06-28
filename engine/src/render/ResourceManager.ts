@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { IDataSource } from '../core/services/DataSource';
+import { isCid } from '../core/services/ipfs';
+import type { IpfsRouter } from '../core/services/ipfs';
 import { IModelLoader, ModelLoader } from './loaders/ModelLoader';
 
 /**
@@ -63,6 +65,9 @@ export interface ResourceManagerConfig {
     /** Injectable texture loader (default THREE.TextureLoader; tests inject a fake). */
     textureLoader?: ITextureLoader;
     ipfsGateway?: string;
+    /** Content-addressed resolver: a CID raw is fetched through this (mock CAS /
+     *  real IPFS) instead of the gateway. See core/services/ipfs. */
+    ipfsRouter?: IpfsRouter;
     maxConcurrent?: number;
     /**
      * Max texture anisotropy (from renderer.capabilities.getMaxAnisotropy()).
@@ -78,6 +83,7 @@ export class ResourceManager {
     private readonly loader: IModelLoader;
     private readonly textureLoader: ITextureLoader;
     private readonly ipfsGateway: string;
+    private readonly ipfsRouter?: IpfsRouter;
     private readonly maxConcurrent: number;
     private readonly maxAnisotropy: number;
 
@@ -96,6 +102,7 @@ export class ResourceManager {
         this.loader = config.loader ?? new ModelLoader();
         this.textureLoader = config.textureLoader ?? (new THREE.TextureLoader() as ITextureLoader);
         this.ipfsGateway = config.ipfsGateway ?? 'https://gateway.pinata.cloud/ipfs/';
+        this.ipfsRouter = config.ipfsRouter;
         this.maxConcurrent = config.maxConcurrent ?? 3;
         // Cap anisotropy at 8: near-indistinguishable from higher on most GPUs but
         // cheaper. 0/undefined renderer caps fall back to 1 (no anisotropic filtering).
@@ -119,7 +126,7 @@ export class ResourceManager {
                 const records = await this.datasource.module([Number(id)]);
                 const rec = records?.[id] ?? records?.[Number(id)];
                 if (!rec?.raw) throw new Error(`[ResourceManager] no audio record for id ${id}`);
-                return this.resolveUrl(rec.raw);
+                return await this.resolveUrl(rec.raw);
             })();
             this.audioUrls.set(id, promise);
         }
@@ -144,7 +151,7 @@ export class ResourceManager {
             if (!rec || !rec.format) {
                 throw new Error(`[ResourceManager] no model record for id ${id}`);
             }
-            const url = this.resolveUrl(rec.raw);
+            const url = await this.resolveUrl(rec.raw);
             const template = await this.loader.parse(rec.format, url);
 
             let rigged = false;
@@ -252,7 +259,7 @@ export class ResourceManager {
             if (!rec || (!rec.raw && !rec.format)) {
                 throw new Error(`[ResourceManager] no texture record for id ${id}`);
             }
-            const url = this.resolveUrl(rec.raw);
+            const url = await this.resolveUrl(rec.raw);
             const tex = await this.textureLoader.loadAsync(url);
 
             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -348,11 +355,18 @@ export class ResourceManager {
      *   - IPFS CID (Qm… / bafy…) → ipfsGateway + cid
      *   - otherwise treat as a relative path (dev/local mock)
      */
-    private resolveUrl(raw: string): string {
+    private async resolveUrl(raw: string): Promise<string> {
         if (!raw) return raw;
         if (/^(https?:|data:|blob:|file:)/.test(raw)) return raw;
-        if (/^(Qm[1-9A-HJ-NP-Za-km-z]{44}|bafy[0-9a-z]+)$/.test(raw)) return `${this.ipfsGateway}${raw}`;
-        return raw;
+        if (isCid(raw)) {
+            // Content-addressed: fetch through the router (mock CAS / real IPFS).
+            // If the router lacks it, fall back to the public gateway.
+            if (this.ipfsRouter) {
+                try { return await this.ipfsRouter.toObjectUrl(raw); } catch { /* fall through to gateway */ }
+            }
+            return `${this.ipfsGateway}${raw}`;
+        }
+        return raw; // relative path (dev/local mock)
     }
 
     /** Concurrency gate: at most `maxConcurrent` loads run at once (cf. AdjunctLoader). */

@@ -6,6 +6,7 @@ import { ECSRegistry } from './ECSRegistry';
 import { SystemManager } from './SystemManager';
 import { WorldBridge } from './WorldBridge';
 import { EntityFactory } from './EntityFactory';
+import { IpfsRouter, MemoryCasProvider } from './services/ipfs';
 
 // Systems (Imported only for registration in constructor or specialized logic)
 import { PhysicsSystem } from './systems/PhysicsSystem';
@@ -109,6 +110,9 @@ export class World {
      * many instances (shared geometry/material). See ResourceManager.
      */
     public resourceManager: ResourceManager;
+    /** Content-addressed resource router (CID → provider → bytes). Hosts ingest
+     *  assets into it and ResourceManager resolves CIDs through it. */
+    public readonly ipfs: IpfsRouter;
 
     // 3. Simulation State
     private lastTime: number = 0;
@@ -236,10 +240,16 @@ export class World {
         // 1.5 Resource manager — load-once-by-id for models/textures. Anisotropy
         //     comes from the live renderer's capabilities (defends large faces
         //     against grazing-angle shimmer).
+        // Content-addressed resource router: ships with a writable in-memory CAS
+        // (the "mock IPFS"). Hosts ingest assets into it; ResourceManager resolves
+        // CID raws through it. Swappable for a local gateway / real IPFS later.
+        this.ipfs = new IpfsRouter([new MemoryCasProvider()]);
+
         this.resourceManager = new ResourceManager(
             deps.dataSource ?? NULL_DATA_SOURCE,
             {
                 ipfsGateway: (config as any).ipfsGateway,
+                ipfsRouter: this.ipfs,
                 maxAnisotropy: (this.renderEngine as any).getMaxAnisotropy?.() ?? 1,
                 ...deps.resources
             }

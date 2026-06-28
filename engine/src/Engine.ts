@@ -333,6 +333,12 @@ export class Engine {
         return this.world;
     }
 
+    /** Content-addressed resource router (CID → provider → bytes). Hosts ingest
+     *  assets and register providers here. Null before bootWorld. */
+    public get ipfs() {
+        return this.world?.ipfs ?? null;
+    }
+
     /**
      * Load a DYNAMIC adjunct from sandboxed code and register it by the type-id it
      * declares, so any block referencing that id materializes it like a built-in.

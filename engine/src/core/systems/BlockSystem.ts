@@ -165,11 +165,16 @@ export class BlockSystem implements ISystem {
         if (!hasGround) {
             const [bw, bl] = world.config.world.block;
             const groundId = world.createEntity();
-            const groundStd = {
+            // World baseline ground texture (WorldConfig block.texture). When set it
+            // resolves through the resource pipeline → IPFS like any other texture;
+            // unset → solid colour as before.
+            const groundTexture = (world.config as any).block?.texture;
+            const groundStd: any = {
                 type: "box",
                 x: bw, y: bl, z: 0.1,
                 ox: bw / 2, oy: bl / 2, oz: -0.05,
-                rx: 0, ry: 0, rz: 0
+                rx: 0, ry: 0, rz: 0,
+                ...(groundTexture ? { material: { texture: String(groundTexture) } } : {})
             };
             this.attachAdjunctComponents(world, eid, groundId, groundStd, AdjunctBox, `ground_${bKey}`);
         }
