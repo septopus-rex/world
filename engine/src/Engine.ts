@@ -350,6 +350,20 @@ export class Engine {
         return this.world?.liveSource ?? null;
     }
 
+    /** Build a 3D pool table + rack on the given block (PoolSystem owns the
+     *  physics; balls are a7 sphere adjunct entities it spawns and drives). */
+    public setupPool(config: import('./core/systems/PoolSystem').PoolConfig): void {
+        const w = this.world;
+        if (w) (w.systems.findSystemByName('PoolSystem') as any)?.configure(w, config);
+    }
+
+    /** Strike the cue ball: angle in table coords (East = 0, North = +π/2),
+     *  power 0..1. Returns false if a shot is already in progress. */
+    public poolShoot(angleRad: number, power: number): boolean {
+        const w = this.world;
+        return w ? !!(w.systems.findSystemByName('PoolSystem') as any)?.shoot(w, angleRad, power) : false;
+    }
+
     /**
      * Load a DYNAMIC adjunct from sandboxed code and register it by the type-id it
      * declares, so any block referencing that id materializes it like a built-in.

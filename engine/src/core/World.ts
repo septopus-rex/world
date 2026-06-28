@@ -17,6 +17,7 @@ import { BlockSystem } from './systems/BlockSystem';
 import { EnvironmentSystem } from './systems/EnvironmentSystem';
 import { VisualSyncSystem } from './systems/VisualSyncSystem';
 import { CoasterSystem } from './systems/CoasterSystem';
+import { PoolSystem } from './systems/PoolSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
@@ -301,6 +302,9 @@ export class World {
         // Coaster ride: overrides the player position along the rail (Game mode),
         // after movement/physics and before the presentation sync.
         this.systems.addSystem(new CoasterSystem());
+        // 3D pool: integrates ball physics and writes ball transforms, also
+        // before the presentation sync (same kinematic-driver slot as coaster).
+        this.systems.addSystem(new PoolSystem());
 
         // Final Sync: Presentation Layer
         this.systems.addSystem(new VisualSyncSystem());

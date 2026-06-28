@@ -68,6 +68,9 @@ export class DesktopLoader implements IDataSource {
      *  Also reachable as engine.live (the injected ILiveSource). */
     private _live: WebSocketLiveSource | null = null;
 
+    /** True once the 3D pool table's balls are spawned (B-to-shoot enabled). */
+    private _poolReady = false;
+
     /** `?level=<name>` selects an authored level instead of the demo court. */
     private level = typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('level') : null;
@@ -249,6 +252,16 @@ export class DesktopLoader implements IDataSource {
         this.engine.on('live.message', (payload: any) => {
             this.applyLiveMotifUpdate(payload?.data);
         }, { key: 'motif' });
+
+        // 3D pool: when the pool table block materializes, build the physical balls
+        // (PoolSystem owns the physics). Press B to break/shoot toward where the
+        // camera faces. The 2D Game-Setting HUD stays an orthogonal way to play.
+        this.engine.on('block.loaded', () => this.setupPool3D(), { key: `blk:${POOL_BLOCK[0]}_${POOL_BLOCK[1]}`, once: true });
+        if (typeof window !== 'undefined') {
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyB' && this._poolReady) this.poolShootFromCamera();
+            });
+        }
 
         // Game-zone gating: the engine derives "player is in a playable block"
         // from the block.game flag and announces it here. The UI uses this to
@@ -950,6 +963,26 @@ export class DesktopLoader implements IDataSource {
      * the IPFS layer. This is the engine-side endpoint of the live pipeline:
      *   (sim) WebSocket → ILiveSource → LiveSystem → world.events → here.
      */
+    /** Build the 3D pool table balls on the pool block (geometry matches poolScene). */
+    private setupPool3D(): void {
+        this.engine?.setupPool({
+            block: POOL_BLOCK, origin: [8, 8],
+            bedW: 7, bedD: 4, bedSurfaceZ: 0.95,
+            ballR: 0.12, pocketR: 0.22, friction: 0.55,
+        });
+        this._poolReady = true;
+    }
+
+    /** Break/shoot the cue toward where the camera faces (B key). The engine's
+     *  PoolSystem does the physics; we only translate camera yaw → table angle. */
+    private poolShootFromCamera(): void {
+        const w = this.engine?.getWorld() as any;
+        const yaw = w?.renderEngine?.getMainCameraRotation?.()[1] ?? 0;
+        // Engine forward at yaw φ is (-sinφ, 0, -cosφ); table is East = +X, North = -Z.
+        const angle = Math.atan2(Math.cos(yaw), -Math.sin(yaw));
+        this.engine?.poolShoot(angle, 1);
+    }
+
     private applyLiveMotifUpdate(data: any): void {
         const world = this.engine?.getWorld() as any;
         if (!world || !data || data.adjunctId == null) return;
