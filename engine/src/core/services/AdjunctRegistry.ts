@@ -13,6 +13,7 @@ import { AdjunctParticle } from '../../plugins/adjunct/adjunct_particle';
 import { BasicWaterAdjunct } from '../../plugins/adjunct/basic_water';
 import { AdjunctLink } from '../../plugins/adjunct/adjunct_link';
 import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
+import { AdjunctMotif } from '../../plugins/adjunct/adjunct_motif';
 
 /**
  * Registry of built-in (native) adjunct types, keyed by on-chain type-id.
@@ -23,7 +24,8 @@ import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
  *   a1 wall · a2 box · a3 light · a4 module(3D model) · a5 water · a6 cone
  *   · a7 ball(sphere) · b4 stop(collider) · b5 item(pickable)
  *   · b6 particle(SPP, expands to standard adjuncts) · b8 trigger
- *   · c1 track(tube rail; coaster) · e1 link(clickable URL / QR panel)
+ *   · c1 track(tube rail; coaster) · c2 motif(generative content)
+ *   · e1 link(clickable URL / QR panel)
  */
 export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<number, AdjunctDefinition>([
     [AdjunctType.Wall, BasicWallAdjunct as unknown as AdjunctDefinition],     // wall
@@ -38,6 +40,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Particle, AdjunctParticle as unknown as AdjunctDefinition],  // string particle (SPP)
     [AdjunctType.Trigger, AdjunctTrigger as unknown as AdjunctDefinition],    // trigger
     [AdjunctType.Track, AdjunctTrack as unknown as AdjunctDefinition],        // track (tube rail; coaster)
+    [AdjunctType.Motif, AdjunctMotif as unknown as AdjunctDefinition],        // motif (generative content)
     [AdjunctType.Link, AdjunctLink as unknown as AdjunctDefinition],          // link / QR panel (clickable)
 ]);
 

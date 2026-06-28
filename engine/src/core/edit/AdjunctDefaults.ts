@@ -31,6 +31,7 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: AdjunctType.Item, label: 'Item' },
     { typeId: AdjunctType.Trigger, label: 'Trigger' },
     { typeId: AdjunctType.Particle, label: 'SPP Cell' },
+    { typeId: AdjunctType.Motif, label: 'Motif' },
     { typeId: AdjunctType.Link, label: 'Link' },
 ];
 
@@ -61,6 +62,10 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             // faces: [Top, Bottom, Front(S), Back(N), Left(W), Right(E)], [state, variant]
             //   state 1=closed 0=open · closed variant 0=solid 1=doorway 2=window
             return [[x, y, z], [{ position: [0, 0, 0], level: 0, faces: [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]] }], 'basic'];
+        case AdjunctType.Motif: // motif: [origin, template, seed, params] — generative content
+            // Seed derived from the placement point so each motif differs by
+            // location (deterministic, no randomness) — refine via the edit form.
+            return [[x, y, z], 'totem', Math.abs(Math.round(x * 131 + y * 977)) % 100000, null];
         case AdjunctType.Link: // link: [size, pos, rot, resource, repeat, animate, stop, url, texture?]
             return [[2, 0.1, 2], [x, y, z + 1], [0, 0, 0], 0, [1, 1], null, null, 'https://example.com'];
         default:

@@ -10,7 +10,20 @@ import { AdjunctFactory } from '../factories/AdjunctFactory';
 import { getBuiltinAdjunct, getAdjunct } from '../services/AdjunctRegistry';
 import { AdjunctType } from '../types/AdjunctType';
 import { expandParticle } from '../spp/Expander';
+import type { ExpandedRow } from '../spp/Expander';
+import { expandMotif } from '../motif/MotifExpander';
 import { RenderHandle } from '../types/Adjunct';
+
+/**
+ * Source adjuncts that render NOTHING themselves and EXPAND into standard
+ * derived rows — each its own entity with native collision / LOD. One dispatch
+ * so block-load, palette-place and live re-expansion treat them identically.
+ *   b6 particle → SPP walls/triggers   ·   c2 motif → seeded generative boxes
+ */
+const SOURCE_EXPANDERS: Record<number, (raw: any[]) => ExpandedRow[]> = {
+    [AdjunctType.Particle]: expandParticle as (raw: any[]) => ExpandedRow[],
+    [AdjunctType.Motif]: expandMotif as (raw: any[]) => ExpandedRow[],
+};
 
 /**
  * BlockSystem handles the transition from standard Block data (std) 
@@ -120,12 +133,13 @@ export class BlockSystem implements ISystem {
                                     id: sourceId
                                 });
 
-                                // SPP (b6): expand the particle into STANDARD adjunct
-                                // rows — every piece is its own entity (collision /
-                                // triggers / LOD all native). Pieces carry derivedFrom
-                                // so BlockSerializer persists only the b6 source.
-                                if (typeId === AdjunctType.Particle) {
-                                    expandParticle(rawInst as any).forEach(([dType, dRow], k) => {
+                                // Source adjuncts (b6 particle / c2 motif) expand into
+                                // STANDARD rows — every piece its own entity (collision /
+                                // LOD native). Pieces carry derivedFrom so BlockSerializer
+                                // persists only the source row.
+                                const expand = SOURCE_EXPANDERS[typeId];
+                                if (expand) {
+                                    expand(rawInst as any).forEach(([dType, dRow], k) => {
                                         const dDef = getBuiltinAdjunct(dType);
                                         const dStd = dDef?.attribute?.deserialize(dRow);
                                         if (!dDef || !dStd) return;
@@ -213,19 +227,22 @@ export class BlockSystem implements ISystem {
         const sourceId = `adj_${block.x}_${block.y}_${typeId}_${idx}`;
         this.attachAdjunctComponents(world, blockEid, adjId, { ...std, typeId }, definition, sourceId);
 
-        // SPP (b6): expand into standard derived pieces immediately so a palette-
-        // placed cell is visible without a reload (block-load does the same).
-        if (typeId === AdjunctType.Particle) {
-            this.expandParticleInto(world, blockEid, sourceId, rawRow);
+        // Source adjuncts (b6/c2): expand into standard derived pieces immediately
+        // so a palette-placed source is visible without a reload (block-load does
+        // the same).
+        if (SOURCE_EXPANDERS[typeId]) {
+            this.expandSourceInto(world, blockEid, typeId, sourceId, rawRow);
         }
         return adjId;
     }
 
-    /** Expand a b6 source row into standard derived adjunct entities (a1/b8),
-     *  each tagged derivedFrom the source so BlockSerializer persists only the
-     *  source. Shared by palette placement and live re-expansion on edit. */
-    private expandParticleInto(world: World, blockEid: EntityId, sourceId: string, rawRow: any[]): void {
-        expandParticle(rawRow as any).forEach(([dType, dRow], k) => {
+    /** Expand a source row (b6 particle / c2 motif) into standard derived adjunct
+     *  entities, each tagged derivedFrom the source so BlockSerializer persists
+     *  only the source. Shared by palette placement and live re-expansion. */
+    private expandSourceInto(world: World, blockEid: EntityId, typeId: number, sourceId: string, rawRow: any[]): void {
+        const expand = SOURCE_EXPANDERS[typeId];
+        if (!expand) return;
+        expand(rawRow as any).forEach(([dType, dRow], k) => {
             const dDef = getBuiltinAdjunct(dType);
             const dStd = dDef?.attribute?.deserialize?.(dRow);
             if (!dDef || !dStd) return;
@@ -250,16 +267,24 @@ export class BlockSystem implements ISystem {
         }
     }
 
-    /** Re-expand a b6 source after its cells changed (edit): drop the old derived
-     *  pieces and rebuild from the source's current stdData. AdjunctSystem builds
-     *  the new meshes next frame. */
-    public reexpandParticle(world: World, sourceEid: EntityId): void {
+    /** Re-expand a source adjunct (b6/c2) after its data changed (edit): drop the
+     *  old derived pieces and rebuild from the source's current stdData.
+     *  AdjunctSystem builds the new meshes next frame. */
+    public reexpandSource(world: World, sourceEid: EntityId): void {
         const src = world.getComponent<AdjunctComponent>(sourceEid, "AdjunctComponent");
-        if (!src || (src.stdData?.typeId ?? -1) !== AdjunctType.Particle) return;
-        if (src.parentBlockEntityId == null) return;
+        if (!src) return;
+        const typeId = src.stdData?.typeId ?? -1;
+        if (!SOURCE_EXPANDERS[typeId] || src.parentBlockEntityId == null) return;
         this.destroyDerived(world, src.adjunctId);
-        const raw = getBuiltinAdjunct(AdjunctType.Particle)?.attribute?.serialize?.(src.stdData);
-        if (raw) this.expandParticleInto(world, src.parentBlockEntityId, src.adjunctId, raw as any[]);
+        const raw = getBuiltinAdjunct(typeId)?.attribute?.serialize?.(src.stdData);
+        if (raw) this.expandSourceInto(world, src.parentBlockEntityId, typeId, src.adjunctId, raw as any[]);
+    }
+
+    /** @deprecated SPP-era name kept for existing call sites (sandbox editor /
+     *  tests / DesktopLoader); delegates to reexpandSource which dispatches by
+     *  type. */
+    public reexpandParticle(world: World, sourceEid: EntityId): void {
+        this.reexpandSource(world, sourceEid);
     }
 
     private attachAdjunctComponents(world: World, blockEid: EntityId, adjId: EntityId, data: any, logic: any, id: string) {

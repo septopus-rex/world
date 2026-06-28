@@ -106,9 +106,11 @@ export class EditTaskExecutor {
         world.renderEngine.setRaycastable(result.handle, true);
         if (meshComp) meshComp.handle = result.handle;
 
-        // SPP source: re-expand derived pieces to match the restored cells.
-        if ((adjComp.stdData as any).typeId === AdjunctType.Particle) {
-            (world.systems.findSystemByName('BlockSystem') as any)?.reexpandParticle?.(world, entityId);
+        // Source adjunct (b6 particle / c2 motif): re-expand derived pieces to
+        // match the restored data.
+        const restoredType = (adjComp.stdData as any).typeId;
+        if (restoredType === AdjunctType.Particle || restoredType === AdjunctType.Motif) {
+            (world.systems.findSystemByName('BlockSystem') as any)?.reexpandSource?.(world, entityId);
         }
 
         return true;
@@ -170,11 +172,13 @@ export class EditTaskExecutor {
             if (std.rz != null) trans.rotation[2] = std.rz;
         }
 
-        // SPP source: fold any face-code form fields into cells, then re-expand
-        // the derived pieces live (the b6's own mesh is just a hidden marker).
-        if ((std as any).typeId === AdjunctType.Particle) {
-            normalizeParticleFaces(std);
-            (world.systems.findSystemByName('BlockSystem') as any)?.reexpandParticle?.(world, entityId);
+        // Source adjunct (b6/c2): fold particle face-codes into cells, then
+        // re-expand the derived pieces live (the source's own mesh is a hidden
+        // marker).
+        const setType = (std as any).typeId;
+        if (setType === AdjunctType.Particle) normalizeParticleFaces(std);
+        if (setType === AdjunctType.Particle || setType === AdjunctType.Motif) {
+            (world.systems.findSystemByName('BlockSystem') as any)?.reexpandSource?.(world, entityId);
         }
 
         console.log(`[EditTaskExecutor] Set ${adjComp.adjunctId} on entity ${entityId}`, param);
