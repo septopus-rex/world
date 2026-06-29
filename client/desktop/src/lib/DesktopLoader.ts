@@ -32,6 +32,7 @@ import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
+import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
 import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
@@ -70,6 +71,8 @@ export class DesktopLoader implements IDataSource {
 
     /** True once the 3D pool table's balls are spawned (B-to-shoot enabled). */
     private _poolReady = false;
+    /** True once the native 3D mahjong table is dealt (N-to-discard enabled). */
+    private _mahjongReady = false;
 
     /** `?level=<name>` selects an authored level instead of the demo court. */
     private level = typeof window !== 'undefined'
@@ -257,9 +260,16 @@ export class DesktopLoader implements IDataSource {
         // (PoolSystem owns the physics). Press B to break/shoot toward where the
         // camera faces. The 2D Game-Setting HUD stays an orthogonal way to play.
         this.engine.on('block.loaded', () => this.setupPool3D(), { key: `blk:${POOL_BLOCK[0]}_${POOL_BLOCK[1]}`, once: true });
+
+        // Native 3D mahjong: when its table block materializes, deal the tiles
+        // (MahjongSystem owns the game). The human discards by clicking one of
+        // their face-up tiles in-world (RaycastInteractionSystem → the System);
+        // N discards the first tile as a no-aim convenience.
+        this.engine.on('block.loaded', () => this.setupMahjong3D(), { key: `blk:${NATIVE_MAHJONG_BLOCK[0]}_${NATIVE_MAHJONG_BLOCK[1]}`, once: true });
         if (typeof window !== 'undefined') {
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'KeyB' && this._poolReady) this.poolShootFromCamera();
+                if (e.code === 'KeyN' && this._mahjongReady) this.mahjongDiscardFirst();
             });
         }
 
@@ -497,6 +507,7 @@ export class DesktopLoader implements IDataSource {
         // The mahjong table block (game zone) and the demo showcase block are
         // authored in scenes/; the loader just dispatches.
         if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);
+        if (x === NATIVE_MAHJONG_BLOCK[0] && y === NATIVE_MAHJONG_BLOCK[1]) return buildMahjong3DScene(x, y);
         if (x === POOL_BLOCK[0] && y === POOL_BLOCK[1]) return buildPoolScene(x, y);
         if (x === MAZE_BLOCK[0] && y === MAZE_BLOCK[1]) return buildMazeScene(x, y);
         if (x === SANDBOX_BLOCK[0] && y === SANDBOX_BLOCK[1]) return buildSandboxScene(x, y);
@@ -971,6 +982,25 @@ export class DesktopLoader implements IDataSource {
             ballR: 0.12, pocketR: 0.22, friction: 0.55,
         });
         this._poolReady = true;
+    }
+
+    /** Deal the native 3D mahjong table (geometry matches mahjong3dScene). The
+     *  MahjongSystem owns the game; we only seed it and mark it ready. */
+    private setupMahjong3D(): void {
+        this.engine?.setupMahjong({
+            block: NATIVE_MAHJONG_BLOCK, origin: [8, 8],
+            surfaceZ: MAHJONG_SURFACE_Z, seed: 20260629,
+        });
+        this._mahjongReady = true;
+    }
+
+    /** Discard the first tile in the human's hand (N key) — a no-aim convenience;
+     *  clicking a tile in-world does the same through the engine's raycast path. */
+    private mahjongDiscardFirst(): void {
+        const st = this.engine?.mahjongState();
+        if (!st || st.phase !== 'playing' || st.turn !== st.humanSeat) return;
+        const hand = st.hands[st.humanSeat];
+        if (hand?.length) this.engine?.mahjongDiscard(hand[0]);
     }
 
     /** Break/shoot the cue toward where the camera faces (B key). The engine's

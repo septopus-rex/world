@@ -348,6 +348,18 @@ export class BlockSystem implements ISystem {
         this.blockGroups.delete(bKey);
     }
 
+    /**
+     * Destroy a single adjunct entity, freeing its mesh + instanced resources
+     * first. The public counterpart to the per-adjunct teardown removeBlock does
+     * in bulk — used by Systems that spawn/destroy adjunct entities at runtime
+     * (e.g. MahjongSystem tiles on draw/discard) so churn doesn't leak meshes.
+     */
+    public destroyAdjunct(world: World, eid: EntityId): void {
+        this.releaseResources(world, eid);
+        this.freeMesh(world, eid);
+        world.destroyEntity(eid);
+    }
+
     private freeMesh(world: World, eid: EntityId): void {
         const mesh = world.getComponent<MeshComponent>(eid, "MeshComponent");
         if (mesh?.handle) world.renderEngine.removeHandle(mesh.handle);

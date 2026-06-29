@@ -364,6 +364,28 @@ export class Engine {
         return w ? !!(w.systems.findSystemByName('PoolSystem') as any)?.shoot(w, angleRad, power) : false;
     }
 
+    /** Build a 3D mahjong table on the given block (MahjongSystem owns the game;
+     *  tiles are a2 box adjunct entities it spawns and drives — the discrete,
+     *  turn-based counterpart to the pool). Deal is seeded → reproducible. */
+    public setupMahjong(config: import('./core/systems/MahjongSystem').MahjongConfig): void {
+        const w = this.world;
+        if (w) (w.systems.findSystemByName('MahjongSystem') as any)?.configure(w, config);
+    }
+
+    /** The local human discards a tile from their hand (by stable tileId). Refused
+     *  unless it's the human's turn and the game is live. Returns whether it took. */
+    public mahjongDiscard(tileId: number): boolean {
+        const w = this.world;
+        return w ? !!(w.systems.findSystemByName('MahjongSystem') as any)?.discard(w, tileId) : false;
+    }
+
+    /** Current mahjong table state (turn/hands/discards/phase), or null. Read-only
+     *  snapshot for HUDs and tests. */
+    public mahjongState(): any {
+        const w = this.world;
+        return w ? (w.systems.findSystemByName('MahjongSystem') as any)?.snapshot(w) ?? null : null;
+    }
+
     /**
      * Load a DYNAMIC adjunct from sandboxed code and register it by the type-id it
      * declares, so any block referencing that id materializes it like a built-in.

@@ -18,6 +18,7 @@ import { EnvironmentSystem } from './systems/EnvironmentSystem';
 import { VisualSyncSystem } from './systems/VisualSyncSystem';
 import { CoasterSystem } from './systems/CoasterSystem';
 import { PoolSystem } from './systems/PoolSystem';
+import { MahjongSystem } from './systems/MahjongSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
@@ -305,6 +306,10 @@ export class World {
         // 3D pool: integrates ball physics and writes ball transforms, also
         // before the presentation sync (same kinematic-driver slot as coaster).
         this.systems.addSystem(new PoolSystem());
+        // 3D mahjong: the DISCRETE, turn-based counterpart — drives tile entity
+        // lifecycle + transforms in the same pre-sync slot (no physics, proving
+        // the native-game seam generalizes beyond continuous simulation).
+        this.systems.addSystem(new MahjongSystem());
 
         // Final Sync: Presentation Layer
         this.systems.addSystem(new VisualSyncSystem());
