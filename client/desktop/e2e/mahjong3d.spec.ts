@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { bootDeterministic, stepEngine } from './helpers';
+import { bootDeterministic, stepEngine, mainCanvas } from './helpers';
 
 // Native 3D mahjong (MahjongSystem) in the REAL client: the table block streams
 // in, the loader deals the tiles as adjunct entities, a human discard reveals a
@@ -84,4 +84,73 @@ test('3D mahjong: the table deals in the client and a discard reveals a tile', a
     await page.screenshot({ path: 'test-results/mahjong3d-after-rounds.png' });
     // eslint-disable-next-line no-console
     console.log('MAHJONG3D', JSON.stringify({ dealt: racked.length, discards: after.discards.map((d: number[]) => d.length) }));
+});
+
+test('3D mahjong: a REAL mouse click on a hand tile discards it (truly playable)', async ({ page }) => {
+    test.setTimeout(180_000);
+    await bootDeterministic(page);
+    await stepEngine(page, 14); // stream the table block → the loader auto-deals
+
+    const dealt = await page.evaluate(() => (window as any).loader.engine.mahjongState());
+    expect(dealt, 'table dealt before we play').toBeTruthy();
+
+    // First-person; stand the player at the south seat so their own face-up hand
+    // is right in front of them (the real way you'd sit down to a table).
+    await page.evaluate(() => {
+        const l = (window as any).loader;
+        l.engine.setCameraView('first');
+        l.teleportSpp([2047, 2048], [8, 4.0, 2]);
+    });
+    await stepEngine(page, 25); // land + camera settle
+
+    // Face north (yaw 0 → forward -Z), then tilt the gaze DOWN onto the hand. In
+    // first person the pitch auto-levels unless locked, so Alt+ArrowDown (the
+    // engine's pitch-lock) looks down and KEEPS looking down hands-free — exactly
+    // how a player settles their view on their tiles before clicking.
+    await page.evaluate(() => (window as any).loader.engine.getWorld().renderEngine.setMainCameraRotation(0, 0, 0));
+    await page.keyboard.down('Alt');
+    await page.keyboard.down('ArrowDown');
+    await stepEngine(page, 12);  // tilt ~22° down + _isPitchLocked = true (hand comfortably in frame)
+    await page.keyboard.up('ArrowDown');
+    await page.keyboard.up('Alt');
+    await stepEngine(page, 3);   // render the locked view (raycast matrix becomes current)
+
+    // Find the MIDDLE hand tile, project it to a pixel, and confirm the REAL
+    // raycaster resolves that pixel to this very tile (visible + unoccluded).
+    const aim = await page.evaluate(() => {
+        const eng = (window as any).loader.engine;
+        const w = eng.getWorld();
+        const st = eng.mahjongState();
+        const seat = st.humanSeat;
+        const hand = st.hands[seat];
+        const tid = hand[Math.floor(hand.length / 2)];
+        let eid: any = null;
+        for (const e of w.getEntitiesWith(['MahjongTileComponent', 'TransformComponent'])) {
+            if (w.getComponent(e, 'MahjongTileComponent').tileId === tid) { eid = e; break; }
+        }
+        const t = w.getComponent(eid, 'TransformComponent').position;
+        const s = w.renderEngine.worldToScreen(t[0], t[1], t[2]);
+        const hit = w.renderEngine.castRayFromCamera(s.x * 2 - 1, 1 - s.y * 2);
+        return { tid, eid: String(eid), nx: s.x, ny: s.y, hit: hit ? String(hit.entityId) : null, turn: st.turn, seat };
+    });
+    expect(aim.turn, 'human to act').toBe(aim.seat);
+    expect(aim.nx, 'tile on screen (x)').toBeGreaterThan(0.05); expect(aim.nx).toBeLessThan(0.95);
+    expect(aim.ny, 'tile on screen (y)').toBeGreaterThan(0.05); expect(aim.ny).toBeLessThan(0.95);
+    expect(aim.hit, 'a click at that pixel would hit this tile').toBe(aim.eid);
+    await page.screenshot({ path: 'test-results/mahjong3d-fpv-before-click.png' });
+
+    // The real thing: a DOM mouse click at the tile's pixel. Pitch stays locked so
+    // the press doesn't disturb the view. FULL chain — DOM click → InputProvider →
+    // RaycastInteractionSystem → interact.primary → MahjongSystem.discard. No API.
+    const box = (await mainCanvas(page).boundingBox())!;
+    await page.mouse.click(box.x + box.width * aim.nx, box.y + box.height * aim.ny);
+    await stepEngine(page, 5);
+
+    const after = await page.evaluate(() => (window as any).loader.engine.mahjongState());
+    expect(after.discards[aim.seat], 'the clicked tile was discarded').toContain(aim.tid);
+    expect(after.turn, 'turn passed to the next seat').not.toBe(aim.seat);
+
+    await page.screenshot({ path: 'test-results/mahjong3d-fpv-after-click.png' });
+    // eslint-disable-next-line no-console
+    console.log('MAHJONG3D-CLICK', JSON.stringify({ clicked: aim.tid, pixel: [aim.nx.toFixed(2), aim.ny.toFixed(2)], discards: after.discards[aim.seat] }));
 });
