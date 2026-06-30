@@ -36,6 +36,10 @@ export function buildShootingScene(bx: number, by: number): any[] {
         [[6, 0.6, 1.0], [C[0], C[1] - 2.5, 0.5], [0, 0, 0], 1, [1, 1], 0, 1],
     ];
     data.raw[2].push([AdjunctType.Box, boxes]);
-    // NOTE: no raw[4] game flag — the native range isn't an external-app zone.
+    // raw[4] = game flag: 1 = playable zone (NOT a registered external-app id like
+    // 42/43, so GameRuntime starts no external HUD — just the zone gate). Entering
+    // Game here spawns the targets (ShootingRangeSystem); leaving auto-exits + tears
+    // them down. See docs/systems/game-mode-entry.md.
+    data.raw[4] = 1;
     return data.raw;
 }

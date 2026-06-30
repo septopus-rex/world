@@ -52,16 +52,48 @@ export interface MahjongConfig {
 }
 
 export class MahjongSystem implements ISystem {
-    private tableEid: EntityId | null = null;
+    private config: MahjongConfig | null = null;   // armed declaration (block + params)
+    private tableEid: EntityId | null = null;       // live session (null = no session)
     private faceCids: string[] | null = null;
     private interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
 
     // ── setup ────────────────────────────────────────────────────────────────
 
-    /** Build the table, shuffle + deal, spawn the hand tiles, and start the human's
-     *  turn (draw to 14, then await a discard). Idempotent. */
+    /** Arm this block as a mahjong table. The deal/spawn happens when the player
+     *  ENTERS Game mode in this block, and tears down on leaving (Game exit / step
+     *  off the block → GameZoneSystem reverts to Normal) — the game is scoped to
+     *  the zone, so walking away ends it cleanly with nothing left to evict (#3).
+     *  The armed config persists across eviction so re-entry deals a fresh game. */
     public configure(world: World, config: MahjongConfig): void {
-        this.teardown(world);
+        this.endSession(world);
+        this.config = config;
+        this.syncSession(world); // deal immediately if already in Game mode here
+    }
+
+    /** Reconcile the live game with "should there be one?" = armed + Game mode +
+     *  the player standing in our block. Called every frame + on (re)arm. */
+    private syncSession(world: World): void {
+        const want = this.config != null
+            && world.mode === SystemMode.Game
+            && this.playerInBlock(world, this.config.block);
+        if (want && this.tableEid == null) this.startSession(world);
+        else if (!want && this.tableEid != null) this.endSession(world);
+    }
+
+    private playerInBlock(world: World, [bx, by]: [number, number]): boolean {
+        const players = world.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
+        if (players.length === 0) return false;
+        const t = world.getComponent<TransformComponent>(players[0], 'TransformComponent');
+        if (!t) return false;
+        const spp = Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]);
+        return spp.block[0] === bx && spp.block[1] === by;
+    }
+
+    /** Build the table, shuffle + deal, spawn the hand tiles, and start the human's
+     *  turn (draw to 14, then await a discard). */
+    private startSession(world: World): void {
+        const config = this.config;
+        if (!config) return;
         const blockEid = this.findBlock(world, config.block);
         if (blockEid == null) return;
         const bs = world.systems.findSystemByName('BlockSystem') as any;
@@ -122,6 +154,7 @@ export class MahjongSystem implements ISystem {
     // ── per-frame ──────────────────────────────────────────────────────────────
 
     public update(world: World, dt: number): void {
+        this.syncSession(world); // start/stop the game on Game-mode / zone transitions
         const table = this.findTable(world);
         if (!table) return;
 
@@ -300,12 +333,15 @@ export class MahjongSystem implements ISystem {
         return b?.elevation || 0;
     }
 
-    private teardown(world: World): void {
+    /** End the live game: free every tile mesh + destroy the table entity. The
+     *  armed config is kept, so re-entering the zone deals a fresh game. */
+    private endSession(world: World): void {
         const bs = world.systems.findSystemByName('BlockSystem') as any;
         for (const eid of world.getEntitiesWith(['MahjongTileComponent'])) {
             if (bs?.destroyAdjunct) bs.destroyAdjunct(world, eid); else world.destroyEntity?.(eid);
         }
         if (this.tableEid != null) world.destroyEntity?.(this.tableEid);
         this.tableEid = null;
+        this.interactReader = null;
     }
 }

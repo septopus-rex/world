@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
+import { SystemMode } from '../../src/core/types/SystemMode';
 
 // L3 — the in-world 3D mahjong table (MahjongSystem): the DISCRETE, turn-based
 // native case. configure deals a seeded shuffle + spawns tiles as adjunct
@@ -13,12 +14,13 @@ const CFG = {
     seed: 1337,
 };
 
-async function bootMahjong(extra: Partial<typeof CFG> & { botDelay?: number } = {}) {
-    const engine = await makeHeadlessEngine();
+async function bootMahjong(extra: Partial<typeof CFG> & { botDelay?: number; faceCids?: string[] } = {}) {
+    const engine = await makeHeadlessEngine(); // player defaults into block [2048,2048]
     engine.injectBlock({ x: 2048, y: 2048, world: 'main', adjuncts: [], elevation: 0 } as any);
     stepN(engine, 3);
-    engine.setupMahjong({ ...CFG, ...extra });
-    stepN(engine, 1);
+    engine.setupMahjong({ ...CFG, ...extra });          // arm the table
+    engine.setMode(SystemMode.Game, { force: true });   // enter Game in this block → deal
+    stepN(engine, 2);                                   // session starts (1) + meshes build (2)
     return engine;
 }
 

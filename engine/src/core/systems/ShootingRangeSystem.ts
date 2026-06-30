@@ -1,7 +1,9 @@
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctType } from '../types/AdjunctType';
 import { SystemMode } from '../types/SystemMode';
+import { Coords } from '../utils/Coords';
 import { BlockComponent } from '../components/BlockComponent';
+import { TransformComponent } from '../components/PlayerComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { ShootingTargetComponent, ShootingRangeComponent, ShootingTargetState } from '../components/ShootingComponents';
 import { setEntityColor } from '../utils/Appearance';
@@ -14,30 +16,54 @@ import { setEntityColor } from '../utils/Appearance';
  * one exists to exercise the gap BOTH of them dodged: RUNTIME RECOLOUR. Targets
  * are a7 sphere adjunct entities the System spawns green; a hit flips the SAME
  * entity red in place via the appearance-override channel (setEntityColor →
- * MeshComponent override → VisualSyncSystem), then it rearms to green after a
- * brief flash. No destroy+respawn to fake a colour change — the colour is live
- * state pushed onto the existing mesh.
+ * MeshComponent override → VisualSyncSystem), then it rearms to green.
+ *
+ * ZONE-GATED LIFECYCLE (game-mode-entry contract): `configure` only ARMS a block
+ * as a range (stores the params); the targets spawn when the player ENTERS Game
+ * mode while standing in that block, and tear down the moment they leave (Game
+ * exit / step off the block → GameZoneSystem auto-reverts to Normal). So the game
+ * is scoped to the zone — walk away and it ends cleanly, with no dangling state
+ * or pieces left to evict (#3 lifecycle binding). The armed config persists on
+ * the System across block eviction, so re-entering the zone starts a fresh round.
  *
  * Firing is the engine's own raycast pick: a click → RaycastInteractionSystem →
  * interact.primary (the same path mahjong uses) → fireAtEntity. The System never
- * reads input itself. Headless tests drive it deterministically via fireAtTarget
- * (castRayFromCamera returns null with no GPU, so the click path is e2e-only).
- *
- * Scope is the SEAM: hit → score + recolour + rearm, a round timer, accuracy.
- * No projectiles/ballistics (the pick is instant), no moving targets.
+ * reads input itself. Headless tests drive it via fireAtTarget after forcing Game
+ * mode (castRayFromCamera is null with no GPU, so the click path is e2e-only).
  */
 export class ShootingRangeSystem implements ISystem {
-    private rangeEid: EntityId | null = null;
+    private config: ShootingConfig | null = null;   // armed declaration (block + params)
+    private rangeEid: EntityId | null = null;       // live session entity (null = no session)
     private targetEids: EntityId[] = [];
     private interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
     private missReader: import('../events/EventReader').EventReader<'interact.miss'> | null = null;
 
-    // ── setup ────────────────────────────────────────────────────────────────
+    // ── arm / lifecycle ──────────────────────────────────────────────────────
 
-    /** Build the range: spawn a row of a7 sphere targets (baked green) and start
-     *  the round timer. Idempotent. */
+    /** Arm this block as a shooting range. The session itself spawns when the
+     *  player enters Game mode in this block; re-arming ends any live session and
+     *  replaces the declaration. */
     public configure(world: World, config: ShootingConfig): void {
-        this.teardown(world);
+        this.endSession(world);
+        this.config = config;
+        this.syncSession(world); // start immediately if already in Game mode here
+    }
+
+    /** Reconcile the live session with "should there be one?" = armed + Game mode
+     *  + the player standing in our block. Called every frame + on (re)arm. */
+    private syncSession(world: World): void {
+        const want = this.config != null
+            && world.mode === SystemMode.Game
+            && this.playerInBlock(world, this.config.block);
+        if (want && this.rangeEid == null) this.startSession(world);
+        else if (!want && this.rangeEid != null) this.endSession(world);
+    }
+
+    /** Build the range: spawn a row of a7 sphere targets (baked green) + the
+     *  scoreboard, and start the round timer. */
+    private startSession(world: World): void {
+        const config = this.config;
+        if (!config) return;
         const blockEid = this.findBlock(world, config.block);
         if (blockEid == null) return;
         const bs = world.systems.findSystemByName('BlockSystem') as any;
@@ -82,6 +108,22 @@ export class ShootingRangeSystem implements ISystem {
         }
     }
 
+    /** End the live session: free the target meshes + destroy the scoreboard. The
+     *  armed config is kept, so re-entering the zone starts a fresh round. */
+    private endSession(world: World): void {
+        // Targets own meshes + instanced resources — free those before destroying
+        // the entity (bare destroyEntity leaks the mesh), mirroring pool/mahjong.
+        const bs = world.systems.findSystemByName('BlockSystem') as any;
+        for (const eid of this.targetEids) {
+            if (bs?.destroyAdjunct) bs.destroyAdjunct(world, eid); else world.destroyEntity?.(eid);
+        }
+        if (this.rangeEid != null) world.destroyEntity?.(this.rangeEid);
+        this.targetEids = [];
+        this.rangeEid = null;
+        this.interactReader = null;
+        this.missReader = null;
+    }
+
     // ── firing ───────────────────────────────────────────────────────────────
 
     /** Register a trigger pull at a picked entity (the interact.primary target, or
@@ -116,7 +158,7 @@ export class ShootingRangeSystem implements ISystem {
         return this.fireAtEntity(world, null); // unknown id → still a (missed) shot
     }
 
-    /** Diagnostics / tests / HUD. */
+    /** Diagnostics / tests / HUD. Null when no session is live (not in the zone). */
     public snapshot(world: World): ShootingSnapshot | null {
         const range = this.findRange(world);
         if (!range) return null;
@@ -135,6 +177,7 @@ export class ShootingRangeSystem implements ISystem {
     // ── per-frame ──────────────────────────────────────────────────────────────
 
     public update(world: World, dt: number): void {
+        this.syncSession(world); // start/stop the session on Game-mode / zone transitions
         const range = this.findRange(world);
         if (!range || range.phase !== 'running') return;
 
@@ -169,6 +212,15 @@ export class ShootingRangeSystem implements ISystem {
 
     // ── helpers ────────────────────────────────────────────────────────────────
 
+    private playerInBlock(world: World, [bx, by]: [number, number]): boolean {
+        const players = world.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
+        if (players.length === 0) return false;
+        const t = world.getComponent<TransformComponent>(players[0], 'TransformComponent');
+        if (!t) return false;
+        const spp = Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]);
+        return spp.block[0] === bx && spp.block[1] === by;
+    }
+
     private findRange(world: World): ShootingRangeComponent | null {
         const eid = world.getEntitiesWith(['ShootingRangeComponent'])[0];
         return eid != null ? world.getComponent<ShootingRangeComponent>(eid, 'ShootingRangeComponent') ?? null : null;
@@ -180,20 +232,6 @@ export class ShootingRangeSystem implements ISystem {
             if (b?.x === bx && b?.y === by) return eid;
         }
         return null;
-    }
-
-    private teardown(world: World): void {
-        // Targets own meshes + instanced resources — free those before destroying
-        // the entity (bare destroyEntity leaks the mesh), mirroring pool/mahjong.
-        const bs = world.systems.findSystemByName('BlockSystem') as any;
-        for (const eid of this.targetEids) {
-            if (bs?.destroyAdjunct) bs.destroyAdjunct(world, eid); else world.destroyEntity?.(eid);
-        }
-        if (this.rangeEid != null) world.destroyEntity?.(this.rangeEid);
-        this.targetEids = [];
-        this.rangeEid = null;
-        this.interactReader = null;
-        this.missReader = null;
     }
 }
 

@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { bootDeterministic, stepEngine } from './helpers';
+import { bootDeterministic, stepEngine, enterGameAt } from './helpers';
 
-// 3D in-world pool (PoolSystem) in the REAL client: the pool block streams in,
-// the loader spawns the physical balls, a break shot rolls them with engine
-// physics, and the ball ENTITY transforms update (meshes follow).
+// 3D in-world pool (PoolSystem) in the REAL client: zone-gated — walk onto the
+// pool table block and ENTER Game to rack the balls; a break shot then rolls them
+// with engine physics and the ball ENTITY transforms update (meshes follow).
 
 function ballsState(page: any) {
   return page.evaluate(() => {
@@ -40,7 +40,8 @@ async function frameTable(page: any) {
 test('3D pool: balls rack, a break shot rolls them in the client', async ({ page }) => {
   test.setTimeout(180_000); // software WebGL + many engine.step renders is slow
   await bootDeterministic(page);
-  await stepEngine(page, 8); // let the pool block stream + the loader spawn balls
+  // Walk into the pool table zone (north of spawn) + enter Game → the balls rack.
+  expect(await enterGameAt(page, [2048, 2049], [8, 8, 2]), 'entered Game in the pool zone').toBe(true);
 
   const racked = await ballsState(page);
   expect(racked.length, '7 balls racked (cue + 6 object)').toBe(7);

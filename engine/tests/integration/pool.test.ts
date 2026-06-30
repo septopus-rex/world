@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
 import { serializeBlockToRaw } from '../../src/core/utils/BlockSerializer';
 import { AdjunctType } from '../../src/core/types/AdjunctType';
+import { SystemMode } from '../../src/core/types/SystemMode';
 
 // L3 — the in-world 3D pool sim (PoolSystem): configure spawns balls, a shot
 // rolls them with deterministic physics, transforms are written for the meshes.
@@ -13,11 +14,12 @@ const CFG = {
 };
 
 async function bootPool() {
-    const engine = await makeHeadlessEngine();
+    const engine = await makeHeadlessEngine(); // player defaults into block [2048,2048]
     engine.injectBlock({ x: 2048, y: 2048, world: 'main', adjuncts: [], elevation: 0 } as any);
     stepN(engine, 3);
-    engine.setupPool({ ...CFG });
-    stepN(engine, 1);
+    engine.setupPool({ ...CFG });                       // arm the table
+    engine.setMode(SystemMode.Game, { force: true });   // enter Game in this block → balls spawn
+    stepN(engine, 2);                                   // session starts (1) + meshes build (2)
     return engine;
 }
 

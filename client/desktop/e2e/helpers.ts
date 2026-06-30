@@ -76,3 +76,30 @@ export async function walkUntil(
   await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));
   return ok;
 }
+
+/**
+ * Teleport into a game zone and explicitly enter Game mode. Native in-world games
+ * (pool/mahjong/shooting) are zone-gated: their pieces only spawn while you're in
+ * Game mode inside the block. setMode('game') is refused outside a zone (the
+ * game-mode-entry contract), so a true return also proves the zone gate fired.
+ */
+export async function enterGameAt(
+  page: Page,
+  block: [number, number],
+  pos: [number, number, number],
+): Promise<boolean> {
+  await page.evaluate(([b, p]) => (window as any).loader.teleportSpp(b, p), [block, pos] as any);
+  // Poll setMode: GameZoneSystem needs a frame or two to register the zone, and
+  // setMode('game') is refused until it has — so retry until it sticks (tolerant
+  // of variable software-WebGL frame pacing) rather than betting on a fixed wait.
+  let entered = false;
+  for (let i = 0; i < 24 && !entered; i++) {
+    await stepEngine(page, 3);
+    entered = await page.evaluate(() => {
+      const l = (window as any).loader;
+      return l.engine.getWorld().mode === 'game' ? true : l.setMode('game');
+    });
+  }
+  await stepEngine(page, 3); // session spawns + meshes build
+  return entered;
+}

@@ -1,14 +1,16 @@
 import { test, expect } from '@playwright/test';
-import { bootDeterministic, stepEngine, mainCanvas } from './helpers';
+import { bootDeterministic, stepEngine, mainCanvas, enterGameAt } from './helpers';
 
-// Native 3D shooting range (ShootingRangeSystem) in the REAL client: the range
-// block streams in, the loader spawns the sphere targets as adjunct entities, and
-// a REAL first-person mouse click on a target scores AND flips it red in place —
-// the runtime-recolour channel pool/mahjong both dodged. The proof is the live
-// Three.js material colour: the clicked target turns red, the others stay green
-// (per-object isolation), so recolouring one never bleeds across shared materials.
+// Native 3D shooting range (ShootingRangeSystem) in the REAL client — the full
+// ZONE-GATED lifecycle (#3) plus the runtime-recolour channel (#1):
+//   1. walk onto the range block → "Enter Game" affordance, no targets yet
+//   2. enter Game → targets spawn as adjunct entities
+//   3. a REAL first-person click scores AND flips the target red in place (the
+//      others stay green — per-object material isolation, no bleed)
+//   4. leave Game → targets + scoreboard torn down (nothing left to evict)
 
-const UP = 0x33cc44;   // live green (ShootingRangeSystem default)
+const RANGE_BLOCK: [number, number] = [2048, 2047];
+const UP = 0x33cc44;   // live green
 const HIT = 0xff3322;  // hit red
 
 // Read the live rendered material colour of every target, keyed by targetId.
@@ -27,44 +29,38 @@ function targetHexes(page: any) {
     });
 }
 
-// Stream the range block + wait for the loader's setup to spawn the targets.
-async function waitForRange(page: any) {
-    for (let i = 0; i < 60; i++) {
-        await stepEngine(page, 2);
-        const st = await page.evaluate(() => (window as any).loader.engine.shootingState());
-        if (st && st.targets.length > 0) return st;
-    }
-    throw new Error('shooting range never set up');
-}
+const targetCount = (page: any) => page.evaluate(() =>
+    (window as any).loader.engine.getWorld().getEntitiesWith(['ShootingTargetComponent']).length);
 
-test('3D shooting: a REAL click scores AND recolours the target red in place', async ({ page }) => {
+test('3D shooting: zone-gated — enter Game to spawn, click to recolour, leave to tear down', async ({ page }) => {
     test.setTimeout(180_000); // software WebGL + many meshes is slow
     await bootDeterministic(page);
-    const st0 = await waitForRange(page);
-    expect(st0.targetCount).toBe(5);
-    expect(st0.phase).toBe('running');
-    expect([st0.score, st0.shots, st0.hits]).toEqual([0, 0, 0]);
 
-    // Stand at the firing line (block 2048,2047), first person, facing north (yaw 0
-    // → forward -Z) so the target row is straight ahead at eye height.
-    await page.evaluate(() => {
-        const l = (window as any).loader;
-        l.engine.setCameraView('first');
-        l.teleportSpp([2048, 2047], [8, 6.0, 2]);
-    });
-    await stepEngine(page, 25); // land + settle
+    // Walk onto the range block (south of spawn). In Normal mode it's just furniture
+    // — no targets yet — and the explicit "Enter Game" affordance appears.
+    await page.evaluate(([b]) => (window as any).loader.teleportSpp(b, [8, 6.0, 2]), [RANGE_BLOCK] as any);
+    await stepEngine(page, 12);
+    expect(await targetCount(page), 'no targets before entering Game').toBe(0);
+    await expect(page.locator('[data-testid="enter-game"]'), 'Enter Game affordance shown in the zone').toBeVisible();
+
+    // Explicit entry → the ShootingRangeSystem spawns the round.
+    const entered = await page.evaluate(() => (window as any).loader.setMode('game'));
+    expect(entered, 'entering Game succeeded (in a game zone)').toBe(true);
+    await stepEngine(page, 4);
+    const st0 = await page.evaluate(() => (window as any).loader.engine.shootingState());
+    expect(st0.targetCount).toBe(5);
+    expect([st0.score, st0.shots, st0.hits]).toEqual([0, 0, 0]);
+    expect(await targetCount(page)).toBe(5);
+
+    // Face north (yaw 0 → forward -Z) so the target row is straight ahead.
     await page.evaluate(() => (window as any).loader.engine.getWorld().renderEngine.setMainCameraRotation(0, 0, 0));
     await stepEngine(page, 3);
-
-    // Before: every target renders LIVE GREEN.
     const before = await targetHexes(page);
     expect(Object.values(before).every((h) => h === UP), 'all targets start green').toBe(true);
     await page.screenshot({ path: 'test-results/shooting3d-before.png' });
 
-    // Project target 2 (the middle) to a screen pixel. The targets sit a touch
-    // below the standing eye line, so tilt the gaze DOWN until it's centred — the
-    // engine's pitch-lock (Alt+ArrowDown) holds the view hands-free for the click,
-    // exactly how a player settles their aim. Adaptive so it's eye-height agnostic.
+    // Aim at the middle target (id 2): tilt the gaze DOWN (pitch-lock) until it's
+    // centred — eye-height agnostic — then confirm the raycaster resolves to it.
     const screenOf = (id: number) => page.evaluate((tid) => {
         const w = (window as any).loader.engine.getWorld();
         let eid: any = null;
@@ -83,33 +79,36 @@ test('3D shooting: a REAL click scores AND recolours the target red in place', a
     for (let i = 0; i < 30 && aim.ny > 0.6; i++) { await stepEngine(page, 2); aim = await screenOf(2); }
     await page.keyboard.up('ArrowDown');
     await page.keyboard.up('Alt');
-    await stepEngine(page, 3); // render the locked view (raycast matrix becomes current)
+    await stepEngine(page, 3);
     aim = await screenOf(2);
-
     expect(aim.nx, 'target on screen (x)').toBeGreaterThan(0.05); expect(aim.nx).toBeLessThan(0.95);
     expect(aim.ny, 'target on screen (y)').toBeGreaterThan(0.05); expect(aim.ny).toBeLessThan(0.95);
     expect(aim.hit, 'a click at that pixel would hit target 2').toBe(aim.eid);
 
-    // The real thing: a DOM mouse click at the target's pixel. FULL chain — DOM
-    // click → InputProvider → RaycastInteractionSystem → interact.primary →
-    // ShootingRangeSystem.fireAtEntity. No API.
+    // The real thing: a DOM mouse click. FULL chain — DOM click → InputProvider →
+    // RaycastInteractionSystem → interact.primary → ShootingRangeSystem.fireAtEntity.
     const box = (await mainCanvas(page).boundingBox())!;
     await page.mouse.click(box.x + box.width * aim.nx, box.y + box.height * aim.ny);
     await stepEngine(page, 5);
 
-    // Scored, and target 2 is now logically 'hit'.
     const st1 = await page.evaluate(() => (window as any).loader.engine.shootingState());
     expect([st1.score, st1.hits], 'the click scored').toEqual([1, 1]);
-    expect(st1.shots).toBeGreaterThanOrEqual(1);
     expect(st1.targets.find((t: any) => t.targetId === 2).state).toBe('hit');
 
-    // RUNTIME RECOLOUR + ISOLATION: target 2 renders RED, every other target is
-    // still GREEN (recolouring one didn't bleed across the shared palette material).
+    // RUNTIME RECOLOUR + ISOLATION: target 2 renders RED, the others stay GREEN.
     const after = await targetHexes(page);
     expect(after[2], 'clicked target turned red').toBe(HIT);
     expect([0, 1, 3, 4].every((id) => after[id] === UP), 'other targets stayed green (no bleed)').toBe(true);
     await page.screenshot({ path: 'test-results/shooting3d-after.png' });
 
+    // Leave Game (the generic exit, as walking out of the zone would auto-do) →
+    // the session + every target is torn down: nothing dangling, nothing to evict.
+    const left = await page.evaluate(() => (window as any).loader.setMode('normal'));
+    expect(left).toBe(true);
+    await stepEngine(page, 3);
+    expect(await page.evaluate(() => (window as any).loader.engine.shootingState()), 'session gone').toBeNull();
+    expect(await targetCount(page), 'targets torn down on exit').toBe(0);
+
     // eslint-disable-next-line no-console
-    console.log('SHOOTING3D', JSON.stringify({ score: st1.score, pixel: [aim.nx.toFixed(2), aim.ny.toFixed(2)], hit2: after[2].toString(16), others: [0, 1, 3, 4].map((i) => after[i].toString(16)) }));
+    console.log('SHOOTING3D', JSON.stringify({ spawned: st0.targetCount, score: st1.score, hit2: after[2].toString(16), others: [0, 1, 3, 4].map((i) => after[i].toString(16)), tornDown: true }));
 });

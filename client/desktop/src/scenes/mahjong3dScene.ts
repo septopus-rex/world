@@ -39,6 +39,10 @@ export function buildMahjong3DScene(bx: number, by: number): any[] {
         [[0.7, 0.7, 0.5], [C[0] + 3.0, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // E
     ];
     data.raw[2].push([AdjunctType.Box, boxes]);
-    // NOTE: no raw[4] game flag — native mahjong isn't an external-app zone.
+    // raw[4] = game flag: 1 = playable zone (NOT a registered external-app id like
+    // 42/43, so GameRuntime starts no external HUD — just the zone gate). Entering
+    // Game here deals the tiles (MahjongSystem); leaving auto-exits + tears them
+    // down. See docs/systems/game-mode-entry.md.
+    data.raw[4] = 1;
     return data.raw;
 }

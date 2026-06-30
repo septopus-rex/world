@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
 import { serializeBlockToRaw } from '../../src/core/utils/BlockSerializer';
 import { AdjunctType } from '../../src/core/types/AdjunctType';
+import { SystemMode } from '../../src/core/types/SystemMode';
 
 // L3 — the in-world 3D shooting range (ShootingRangeSystem): the SHOT-and-REACT
 // native case after pool (continuous physics) + mahjong (discrete turn-based).
@@ -21,11 +22,12 @@ const CFG = {
 };
 
 async function bootRange(extra: Partial<typeof CFG> = {}) {
-    const engine = await makeHeadlessEngine();
+    const engine = await makeHeadlessEngine(); // player defaults into block [2048,2048]
     engine.injectBlock({ x: 2048, y: 2048, world: 'main', adjuncts: [], elevation: 0 } as any);
     stepN(engine, 3);
-    engine.setupShooting({ ...CFG, ...extra });
-    stepN(engine, 1); // let AdjunctSystem build the target meshes (→ MeshComponent)
+    engine.setupShooting({ ...CFG, ...extra });        // arm the range
+    engine.setMode(SystemMode.Game, { force: true });   // enter Game in this block → targets spawn
+    stepN(engine, 2);                                   // session starts (1) + meshes build (2)
     return engine;
 }
 
@@ -51,6 +53,41 @@ describe('3D shooting range (ShootingRangeSystem)', () => {
         const w = engine.getWorld();
         const spheres = w.getEntitiesWith(['ShootingTargetComponent', 'TransformComponent']);
         expect(spheres.length).toBe(5);
+    });
+
+    it('is zone-gated: no targets until the player enters Game mode here', async () => {
+        const engine = await makeHeadlessEngine(); // player in block [2048,2048]
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', adjuncts: [], elevation: 0 } as any);
+        stepN(engine, 3);
+        engine.setupShooting(CFG);  // ARM only — still in Normal mode
+        stepN(engine, 2);
+        const w = engine.getWorld();
+        expect(engine.shootingState(), 'armed but no session in Normal mode').toBeNull();
+        expect(w.getEntitiesWith(['ShootingTargetComponent']).length).toBe(0);
+
+        engine.setMode(SystemMode.Game, { force: true }); // explicit entry → session spawns
+        stepN(engine, 2);
+        expect(engine.shootingState()?.targetCount).toBe(5);
+        expect(w.getEntitiesWith(['ShootingTargetComponent']).length).toBe(5);
+    });
+
+    it('leaving Game (zone exit) tears the session + targets down; re-entry is fresh', async () => {
+        const engine = await bootRange();
+        const w = engine.getWorld();
+        engine.shootingFire(0); // score a point in this round
+        expect(engine.shootingState().score).toBe(1);
+        expect(w.getEntitiesWith(['ShootingTargetComponent']).length).toBe(5);
+
+        engine.setMode(SystemMode.Normal); // GameZoneSystem does this on leaving the zone
+        stepN(engine, 1);
+        expect(engine.shootingState(), 'session gone on exit').toBeNull();
+        expect(w.getEntitiesWith(['ShootingTargetComponent']).length, 'targets torn down').toBe(0);
+
+        // Re-enter the zone → a FRESH round (score reset), config persisted on the System.
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        expect(engine.shootingState()?.targetCount).toBe(5);
+        expect(engine.shootingState().score, 'fresh round').toBe(0);
     });
 
     it('a hit scores, flips the target red in place (runtime recolour), and rearms', async () => {

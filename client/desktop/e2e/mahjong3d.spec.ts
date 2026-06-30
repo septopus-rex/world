@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { bootDeterministic, stepEngine, mainCanvas } from './helpers';
+import { bootDeterministic, stepEngine, mainCanvas, enterGameAt } from './helpers';
 
 // Native 3D mahjong (MahjongSystem) in the REAL client: the table block streams
 // in, the loader deals the tiles as adjunct entities, a human discard reveals a
@@ -42,12 +42,19 @@ async function frameTable(page: any) {
 // (generate 34 face images + ingest into the CAS, then deal). Polls rather than
 // assuming a fixed step count, since face generation is asynchronous.
 async function waitForDeal(page: any) {
-    for (let i = 0; i < 60; i++) {
+    // Zone-gated: walk onto the native mahjong block (west of spawn) + enter Game →
+    // the MahjongSystem deals. The client gates the deal on async face generation
+    // (34 canvas→PNG→CAS), which under software-WebGL can lag the immediate
+    // teleport — so poll generously for a COMPLETE deal (human drawn to 14), giving
+    // the event loop time between steps for the faces to finish. (A real player
+    // walks over seconds after boot, long after faces are ready.)
+    await enterGameAt(page, [2047, 2048], [8, 8, 2]);
+    for (let i = 0; i < 200; i++) {
         await stepEngine(page, 2);
         const st = await page.evaluate(() => (window as any).loader.engine.mahjongState());
-        if (st) return st;
+        if (st && st.phase === 'playing' && st.hands?.[st.humanSeat]?.length === 14) return st;
     }
-    throw new Error('mahjong table never dealt');
+    throw new Error('mahjong table never fully dealt');
 }
 
 test('3D mahjong: the table deals in the client and a discard reveals a tile', async ({ page }) => {

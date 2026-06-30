@@ -81,7 +81,16 @@ setMode(mode, opts?: { force?: boolean }): boolean
 - `useEngine` 的 `mode` 镜像引擎 `system.mode`（引擎为真相源），`gameZoneActive` 镜像
   `game.zone_enter/exit`。
 
-## 7. 未实现 / 后续
+## 7. 原生在场游戏复用本契约（Pattern B）
+
+`block.game` 有**两类取值**，都经同一套区域门控，但路由不同：
+
+- **外部 app id（`42`=麻将、`43`=台球…）**：`GameRuntimeSystem` 解析成 GameSetting → 进 Game 时 `start` → `game.started`（外部 HUD）。
+- **纯可玩标记 `1`**：`gameById(1)` 无记录 → `GameSetting` 解析为 `null` → `GameRuntimeSystem.startGame` 早返回（**不启动外部 app**），只留区域门控。**原生在场游戏**（`PoolSystem`/`MahjongSystem`/`ShootingRangeSystem`，对象即 adjunct、System 持逻辑）用这一类。
+
+原生游戏的生命周期就**绑在本契约上**：`configure` 只**登记(arm)**该块为某游戏 + 参数；System 每帧 `syncSession` 按「`world.mode===Game` 且玩家在该块」**spawn / teardown** 棋子。进入＝明确动作（进入游戏按钮），离开 block ＝ `GameZoneSystem` 自动退回 Normal ＝ 拆局。armed config 留在 System，跨块驱逐保留 → 重入即新一局。详见 `docs/plan/specs/native-in-world-games.md` #3。
+
+## 8. 未实现 / 后续
 
 - **跨多 block 的可玩区**：当前以单 block 可玩区为主（过山车关卡即单 block）。多 block 连续
   可玩区需要把相邻 block 也标 `game>=1`，并解决 Game 模式全量缓存/流式（见

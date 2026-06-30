@@ -4,7 +4,7 @@
 > **由来**：用三个案例对抗性验证了这条缝——`PoolSystem`（连续物理）+ `MahjongSystem`（离散回合）+ `ShootingRangeSystem`（一击一反应/运行时改色）。核心回路已证明通用（对象即 adjunct、System 持逻辑、点击→动作、确定性、`derivedFrom` 防序列化、`destroyAdjunct` 防网格泄漏）。本文记录这些案例**没触及**或刚补上的部分。
 > **三种托管模式**（别混）：**A 外部 app**（GameSetting + GameRuntime + IGameApi + HUD，逻辑零引擎依赖、可服务端跑）·**B 原生 System**（本文，System 持逻辑、对象即 adjunct）·**C 纯数据驱动**（authored 块数据 + 通用 Trigger/Actuator/Flag/Health，**零专用代码**）。**跑酷 = C**（`core/levels/parkour.ts`，已落地+测；移动闯关/机关/门禁类用 C 就够，不该写 System）。选型口诀：**先问能不能 C，不能再上 B，需要服务端权威才上 A**。
 > **配套**：内容寻址/资源见 `specs/mock-ipfs-resource.md`；可玩化总清单见 `PLAYABLE_CHECKLIST.md`；记忆 `native-in-world-game-pattern.md`。
-> **更新**：2026-06-30 —— 打靶（第三案例）落地，**运行时改色通道补齐**（#1 改色子项 ✅）。2026-06-29 创建（双案例 gap 评估基线）。改一项就勾一项并更新本行。
+> **更新**：2026-06-30 —— **#3 生命周期绑定落地**：三个原生游戏改成**区域门控 Game 游戏**（明确进入 spawn / 走出 block 自动退出 + teardown，复用 GameZoneSystem）。**这反转了早先「原生游戏故意不挂 Game 模式、在场」的决策**。同日：打靶（第三案例）+ 运行时改色通道（#1 改色子项 ✅）。2026-06-29 创建（双案例 gap 评估基线）。改一项就勾一项并更新本行。
 
 ## 图例
 
@@ -20,8 +20,8 @@
 ## 推进顺序（按「挡不挡得住真人玩」）
 
 1. ✅ **可读对象**（#1）—— 麻将牌面（slot-7 内容寻址）+ **运行时改色**（打靶）均已落地。
-2. **生命周期绑定**（#3）—— 不做，正常走动（块驱逐）就会把游戏走坏。**下一项**。
-3. **更丰富的场内输入**（#2）—— 让台球真正「在场可玩」，而非靠键盘/API。
+2. ✅ **生命周期绑定**（#3）—— 改成**区域门控 Game 游戏**：明确进入 spawn、走出 block 自动退出 + teardown（复用 GameZoneSystem）。
+3. **更丰富的场内输入**（#2）—— 让台球真正「在场可玩」，而非靠键盘/API。**下一项**。
 4. 之后：HUD 外壳（#6，打靶/麻将/台球各有 HUD，仍缺通用外壳）、每实例化（#4）、玩家绑定/多人（#5）。
 
 ---
@@ -52,18 +52,24 @@
 
 **关键文件**：麻将牌面：`render/MeshFactory.ts`(`fit`/`getGeometry`)、`render/TextureScale.ts`、`core/types/Adjunct.ts`(`MaterialConfig.fit`)、`core/systems/MahjongSystem.ts`(`faceCids`/slot7)、`client/scenes/mahjongFaces.ts`、`client/lib/DesktopLoader.ts`(`mahjongFaceCids`)。运行时改色：`core/utils/Appearance.ts`、`core/components/VisualizationComponents.ts`(`MeshComponent.colorOverride/opacityOverride`)、`core/systems/VisualSyncSystem.ts`、`render/RenderEngine.ts`(`isolateMaterial`)、`core/systems/ShootingRangeSystem.ts`。验证：engine `mahjong.test.ts`(9) + `shooting.test.ts`(8) + e2e `mahjong3d.spec.ts`(3) + `shooting3d.spec.ts`(1，真实点击→绿变红、其余不染)。
 
-## #3 没有生命周期绑定（load / evict / persist）🔲
+## #3 生命周期绑定（load / evict / persist）✅ 区域门控 Game 进入
 
-**现状（已核）**：
-- 块驱逐销毁游戏对象：`BlockSystem.removeBlock` 销毁该块**所有**子 adjunct（牌/球在内；`derivedFrom` 只挡序列化、不挡驱逐）。Pool/Mahjong **都不监听驱逐**。
-- 玩家走远 → 块驱逐 → 对象没了、table 组件实体悬空、System 持悬空 eid；而 DesktopLoader 的 `block.loaded {once:true}` 不再触发 setup → **游戏半死、无法恢复**。
-- 无中途存档：两者每次 boot 重新发牌/摆球（背包+玩家位置走 DraftStore meta，游戏没接）→ 中途退出丢局。
-- setup 硬编码在客户端（单块 once-key），非数据驱动 → 块无法「声明自己是球桌/牌桌」。
+**曾经的病（已核）**：三个原生游戏当时是 Normal 下「在场」、`block.loaded {once}` 自动 spawn。游戏对象（牌/球/靶）是块的子 adjunct，命随块走；而游戏**状态**住在 System 私有字段 + 一个**游离的 table/range 实体**（`world.createEntity`，无 `parentBlockEntityId`）。玩家走远 → 5×5 窗外块**立即驱逐**（`removeBlock` 无差别销毁子 adjunct，`derivedFrom` 只挡序列化不挡驱逐）→ **对象没了、游离状态残留、System 持悬空 eid**；麻将的 bot 计时器还在内存里**空跑发牌**；而 `once` 钩子已消费 → 走回也不重建 → **半死、无法恢复**。
 
-**方案（草案）**：
-- System 监听块 load/evict（事件通道 `block.loaded`/驱逐），在所属块进出时挂起/恢复，而非靠客户端 once-key。
-- 游戏状态走 DraftStore meta 通道（同背包/玩家位置）做中途存档。
-- 数据驱动声明：块头/某 adjunct 声明「此处是 X 游戏」→ 通用实例化（替代 DesktopLoader 硬编码）。
+**方案（已落地 2026-06-30）—— 复用 game-mode-entry 契约，把原生游戏改成区域门控 Game 游戏**：
+- **标块**：原生游戏块 `block.game = 1`（纯可玩标记，≠外部 app id 42/43，`GameRuntime` 不启动外部 HUD，只吃区域门控）。`shooting`/`mahjong3d` 场景已设；台球块本就是外部区（43）。
+- **System 自管生命周期**：`configure` 改为**登记(arm)**（存 config，不立即 spawn）；每帧 `syncSession` 按「`world.mode===Game` 且玩家在本游戏块」启停——进入 Game 即 `startSession`（spawn），退出/走出块即 `endSession`（free mesh + 销毁状态实体）。三个 System 一致（Pool/Mahjong/Shooting）。
+- **更紧的边界根除半死**：「走出 block」（1 格、`GameZoneSystem` 自动退回 Normal）比「块驱逐」（3 格）**更早触发** → 棋子在驱逐前就拆干净，永不残留。armed config 留在 System（跨驱逐保留）→ 重入 Game = 全新一局。
+- **明确进入/退出**：站上块出「▶ 进入游戏」（`data-testid="enter-game"`），点击 → `setMode(Game)`（守卫：仅 zone 内）；走出块自动退回 Normal（`exit-game` 亦可）。
+- **客户端几乎不改**：仍在 `block.loaded {once}` 上 arm 一次；进/出 Game 全由引擎管（引擎为真相源）。
+
+**代价（有意接受）**：「街机柜」模型——离开即弃局，回来是新一局（无中途存档）。中途存档（游戏状态进 DraftStore meta，同背包/玩家位置）是**可叠加的后续**，未做。
+
+**仍开放（后续）**：
+- 中途存档（DraftStore meta）让重入接着玩同一局。
+- 数据驱动声明：把「此块是 X 游戏 + 参数」放进块数据，引擎通用实例化（替代客户端 arm 的硬编码块坐标）。
+
+**关键文件**：`core/systems/{Pool,Mahjong,ShootingRange}System.ts`（arm/syncSession/startSession/endSession + playerInBlock）、`core/systems/GameZoneSystem.ts`、`World.setMode` 守卫、客户端 `scenes/{shooting,mahjong3d}Scene.ts`（raw[4]=1）。验证：engine `shooting.test.ts`（含 zone-gated spawn + 退出 teardown + 重入 fresh）、e2e `shooting3d.spec.ts`（走上块→无棋子+进入提示→进入→spawn→点击变红→退出→拆除）。
 
 ## #2 输入只有「单击 → 离散动作」🔲
 

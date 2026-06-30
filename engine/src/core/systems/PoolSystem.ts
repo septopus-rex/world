@@ -1,5 +1,6 @@
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctType } from '../types/AdjunctType';
+import { SystemMode } from '../types/SystemMode';
 import { Coords } from '../utils/Coords';
 import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent } from '../components/PlayerComponents';
@@ -38,15 +39,47 @@ export interface PoolConfig {
 }
 
 export class PoolSystem implements ISystem {
+    private config: PoolConfig | null = null;   // armed declaration (block + params)
     private ballEids: EntityId[] = [];
-    private tableEid: EntityId | null = null;
+    private tableEid: EntityId | null = null;    // live session (null = no session)
 
-    // ── setup ────────────────────────────────────────────────────────────────
+    // ── arm / lifecycle ──────────────────────────────────────────────────────
+
+    /** Arm this block as a pool table. The balls spawn when the player ENTERS Game
+     *  mode in this block, and tear down on leaving (Game exit / step off the block
+     *  → GameZoneSystem reverts to Normal) — the game is scoped to the zone, so
+     *  walking away ends it cleanly with nothing left to evict (#3). The armed
+     *  config persists across eviction so re-entering re-racks. */
+    public configure(world: World, config: PoolConfig): void {
+        this.endSession(world);
+        this.config = config;
+        this.syncSession(world); // start immediately if already in Game mode here
+    }
+
+    /** Reconcile the live session with "should there be one?" = armed + Game mode
+     *  + the player standing in our block. Called every frame + on (re)arm. */
+    private syncSession(world: World): void {
+        const want = this.config != null
+            && world.mode === SystemMode.Game
+            && this.playerInBlock(world, this.config.block);
+        if (want && this.tableEid == null) this.startSession(world);
+        else if (!want && this.tableEid != null) this.endSession(world);
+    }
+
+    private playerInBlock(world: World, [bx, by]: [number, number]): boolean {
+        const players = world.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
+        if (players.length === 0) return false;
+        const t = world.getComponent<TransformComponent>(players[0], 'TransformComponent');
+        if (!t) return false;
+        const spp = Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]);
+        return spp.block[0] === bx && spp.block[1] === by;
+    }
 
     /** Build the table + rack: spawn a7 sphere ball entities and tag them with
-     *  PoolBallComponent, create the PoolTableComponent. Idempotent. */
-    public configure(world: World, config: PoolConfig): void {
-        this.teardown(world);
+     *  PoolBallComponent, create the PoolTableComponent. */
+    private startSession(world: World): void {
+        const config = this.config;
+        if (!config) return;
         const blockEid = this.findBlock(world, config.block);
         if (blockEid == null) return;
         const bs = world.systems.findSystemByName('BlockSystem') as any;
@@ -115,6 +148,7 @@ export class PoolSystem implements ISystem {
     // ── per-frame ──────────────────────────────────────────────────────────────
 
     public update(world: World, dt: number): void {
+        this.syncSession(world); // start/stop the session on Game-mode / zone transitions
         const table = this.findTable(world);
         if (!table) return;
         const entries = this.collectBalls(world);
@@ -250,7 +284,9 @@ export class PoolSystem implements ISystem {
         return out;
     }
 
-    private teardown(world: World): void {
+    /** End the live session: free the ball meshes + destroy the table entity. The
+     *  armed config is kept, so re-entering the zone re-racks. */
+    private endSession(world: World): void {
         // Balls own meshes + instanced resources — free those before destroying the
         // entity (bare destroyEntity leaks the mesh). The table entity has no mesh.
         const bs = world.systems.findSystemByName('BlockSystem') as any;
