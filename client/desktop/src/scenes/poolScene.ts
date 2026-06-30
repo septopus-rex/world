@@ -33,6 +33,18 @@ export function buildPoolScene(bx: number, by: number): any[] {
         [[0.4, 0.4, bedTop], [C[0] + bedW / 2 - 0.5, C[1] + bedD / 2 - 0.5, bedTop / 2], [0, 0, 0], 1, [1, 1], 0, 1],
     ];
     data.raw[2].push([AdjunctType.Box, boxes]);
-    data.raw[4] = POOL_GAME_ID; // block-level game flag = the Game Setting resource id
+
+    // GAME TRIGGER (b8): walking up to the table ENTERS Game (trigger-borne entry,
+    // docs/systems/game-mode-entry.md §1). exitPolicy 'ephemeral' — walk off and the
+    // rack resets. Volume covers the table; gameOnly=0 so it fires in Normal. row =
+    // [size, centre, rot, shape(1=box), gameOnly, [{type, oneTime?, actions}]].
+    const enterTable = { type: 'player', method: 'enterGame', params: [{ exitPolicy: 'ephemeral' }] };
+    data.raw[2].push([AdjunctType.Trigger, [
+        [[5, 5, 3], [C[0], C[1], 1.5], [0, 0, 0], 1, 0, [{ type: 'in', oneTime: false, actions: [enterTable] }]],
+    ]]);
+    // raw[4] = POOL_GAME_ID: here the coarse block bit doubles as a registered
+    // external-app id (43), so GameRuntime ALSO resolves the external pool app on
+    // entry. The trigger above is what actually fires enterGame.
+    data.raw[4] = POOL_GAME_ID;
     return data.raw;
 }

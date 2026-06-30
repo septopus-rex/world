@@ -10,13 +10,14 @@ import { ParkourHUD } from './components/ParkourHUD';
 import { MahjongHUD } from './components/MahjongHUD';
 import { PoolHUD } from './components/PoolHUD';
 import { ShootingHUD } from './components/ShootingHUD';
+import { LeaveGameDialog } from './components/LeaveGameDialog';
 import { WorldMap2D } from './components/WorldMap2D';
 import { MAZE_BLOCK, MAZE_ENTRY } from './scenes/mazeScene';
 import { DYN_BLOCK, DYN_VIEW } from './scenes/dynamicAdjunctScene';
 
 function App() {
   const isMobile = useIsMobile();
-  const { loader, ready, mode, setMode, gameZoneActive, activeGame, gameState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
+  const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -160,6 +161,10 @@ function App() {
           generic exit button is hidden while any game HUD is up. */}
       {ready && loader && activeGame === 'mahjong' && gameState && <MahjongHUD state={gameState} loader={loader} />}
       {ready && loader && activeGame === 'pool' && gameState && <PoolHUD state={gameState} loader={loader} />}
+
+      {/* 'confirm'-policy games: stepping off the block keeps the round alive and
+          asks whether to leave (vs the silent 'ephemeral' auto-exit). */}
+      <LeaveGameDialog loader={loader} open={ready && leaveIntent} />
 
       {ready && mode === 'game' && !activeGame && (
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">

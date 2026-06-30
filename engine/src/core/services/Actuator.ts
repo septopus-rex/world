@@ -1,6 +1,6 @@
 import { World, EntityId } from '../World';
 import { TriggerAction } from '../types/Trigger';
-import { SystemMode } from '../types/SystemMode';
+import { SystemMode, asExitPolicy } from '../types/SystemMode';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
 
@@ -112,6 +112,12 @@ export class LocalActuator implements IActuator {
         // a block declares game>=1). The mirror of a client confirm button; both
         // honour the same gate. enterGame runs OUTSIDE Game by design.
         if (action.method === 'enterGame') {
+            // The game trigger declares how this session ends. params[0] may be a
+            // plain policy string or an options object { exitPolicy }. Set it BEFORE
+            // setMode so GameZoneSystem/native Systems see it the same frame.
+            const p0 = action.params?.[0];
+            const policy = typeof p0 === 'object' && p0 !== null ? (p0 as any).exitPolicy : p0;
+            ctx.world.gameExitPolicy = asExitPolicy(policy);
             ctx.world.setMode(SystemMode.Game);
             return;
         }

@@ -15,6 +15,9 @@ export function useEngine(containerId: string) {
     // system.mode event into React rather than driving it from React state.
     const [mode, setModeState] = useState<WorldMode>('normal');
     const [gameZoneActive, setGameZoneActive] = useState(false);
+    // A 'confirm'-policy game wants confirmation to leave (player stepped off its
+    // block; the round is kept alive). Drives the leave-game dialog.
+    const [leaveIntent, setLeaveIntent] = useState(false);
     const [showMinimap, setShowMinimap] = useState(false);
     // Default third-person so the avatar is visible (matches CharacterController default).
     const [view, setView] = useState<'first' | 'third'>('third');
@@ -29,6 +32,7 @@ export function useEngine(containerId: string) {
             (window as any).loader = loaderRef.current;
             loaderRef.current.onModeChange((m) => setModeState(m as WorldMode));
             loaderRef.current.onZoneChange((active) => setGameZoneActive(active));
+            loaderRef.current.onLeaveIntent((active) => setLeaveIntent(active));
             loaderRef.current.onGameStateChange((game, s) => { setActiveGame(game); setGameState(s); });
             loaderRef.current
                 .init(containerId)
@@ -53,6 +57,7 @@ export function useEngine(containerId: string) {
         setMode,
         isEditMode: mode === 'edit',
         gameZoneActive,
+        leaveIntent,
         activeGame,
         gameState,
         showMinimap,

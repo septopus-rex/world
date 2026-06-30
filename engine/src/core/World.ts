@@ -37,7 +37,7 @@ import { BlockLODSystem } from './systems/BlockLODSystem';
 import { EditSystem } from './systems/EditSystem';
 
 import { FullWorldConfig } from './types/WorldConfig';
-import { SystemMode } from './types/SystemMode';
+import { SystemMode, GameExitPolicy } from './types/SystemMode';
 import { IUIProvider } from './services/UIProvider';
 import { IDataSource } from './services/DataSource';
 import { DraftStore, IDraftBackend, InMemoryDraftBackend } from './services/DraftStore';
@@ -207,6 +207,23 @@ export class World {
      * calls (enforces the methods whitelist). Drive moves via gameRuntime.call().
      */
     public gameRuntime: GameRuntime | null = null;
+
+    /**
+     * The block the ACTIVE game session is anchored to (set when Game mode is
+     * entered, from the player's block at that instant; cleared on leaving Game).
+     * Native game Systems (Pool/Mahjong/Shooting) key their spawn/teardown on this
+     * — NOT on the player's live position — so a session declared on block X stays
+     * scoped to X even if the player steps off (e.g. while a 'confirm' dialog is up).
+     */
+    public activeGameBlock: [number, number] | null = null;
+
+    /**
+     * How the active session ends when the player leaves its block (see
+     * GameExitPolicy). Set by the `enterGame` trigger action; default 'ephemeral'
+     * (the silent walk-off-and-tear-down used by direct setMode/the legacy button).
+     * Reset to 'ephemeral' on leaving Game.
+     */
+    public gameExitPolicy: GameExitPolicy = 'ephemeral';
 
     // 4. Events
     private listeners: Map<string, Function[]> = new Map();
@@ -410,9 +427,27 @@ export class World {
         // (world:save_request was a dead line — exit-Edit saving runs through
         //  EditSystem's own mode polling, see clearHelpers.)
         if (mode === SystemMode.Game) {
+            // Anchor the session to the block the player is standing in right now.
+            // enterGame sets gameExitPolicy just before this call; a direct/forced
+            // setMode (legacy button, tests) leaves it at the default 'ephemeral'.
+            if (oldMode !== SystemMode.Game) this.activeGameBlock = this.computePlayerBlock();
             this.events.emit("system.preload", { scope: 'all' });
+        } else if (oldMode === SystemMode.Game) {
+            // Left Game → the session is over; clear its anchor + reset the policy.
+            this.activeGameBlock = null;
+            this.gameExitPolicy = 'ephemeral';
         }
         return true;
+    }
+
+    /** The SPP block the local player currently stands in, or null if there is no
+     *  player yet. Used to anchor a game session on Game-mode entry. */
+    private computePlayerBlock(): [number, number] | null {
+        const players = this.getEntitiesWith(["TransformComponent", "InputStateComponent"]);
+        if (players.length === 0) return null;
+        const t = this.getComponent<{ position: number[] }>(players[0], "TransformComponent");
+        if (!t) return null;
+        return Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]).block;
     }
 
     public setEditMode(active: boolean): void {

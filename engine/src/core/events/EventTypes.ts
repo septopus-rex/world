@@ -32,6 +32,10 @@ export interface EventMap {
     // ── game (zone gating: derived from block.game; see GameZoneSystem) ──
     'game.zone_enter': { block: [number, number]; key: string; game: number };
     'game.zone_exit': { block: [number, number]; key: string };
+    /** Player left the active game's block under a 'confirm' exitPolicy: the round
+     *  is kept alive and the interpreter is asked to confirm leaving (vs the silent
+     *  auto-exit of 'ephemeral'). See docs/systems/game-mode-entry.md §2. */
+    'game.leave_intent': { block: [number, number]; key: string };
     /** A game session opened (entered Game mode + `start` resolved). */
     'game.started': { game: string; session: any };
     /** A game session closed (left Game mode + `end` resolved). */

@@ -1,9 +1,7 @@
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctType } from '../types/AdjunctType';
 import { SystemMode } from '../types/SystemMode';
-import { Coords } from '../utils/Coords';
 import { BlockComponent } from '../components/BlockComponent';
-import { TransformComponent } from '../components/PlayerComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { ShootingTargetComponent, ShootingRangeComponent, ShootingTargetState } from '../components/ShootingComponents';
 import { setEntityColor } from '../utils/Appearance';
@@ -50,11 +48,18 @@ export class ShootingRangeSystem implements ISystem {
     }
 
     /** Reconcile the live session with "should there be one?" = armed + Game mode
-     *  + the player standing in our block. Called every frame + on (re)arm. */
+     *  + our block IS the active session's block + that block is still loaded.
+     *  Keying on `world.activeGameBlock` (not the player's live position) lets a
+     *  'confirm' round survive the player stepping off the block while the dialog
+     *  is up; the block-loaded guard tears it down if the player wanders far enough
+     *  to evict it (so no dangling pieces either way). Called every frame + on arm. */
     private syncSession(world: World): void {
-        const want = this.config != null
+        const c = this.config;
+        const a = world.activeGameBlock;
+        const want = c != null
             && world.mode === SystemMode.Game
-            && this.playerInBlock(world, this.config.block);
+            && a != null && a[0] === c.block[0] && a[1] === c.block[1]
+            && this.findBlock(world, c.block) != null;
         if (want && this.rangeEid == null) this.startSession(world);
         else if (!want && this.rangeEid != null) this.endSession(world);
     }
@@ -211,15 +216,6 @@ export class ShootingRangeSystem implements ISystem {
     }
 
     // ── helpers ────────────────────────────────────────────────────────────────
-
-    private playerInBlock(world: World, [bx, by]: [number, number]): boolean {
-        const players = world.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
-        if (players.length === 0) return false;
-        const t = world.getComponent<TransformComponent>(players[0], 'TransformComponent');
-        if (!t) return false;
-        const spp = Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]);
-        return spp.block[0] === bx && spp.block[1] === by;
-    }
 
     private findRange(world: World): ShootingRangeComponent | null {
         const eid = world.getEntitiesWith(['ShootingRangeComponent'])[0];

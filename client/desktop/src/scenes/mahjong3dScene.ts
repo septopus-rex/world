@@ -41,10 +41,20 @@ export function buildMahjong3DScene(bx: number, by: number): any[] {
         [[0.7, 0.7, 0.5], [C[0] + 3.0, C[1], 0.25], [0, 0, 0], 3, [1, 1], 0, 1], // E
     ];
     data.raw[2].push([AdjunctType.Box, boxes]);
-    // raw[4] = game flag: 1 = playable zone (NOT a registered external-app id like
-    // 42/43, so GameRuntime starts no external HUD — just the zone gate). Entering
-    // Game here deals the tiles (MahjongSystem); leaving auto-exits + tears them
-    // down. See docs/systems/game-mode-entry.md.
+
+    // GAME TRIGGER (b8): sitting down at the table ENTERS Game (trigger-borne entry,
+    // docs/systems/game-mode-entry.md §1). exitPolicy 'confirm' — a turn-based round
+    // you invest minutes in, so stepping off the block does NOT silently nuke it: the
+    // engine emits game.leave_intent and the client asks "leave game?" (vs the arcade
+    // 'ephemeral' of the range). Volume covers the table; gameOnly=0 so it fires in
+    // Normal. row = [size, centre, rot, shape(1=box), gameOnly, [{type, oneTime?, actions}]].
+    const enterTable = { type: 'player', method: 'enterGame', params: [{ exitPolicy: 'confirm' }] };
+    data.raw[2].push([AdjunctType.Trigger, [
+        [[5, 5, 3], [C[0], C[1], 1.5], [0, 0, 0], 1, 0, [{ type: 'in', oneTime: false, actions: [enterTable] }]],
+    ]]);
+    // raw[4] = coarse "this block is playable" bit (the zone gate scoping where
+    // enterGame may succeed). Rich declaration (which game + exitPolicy) is on the
+    // trigger above. NOT an external-app id, so GameRuntime starts no external HUD.
     data.raw[4] = 1;
     return data.raw;
 }

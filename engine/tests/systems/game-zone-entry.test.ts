@@ -109,3 +109,94 @@ describe('game-mode entry is zone-gated on block.game', () => {
         expect(world.mode).toBe(SystemMode.Normal); // gate held
     });
 });
+
+// The corrected game-mode (docs/systems/game-mode-entry.md §2): the game trigger's
+// enterGame action carries a per-game exitPolicy, and the session is anchored to a
+// block (world.activeGameBlock) rather than the player's live position — so a
+// 'confirm' game survives the player stepping off (dialog up) while 'ephemeral'
+// auto-exits. NOT a second SystemMode: gameplay gating is unchanged.
+describe('exitPolicy + session anchoring (corrected game-mode)', () => {
+    function enterGame(world: any, exitPolicy?: string) {
+        const player = world.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const params = exitPolicy === undefined ? [] : [{ exitPolicy }];
+        world.actuator.execute({ type: 'player', target: '', method: 'enterGame', params } as any,
+            { world, playerId: player, mode: world.mode });
+    }
+
+    it('enterGame carries the exitPolicy + anchors the session block; exit clears both', async () => {
+        const { world } = await bootInBlock(1);
+        expect(world.activeGameBlock).toBeNull();
+        expect(world.gameExitPolicy).toBe('ephemeral'); // default
+
+        enterGame(world, 'confirm');
+        expect(world.mode).toBe(SystemMode.Game);
+        expect(world.gameExitPolicy).toBe('confirm');                 // from the trigger param
+        expect(world.activeGameBlock).toEqual([2048, 2048]);          // anchored to the player's block
+
+        world.actuator.execute({ type: 'player', target: '', method: 'exitGame', params: [] } as any,
+            { world, playerId: 0, mode: world.mode });
+        expect(world.mode).toBe(SystemMode.Normal);
+        expect(world.activeGameBlock).toBeNull();                     // anchor cleared
+        expect(world.gameExitPolicy).toBe('ephemeral');               // policy reset
+    });
+
+    it("a bare enterGame (no param) defaults to 'ephemeral'; an unknown value is coerced", async () => {
+        const { world } = await bootInBlock(1);
+        enterGame(world);                       // no params
+        expect(world.gameExitPolicy).toBe('ephemeral');
+        world.actuator.execute({ type: 'player', target: '', method: 'exitGame', params: [] } as any,
+            { world, playerId: 0, mode: world.mode });
+
+        enterGame(world, 'bogus');              // not a real policy → coerced to ephemeral
+        expect(world.gameExitPolicy).toBe('ephemeral');
+    });
+
+    it("'ephemeral': stepping off the block silently auto-exits to Normal", async () => {
+        const leaveIntents: any[] = [];
+        const { engine, world } = await bootInBlock(1);
+        engine.on('game.leave_intent', (p: any) => leaveIntents.push(p));
+        enterGame(world, 'ephemeral');
+        expect(world.mode).toBe(SystemMode.Game);
+
+        const trans = playerTransform(world);
+        trans.position[0] += 100; // ~6 blocks east, out of the zone
+        stepN(engine, 2);
+
+        expect(world.mode).toBe(SystemMode.Normal);   // silent auto-exit
+        expect(world.activeGameBlock).toBeNull();
+        expect(leaveIntents.length).toBe(0);          // no dialog for ephemeral
+    });
+
+    it("'confirm': stepping off KEEPS the round alive + emits game.leave_intent (no auto-exit)", async () => {
+        const leaveIntents: any[] = [];
+        const { engine, world } = await bootInBlock(1);
+        engine.on('game.leave_intent', (p: any) => leaveIntents.push(p));
+        enterGame(world, 'confirm');
+        expect(world.mode).toBe(SystemMode.Game);
+
+        const trans = playerTransform(world);
+        const homeX = trans.position[0];
+        trans.position[0] += 100; // step off the block
+        stepN(engine, 2);
+
+        // The round survives: mode stays Game, the session anchor is untouched, and
+        // the interpreter is asked to confirm (vs the silent ephemeral exit).
+        expect(world.mode).toBe(SystemMode.Game);
+        expect(world.activeGameBlock).toEqual([2048, 2048]);
+        expect(world.gameZoneActive).toBe(false);
+        expect(leaveIntents.length).toBe(1);
+        expect(leaveIntents[0].key).toBe('2048_2048');
+
+        // Walk back in → resume the same round (still Game, still anchored).
+        trans.position[0] = homeX;
+        stepN(engine, 2);
+        expect(world.gameZoneActive).toBe(true);
+        expect(world.mode).toBe(SystemMode.Game);
+
+        // Confirming the leave (exitGame) tears it down for real.
+        world.actuator.execute({ type: 'player', target: '', method: 'exitGame', params: [] } as any,
+            { world, playerId: 0, mode: world.mode });
+        expect(world.mode).toBe(SystemMode.Normal);
+        expect(world.activeGameBlock).toBeNull();
+    });
+});

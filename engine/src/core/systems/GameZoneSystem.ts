@@ -58,16 +58,26 @@ export class GameZoneSystem implements ISystem {
         }
     }
 
-    /** Leave the active zone: clear the flag, announce it, and — per the entry
-     *  contract — drop out of Game mode (you can't keep playing once you've left
-     *  the playable block). */
+    /** Leave the active zone: clear the flag + announce it. Whether we also drop
+     *  out of Game depends on the active session's exitPolicy:
+     *   - 'ephemeral' (default): silent auto-exit — `setMode(Normal)` tears the
+     *     round down (the arcade-cabinet model).
+     *   - 'confirm': KEEP the round alive (mode stays Game, the session's
+     *     activeGameBlock anchor is untouched, so native Systems don't tear down)
+     *     and emit `game.leave_intent` so the interpreter can ask "leave game?".
+     *     The player then exits (exitGame) or walks back in to resume. */
     private leaveZone(world: World, key: string): void {
         const [bxs, bys] = key.split('_');
+        const block: [number, number] = [Number(bxs), Number(bys)];
         this.activeKey = null;
         world.gameZoneActive = false;
-        world.events.emit('game.zone_exit', { block: [Number(bxs), Number(bys)], key });
+        world.events.emit('game.zone_exit', { block, key });
         if (world.mode === SystemMode.Game) {
-            world.setMode(SystemMode.Normal);
+            if (world.gameExitPolicy === 'confirm') {
+                world.events.emit('game.leave_intent', { block, key });
+            } else {
+                world.setMode(SystemMode.Normal);
+            }
         }
     }
 

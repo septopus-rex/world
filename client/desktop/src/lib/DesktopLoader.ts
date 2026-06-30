@@ -103,6 +103,19 @@ export class DesktopLoader implements IDataSource {
     /** Subscribe to engine-confirmed mode changes (one consumer: useEngine). */
     public onModeChange(cb: (m: string) => void): void { this._onMode = cb; }
 
+    /** Set while a 'confirm'-policy game wants confirmation to leave (the player
+     *  stepped off its block): the engine kept the round alive + emitted
+     *  game.leave_intent instead of auto-exiting. The UI shows a "leave game?"
+     *  dialog; cleared when the player confirms (exit) or walks back in (re-enter). */
+    private _leaveIntent = false;
+    public get leaveIntentActive(): boolean { return this._leaveIntent; }
+    private _onLeaveIntent: ((active: boolean) => void) | null = null;
+    /** Subscribe to leave-game-intent (one consumer: useEngine → LeaveGameDialog). */
+    public onLeaveIntent(cb: (active: boolean) => void): void { this._onLeaveIntent = cb; }
+    /** "Stay" — dismiss the leave prompt without exiting Game (the round is still
+     *  alive; the player can walk back into the block to resume it). */
+    public cancelLeaveIntent(): void { if (this._leaveIntent) { this._leaveIntent = false; this._onLeaveIntent?.(false); } }
+
     /** One IGameApi injected into the engine, dispatching by game name to per-game
      *  backends (loopback mock, or networked FetchGameApi under `?mjserver`). The
      *  Game Setting `methods` whitelist is enforced by the engine before a call
@@ -288,14 +301,24 @@ export class DesktopLoader implements IDataSource {
         // Game-zone gating: the engine derives "player is in a playable block"
         // from the block.game flag and announces it here. The UI uses this to
         // offer Game-mode entry only inside a playable zone (no free toggle).
-        this.engine.on('game.zone_enter', () => { this._gameZone = true; this._onZone?.(true); });
+        this.engine.on('game.zone_enter', () => {
+            this._gameZone = true; this._onZone?.(true);
+            // Walked back into the game's block → cancel any pending leave prompt.
+            if (this._leaveIntent) { this._leaveIntent = false; this._onLeaveIntent?.(false); }
+        });
         this.engine.on('game.zone_exit', () => { this._gameZone = false; this._onZone?.(false); });
+
+        // A 'confirm'-policy game: the player stepped off its block but the round is
+        // kept alive — ask whether to leave (vs the silent 'ephemeral' auto-exit).
+        this.engine.on('game.leave_intent', () => { this._leaveIntent = true; this._onLeaveIntent?.(true); });
 
         // Engine is the source of truth for the active mode (it can refuse a
         // requested switch — e.g. Game outside a zone, or an auto zone-exit).
         this.engine.on('system.mode', (p: any) => {
             this._mode = p?.mode ?? this._mode;
             this._onMode?.(this._mode);
+            // Any move out of Game resolves a pending leave prompt.
+            if (this._mode !== 'game' && this._leaveIntent) { this._leaveIntent = false; this._onLeaveIntent?.(false); }
         });
 
         // Game runtime lifecycle (game.md §5): the engine resolved the block's

@@ -36,10 +36,20 @@ export function buildShootingScene(bx: number, by: number): any[] {
         [[6, 0.6, 1.0], [C[0], C[1] - 2.5, 0.5], [0, 0, 0], 1, [1, 1], 0, 1],
     ];
     data.raw[2].push([AdjunctType.Box, boxes]);
-    // raw[4] = game flag: 1 = playable zone (NOT a registered external-app id like
-    // 42/43, so GameRuntime starts no external HUD — just the zone gate). Entering
-    // Game here spawns the targets (ShootingRangeSystem); leaving auto-exits + tears
-    // them down. See docs/systems/game-mode-entry.md.
+
+    // GAME TRIGGER (b8): walking up to the firing line ENTERS Game (the trigger-borne
+    // entry, docs/systems/game-mode-entry.md §1). `enterGame` carries the per-game
+    // exitPolicy — 'ephemeral' here: an arcade range, walk off the block and the round
+    // silently ends. Volume sits just north of the spawn-in spot so you enter by
+    // stepping toward the targets (gameOnly=0 so it fires in Normal). row format =
+    // [size, centre, rot, shape(1=box), gameOnly, [{type, oneTime?, actions}]].
+    const enterRange = { type: 'player', method: 'enterGame', params: [{ exitPolicy: 'ephemeral' }] };
+    data.raw[2].push([AdjunctType.Trigger, [
+        [[5, 3, 3], [C[0], C[1] + 1.5, 1.5], [0, 0, 0], 1, 0, [{ type: 'in', oneTime: false, actions: [enterRange] }]],
+    ]]);
+    // raw[4] = coarse "this block is playable" bit (the zone gate that scopes where
+    // enterGame may succeed). NOT a registered external-app id like 42/43, so
+    // GameRuntime starts no external HUD. Rich declaration is on the trigger above.
     data.raw[4] = 1;
     return data.raw;
 }
