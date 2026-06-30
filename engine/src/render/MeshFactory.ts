@@ -73,7 +73,10 @@ export class MeshFactory {
             case 'box':
             default:
                 object = new THREE.Mesh(
-                    this.getGeometry('box', w, h, d),
+                    // `material.fit` → map the texture 0..1 onto each face (a fitted
+                    // label/decal: signs, mahjong tile faces) instead of size-derived
+                    // tiling (which is for walls/floors and would crop a small face).
+                    this.getGeometry('box', w, h, d, !!material?.fit),
                     this.getMaterial(material)
                 );
                 break;
@@ -103,8 +106,10 @@ export class MeshFactory {
     /**
      * Get or create a cached geometry instance.
      */
-    private static getGeometry(type: string, w: number, h: number, d: number): THREE.BufferGeometry {
-        const key = `${type}:${w},${h},${d}`;
+    private static getGeometry(type: string, w: number, h: number, d: number, fitUV: boolean = false): THREE.BufferGeometry {
+        // fitUV boxes keep BoxGeometry's natural 0..1 UVs (full image per face), so
+        // they need a distinct cache entry from the size-tiled box of the same dims.
+        const key = `${type}:${w},${h},${d}${fitUV ? ':fit' : ''}`;
         let geo = this._geoCache.get(key);
         if (!geo) {
             switch (type) {
@@ -123,8 +128,9 @@ export class MeshFactory {
                     // Size-derived UV tiling: constant texel density regardless of
                     // face size (kills the old low-texel-density "mosaic"). Pure
                     // function of (w,h,d) → safe with the size-keyed geo cache, and
-                    // harmless for colour-only materials (they ignore UVs).
-                    applyBoxWorldUV(geo, [w, h, d]);
+                    // harmless for colour-only materials (they ignore UVs). A fitted
+                    // label opts out → the whole image maps 0..1 onto each face.
+                    if (!fitUV) applyBoxWorldUV(geo, [w, h, d]);
                     break;
             }
             // Tag as shared: this geometry instance is reused by reference across

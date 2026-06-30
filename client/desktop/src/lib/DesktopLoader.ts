@@ -33,6 +33,8 @@ import { DEMO_BLOCK, DEMO_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scen
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
+import { generateMahjongFaceCids } from '../scenes/mahjongFaces';
+import { SHOOTING_BLOCK, SHOOTING_ORIGIN, SHOOTING_TARGET_DIST, SHOOTING_TARGET_Z, buildShootingScene } from '../scenes/shootingScene';
 import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
@@ -73,6 +75,11 @@ export class DesktopLoader implements IDataSource {
     private _poolReady = false;
     /** True once the native 3D mahjong table is dealt (N-to-discard enabled). */
     private _mahjongReady = false;
+    /** True once the native 3D shooting range is set up (drives the shooting HUD). */
+    private _shootingReady = false;
+    public get shootingReady(): boolean { return this._shootingReady; }
+    /** Read-only shooting-range snapshot (score/shots/hits/phase) for the HUD. */
+    public shootingState(): any { return this.engine?.shootingState() ?? null; }
 
     /** `?level=<name>` selects an authored level instead of the demo court. */
     private level = typeof window !== 'undefined'
@@ -265,7 +272,12 @@ export class DesktopLoader implements IDataSource {
         // (MahjongSystem owns the game). The human discards by clicking one of
         // their face-up tiles in-world (RaycastInteractionSystem → the System);
         // N discards the first tile as a no-aim convenience.
-        this.engine.on('block.loaded', () => this.setupMahjong3D(), { key: `blk:${NATIVE_MAHJONG_BLOCK[0]}_${NATIVE_MAHJONG_BLOCK[1]}`, once: true });
+        this.engine.on('block.loaded', () => { void this.setupMahjong3D(); }, { key: `blk:${NATIVE_MAHJONG_BLOCK[0]}_${NATIVE_MAHJONG_BLOCK[1]}`, once: true });
+
+        // Native 3D shooting range: when its block materializes, spawn the targets
+        // (ShootingRangeSystem owns the score/timer). Shooting is the engine's own
+        // raycast pick — click a target to hit it (interact.primary → the System).
+        this.engine.on('block.loaded', () => this.setupShooting3D(), { key: `blk:${SHOOTING_BLOCK[0]}_${SHOOTING_BLOCK[1]}`, once: true });
         if (typeof window !== 'undefined') {
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'KeyB' && this._poolReady) this.poolShootFromCamera();
@@ -508,6 +520,7 @@ export class DesktopLoader implements IDataSource {
         // authored in scenes/; the loader just dispatches.
         if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);
         if (x === NATIVE_MAHJONG_BLOCK[0] && y === NATIVE_MAHJONG_BLOCK[1]) return buildMahjong3DScene(x, y);
+        if (x === SHOOTING_BLOCK[0] && y === SHOOTING_BLOCK[1]) return buildShootingScene(x, y);
         if (x === POOL_BLOCK[0] && y === POOL_BLOCK[1]) return buildPoolScene(x, y);
         if (x === MAZE_BLOCK[0] && y === MAZE_BLOCK[1]) return buildMazeScene(x, y);
         if (x === SANDBOX_BLOCK[0] && y === SANDBOX_BLOCK[1]) return buildSandboxScene(x, y);
@@ -984,12 +997,44 @@ export class DesktopLoader implements IDataSource {
         this._poolReady = true;
     }
 
+    /** Build the native 3D shooting range targets (geometry matches shootingScene).
+     *  The ShootingRangeSystem spawns the spheres + owns the score; a click hits
+     *  a target through the engine's raycast path (interact.primary). */
+    private setupShooting3D(): void {
+        this.engine?.setupShooting({
+            block: SHOOTING_BLOCK, origin: SHOOTING_ORIGIN,
+            dist: SHOOTING_TARGET_DIST, z: SHOOTING_TARGET_Z,
+            targetCount: 5, targetR: 0.3, spacing: 1.3,
+            duration: 60, litTime: 1.2,
+        });
+        this._shootingReady = true;
+    }
+
+    /** kind → face-image CID, generated + ingested once (memoized). */
+    private _mahjongFaceCids: Promise<string[] | undefined> | null = null;
+
+    private mahjongFaceCids(): Promise<string[] | undefined> {
+        if (!this._mahjongFaceCids) {
+            const router = this.engine?.ipfs;
+            this._mahjongFaceCids = router
+                ? generateMahjongFaceCids(router).catch((e) => {
+                    console.warn('[DesktopLoader] mahjong face generation failed; tiles stay blank.', e);
+                    return undefined;
+                })
+                : Promise.resolve(undefined);
+        }
+        return this._mahjongFaceCids;
+    }
+
     /** Deal the native 3D mahjong table (geometry matches mahjong3dScene). The
-     *  MahjongSystem owns the game; we only seed it and mark it ready. */
-    private setupMahjong3D(): void {
+     *  MahjongSystem owns the game; we generate readable tile faces (slot-7
+     *  textures via the CAS), then seed it and mark it ready. */
+    private async setupMahjong3D(): Promise<void> {
+        const faceCids = await this.mahjongFaceCids();
         this.engine?.setupMahjong({
             block: NATIVE_MAHJONG_BLOCK, origin: [8, 8],
             surfaceZ: MAHJONG_SURFACE_Z, seed: 20260629,
+            ...(faceCids ? { faceCids } : {}),
         });
         this._mahjongReady = true;
     }

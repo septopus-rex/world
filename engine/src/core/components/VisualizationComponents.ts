@@ -12,4 +12,10 @@ export interface MeshComponent {
     syncRotation?: boolean;
     syncRotationAxes?: [boolean, boolean, boolean];
     visible?: boolean;
+    /** Runtime appearance override (gameplay highlight / state colour / dimming),
+     *  set via core/utils/Appearance. VisualSyncSystem pushes it onto the handle
+     *  on each dirty sync (isolated per-object so it never bleeds across shared
+     *  cached materials). Distinct from SPP AnimationComponent overrides. */
+    colorOverride?: number;
+    opacityOverride?: number;
 }

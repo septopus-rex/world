@@ -280,15 +280,21 @@ export class RenderEngine {
         }
     }
 
+    /**
+     * Per-object colour/opacity override (SPP animation overrides + gameplay
+     * recolour). Isolated per-object: MeshFactory hands out one cached material
+     * shared by every mesh of the same colour, so mutating it in place would
+     * recolour ALL of them — clone-on-write first (see isolateMaterial).
+     */
     public updateObjectAppearance(handle: RenderHandle, color?: number, opacity?: number): void {
+        if (color === undefined && opacity === undefined) return;
         (handle as THREE.Object3D).traverse((child) => {
-            if (child instanceof THREE.Mesh && child.material) {
-                const mat = child.material as THREE.MeshStandardMaterial;
-                if (color !== undefined) mat.color.setHex(color);
-                if (opacity !== undefined) {
-                    mat.opacity = opacity;
-                    mat.transparent = opacity < 1.0;
-                }
+            if (!(child instanceof THREE.Mesh) || !child.material) return;
+            const mat = RenderEngine.isolateMaterial(child as THREE.Mesh);
+            if (color !== undefined) mat.color.setHex(color);
+            if (opacity !== undefined) {
+                mat.opacity = opacity;
+                mat.transparent = opacity < 1.0;
             }
         });
     }
@@ -296,24 +302,36 @@ export class RenderEngine {
     /**
      * Set opacity on ONE object without bleeding into the shared, cached
      * materials MeshFactory hands out (many wall pieces reference one material —
-     * mutating it in place would dim them all). Clones each material ONCE per
-     * mesh, marks it, then mutates the owned copy — so per-object highlighting
-     * (e.g. the SPP editor dimming the cells that aren't open) stays local. The
-     * clone is freed with the mesh, so re-expanding a structure doesn't leak.
+     * mutating it in place would dim them all). Per-object highlighting (e.g. the
+     * SPP editor dimming the cells that aren't open) stays local via the same
+     * clone-on-write isolation as updateObjectAppearance.
      */
     public setObjectOpacityIsolated(handle: RenderHandle, opacity: number): void {
         (handle as THREE.Object3D).traverse((child) => {
             if (!(child instanceof THREE.Mesh) || !child.material) return;
-            const cur = child.material as THREE.Material & { __isolated?: boolean };
-            if (!cur.__isolated) {
-                const cloned = cur.clone() as THREE.Material & { __isolated?: boolean };
-                cloned.__isolated = true;
-                child.material = cloned;
-            }
-            const mat = child.material as THREE.MeshStandardMaterial;
+            const mat = RenderEngine.isolateMaterial(child as THREE.Mesh);
             mat.opacity = opacity;
             mat.transparent = opacity < 1.0;
         });
+    }
+
+    /**
+     * Clone-on-write a mesh's material the first time it's overridden, so a
+     * per-object appearance change never bleeds across the meshes that share one
+     * cached MeshFactory material. The clone is marked owned (userData.shared =
+     * false — Material.clone deep-copies userData, which would otherwise carry the
+     * cached material's shared=true and skip disposal), so it's freed with the
+     * mesh (disposeMeshResources) instead of leaking.
+     */
+    private static isolateMaterial(child: THREE.Mesh): THREE.MeshStandardMaterial {
+        const cur = child.material as THREE.Material & { __isolated?: boolean };
+        if (!cur.__isolated) {
+            const cloned = cur.clone() as THREE.Material & { __isolated?: boolean };
+            cloned.__isolated = true;
+            cloned.userData = { ...cloned.userData, shared: false };
+            child.material = cloned;
+        }
+        return child.material as THREE.MeshStandardMaterial;
     }
 
     /** Animated texture scroll: set the material map's UV offset (type 'texture').

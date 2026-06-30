@@ -386,6 +386,29 @@ export class Engine {
         return w ? (w.systems.findSystemByName('MahjongSystem') as any)?.snapshot(w) ?? null : null;
     }
 
+    /** Build a 3D shooting range on the given block (ShootingRangeSystem owns the
+     *  score/timer; targets are a7 sphere adjunct entities it spawns and recolours
+     *  on hit — the runtime-recolour native case after pool/mahjong). */
+    public setupShooting(config: import('./core/systems/ShootingRangeSystem').ShootingConfig): void {
+        const w = this.world;
+        if (w) (w.systems.findSystemByName('ShootingRangeSystem') as any)?.configure(w, config);
+    }
+
+    /** Fire at a target by id (null = a deliberate miss) — a no-aim convenience for
+     *  HUDs/tests; clicking a target in-world does the same through the raycast
+     *  path. Returns 'hit' | 'miss' (false if the range is gone). */
+    public shootingFire(targetId: number | null): 'hit' | 'miss' | false {
+        const w = this.world;
+        return w ? (w.systems.findSystemByName('ShootingRangeSystem') as any)?.fireAtTarget(w, targetId) ?? false : false;
+    }
+
+    /** Current shooting-range state (score/shots/hits/phase/targets), or null.
+     *  Read-only snapshot for HUDs and tests. */
+    public shootingState(): any {
+        const w = this.world;
+        return w ? (w.systems.findSystemByName('ShootingRangeSystem') as any)?.snapshot(w) ?? null : null;
+    }
+
     /**
      * Load a DYNAMIC adjunct from sandboxed code and register it by the type-id it
      * declares, so any block referencing that id materializes it like a built-in.

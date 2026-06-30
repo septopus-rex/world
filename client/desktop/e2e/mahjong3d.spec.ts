@@ -38,14 +38,24 @@ async function frameTable(page: any) {
     });
 }
 
+// Stream the table block and wait for the loader's async setup to finish
+// (generate 34 face images + ingest into the CAS, then deal). Polls rather than
+// assuming a fixed step count, since face generation is asynchronous.
+async function waitForDeal(page: any) {
+    for (let i = 0; i < 60; i++) {
+        await stepEngine(page, 2);
+        const st = await page.evaluate(() => (window as any).loader.engine.mahjongState());
+        if (st) return st;
+    }
+    throw new Error('mahjong table never dealt');
+}
+
 test('3D mahjong: the table deals in the client and a discard reveals a tile', async ({ page }) => {
     test.setTimeout(180_000); // software WebGL + many box meshes is slow
     await bootDeterministic(page);
-    await stepEngine(page, 12); // stream the table block → the loader auto-deals
 
     // The real client wiring dealt the game (53 on-table tiles, human to act).
-    const dealt = await page.evaluate(() => (window as any).loader.engine.mahjongState());
-    expect(dealt, 'loader auto-dealt the table on block.loaded').toBeTruthy();
+    const dealt = await waitForDeal(page);
     expect(dealt.turn).toBe(dealt.humanSeat);
     expect(dealt.hands[dealt.humanSeat].length).toBe(14);
 
@@ -89,10 +99,7 @@ test('3D mahjong: the table deals in the client and a discard reveals a tile', a
 test('3D mahjong: a REAL mouse click on a hand tile discards it (truly playable)', async ({ page }) => {
     test.setTimeout(180_000);
     await bootDeterministic(page);
-    await stepEngine(page, 14); // stream the table block → the loader auto-deals
-
-    const dealt = await page.evaluate(() => (window as any).loader.engine.mahjongState());
-    expect(dealt, 'table dealt before we play').toBeTruthy();
+    await waitForDeal(page); // stream the block → loader generates faces + auto-deals
 
     // First-person; stand the player at the south seat so their own face-up hand
     // is right in front of them (the real way you'd sit down to a table).
@@ -153,4 +160,43 @@ test('3D mahjong: a REAL mouse click on a hand tile discards it (truly playable)
     await page.screenshot({ path: 'test-results/mahjong3d-fpv-after-click.png' });
     // eslint-disable-next-line no-console
     console.log('MAHJONG3D-CLICK', JSON.stringify({ clicked: aim.tid, pixel: [aim.nx.toFixed(2), aim.ny.toFixed(2)], discards: after.discards[aim.seat] }));
+});
+
+test('3D mahjong: tiles are READABLE — each face-up tile shows its kind (slot-7 texture via CAS)', async ({ page }) => {
+    test.setTimeout(180_000);
+    await bootDeterministic(page);
+    await waitForDeal(page); // the loader generated 34 face images + ingested them into the CAS
+
+    // Every face-up tile (your open hand) references a content-addressed face image
+    // in box slot 7; concealed opponents reference none.
+    const faces = await page.evaluate(() => {
+        const w = (window as any).loader.engine.getWorld();
+        const out: any[] = [];
+        for (const eid of w.getEntitiesWith(['MahjongTileComponent', 'AdjunctComponent'])) {
+            const tc = w.getComponent(eid, 'MahjongTileComponent');
+            const adj = w.getComponent(eid, 'AdjunctComponent');
+            out.push({ kind: tc.kind, faceUp: tc.faceUp, tex: adj.stdData?.material?.texture ?? null });
+        }
+        return out;
+    });
+    const up = faces.filter((f) => f.faceUp);
+    const down = faces.filter((f) => !f.faceUp);
+    expect(up.length, 'the human hand is open').toBe(14);
+    expect(up.every((f) => typeof f.tex === 'string' && f.tex.startsWith('bafy')), 'every open tile carries a CID face').toBe(true);
+    expect(down.every((f) => f.tex == null), 'concealed tiles are blank').toBe(true);
+
+    // The face CID really resolves through the content store (CAS roundtrip).
+    const resolved = await page.evaluate(async (cid) => {
+        const url = await (window as any).loader.engine.ipfs.toObjectUrl(cid);
+        return typeof url === 'string' && url.length > 0;
+    }, up[0].tex);
+    expect(resolved, 'the face CID resolves to a loadable URL').toBe(true);
+
+    // Let the textures finish loading onto the meshes, then capture the proof: a
+    // top-down frame where the hand shows legible numbers/suits.
+    await stepEngine(page, 20);
+    await frameTable(page);
+    await page.screenshot({ path: 'test-results/mahjong3d-readable-faces.png' });
+    // eslint-disable-next-line no-console
+    console.log('MAHJONG3D-FACES', JSON.stringify({ faceUp: up.length, concealed: down.length, sampleCid: up[0].tex.slice(0, 14) }));
 });

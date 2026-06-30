@@ -9,6 +9,7 @@ import { HealthBar } from './components/HealthBar';
 import { ParkourHUD } from './components/ParkourHUD';
 import { MahjongHUD } from './components/MahjongHUD';
 import { PoolHUD } from './components/PoolHUD';
+import { ShootingHUD } from './components/ShootingHUD';
 import { WorldMap2D } from './components/WorldMap2D';
 import { MAZE_BLOCK, MAZE_ENTRY } from './scenes/mazeScene';
 import { DYN_BLOCK, DYN_VIEW } from './scenes/dynamicAdjunctScene';
@@ -134,6 +135,7 @@ function App() {
       {ready && <InventoryPanel loader={loader} />}
       {ready && <HealthBar loader={loader} />}
       <ParkourHUD loader={loader} ready={ready} />
+      <ShootingHUD loader={loader} ready={ready} />
       <WorldMap2D loader={loader} open={show2DMap} onClose={() => setShow2DMap(false)} />
 
       {/* Game-mode entry is ZONE-GATED: this prompt appears only while the player

@@ -119,6 +119,41 @@ describe('3D mahjong (MahjongSystem)', () => {
         expect(table.wall.length).toBe(0);
     });
 
+    it('readable faces: face-up tiles carry their kind image in box slot 7, concealed tiles do not', async () => {
+        // kind(0..33) → a content-addressed locator. A face-up tile must reference
+        // its kind's image (so it is readable); a concealed tile must reference none.
+        const faceCids = Array.from({ length: 34 }, (_, k) => `face-cid-${k}`);
+        const engine = await bootMahjong({ faceCids } as any);
+        const w = engine.getWorld();
+        const table = engine.mahjongState();
+
+        let checkedFaceUp = 0, checkedDown = 0;
+        for (const eid of w.getEntitiesWith(['MahjongTileComponent', 'AdjunctComponent'])) {
+            const tc = w.getComponent(eid, 'MahjongTileComponent');
+            const adj = w.getComponent(eid, 'AdjunctComponent');
+            const tex = adj.stdData?.material?.texture;
+            if (tc.faceUp) {
+                expect(tex, `face-up tile ${tc.tileId} shows its kind`).toBe(`face-cid-${table.kinds[tc.tileId]}`);
+                // the face is a fitted label (full image on the face), not size-tiled
+                expect(adj.stdData?.material?.fit, `face tile ${tc.tileId} fits the image`).toBe(true);
+                checkedFaceUp++;
+            } else {
+                expect(tex, `concealed tile ${tc.tileId} is blank`).toBeUndefined();
+                checkedDown++;
+            }
+        }
+        expect(checkedFaceUp).toBe(14);                 // the human's open hand
+        expect(checkedDown).toBe(13 * 3);               // three concealed opponents
+    });
+
+    it('without faceCids tiles stay blank (pre-readable behaviour preserved)', async () => {
+        const engine = await bootMahjong();
+        const w = engine.getWorld();
+        for (const eid of w.getEntitiesWith(['MahjongTileComponent', 'AdjunctComponent'])) {
+            expect(w.getComponent(eid, 'AdjunctComponent').stdData?.material?.texture).toBeUndefined();
+        }
+    });
+
     it('writes tile entity transforms so the meshes spread across the felt', async () => {
         const engine = await bootMahjong();
         const human = tiles(engine).filter((x) => x.zone === 'hand' && x.seat === 0).sort((a, b) => a.slot - b.slot);

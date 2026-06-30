@@ -44,10 +44,16 @@ export interface MahjongConfig {
     botDelay?: number;          // seconds a bot waits before discarding (default 0.6)
     tileW?: number; tileD?: number; tileH?: number;
     spacing?: number; handDist?: number; discDist?: number;
+    /** kind(0..33) → face-image locator (content-addressed CID / data: URL). When
+     *  set, a face-up tile shows its kind on the top face (box slot 7) so the game
+     *  is READABLE; concealed tiles stay blank. Optional — without it tiles are
+     *  plain cream boxes (the pre-readable behaviour). */
+    faceCids?: string[];
 }
 
 export class MahjongSystem implements ISystem {
     private tableEid: EntityId | null = null;
+    private faceCids: string[] | null = null;
     private interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
 
     // ── setup ────────────────────────────────────────────────────────────────
@@ -62,6 +68,7 @@ export class MahjongSystem implements ISystem {
         if (!bs?.spawnAdjunct) return;
 
         const humanSeat = config.humanSeat ?? 0;
+        this.faceCids = config.faceCids ?? null;
         const rng = makeRng(config.seed);
 
         // Fixed identity: tileId → kind (four of each), then a seeded draw order.
@@ -202,12 +209,22 @@ export class MahjongSystem implements ISystem {
         const faceUp = zone === 'discard' ? true : seat === table.humanSeat;
         const rz = seat === 1 || seat === 3 ? Math.PI / 2 : 0;          // E/W seats turn 90°
         const resId = faceUp ? 10 : 1;                                  // 10 cream face · 1 dark back (vs blue felt)
-        const raw = [[table.tileW, table.tileD, table.tileH], [table.cx, table.cy, table.surfaceZ + table.tileH / 2], [0, 0, rz], resId, [1, 1], 0, 0];
+        const raw: any[] = [[table.tileW, table.tileD, table.tileH], [table.cx, table.cy, table.surfaceZ + table.tileH / 2], [0, 0, rz], resId, [1, 1], 0, 0];
+        // Readable face: a face-up tile (your hand + every discard) carries its
+        // kind's image in box slot 7 (content-addressed). Concealed tiles get none.
+        const kind = table.kinds[tileId];
+        const face = faceUp ? this.faceCids?.[kind] : undefined;
+        if (face) raw.push(face);
         const eid = bs.spawnAdjunct(world, blockEid, AdjunctType.Box, raw);
         if (eid == null) return;
         // Transient game pieces — keep them out of block serialization.
         const adj = world.getComponent<AdjunctComponent>(eid, 'AdjunctComponent');
-        if (adj?.stdData) (adj.stdData as any).derivedFrom = 'mahjong';
+        if (adj?.stdData) {
+            (adj.stdData as any).derivedFrom = 'mahjong';
+            // The face image is a label: fit it 0..1 onto the tile face rather than
+            // size-tiling it (a 0.24×0.36 m face would otherwise crop the glyph).
+            if (face && adj.stdData.material) adj.stdData.material.fit = true;
+        }
         world.addComponent<MahjongTileComponent>(eid, 'MahjongTileComponent', {
             tileId, kind: table.kinds[tileId], zone, seat, slot: 0, faceUp,
         });

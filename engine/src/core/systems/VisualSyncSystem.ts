@@ -78,6 +78,14 @@ export class VisualSyncSystem implements ISystem {
                 }
             }
 
+            // 6. Apply gameplay appearance overrides (runtime recolour / dimming a
+            //    System set via core/utils/Appearance). Applied after the SPP anim
+            //    overrides so a gameplay highlight wins; isolated per-object inside
+            //    updateObjectAppearance so it never bleeds across shared materials.
+            if (mesh.colorOverride !== undefined || mesh.opacityOverride !== undefined) {
+                world.renderEngine.updateObjectAppearance(mesh.handle, mesh.colorOverride, mesh.opacityOverride);
+            }
+
             // Mark as clean
             trans.dirty = false;
         }

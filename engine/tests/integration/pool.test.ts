@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
+import { serializeBlockToRaw } from '../../src/core/utils/BlockSerializer';
+import { AdjunctType } from '../../src/core/types/AdjunctType';
 
 // L3 — the in-world 3D pool sim (PoolSystem): configure spawns balls, a shot
 // rolls them with deterministic physics, transforms are written for the meshes.
@@ -94,6 +96,29 @@ describe('3D pool (PoolSystem)', () => {
         expect(engine.poolShoot(ang, 1)).toBe(true);
         stepN(engine, 120);
         expect(table().scratches).toBeGreaterThanOrEqual(1); // cue reached the pocket
+    });
+
+    it('balls are derived state — they never serialize into the block draft', async () => {
+        const engine = await bootPool();
+        const w = engine.getWorld();
+        // sanity: the balls really are live adjunct entities on the table block
+        expect(balls(engine).length).toBe(7);
+
+        const blockEid = w.getEntitiesWith(['BlockComponent'])[0];
+        const raw = serializeBlockToRaw(w, blockEid)!;
+        const adjunctsRaw: any[] = raw[2];
+        const ballGroup = adjunctsRaw.find((g) => g[0] === AdjunctType.Ball);
+        expect(ballGroup, 'a7 ball rows must not persist into the block raw').toBeUndefined();
+    });
+
+    it('reconfiguring tears the old balls down (no entity leak)', async () => {
+        const engine = await bootPool();
+        expect(balls(engine).length).toBe(7);
+        // a second configure must free the old balls via BlockSystem.destroyAdjunct
+        // (mesh + instanced resources) before respawning — not pile a 2nd rack on top.
+        engine.setupPool({ ...CFG });
+        stepN(engine, 1);
+        expect(balls(engine).length).toBe(7);
     });
 
     it('writes the cue entity transform each frame (mesh follows)', async () => {

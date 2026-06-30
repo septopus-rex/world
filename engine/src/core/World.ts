@@ -19,6 +19,7 @@ import { VisualSyncSystem } from './systems/VisualSyncSystem';
 import { CoasterSystem } from './systems/CoasterSystem';
 import { PoolSystem } from './systems/PoolSystem';
 import { MahjongSystem } from './systems/MahjongSystem';
+import { ShootingRangeSystem } from './systems/ShootingRangeSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
@@ -310,6 +311,11 @@ export class World {
         // lifecycle + transforms in the same pre-sync slot (no physics, proving
         // the native-game seam generalizes beyond continuous simulation).
         this.systems.addSystem(new MahjongSystem());
+        // 3D shooting range: the SHOT-and-REACT native shape. Targets are a7 sphere
+        // adjuncts the System recolours on hit (the runtime-recolour channel that
+        // pool/mahjong both dodged), in the same pre-sync slot so the colour change
+        // lands the same frame.
+        this.systems.addSystem(new ShootingRangeSystem());
 
         // Final Sync: Presentation Layer
         this.systems.addSystem(new VisualSyncSystem());

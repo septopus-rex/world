@@ -78,7 +78,13 @@ export class PoolSystem implements ISystem {
             // Spheres don't map resource→colour, so set the material colour directly
             // (before the mesh builds next frame) to tell the cue from object balls.
             const adj = world.getComponent<AdjunctComponent>(eid, 'AdjunctComponent');
-            if (adj?.stdData) adj.stdData.material = { ...(adj.stdData.material || {}), color: i === 0 ? cueColor : ballColor };
+            if (adj?.stdData) {
+                adj.stdData.material = { ...(adj.stdData.material || {}), color: i === 0 ? cueColor : ballColor };
+                // Balls are simulation state, not authored geometry — tag them so
+                // serializeBlockToRaw skips them and they never pollute the block
+                // draft (mirrors MahjongSystem's tiles).
+                (adj.stdData as any).derivedFrom = 'pool';
+            }
             world.addComponent<PoolBallComponent>(eid, 'PoolBallComponent', {
                 ballId: i, x: p.x, y: p.y, vx: 0, vy: 0, potted: false, radius: r,
             });
@@ -245,7 +251,13 @@ export class PoolSystem implements ISystem {
     }
 
     private teardown(world: World): void {
-        for (const eid of this.ballEids) world.destroyEntity?.(eid);
+        // Balls own meshes + instanced resources — free those before destroying the
+        // entity (bare destroyEntity leaks the mesh). The table entity has no mesh.
+        const bs = world.systems.findSystemByName('BlockSystem') as any;
+        for (const eid of this.ballEids) {
+            if (bs?.destroyAdjunct) bs.destroyAdjunct(world, eid);
+            else world.destroyEntity?.(eid);
+        }
         if (this.tableEid != null) world.destroyEntity?.(this.tableEid);
         this.ballEids = [];
         this.tableEid = null;
