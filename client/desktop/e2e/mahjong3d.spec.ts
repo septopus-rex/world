@@ -104,7 +104,11 @@ test('3D mahjong: the table deals in the client and a discard reveals a tile', a
 });
 
 test('3D mahjong: a REAL mouse click on a hand tile discards it (truly playable)', async ({ page }) => {
-    test.setTimeout(180_000);
+    // The heaviest e2e: async 34-face CAS generation poll + FPV camera tilt +
+    // raycast verification + a REAL DOM click. ~2.9m even uncontended under
+    // software-WebGL, so it sits near a 180s budget and tips over when batched
+    // with the other specs in one worker. Give it a comfortable margin.
+    test.setTimeout(300_000);
     await bootDeterministic(page);
     await waitForDeal(page); // stream the block → loader generates faces + auto-deals
 
