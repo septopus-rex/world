@@ -4,10 +4,10 @@ import { AdjunctType } from '@engine/core/types/AdjunctType';
 /**
  * shootingScene — the NATIVE in-world shooting range (Plan B), the SHOT-and-REACT
  * counterpart to the native pool (continuous physics) and mahjong (discrete turn
- * based). NOT a game zone: the targets are physically "在场", driven by the
- * engine's ShootingRangeSystem (no mode-gating). The scene here is just the
- * furniture — a firing-line counter + a backstop wall; the System spawns the
- * sphere targets in front of the backstop and recolours them on hit.
+ * based). A ZONE-GATED game (raw[4]=1, #3): the scene is just the furniture — a
+ * firing-line counter + a backstop wall — while the ShootingRangeSystem spawns
+ * the sphere targets ON ENTERING Game and tears them down on leaving (walking
+ * off the block auto-exits). It recolours targets on hit (runtime recolour, #1).
  *
  * Sits one block SOUTH of the demo spawn (mahjong is west, pool north, external
  * mahjong east), so all four demos are neighbours the player can walk between.

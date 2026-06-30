@@ -3,11 +3,13 @@ import { AdjunctType } from '@engine/core/types/AdjunctType';
 
 /**
  * mahjong3dScene — the NATIVE in-world mahjong table (Plan B), the discrete
- * counterpart to the native 3D pool. Unlike the external-app mahjong block
- * (mahjongScene.ts, raw[4] = a Game Setting id), this is NOT a game zone: the
- * tiles are physically "在场" and driven by the engine's MahjongSystem, no
- * mode-gating. The scene here is just the furniture — a felt + legs + four
- * stools; the MahjongSystem spawns the 136 tiles, hands, and discards on top.
+ * counterpart to the native 3D pool. Like the external-app mahjong block
+ * (mahjongScene.ts) it is a game zone, but via the plain playable marker
+ * raw[4]=1 (NOT a registered Game-Setting id), so no external HUD starts — the
+ * MahjongSystem owns everything natively and is ZONE-GATED (#3): it deals the
+ * 136 tiles / hands / discards ON ENTERING Game and tears them down on leaving
+ * (walking off the block auto-exits). The scene here is just the furniture — a
+ * felt + legs + four stools.
  *
  * Sits one block WEST of the demo spawn (external mahjong is east, pool is north),
  * so the three demos are neighbours the player can walk between.

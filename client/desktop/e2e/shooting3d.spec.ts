@@ -112,3 +112,78 @@ test('3D shooting: zone-gated — enter Game to spawn, click to recolour, leave 
     // eslint-disable-next-line no-console
     console.log('SHOOTING3D', JSON.stringify({ spawned: st0.targetCount, score: st1.score, hit2: after[2].toString(16), others: [0, 1, 3, 4].map((i) => after[i].toString(16)), tornDown: true }));
 });
+
+test('3D shooting: WALKING out of the zone auto-exits Game and tears the round down; walking back re-arms a fresh round', async ({ page }) => {
+    test.setTimeout(180_000);
+    await bootDeterministic(page);
+
+    // Stand on the range block, face north (yaw 0), enter Game → 5 targets spawn.
+    await page.evaluate(([b]) => (window as any).loader.teleportSpp(b, [8, 6.0, 2]), [RANGE_BLOCK] as any);
+    await page.evaluate(() => (window as any).loader.engine.getWorld().renderEngine.setMainCameraRotation(0, 0, 0));
+    await stepEngine(page, 8);
+    expect(await page.evaluate(() => (window as any).loader.setMode('game')), 'entered Game in the zone').toBe(true);
+    await stepEngine(page, 4);
+    expect(await targetCount(page), '5 targets after entering').toBe(5);
+
+    // Score a hit, so re-entry can be PROVEN fresh (not a resumed round).
+    expect(await page.evaluate(() => (window as any).loader.engine.shootingFire(2))).toBe('hit');
+    await stepEngine(page, 2);
+    expect((await page.evaluate(() => (window as any).loader.engine.shootingState())).hits, 'one hit on the books').toBe(1);
+
+    const loc0 = await page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+    expect(loc0.block, 'standing on the range block').toEqual(RANGE_BLOCK);
+
+    // WALK EAST (yaw 0 → intent (1,0) is +X = east, the open side — furniture is
+    // N/S) until the player crosses off the range block. NO setMode call: the exit
+    // must be driven purely by leaving the zone, exactly as "走出一定范围就退出".
+    await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(1, 0));
+    let loc = loc0, crossed = false;
+    for (let i = 0; i < 80 && !crossed; i++) {
+        await stepEngine(page, 8);
+        loc = await page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+        crossed = loc.block[0] !== RANGE_BLOCK[0] || loc.block[1] !== RANGE_BLOCK[1];
+    }
+    await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));
+    expect(crossed, `walked off the range block (now on ${JSON.stringify(loc.block)})`).toBe(true);
+    await stepEngine(page, 4);
+
+    // Walking out ALONE flipped the mode back and tore the whole round down — no
+    // setMode, no eviction (the neighbour block is still in the 5×5 window).
+    const mode = await page.evaluate(() => (window as any).loader.engine.getWorld().mode);
+    expect(mode, 'leaving the zone auto-reverted to Normal').toBe('normal');
+    expect(await targetCount(page), 'targets torn down by walking out').toBe(0);
+    expect(await page.evaluate(() => (window as any).loader.engine.shootingState()), 'session gone').toBeNull();
+
+    // WALK BACK WEST onto the range block → the zone re-activates (Enter Game shows).
+    await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(-1, 0));
+    let back = false;
+    for (let i = 0; i < 80 && !back; i++) {
+        await stepEngine(page, 8);
+        const l = await page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+        back = l.block[0] === RANGE_BLOCK[0] && l.block[1] === RANGE_BLOCK[1];
+    }
+    await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));
+    expect(back, 'walked back onto the range block').toBe(true);
+    await stepEngine(page, 6);
+    await expect(page.locator('[data-testid="enter-game"]'), 'Enter Game shown again on return').toBeVisible();
+
+    // Re-enter → a FRESH round: 5 targets, scoreboard back to zero (the armed config
+    // survived the walk-out, but the previous hit did NOT carry over).
+    let reentered = false;
+    for (let i = 0; i < 12 && !reentered; i++) {
+        await stepEngine(page, 3);
+        reentered = await page.evaluate(() => {
+            const l = (window as any).loader;
+            return l.engine.getWorld().mode === 'game' ? true : l.setMode('game');
+        });
+    }
+    expect(reentered, 're-entered Game on return').toBe(true);
+    await stepEngine(page, 4);
+    const fresh = await page.evaluate(() => (window as any).loader.engine.shootingState());
+    expect(fresh.targetCount).toBe(5);
+    expect([fresh.score, fresh.shots, fresh.hits], 'fresh round resets the scoreboard').toEqual([0, 0, 0]);
+    expect(await targetCount(page), '5 fresh targets respawned').toBe(5);
+
+    // eslint-disable-next-line no-console
+    console.log('SHOOTING3D-WALKOUT', JSON.stringify({ leftAt: loc.block, modeAfterWalkout: mode, reentryTargets: fresh.targetCount, reentryHits: fresh.hits }));
+});

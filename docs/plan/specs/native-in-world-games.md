@@ -4,7 +4,7 @@
 > **由来**：用三个案例对抗性验证了这条缝——`PoolSystem`（连续物理）+ `MahjongSystem`（离散回合）+ `ShootingRangeSystem`（一击一反应/运行时改色）。核心回路已证明通用（对象即 adjunct、System 持逻辑、点击→动作、确定性、`derivedFrom` 防序列化、`destroyAdjunct` 防网格泄漏）。本文记录这些案例**没触及**或刚补上的部分。
 > **三种托管模式**（别混）：**A 外部 app**（GameSetting + GameRuntime + IGameApi + HUD，逻辑零引擎依赖、可服务端跑）·**B 原生 System**（本文，System 持逻辑、对象即 adjunct）·**C 纯数据驱动**（authored 块数据 + 通用 Trigger/Actuator/Flag/Health，**零专用代码**）。**跑酷 = C**（`core/levels/parkour.ts`，已落地+测；移动闯关/机关/门禁类用 C 就够，不该写 System）。选型口诀：**先问能不能 C，不能再上 B，需要服务端权威才上 A**。
 > **配套**：内容寻址/资源见 `specs/mock-ipfs-resource.md`；可玩化总清单见 `PLAYABLE_CHECKLIST.md`；记忆 `native-in-world-game-pattern.md`。
-> **更新**：2026-06-30 —— **#3 生命周期绑定落地**：三个原生游戏改成**区域门控 Game 游戏**（明确进入 spawn / 走出 block 自动退出 + teardown，复用 GameZoneSystem）。**这反转了早先「原生游戏故意不挂 Game 模式、在场」的决策**。同日：打靶（第三案例）+ 运行时改色通道（#1 改色子项 ✅）。2026-06-29 创建（双案例 gap 评估基线）。改一项就勾一项并更新本行。
+> **更新**：2026-06-30（晚）—— **#3 设计校正**：经讨论确认「写在 block 上的区域门控」**层放错了**——一块只能一个游戏（放不下一排扭蛋机），且把"哪里能玩"和"玩什么+在哪+参数"挤在一层。**校正为**：游戏富声明迁到 **game trigger**（`enterGame` 带 `gameId`/`origin`/`exitPolicy`，一块可多台），block 只留**粗粒度"此处可玩"位**；退出做成 per-game **`exitPolicy` 三档**（`ephemeral` 走出即拆＝现状 / `confirm` 弹框防误触 / `persistent` 存档重入）。**不新增第二个 SystemMode**（玩法门控不变）。文档已按此校正（本文 #3 + `game-mode-entry.md`），**代码待跟进**。2026-06-30（早）—— #3 单块 ephemeral 落地（区域门控 Game、复用 GameZoneSystem，反转早先「不挂 Game、在场」决策）+ 打靶第三案例 + 运行时改色（#1 子项 ✅）。2026-06-29 创建。改一项就勾一项并更新本行。
 
 ## 图例
 
@@ -20,8 +20,8 @@
 ## 推进顺序（按「挡不挡得住真人玩」）
 
 1. ✅ **可读对象**（#1）—— 麻将牌面（slot-7 内容寻址）+ **运行时改色**（打靶）均已落地。
-2. ✅ **生命周期绑定**（#3）—— 改成**区域门控 Game 游戏**：明确进入 spawn、走出 block 自动退出 + teardown（复用 GameZoneSystem）。
-3. **更丰富的场内输入**（#2）—— 让台球真正「在场可玩」，而非靠键盘/API。**下一项**。
+2. 🟡 **生命周期绑定**（#3）—— `ephemeral` 单块版**已落地**（区域门控 Game、走出即拆）；**设计已校正**为 trigger 声明 + `exitPolicy` 三档 + block 降粗位，**代码待跟进**（见下）。
+3. **更丰富的场内输入**（#2）—— 让台球真正「在场可玩」，而非靠键盘/API。
 4. 之后：HUD 外壳（#6，打靶/麻将/台球各有 HUD，仍缺通用外壳）、每实例化（#4）、玩家绑定/多人（#5）。
 
 ---
@@ -52,7 +52,7 @@
 
 **关键文件**：麻将牌面：`render/MeshFactory.ts`(`fit`/`getGeometry`)、`render/TextureScale.ts`、`core/types/Adjunct.ts`(`MaterialConfig.fit`)、`core/systems/MahjongSystem.ts`(`faceCids`/slot7)、`client/scenes/mahjongFaces.ts`、`client/lib/DesktopLoader.ts`(`mahjongFaceCids`)。运行时改色：`core/utils/Appearance.ts`、`core/components/VisualizationComponents.ts`(`MeshComponent.colorOverride/opacityOverride`)、`core/systems/VisualSyncSystem.ts`、`render/RenderEngine.ts`(`isolateMaterial`)、`core/systems/ShootingRangeSystem.ts`。验证：engine `mahjong.test.ts`(9) + `shooting.test.ts`(8) + e2e `mahjong3d.spec.ts`(3) + `shooting3d.spec.ts`(1，真实点击→绿变红、其余不染)。
 
-## #3 生命周期绑定（load / evict / persist）✅ 区域门控 Game 进入
+## #3 生命周期绑定（load / evict / persist）🟡 ephemeral 单块版 ✅ / trigger 声明 + exitPolicy 待建
 
 **曾经的病（已核）**：三个原生游戏当时是 Normal 下「在场」、`block.loaded {once}` 自动 spawn。游戏对象（牌/球/靶）是块的子 adjunct，命随块走；而游戏**状态**住在 System 私有字段 + 一个**游离的 table/range 实体**（`world.createEntity`，无 `parentBlockEntityId`）。玩家走远 → 5×5 窗外块**立即驱逐**（`removeBlock` 无差别销毁子 adjunct，`derivedFrom` 只挡序列化不挡驱逐）→ **对象没了、游离状态残留、System 持悬空 eid**；麻将的 bot 计时器还在内存里**空跑发牌**；而 `once` 钩子已消费 → 走回也不重建 → **半死、无法恢复**。
 
@@ -63,13 +63,24 @@
 - **明确进入/退出**：站上块出「▶ 进入游戏」（`data-testid="enter-game"`），点击 → `setMode(Game)`（守卫：仅 zone 内）；走出块自动退回 Normal（`exit-game` 亦可）。
 - **客户端几乎不改**：仍在 `block.loaded {once}` 上 arm 一次；进/出 Game 全由引擎管（引擎为真相源）。
 
-**代价（有意接受）**：「街机柜」模型——离开即弃局，回来是新一局（无中途存档）。中途存档（游戏状态进 DraftStore meta，同背包/玩家位置）是**可叠加的后续**，未做。
+**代价（有意接受）**：「街机柜」模型——离开即弃局，回来是新一局（无中途存档）。
 
-**仍开放（后续）**：
-- 中途存档（DraftStore meta）让重入接着玩同一局。
-- 数据驱动声明：把「此块是 X 游戏 + 参数」放进块数据，引擎通用实例化（替代客户端 arm 的硬编码块坐标）。
+### 设计校正（2026-06-30 晚）—— ephemeral 单块版只是第一档，声明该迁到 trigger
 
-**关键文件**：`core/systems/{Pool,Mahjong,ShootingRange}System.ts`（arm/syncSession/startSession/endSession + playerInBlock）、`core/systems/GameZoneSystem.ts`、`World.setMode` 守卫、客户端 `scenes/{shooting,mahjong3d}Scene.ts`（raw[4]=1）。验证：engine `shooting.test.ts`（含 zone-gated spawn + 退出 teardown + 重入 fresh）、e2e `shooting3d.spec.ts`（走上块→无棋子+进入提示→进入→spawn→点击变红→退出→拆除）。
+落地后讨论暴露两点，确认上面的"区域门控写在 block 上"**层放错了**：
+
+1. **"走出即退出"是错的默认**：对打靶/扭蛋这种街机柜，走开＝结束本就对（这是 `ephemeral`）；但它**未被声明**、且对"已玩几分钟的单局麻将"**静默丢局**很难受 → 需要 per-game **`exitPolicy`**（`ephemeral` / `confirm` 弹框 / `persistent` 存档重入）。**不新增第二个 SystemMode**——玩法门控（`mode===Game` 12+ 处）不变，策略只管会话怎么收场。
+2. **一块一游戏放不下一排扭蛋机**：`block.game` 标量把"哪里能玩"（粗）和"玩什么+在哪+参数"（细）挤在一层 → 富声明迁到 **game trigger**（`b8` + `enterGame` 带 `gameId`/`origin`/`exitPolicy`，一块可多台），block 只留**粗粒度"此处可玩"位**。现成的 `GameRuntimeSystem` gameId→GameSetting 解析**直接复用**，只换 `gameId` 来源（block → trigger）。**顺带干掉客户端硬编码 arm 坐标**（下方"仍开放"的数据驱动声明随之解决）。
+
+完整校正后的契约见 `docs/systems/game-mode-entry.md`（§1 声明在 trigger、§2 exitPolicy、§8 实现状态与顺序）。
+
+**仍开放（后续，按建议顺序）**：
+- ① `enterGame` 带 `gameId`/`params`/`exitPolicy` + game trigger 入口（开"一块多游戏"，替代客户端硬编码块坐标）。
+- ② `exitPolicy` `ephemeral`（＝现状，声明化）+ `confirm`（`game.leave_intent` + 客户端弹框，防误触丢局）。
+- ③ `block.game` 降级为粗粒度位（可由"块内是否有 game trigger"派生）。
+- ④ `persistent`（中途存档进 DraftStore meta）+ 跨多块区域预加载（依赖 `coaster-via-spp.md §9.1/M2.5`；`ephemeral` 单块不需要）。
+
+**关键文件**：`core/systems/{Pool,Mahjong,ShootingRange}System.ts`（arm/syncSession/startSession/endSession + playerInBlock）、`core/systems/GameZoneSystem.ts`、`World.setMode` 守卫、`core/services/Actuator.ts`（`enterGame` 待带 gameId）、`core/systems/GameRuntimeSystem.ts`（解析管道）、客户端 `scenes/{shooting,mahjong3d}Scene.ts`（现 `raw[4]=1`）。验证：engine `shooting.test.ts`（zone-gated spawn + 退出 teardown + 重入 fresh）、e2e `shooting3d.spec.ts`（走上块→无棋子+进入提示→进入→spawn→点击变红→**真实走出 block 自动退出+拆除**→走回重入 fresh）。
 
 ## #2 输入只有「单击 → 离散动作」🔲
 
