@@ -409,6 +409,30 @@ export class Engine {
         return w ? (w.systems.findSystemByName('ShootingRangeSystem') as any)?.snapshot(w) ?? null : null;
     }
 
+    /** Build a 3D tumble tower (Jenga) on the given block (TumbleSystem owns the
+     *  rigid-body physics via rapier; pieces are a2 box adjunct entities it spawns
+     *  and drives — the first native game with a REAL physics topple). Clicking a
+     *  block in-world pulls it through the raycast path. */
+    public setupTumble(config: import('./core/systems/TumbleSystem').TumbleConfig): void {
+        const w = this.world;
+        if (w) (w.systems.findSystemByName('TumbleSystem') as any)?.configure(w, config);
+    }
+
+    /** Current tumble-tower state (standing/pulled/maxY/toppled/settled), or null.
+     *  Read-only snapshot for HUDs and tests. */
+    public tumbleState(): any {
+        const w = this.world;
+        return w ? (w.systems.findSystemByName('TumbleSystem') as any)?.snapshot(w) ?? null : null;
+    }
+
+    /** Pull a tower piece by its stable blockId (null-safe) — a no-aim convenience
+     *  for HUDs/tests; clicking a block in-world does the same through the raycast
+     *  path. Returns whether a piece was pulled. */
+    public tumblePull(blockId: number): boolean {
+        const w = this.world;
+        return w ? !!(w.systems.findSystemByName('TumbleSystem') as any)?.pullById(w, blockId) : false;
+    }
+
     /**
      * Load a DYNAMIC adjunct from sandboxed code and register it by the type-id it
      * declares, so any block referencing that id materializes it like a built-in.

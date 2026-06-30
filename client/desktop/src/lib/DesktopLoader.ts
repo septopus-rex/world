@@ -35,6 +35,7 @@ import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
 import { generateMahjongFaceCids } from '../scenes/mahjongFaces';
 import { SHOOTING_BLOCK, SHOOTING_ORIGIN, SHOOTING_TARGET_DIST, SHOOTING_TARGET_Z, buildShootingScene } from '../scenes/shootingScene';
+import { TUMBLE_BLOCK, TUMBLE_ORIGIN, buildTumbleScene } from '../scenes/tumbleScene';
 import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
@@ -80,6 +81,12 @@ export class DesktopLoader implements IDataSource {
     public get shootingReady(): boolean { return this._shootingReady; }
     /** Read-only shooting-range snapshot (score/shots/hits/phase) for the HUD. */
     public shootingState(): any { return this.engine?.shootingState() ?? null; }
+
+    /** True once the native 3D tumble tower is armed (drives any tumble HUD). */
+    private _tumbleReady = false;
+    public get tumbleReady(): boolean { return this._tumbleReady; }
+    /** Read-only tumble-tower snapshot (standing/pulled/maxY/toppled/settled). */
+    public tumbleState(): any { return this.engine?.tumbleState() ?? null; }
 
     /** `?level=<name>` selects an authored level instead of the demo court. */
     private level = typeof window !== 'undefined'
@@ -291,6 +298,12 @@ export class DesktopLoader implements IDataSource {
         // (ShootingRangeSystem owns the score/timer). Shooting is the engine's own
         // raycast pick — click a target to hit it (interact.primary → the System).
         this.engine.on('block.loaded', () => this.setupShooting3D(), { key: `blk:${SHOOTING_BLOCK[0]}_${SHOOTING_BLOCK[1]}`, once: true });
+
+        // Native 3D tumble tower (Jenga): when its block materializes, arm the
+        // TumbleSystem (it builds the rigid-body tower on Game entry and tears it
+        // down on leaving). Clicking a piece pulls it (interact.primary → System);
+        // the rest of the tower reacts under real physics (rapier).
+        this.engine.on('block.loaded', () => this.setupTumble3D(), { key: `blk:${TUMBLE_BLOCK[0]}_${TUMBLE_BLOCK[1]}`, once: true });
         if (typeof window !== 'undefined') {
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'KeyB' && this._poolReady) this.poolShootFromCamera();
@@ -544,6 +557,7 @@ export class DesktopLoader implements IDataSource {
         if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);
         if (x === NATIVE_MAHJONG_BLOCK[0] && y === NATIVE_MAHJONG_BLOCK[1]) return buildMahjong3DScene(x, y);
         if (x === SHOOTING_BLOCK[0] && y === SHOOTING_BLOCK[1]) return buildShootingScene(x, y);
+        if (x === TUMBLE_BLOCK[0] && y === TUMBLE_BLOCK[1]) return buildTumbleScene(x, y);
         if (x === POOL_BLOCK[0] && y === POOL_BLOCK[1]) return buildPoolScene(x, y);
         if (x === MAZE_BLOCK[0] && y === MAZE_BLOCK[1]) return buildMazeScene(x, y);
         if (x === SANDBOX_BLOCK[0] && y === SANDBOX_BLOCK[1]) return buildSandboxScene(x, y);
@@ -1031,6 +1045,14 @@ export class DesktopLoader implements IDataSource {
             duration: 60, litTime: 1.2,
         });
         this._shootingReady = true;
+    }
+
+    /** Arm the native 3D tumble tower (TumbleSystem owns the rigid-body physics;
+     *  pieces are a2 box adjuncts it spawns on Game entry and drives via rapier).
+     *  Clicking a piece pulls it through the engine's raycast path. */
+    private setupTumble3D(): void {
+        this.engine?.setupTumble({ block: TUMBLE_BLOCK, origin: TUMBLE_ORIGIN });
+        this._tumbleReady = true;
     }
 
     /** kind → face-image CID, generated + ingested once (memoized). */

@@ -20,6 +20,7 @@ import { CoasterSystem } from './systems/CoasterSystem';
 import { PoolSystem } from './systems/PoolSystem';
 import { MahjongSystem } from './systems/MahjongSystem';
 import { ShootingRangeSystem } from './systems/ShootingRangeSystem';
+import { TumbleSystem } from './systems/TumbleSystem';
 import { MinimapSystem } from './systems/MinimapSystem';
 import { AnimationSystem } from './systems/AnimationSystem';
 import { GridSystem } from './systems/GridSystem';
@@ -333,6 +334,11 @@ export class World {
         // pool/mahjong both dodged), in the same pre-sync slot so the colour change
         // lands the same frame.
         this.systems.addSystem(new ShootingRangeSystem());
+        // 3D tumble tower (Jenga): the first native game with a REAL rigid-body
+        // topple (rapier, scoped per-session world). Steps the solver and writes
+        // block body poses (position + rotation) in the same pre-sync slot, so
+        // VisualSync moves AND turns the meshes as the tower leans and falls.
+        this.systems.addSystem(new TumbleSystem());
 
         // Final Sync: Presentation Layer
         this.systems.addSystem(new VisualSyncSystem());
