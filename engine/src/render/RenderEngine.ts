@@ -216,6 +216,9 @@ export class RenderEngine {
     }
 
     public setObjectRotation(handle: RenderHandle, x: number, y: number, z: number): void {
+        // Adjunct rotation = engine-frame Euler, default XYZ order, radians, about
+        // center (NOT heading-converted; only player yaw is). Normative cross-engine
+        // contract: docs/architecture/coordinate.md §3.1. Camera uses YXZ (see :92).
         (handle as THREE.Object3D).rotation.set(x, y, z);
     }
 

@@ -68,6 +68,16 @@ const adjunct_position = {
 `渲染器世界坐标 X = (Block_X - 1) * Block宽度 + Adjunct_OX`
 然后将整套算出数值传递给 Three.js 对象。
 
+### 3.1 旋转的欧拉序与坐标系（跨引擎契约）
+
+`[rx, ry, rz]` 的语义必须写死，否则换一台引擎（如 UE）朝向就会歪。规范如下：
+
+- **单位**：弧度。**枢轴 (pivot)**：物体几何体的**中心**（`size` 是全长包围盒，见 §3）。
+- **欧拉序**：**Adjunct 用 `XYZ` 序**（Three.js `Euler` 默认序，`RenderEngine.setObjectRotation` 直接 `rotation.set(rx,ry,rz)`）。**玩家/相机用 `YXZ` 序**（防倾覆/万向锁）——两者是**不同**的序，别混。
+- **坐标系（关键）**：Adjunct 的 `[rx,ry,rz]` **直接在引擎系应用，不经朝向换算**——即它是**引擎系欧拉角**，与 §1.1 的 `engineYawToHeading` **无关**。只有**玩家 yaw**（导航/罗盘语义）才走 `sppRotationToEngine` 的 heading 换算；Adjunct 是「作者直接按引擎朝向摆放」。
+  > 由此有个**不对称**要留意：Adjunct 的**位置**按 SPP 系 author（经 `localSppToEngine` 转 −North），**旋转**却按引擎系 author（原样应用）。author 内容时以此为准。
+- **UE 等其它引擎实现**：按上面把 `[rx,ry,rz]` 当引擎系 XYZ 欧拉角、绕中心应用即可对齐（观感等价，非逐位相同）。
+
 ## 4. 精度与防抖动机制
 
 在 Web3D 尤其是基于 WebGL 的大世界渲染中，浮点数精度丢失极易引起远处模型的重叠闪烁（Z-Fighting）或模型抖动变形。

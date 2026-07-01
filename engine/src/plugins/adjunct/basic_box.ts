@@ -116,7 +116,9 @@ const attribute: AdjunctAttribute = {
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
         return stds.map((row, index) => {
-            // Color Mapping based on resource index
+            // Color Mapping based on resource index. NON-NORMATIVE legacy/demo
+            // convenience — cross-engine content should author an explicit hex
+            // color instead of relying on this palette (protocol/adjunct.md §6).
             const resId = (row.material?.resource as any) || 0;
             let color = 0x888888; // Default Gray
 

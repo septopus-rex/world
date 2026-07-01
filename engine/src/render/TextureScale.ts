@@ -23,7 +23,9 @@ import * as THREE from 'three';
  * texture dedup.
  */
 
-/** Default world-space size of one texture tile (metres). 1 tile per 2 m. */
+/** Default world-space size of one texture tile (metres). 1 tile per 2 m.
+ *  Normative cross-engine contract (repeat_per_face = faceSizeMeters / TILE_METERS):
+ *  protocol/{cn,en}/adjunct.md §6 — another engine must match this density to align. */
 export const DEFAULT_TILE_METERS = 2;
 
 /**

@@ -91,7 +91,8 @@ cd engine && yarn build                            # tsc
 ## 文档索引
 
 - `docs/plan/STANDALONE_ENGINE_ROADMAP.md` — 开发路线图（链剥离记录 + 旧引擎退役 + 后续 P1–P5）。
-- `docs/plan/PLAYABLE_CHECKLIST.md` — **可玩化落地清单**（从技术 demo 到用户可玩的 gap 追踪 + 首迭代）。
+- `docs/plan/PLAYABLE_CHECKLIST.md` — **可玩化落地清单**（从技术 demo 到用户可玩的 gap 追踪 + 首迭代；内容/产品视角）。
+- `docs/plan/GAME_SYSTEMS_BACKLOG.md` — **游戏引擎系统缺口清单**（引擎原语视角：F1 调度/生成 · F2 NPC/AI · F3 战斗 · F4 对话任务；逐个处理。联网=外部已定，game-mode 已定）。
 - `docs/plan/specs/phase0-engine-consolidation.md` — 引擎收敛规格。
 - `docs/plan/specs/coaster-via-spp.md` — **用 SPP 搭过山车**设计稿（连通→theme 几何 + CoasterSystem 运动；未落地）。
 - `docs/plan/specs/2d-map.md` — **2D 世界地图**设计规格（解除"有意不移植"；视口窗口化按需流式、复用 `block.need` 块通道、非全局索引；参考旧引擎 `control_2d.js`+`render_2d.js` 的逐块顶面俯视投影；**规划中**）。
