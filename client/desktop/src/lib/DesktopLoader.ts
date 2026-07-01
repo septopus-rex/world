@@ -401,6 +401,10 @@ export class DesktopLoader implements IDataSource {
             { block: (x, y) => this.sceneBlock(x, y) } as SceneProvider,
             this.engine.getWorld()!.draftStore,
             0,
+            // Route scene seeds through the content-addressed block store: block
+            // content is now content-addressed (CID) like resources, over the same
+            // mock-IPFS router (第二/三期, spec mock-ipfs-block.md).
+            this.engine.getWorld()!.blockCas,
         );
 
         // Parkour: load the persisted best time for the HUD.
@@ -583,6 +587,19 @@ export class DesktopLoader implements IDataSource {
         this.engine.injectBlock({ x: bx, y: by, adjuncts: merged.raw, elevation: merged.raw[0] });
         this.loadedBlockKeys.add(`${bx}_${by}`);
         console.log(`[Loader] stamped test scene onto block ${bx}_${by} (persisted)`);
+    }
+
+    /**
+     * Publish the current effective block (seed + local edits) into the CAS and
+     * return its content id (CID) — the 第三期「发布块到 CAS」primitive. This is
+     * how a locally-authored block becomes content-addressed; DraftStore stays the
+     * working copy. (A full editor button lives in the React UI; this is the seam.)
+     */
+    public async publishBlock(bx: number, by: number): Promise<string | null> {
+        if (!this.localData) return null;
+        const cid = await this.localData.publish(bx, by);
+        if (cid) console.log(`[Loader] published block ${bx}_${by} → ${cid}`);
+        return cid;
     }
 
     /**

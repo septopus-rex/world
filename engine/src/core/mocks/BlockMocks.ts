@@ -1,9 +1,13 @@
 import { AdjunctType } from '../types/AdjunctType';
+import { normalizeBlockRaw } from '../protocol/BlockRaw';
 /**
  * BlockMocks.ts
- * 
- * Provides mock block data in the native Septopus raw format.
- * Format: [elevation, status, adjuncts_list, animations_library]
+ *
+ * Provides mock block data in the CANONICAL Septopus block raw format
+ * (5-slot: [elevation, status, adjuncts, animations, game]; see
+ * core/protocol/BlockRaw.ts). The `{x,y,raw}` wrapper is a legacy addressing
+ * shape unwrapped at the single seam (DesktopLoader.sceneBlock → `.raw`); the
+ * SceneProvider contract itself is the bare canonical raw.
  */
 
 export function MockBlockData(x: number, y: number): any {
@@ -124,12 +128,14 @@ export function MockBlockData(x: number, y: number): any {
     return {
         x,
         y,
-        raw: [
+        // Canonical 5-slot (game=0: these mock blocks are not playable zones).
+        // normalizeBlockRaw pads the game slot and sorts adjunct groups by typeId.
+        raw: normalizeBlockRaw([
             0, // elevation
             1, // status
             adjunctsRaw,
             animations
-        ]
+        ])
     };
 }
 

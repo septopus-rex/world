@@ -8,6 +8,7 @@
  */
 import { BlockDraft, DraftStore } from './DraftStore';
 import { ProtocolError } from '../errors';
+import { validateBlockRaw } from '../protocol/BlockRaw';
 
 export const EXPORT_FORMAT = 'septopus.world.drafts';
 export const EXPORT_VERSION = 1 as const;
@@ -63,6 +64,15 @@ export class ExportService {
         let imported = 0;
         for (const d of file.drafts) {
             if (!d || typeof d.blockKey !== 'string' || !Array.isArray(d.raw)) continue; // skip corrupt rows
+            // Import boundary: external JSON is untrusted — reject structurally
+            // invalid block raw (spec mock-ipfs-block §1.4). Content is preserved
+            // as-is to keep export→import an identical round-trip; canonicalization
+            // is a serialize/CAS-time concern, not an import-time rewrite.
+            try {
+                validateBlockRaw(d.raw);
+            } catch {
+                continue; // skip a malformed block rather than poison the store
+            }
             this.store.put({
                 version: 1,
                 timestamp: d.timestamp ?? Date.now(),

@@ -343,6 +343,13 @@ export class Engine {
         return this.world?.ipfs ?? null;
     }
 
+    /** Content-addressed BLOCK store (authored block raw ↔ CID) over the same
+     *  router. The data-source layer routes scene seeds through it so block
+     *  content is content-addressed. Null before bootWorld. */
+    public get blockCas() {
+        return this.world?.blockCas ?? null;
+    }
+
     /** External realtime transport (ILiveSource) feeding world.events via
      *  LiveSystem. The client subscribes()/pushes through its own implementation;
      *  this exposes whatever was injected. Null before bootWorld. */

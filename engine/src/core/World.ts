@@ -7,6 +7,7 @@ import { SystemManager } from './SystemManager';
 import { WorldBridge } from './WorldBridge';
 import { EntityFactory } from './EntityFactory';
 import { IpfsRouter, MemoryCasProvider } from './services/ipfs';
+import { BlockCas } from './services/BlockCas';
 
 // Systems (Imported only for registration in constructor or specialized logic)
 import { PhysicsSystem } from './systems/PhysicsSystem';
@@ -122,6 +123,10 @@ export class World {
     /** Content-addressed resource router (CID → provider → bytes). Hosts ingest
      *  assets into it and ResourceManager resolves CIDs through it. */
     public readonly ipfs: IpfsRouter;
+    /** Content-addressed BLOCK store over the same router: authored block raw ↔
+     *  CID (spec mock-ipfs-block.md). The data-source layer (LocalDataSource)
+     *  routes scene seeds through this so block content is content-addressed too. */
+    public readonly blockCas: BlockCas;
 
     // 3. Simulation State
     private lastTime: number = 0;
@@ -286,6 +291,7 @@ export class World {
         // (the "mock IPFS"). Hosts ingest assets into it; ResourceManager resolves
         // CID raws through it. Swappable for a local gateway / real IPFS later.
         this.ipfs = new IpfsRouter([new MemoryCasProvider()]);
+        this.blockCas = new BlockCas(this.ipfs);
 
         this.resourceManager = new ResourceManager(
             deps.dataSource ?? NULL_DATA_SOURCE,

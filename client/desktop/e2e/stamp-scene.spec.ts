@@ -34,7 +34,12 @@ async function blockCensus(page: any, bx: number, by: number) {
 }
 
 test('stamp test scene onto an empty block, persist across reload, then reset', async ({ page }) => {
-  test.setTimeout(90_000);
+  // This test does two full reloads, each re-booting under SwiftShader software
+  // rendering. Boot alone stalls the main thread ~29s (initial 25-block materialise
+  // + shader compile after engine.stop() — measured identical on a clean tree), so
+  // the 3-boot sequence lands right at ~86-90s. Give it headroom rather than flake
+  // at the boundary (same batch-contention practice as the mahjong FPV budget).
+  test.setTimeout(150_000);
   await bootDeterministic(page);
 
   // Seed state: the target block has only the procedural ground.
