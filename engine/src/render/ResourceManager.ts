@@ -4,6 +4,7 @@ import { IDataSource } from '../core/services/DataSource';
 import { isCid } from '../core/services/ipfs';
 import type { IpfsRouter } from '../core/services/ipfs';
 import { IModelLoader, ModelLoader } from './loaders/ModelLoader';
+import { reportError } from '../core/errors';
 
 /**
  * ResourceManager — the single load-once-by-id authority for external 3D assets
@@ -177,8 +178,12 @@ export class ResourceManager {
         });
 
         this.models.set(id, promise);
-        // If the load fails, drop the cached promise so a later request can retry.
-        promise.catch(() => { if (this.models.get(id) === promise) this.models.delete(id); });
+        // If the load fails, drop the cached promise so a later request can retry,
+        // and surface it (was silent) — revives resource.failed via WorldEventSink.
+        promise.catch((e) => {
+            if (this.models.get(id) === promise) this.models.delete(id);
+            reportError(e, { tag: '[ResourceManager]', severity: 'warn', code: 'RESOURCE_LOAD', kind: 'model', id });
+        });
         return promise;
     }
 
@@ -295,7 +300,10 @@ export class ResourceManager {
         });
 
         this.textures.set(id, promise);
-        promise.catch(() => { if (this.textures.get(id) === promise) this.textures.delete(id); });
+        promise.catch((e) => {
+            if (this.textures.get(id) === promise) this.textures.delete(id);
+            reportError(e, { tag: '[ResourceManager]', severity: 'warn', code: 'RESOURCE_LOAD', kind: 'texture', id });
+        });
         return promise;
     }
 

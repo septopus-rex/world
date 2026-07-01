@@ -49,6 +49,9 @@ export interface EventMap {
     // ── resource ──
     'resource.parsed': { kind: 'model' | 'texture'; id: string };
     'resource.failed': { kind: 'model' | 'texture'; id: string; error: string };
+    // ── error (typed-error general channel; WorldEventSink → core/errors) ──
+    'engine.error': { code: string; severity: 'fatal' | 'error' | 'warn' | 'debug';
+                      message: string; userMessage?: string; kind?: string; id?: string };
     // ── interact ──
     'interact.primary': { metadata: unknown; distance: number; point: [number, number, number] };
     'interact.context': { metadata: unknown; distance: number; point: [number, number, number]; screenPos: [number, number] };

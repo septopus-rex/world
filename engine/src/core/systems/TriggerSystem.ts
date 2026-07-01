@@ -1,4 +1,5 @@
 import jsonLogic from 'json-logic-js';
+import { reportError } from '../errors';
 import { World, ISystem, EntityId } from '../World';
 import { TriggerComponent, TriggerEvent } from '../components/TriggerComponent';
 import { TransformComponent } from '../components/PlayerComponents';
@@ -218,12 +219,21 @@ export class TriggerSystem implements ISystem {
         }
     }
 
+    /** Hoisted so the per-frame condition path allocates nothing (this runs every
+     *  frame the player is near a conditional trigger — keep it baseline-cheap). */
+    private static readonly _CONDCTX = { tag: '[TriggerSystem]', severity: 'warn' as const, code: 'CONDITION_EVAL' as const };
+
     /** Returns true when there are no conditions, or when JSONLogic evaluates truthy. */
     private _evalConditions(event: TriggerEvent, ctx: WorldContext): boolean {
         if (!event.conditions) return true;
+        // Inline try/catch (not the `attempt` closure) keeps the hot success path
+        // byte-for-byte the baseline cost — no per-call ctx alloc, no extra call.
+        // A malformed condition still evaluates to false, but is now REPORTED, not
+        // silently swallowed (was `catch { return false }`). See core/errors.
         try {
             return !!jsonLogic.apply(event.conditions, ctx as unknown as Record<string, unknown>);
-        } catch {
+        } catch (e) {
+            reportError(e, TriggerSystem._CONDCTX);
             return false;
         }
     }

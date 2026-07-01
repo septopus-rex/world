@@ -1,4 +1,5 @@
 import { AdjunctSandbox } from './AdjunctSandbox';
+import { retry, attemptAsync, reportError } from '../errors';
 
 /**
  * AdjunctLoader — dynamic loader for adjunct code from IPFS (and, later, chain).
@@ -76,48 +77,52 @@ export class AdjunctLoader {
     }
 
     private async fetchFromIPFS(cid: string): Promise<string> {
-        let lastError: unknown = null;
-        for (let i = 0; i < this.retryCount; i++) {
-            try {
+        // retryCount / backoff are parameters now, not an inline loop; on
+        // exhaustion `retry` reports (severity 'error') and throws the typed
+        // last error. See core/errors §6.
+        return retry(
+            { tag: '[AdjunctLoader]', code: 'RESOURCE_LOAD', kind: 'cid', id: cid },
+            async () => {
                 const controller = new AbortController();
                 const timer = setTimeout(() => controller.abort(), this.timeout);
-                const res = await fetch(`${this.ipfsGateway}${cid}`, {
-                    signal: controller.signal,
-                    headers: { Accept: 'text/javascript, application/javascript' },
-                });
-                clearTimeout(timer);
-                if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-                const code = await res.text();
-                if (code.length > this.maxCodeSize) throw new Error(`Code too large: ${code.length} bytes`);
-                return code;
-            } catch (err) {
-                lastError = err;
-                if (i < this.retryCount - 1) {
-                    await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
+                try {
+                    const res = await fetch(`${this.ipfsGateway}${cid}`, {
+                        signal: controller.signal,
+                        headers: { Accept: 'text/javascript, application/javascript' },
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                    const code = await res.text();
+                    if (code.length > this.maxCodeSize) throw new Error(`Code too large: ${code.length} bytes`);
+                    return code;
+                } finally {
+                    clearTimeout(timer);
                 }
-            }
-        }
-        throw new Error(`Failed to fetch ${cid} after ${this.retryCount} attempts: ${String((lastError as any)?.message ?? lastError)}`);
+            },
+            { tries: this.retryCount, backoffMs: 1000 },
+        );
     }
 
     async verifyCodeHash(code: string, expectedHash: string): Promise<boolean> {
-        try {
-            const data = new TextEncoder().encode(code);
-            const buf = await crypto.subtle.digest('SHA-256', data);
-            const actual = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
-            return actual === expectedHash;
-        } catch {
-            return false;
-        }
+        // Safe default false (verification failed) on a crypto error — now
+        // reported instead of silently swallowed.
+        return attemptAsync(
+            { tag: '[AdjunctLoader]', severity: 'warn', code: 'ADJUNCT_VALIDATE' },
+            async () => {
+                const data = new TextEncoder().encode(code);
+                const buf = await crypto.subtle.digest('SHA-256', data);
+                const actual = Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join('');
+                return actual === expectedHash;
+            },
+            false,
+        );
     }
 
     async preload(list: Array<{ ipfsHash?: string; codeHash?: string; name?: string }>): Promise<void> {
         await Promise.allSettled(
             list.map(async (a) => {
-                if (a.ipfsHash) {
-                    try { await this.loadFromIPFS(a.ipfsHash, a.codeHash); }
-                    catch (e) { console.warn(`[AdjunctLoader] preload failed for ${a.name ?? a.ipfsHash}:`, e); }
-                }
+                if (!a.ipfsHash) return;
+                try { await this.loadFromIPFS(a.ipfsHash, a.codeHash); }
+                catch (e) { reportError(e, { tag: '[AdjunctLoader]', severity: 'debug', code: 'RESOURCE_LOAD', kind: 'cid', id: a.name ?? a.ipfsHash }); }
             }),
         );
     }

@@ -6,6 +6,7 @@ import { Joystick } from './components/Joystick';
 import { Compass } from './components/HUD';
 import { InventoryPanel } from './components/InventoryPanel';
 import { HealthBar } from './components/HealthBar';
+import { Toaster } from './components/Toaster';
 import { ParkourHUD } from './components/ParkourHUD';
 import { MahjongHUD } from './components/MahjongHUD';
 import { PoolHUD } from './components/PoolHUD';
@@ -135,6 +136,7 @@ function App() {
 
       {ready && <InventoryPanel loader={loader} />}
       {ready && <HealthBar loader={loader} />}
+      {ready && <Toaster loader={loader} />}
       <ParkourHUD loader={loader} ready={ready} />
       <ShootingHUD loader={loader} ready={ready} />
       <WorldMap2D loader={loader} open={show2DMap} onClose={() => setShow2DMap(false)} />

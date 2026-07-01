@@ -48,6 +48,7 @@ import { IGameApi, NullGameApi } from './services/IGameApi';
 import { GameSetting } from './types/GameSetting';
 import { GameRuntime } from './services/GameRuntime';
 import { EventQueue } from './events/EventQueue';
+import { addSink, WorldEventSink } from './errors';
 import { IdbDraftBackend, hasIndexedDB } from './services/IdbDraftBackend';
 import { ResourceManager, ResourceManagerConfig } from '../render/ResourceManager';
 import { MeshFactory } from '../render/MeshFactory';
@@ -237,6 +238,8 @@ export class World {
      * adopt readers channel-by-channel (spec §7).
      */
     public readonly events = new EventQueue(this);
+    /** Removes this world's WorldEventSink from the global error registry (dispose). */
+    private _errorSinkOff?: () => void;
 
     /**
      * Facades for external UI/Loader compatibility
@@ -250,6 +253,12 @@ export class World {
         this.config = config;
         this.bridge = new WorldBridge(this);
         Coords.BLOCK_SIZE = config.world.block[0];
+
+        // Route reported errors onto THIS world's event queue (revives
+        // resource.failed + engine.error). ConsoleSink stays global; this sink
+        // is added now and removed in dispose(). Installed early so failures
+        // during the rest of construction still surface. See core/errors.
+        this._errorSinkOff = addSink(new WorldEventSink(this.events, this));
 
         this.draftStore = new DraftStore(
             deps.draftBackend !== undefined
@@ -501,6 +510,7 @@ export class World {
         // pins subscriber closures (and whatever they capture) past the World's
         // life, and the resize handler pins the whole World via this.renderEngine.
         this.listeners.clear();
+        this._errorSinkOff?.();          // stop routing errors to a dead event queue
         this.events.dispose();
         if (typeof window !== 'undefined') {
             window.removeEventListener('resize', this._onResize, false);
