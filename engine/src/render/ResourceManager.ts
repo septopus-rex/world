@@ -48,11 +48,16 @@ export interface ModelEntry {
     animations: THREE.AnimationClip[];
     /** Live clone count; template is disposed when this returns to 0 on release. */
     refCount: number;
+    /** The unresolved source (CID/URL/path). Kept so release() can revoke a
+     *  router-cached blob: URL once the last instance is gone. */
+    src?: string;
 }
 
 interface TextureEntry {
     texture: THREE.Texture;
     refCount: number;
+    /** See ModelEntry.src — drives blob:-URL revocation on releaseTexture(). */
+    src?: string;
 }
 
 /** Loader that turns an already-resolved URL into a THREE.Texture. Injectable for tests. */
@@ -71,6 +76,13 @@ export interface ResourceManagerConfig {
     ipfsRouter?: IpfsRouter;
     maxConcurrent?: number;
     /**
+     * LRU cap on resolved audio URLs. Audio is transient (play-and-forget), so it
+     * has no per-instance holder to refcount — instead the least-recently-used
+     * entries are evicted past this cap, and any router-cached blob: URL they hold
+     * is revoked. Keeps memory bounded without thrashing decode of hot sounds.
+     */
+    maxAudioUrls?: number;
+    /**
      * Max texture anisotropy (from renderer.capabilities.getMaxAnisotropy()).
      * Raising anisotropy is the single biggest defense against grazing-angle
      * shimmer/blur on long or large faces (floors, walls, pipes) — the main
@@ -87,6 +99,7 @@ export class ResourceManager {
     private readonly ipfsRouter?: IpfsRouter;
     private readonly maxConcurrent: number;
     private readonly maxAnisotropy: number;
+    private readonly maxAudioUrls: number;
 
     // Promise-keyed caches: fetch+decode dedup under concurrent bursts.
     private models = new Map<string, Promise<ModelEntry>>();
@@ -108,30 +121,63 @@ export class ResourceManager {
         // Cap anisotropy at 8: near-indistinguishable from higher on most GPUs but
         // cheaper. 0/undefined renderer caps fall back to 1 (no anisotropic filtering).
         this.maxAnisotropy = Math.max(1, Math.min(8, config.maxAnisotropy ?? 8));
+        this.maxAudioUrls = Math.max(1, config.maxAudioUrls ?? 64);
     }
 
     // ── Audio ─────────────────────────────────────────────────────────────────
 
-    private audioUrls = new Map<string, Promise<string>>();
+    // id → { resolved URL, unresolved src }. LRU-ordered (Map insertion order):
+    // a cache hit is re-inserted at the tail, the head is the eviction victim.
+    private audioUrls = new Map<string, Promise<{ url: string; src: string }>>();
 
     /**
-     * Resolve an audio resource id to a playable URL (record served through the
-     * same datasource channel as models; CID/path/data via resolveUrl). Cached —
-     * the actual AudioBuffer decode is cached separately by the render layer.
+     * Resolve an audio resource id (or a direct URL/CID) to a playable URL. Served
+     * through the dedicated audio channel when the source provides one, else the
+     * module channel; CID/path/data go through resolveUrl (same as models). The
+     * decode → AudioBuffer is cached separately by the render layer.
+     *
+     * LRU-bounded: audio is play-and-forget with no instance to refcount, so entries
+     * past maxAudioUrls are evicted (and their blob: URL bytes reclaimed) rather than
+     * kept forever — the fix for the old unbounded audioUrls growth.
      */
     async getAudioUrl(resourceId: string | number): Promise<string> {
         const id = String(resourceId);
-        let promise = this.audioUrls.get(id);
-        if (!promise) {
-            promise = (async () => {
-                const records = await this.datasource.module([Number(id)]);
+        let entry = this.audioUrls.get(id);
+        if (entry) {
+            this.audioUrls.delete(id);        // LRU touch: move to the tail
+            this.audioUrls.set(id, entry);
+            return entry.then(r => r.url);
+        }
+        entry = (async () => {
+            const direct = isCid(id) || /^(https?:|data:|blob:|file:)/.test(id);
+            let src: string;
+            if (direct) {
+                src = id;
+            } else {
+                const fetchAudio = this.datasource.audio ?? this.datasource.module;
+                const records = await fetchAudio.call(this.datasource, [Number(id)]);
                 const rec = records?.[id] ?? records?.[Number(id)];
                 if (!rec?.raw) throw new Error(`[ResourceManager] no audio record for id ${id}`);
-                return await this.resolveUrl(rec.raw);
-            })();
-            this.audioUrls.set(id, promise);
+                src = rec.raw;
+            }
+            return { url: await this.resolveUrl(src), src };
+        })();
+        this.audioUrls.set(id, entry);
+        // Drop a failed lookup so a later play retries (Actuator reports the failure).
+        entry.catch(() => { if (this.audioUrls.get(id) === entry) this.audioUrls.delete(id); });
+        this.evictAudioOverCap();
+        return entry.then(r => r.url);
+    }
+
+    /** Evict LRU audio entries past the cap; revoke any blob: URL they still hold. */
+    private evictAudioOverCap(): void {
+        while (this.audioUrls.size > this.maxAudioUrls) {
+            const victim = this.audioUrls.keys().next().value as string | undefined;
+            if (victim === undefined) break;
+            const evicted = this.audioUrls.get(victim)!;
+            this.audioUrls.delete(victim);
+            evicted.then(r => this.revokeIfUnused(r.src)).catch(() => { /* failed entry never made a URL */ });
         }
-        return promise;
     }
 
     // ── Models ────────────────────────────────────────────────────────────────
@@ -171,7 +217,8 @@ export class ResourceManager {
                 // ModelLoader stashes the decoded clips on the template's userData;
                 // lift them out while they are still real AnimationClip instances.
                 animations: (template.userData?.animations as THREE.AnimationClip[]) ?? [],
-                refCount: 0
+                refCount: 0,
+                src: rec.raw,
             };
             this.modelEntries.set(id, entry);
             return entry;
@@ -232,6 +279,7 @@ export class ResourceManager {
             this.disposeObject(entry.template);
             this.modelEntries.delete(id);
             this.models.delete(id);
+            this.revokeIfUnused(entry.src);   // reclaim the IPFS blob: URL bytes
         }
     }
 
@@ -295,7 +343,7 @@ export class ResourceManager {
             this.warnIfNPOT(id, raw, tex);
             tex.needsUpdate = true;
 
-            this.textureEntries.set(id, { texture: tex, refCount: 0 });
+            this.textureEntries.set(id, { texture: tex, refCount: 0, src: raw });
             return tex;
         });
 
@@ -323,7 +371,23 @@ export class ResourceManager {
             e.texture.dispose();
             this.textureEntries.delete(id);
             this.textures.delete(id);
+            this.revokeIfUnused(e.src);       // reclaim the IPFS blob: URL bytes
         }
+    }
+
+    /**
+     * Revoke the router-cached blob: URL for `raw` — but ONLY once no other live
+     * model/texture entry still resolves to the same CID. ResourceManager
+     * refcounts by resource-id while the router caches by CID, and one CID could
+     * back two ids (identical content); revoking eagerly would dead-URL the
+     * survivor. Called AFTER the releasing entry is removed from its map, so the
+     * scan below never sees itself. No-op unless a router is set and raw is a CID.
+     */
+    private revokeIfUnused(raw?: string): void {
+        if (!raw || !this.ipfsRouter || !isCid(raw)) return;
+        for (const e of this.modelEntries.values()) if (e.src === raw) return;
+        for (const e of this.textureEntries.values()) if (e.src === raw) return;
+        this.ipfsRouter.revoke(raw);
     }
 
     // ── Internals ───────────────────────────────────────────────────────────────
@@ -409,20 +473,25 @@ export class ResourceManager {
     }
 
     /** Diagnostics for tests/dev: how many distinct files are currently held. */
-    getStats(): { models: number; textures: number; modelRefs: Record<string, number>; textureRefs: Record<string, number> } {
+    getStats(): { models: number; textures: number; audioUrls: number; modelRefs: Record<string, number>; textureRefs: Record<string, number> } {
         const modelRefs: Record<string, number> = {};
         for (const [id, e] of this.modelEntries) modelRefs[id] = e.refCount;
         const textureRefs: Record<string, number> = {};
         for (const [id, e] of this.textureEntries) textureRefs[id] = e.refCount;
-        return { models: this.modelEntries.size, textures: this.textureEntries.size, modelRefs, textureRefs };
+        return { models: this.modelEntries.size, textures: this.textureEntries.size, audioUrls: this.audioUrls.size, modelRefs, textureRefs };
     }
 
     dispose(): void {
         for (const e of this.modelEntries.values()) this.disposeObject(e.template);
         for (const e of this.textureEntries.values()) e.texture.dispose();
+        // Reclaim any router-cached blob: URLs the audio cache still holds.
+        for (const entry of this.audioUrls.values()) {
+            entry.then(r => this.ipfsRouter?.revoke(r.src)).catch(() => {});
+        }
         this.models.clear();
         this.textures.clear();
         this.modelEntries.clear();
         this.textureEntries.clear();
+        this.audioUrls.clear();
     }
 }

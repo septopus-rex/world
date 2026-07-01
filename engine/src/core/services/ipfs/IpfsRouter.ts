@@ -82,4 +82,24 @@ export class IpfsRouter {
         }
         return url;
     }
+
+    /**
+     * Drop the cached object URL for a cid and revoke it, reclaiming the fetched
+     * bytes a `blob:` URL keeps alive. `createObjectURL` blobs are NOT
+     * garbage-collected until revoked, so a long-lived world would otherwise
+     * accumulate every model/texture it ever loaded. The router keeps no
+     * refcount of its own — ResourceManager calls this when a resource's refCount
+     * hits 0. Safe on an unknown cid (no-op) or a still-pending / failed entry
+     * (dropped without revoking; a failed lookup never produced a URL).
+     */
+    revoke(cid: string): void {
+        const pending = this.urlCache.get(cid);
+        if (!pending) return;
+        this.urlCache.delete(cid);
+        pending
+            .then((url) => {
+                if (url.startsWith('blob:')) globalThis.URL?.revokeObjectURL?.(url);
+            })
+            .catch(() => { /* lookup failed → no URL was ever created */ });
+    }
 }

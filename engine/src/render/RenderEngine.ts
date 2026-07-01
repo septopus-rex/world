@@ -850,7 +850,12 @@ export class RenderEngine {
 
     private audioListener: THREE.AudioListener | null = null;
     private audioLoader: THREE.AudioLoader | null = null;
-    /** Decoded buffers, load-once by URL (shared across every play). */
+    /** Decoded buffers, load-once by URL (shared across every play). LRU-ordered
+     *  (Map insertion order) and capped: a currently-playing source keeps its own
+     *  buffer reference, so evicting from the cache never cuts a sound short — the
+     *  decoded PCM is just GC'd once nothing is playing it. Bounds the old
+     *  unbounded audioBuffers growth. */
+    private static readonly MAX_AUDIO_BUFFERS = 64;
     private audioBuffers = new Map<string, Promise<AudioBuffer>>();
 
     /**
@@ -870,9 +875,16 @@ export class RenderEngine {
 
         if (!this.audioLoader) this.audioLoader = new THREE.AudioLoader();
         let buffer = this.audioBuffers.get(url);
-        if (!buffer) {
+        if (buffer) {
+            this.audioBuffers.delete(url); this.audioBuffers.set(url, buffer);   // LRU touch
+        } else {
             buffer = this.audioLoader.loadAsync(url);
             this.audioBuffers.set(url, buffer);
+            while (this.audioBuffers.size > RenderEngine.MAX_AUDIO_BUFFERS) {
+                const victim = this.audioBuffers.keys().next().value;             // LRU head
+                if (victim === undefined) break;
+                this.audioBuffers.delete(victim);
+            }
         }
         buffer.then((buf) => {
             if (position) {

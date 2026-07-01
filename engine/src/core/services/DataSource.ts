@@ -20,6 +20,14 @@ export interface IDataSource {
     texture(ids: number[]): Promise<any>;
 
     /**
+     * Get audio definitions (record shape: { raw, format }, raw = CID/URL/path —
+     * resolved the same way as models/textures). Optional and first-class: a host
+     * that provides it gives audio its own channel; ResourceManager falls back to
+     * module() when it is absent, so existing sources keep working unchanged.
+     */
+    audio?(ids: number[]): Promise<any>;
+
+    /**
      * Resolve a Game Setting resource (game.md §2): the playable block's `game`
      * field carries this resource id. Returns the GameSetting, or null if the id
      * resolves to nothing (then the block is a bare playable zone with no game).
