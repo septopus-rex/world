@@ -1,4 +1,5 @@
 import { World } from '../World';
+import { reportError, ResourceError } from '../errors';
 import { RenderHandle, AdjunctDefinition, RenderObject } from '../types/Adjunct';
 import { Coords } from '../utils/Coords';
 import { MeshFactory } from '../../render/MeshFactory';
@@ -157,9 +158,11 @@ export class AdjunctFactory {
 
             const ud = (meshGroup as any).userData ?? ((meshGroup as any).userData = {});
             ud.loadedResources = [...(ud.loadedResources ?? []), resource];
-        }).catch((err: any) => {
+        }).catch((err: unknown) => {
             // Load failed / unsupported format — keep the placeholder box visible.
-            console.warn(`[AdjunctFactory] module ${resource} load failed; keeping placeholder.`, err?.message ?? err);
+            // No `kind` here: ResourceManager already emitted resource.failed for the
+            // underlying load; this is the consumer's graceful-degradation notice.
+            reportError(new ResourceError(`module ${resource} load failed; keeping placeholder`, { cause: err }), { tag: '[AdjunctFactory]', severity: 'warn' });
         });
     }
 
@@ -196,8 +199,8 @@ export class AdjunctFactory {
             rm.retainTexture(texId);
             const ud = (meshGroup as any).userData ?? ((meshGroup as any).userData = {});
             ud.loadedTextures = [...(ud.loadedTextures ?? []), texId];
-        }).catch((err: any) => {
-            console.warn(`[AdjunctFactory] texture ${texId} load failed; keeping solid colour.`, err?.message ?? err);
+        }).catch((err: unknown) => {
+            reportError(new ResourceError(`texture ${texId} load failed; keeping solid colour`, { cause: err }), { tag: '[AdjunctFactory]', severity: 'warn' });
         });
     }
 

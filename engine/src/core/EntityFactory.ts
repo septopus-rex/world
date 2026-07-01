@@ -1,4 +1,5 @@
 import { World, EntityId } from './World';
+import { reportError, ResourceError } from './errors';
 import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComponent, AvatarComponent, PlayerBodyComponent } from './components/PlayerComponents';
 import { InventoryComponent } from './components/InventoryComponent';
 import { HealthComponent } from './components/HealthComponent';
@@ -154,8 +155,8 @@ export class EntityFactory {
 
             let meshes = 0; model.traverse?.((o: any) => { if (o.isMesh) meshes++; });
             console.log(`[Avatar] loaded ${resourceId}: meshes=${meshes} clips=${clips.length} bodyH=${bodyHeight} srcH=${h?.toFixed?.(2)} scale=${k.toFixed(3)} at`, t?.position);
-        }).catch((err: any) => {
-            console.warn(`[Avatar] model ${resourceId} load FAILED; keeping placeholder box.`, err?.message ?? err);
+        }).catch((err: unknown) => {
+            reportError(new ResourceError(`model ${resourceId} load FAILED; keeping placeholder box`, { cause: err }), { tag: '[Avatar]', severity: 'warn' });
         });
     }
 }

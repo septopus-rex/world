@@ -14,6 +14,7 @@
  * The durable layer is pluggable (IDraftBackend): browsers use IdbDraftBackend
  * (IndexedDB via `idb`), headless tests use InMemoryDraftBackend (or none).
  */
+import { reportError, PersistenceError } from '../errors';
 
 export interface BlockDraft {
     version: 1;
@@ -153,7 +154,7 @@ export class DraftStore {
         for (const k of [...this.dirty.keys()]) if (k.startsWith(pfx)) this.dirty.delete(k);
         if (this.backend?.clearWorld) {
             try { await this.backend.clearWorld(worldId); }
-            catch (e) { console.warn(`[DraftStore] clearWorld(${worldId}) failed`, e); }
+            catch (e) { reportError(e, { tag: '[DraftStore]', severity: 'warn', code: 'PERSIST_IDB', id: `clearWorld(${worldId})` }); }
         }
     }
 
@@ -165,7 +166,7 @@ export class DraftStore {
         try {
             return await this.backend.loadMeta(worldId, key);
         } catch (e) {
-            console.warn(`[DraftStore] loadMeta(${worldId}, ${key}) failed`, e);
+            reportError(e, { tag: '[DraftStore]', severity: 'warn', code: 'PERSIST_IDB', id: `loadMeta(${worldId}, ${key})` });
             return undefined;
         }
     }
@@ -179,12 +180,12 @@ export class DraftStore {
         let snapshot: any;
         try {
             snapshot = JSON.parse(JSON.stringify(value));
-        } catch {
-            console.warn(`[DraftStore] saveMeta(${worldId}, ${key}): value not serializable, skipped`);
+        } catch (e) {
+            reportError(new PersistenceError(`saveMeta(${worldId}, ${key}): value not serializable, skipped`, { cause: e }), { tag: '[DraftStore]', severity: 'warn' });
             return;
         }
         const write: Promise<void> = this.backend.saveMeta(worldId, key, snapshot)
-            .catch(e => console.warn(`[DraftStore] saveMeta(${worldId}, ${key}) failed`, e))
+            .catch(e => { reportError(e, { tag: '[DraftStore]', severity: 'warn', code: 'PERSIST_IDB', id: `saveMeta(${worldId}, ${key})` }); })
             .finally(() => this.metaWrites.delete(write));
         this.metaWrites.add(write);
     }
@@ -221,7 +222,8 @@ export class DraftStore {
                         if (this.dirty.get(k) === pending) this.dirty.delete(k);
                         progressed = true;
                     } catch (e) {
-                        console.warn(`[DraftStore] write-behind failed for ${k} (kept dirty)`, e);
+                        // Kept dirty (retried next mutation/flush) — policy unchanged, now reported.
+                        reportError(e, { tag: '[DraftStore]', severity: 'warn', code: 'PERSIST_IDB', id: `write-behind ${k}` });
                     }
                 }
                 if (!progressed) break;

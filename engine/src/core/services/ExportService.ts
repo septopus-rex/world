@@ -7,6 +7,7 @@
  * backup, or feed drafts to a publisher.
  */
 import { BlockDraft, DraftStore } from './DraftStore';
+import { ProtocolError } from '../errors';
 
 export const EXPORT_FORMAT = 'septopus.world.drafts';
 export const EXPORT_VERSION = 1 as const;
@@ -46,17 +47,17 @@ export class ExportService {
         let file: WorldExportFile;
         try {
             file = JSON.parse(json);
-        } catch {
-            throw new Error('[ExportService] not valid JSON');
+        } catch (e) {
+            throw new ProtocolError('[ExportService] not valid JSON', { cause: e });
         }
         if (file?.format !== EXPORT_FORMAT) {
-            throw new Error(`[ExportService] unrecognized format: ${String(file?.format)}`);
+            throw new ProtocolError(`[ExportService] unrecognized format: ${String(file?.format)}`);
         }
         if (file.version !== EXPORT_VERSION) {
-            throw new Error(`[ExportService] unsupported version: ${String(file.version)}`);
+            throw new ProtocolError(`[ExportService] unsupported version: ${String(file.version)}`);
         }
         if (!Array.isArray(file.drafts)) {
-            throw new Error('[ExportService] drafts is not an array');
+            throw new ProtocolError('[ExportService] drafts is not an array');
         }
 
         let imported = 0;

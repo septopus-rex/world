@@ -16,6 +16,7 @@ import { InputProvider } from './InputProvider';
 import { saveBlockDraft } from '../utils/BlockSerializer';
 import { PLACEABLE_ADJUNCTS, defaultRawFor } from '../edit/AdjunctDefaults';
 import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
+import { reportError } from '../errors';
 
 /** Placement form drops these STD keys: position/rotation are set in 3D space
  *  (click to place, [ ] to rotate, drag to move), not pre-entered in a form. */
@@ -519,7 +520,7 @@ export class EditSystem implements ISystem {
                     const std = def.attribute.deserialize(raw);
                     this.applyValuesToStd(std, this.placingParams);
                     raw = def.attribute.serialize(std);
-                } catch (e) { console.warn('[EditSystem] pre-placement params failed; using defaults', e); }
+                } catch (e) { reportError(e, { tag: '[EditSystem]', severity: 'warn', id: 'pre-placement params; using defaults' }); }
             }
         }
 

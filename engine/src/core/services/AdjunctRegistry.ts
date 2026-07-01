@@ -14,6 +14,7 @@ import { BasicWaterAdjunct } from '../../plugins/adjunct/basic_water';
 import { AdjunctLink } from '../../plugins/adjunct/adjunct_link';
 import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
 import { AdjunctMotif } from '../../plugins/adjunct/adjunct_motif';
+import { AdjunctError } from '../errors';
 
 /**
  * Registry of built-in (native) adjunct types, keyed by on-chain type-id.
@@ -60,7 +61,7 @@ const DYNAMIC_ADJUNCTS = new Map<number, AdjunctDefinition>();
  *  built-in (those are the immutable native set). Last write wins for re-loads. */
 export function registerDynamicAdjunct(typeId: number, definition: AdjunctDefinition): void {
     if (BUILTIN_ADJUNCTS.has(typeId)) {
-        throw new Error(`[AdjunctRegistry] type-id 0x${typeId.toString(16)} is a built-in adjunct; dynamic adjuncts cannot override it`);
+        throw new AdjunctError(`[AdjunctRegistry] type-id 0x${typeId.toString(16)} is a built-in adjunct; dynamic adjuncts cannot override it`, { code: 'ADJUNCT_REGISTRY' });
     }
     DYNAMIC_ADJUNCTS.set(typeId, definition);
 }

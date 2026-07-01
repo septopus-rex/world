@@ -11,6 +11,7 @@
  * URL.createObjectURL), so timeout/crash-restart are covered by browser E2E, not
  * unit tests. The worker is created lazily so this class can be constructed in Node.
  */
+import { AdjunctError } from '../errors';
 
 export interface SandboxConfig {
     /** main-thread kill timeout in ms (default 5000) */
@@ -53,17 +54,17 @@ export class AdjunctSandbox {
      * forbidden pattern or oversized code. Runs on the main thread before dispatch.
      */
     static validateCode(code: string): void {
-        if (typeof code !== 'string') throw new Error('Adjunct code must be a string');
-        if (code.length > MAX_CODE_SIZE) throw new Error(`Adjunct code too large (>${MAX_CODE_SIZE} bytes)`);
+        if (typeof code !== 'string') throw new AdjunctError('Adjunct code must be a string');
+        if (code.length > MAX_CODE_SIZE) throw new AdjunctError(`Adjunct code too large (>${MAX_CODE_SIZE} bytes)`);
         for (const re of FORBIDDEN_PATTERNS) {
-            if (re.test(code)) throw new Error(`Forbidden code pattern detected: ${re}`);
+            if (re.test(code)) throw new AdjunctError(`Forbidden code pattern detected: ${re}`);
         }
     }
 
     private ensureWorker(): Worker {
         if (this.worker) return this.worker;
         if (typeof Worker === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') {
-            throw new Error('AdjunctSandbox execution requires a browser environment (Web Worker + Blob URL).');
+            throw new AdjunctError('AdjunctSandbox execution requires a browser environment (Web Worker + Blob URL).');
         }
         const blob = new Blob([this.workerSource()], { type: 'application/javascript' });
         this.workerUrl = URL.createObjectURL(blob);

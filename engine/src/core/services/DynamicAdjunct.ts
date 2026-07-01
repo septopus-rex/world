@@ -1,5 +1,6 @@
 import { AdjunctDefinition, RenderObject, STDObject, MeshType } from '../types/Adjunct';
 import { standardAttribute, standardMenu } from '../../plugins/adjunct/_shared';
+import { AdjunctError } from '../errors';
 
 /**
  * DynamicAdjunct — the DECLARATIVE v1 of dynamically-loaded adjuncts.
@@ -60,23 +61,23 @@ function num(n: any): n is number { return typeof n === 'number' && Number.isFin
  *  surfaces to whoever injected the code (loader → Engine.loadDynamicAdjunct). */
 export function validateDescriptor(desc: any): asserts desc is AdjunctDescriptor {
     if (!desc || typeof desc !== 'object') {
-        throw new Error('[DynamicAdjunct] descriptor missing — dynamic code must assign `hooks = { meta, render }`');
+        throw new AdjunctError('[DynamicAdjunct] descriptor missing — dynamic code must assign `hooks = { meta, render }`', { code: 'ADJUNCT_DESCRIPTOR' });
     }
     if (typeof desc.deserialize === 'function' || typeof desc.transform === 'function'
         || (desc.transform && typeof desc.transform.stdToRenderData === 'function')) {
-        throw new Error('[DynamicAdjunct] function-style hooks are not supported in v1 (declarative only) — return a plain { meta, render } descriptor');
+        throw new AdjunctError('[DynamicAdjunct] function-style hooks are not supported in v1 (declarative only) — return a plain { meta, render } descriptor', { code: 'ADJUNCT_DESCRIPTOR' });
     }
     if (!desc.meta || !num(desc.meta.typeId)) {
-        throw new Error('[DynamicAdjunct] descriptor.meta.typeId must be a number');
+        throw new AdjunctError('[DynamicAdjunct] descriptor.meta.typeId must be a number', { code: 'ADJUNCT_DESCRIPTOR' });
     }
     if (desc.layout !== undefined && desc.layout !== 'standard') {
-        throw new Error(`[DynamicAdjunct] unsupported layout '${desc.layout}' (v1 supports 'standard' only)`);
+        throw new AdjunctError(`[DynamicAdjunct] unsupported layout '${desc.layout}' (v1 supports 'standard' only)`, { code: 'ADJUNCT_DESCRIPTOR' });
     }
     const parts = Array.isArray(desc.render) ? desc.render : [desc.render];
-    if (parts.length === 0) throw new Error('[DynamicAdjunct] descriptor.render must define at least one part');
+    if (parts.length === 0) throw new AdjunctError('[DynamicAdjunct] descriptor.render must define at least one part', { code: 'ADJUNCT_DESCRIPTOR' });
     for (const p of parts) {
         if (!p || !MESH_TYPES.has(p.mesh)) {
-            throw new Error(`[DynamicAdjunct] each render part needs a valid mesh (${[...MESH_TYPES].join('/')}), got '${p?.mesh}'`);
+            throw new AdjunctError(`[DynamicAdjunct] each render part needs a valid mesh (${[...MESH_TYPES].join('/')}), got '${p?.mesh}'`, { code: 'ADJUNCT_DESCRIPTOR' });
         }
     }
 }

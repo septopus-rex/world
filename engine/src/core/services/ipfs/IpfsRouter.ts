@@ -1,5 +1,6 @@
 import { IpfsProvider } from './IpfsProvider';
 import { cidForBytes } from './Cid';
+import { ResourceError } from '../../errors';
 
 /** Base64-encode bytes (data: URL fallback when there is no DOM). */
 function toBase64(bytes: Uint8Array): string {
@@ -42,11 +43,11 @@ export class IpfsRouter {
             if (!bytes) continue;
             const actual = await cidForBytes(bytes);
             if (actual !== cid) {
-                throw new Error(`[ipfs] integrity: provider '${p.name}' returned bytes for ${cid} that hash to ${actual}`);
+                throw new ResourceError(`[ipfs] integrity: provider '${p.name}' returned bytes for ${cid} that hash to ${actual}`, { code: 'RESOURCE_FORMAT', id: cid });
             }
             return bytes;
         }
-        throw new Error(`[ipfs] no provider has ${cid}`);
+        throw new ResourceError(`[ipfs] no provider has ${cid}`, { code: 'RESOURCE_MISSING', id: cid });
     }
 
     /** Store content in the first writable provider; returns its cid. */
@@ -54,7 +55,7 @@ export class IpfsRouter {
         for (const p of this.providers) {
             if (p.put) return p.put(bytes);
         }
-        throw new Error('[ipfs] no writable provider to put content');
+        throw new ResourceError('[ipfs] no writable provider to put content', { code: 'RESOURCE_LOAD' });
     }
 
     /** Semantic alias for put — "add this content to the store, get its cid". */

@@ -1,4 +1,5 @@
 import { ParticleCell, SubdivisionLevel } from "../types/ParticleCell.js";
+import { ProtocolError } from "../errors";
 
 /**
  * 44-byte Header structure defined by SPP Protocol v1.1.
@@ -124,7 +125,7 @@ export class CollapseCodec {
                 processed += length;
             }
         } else {
-            throw new Error(`Unsupported SPP Protocol encoding flag: ${header.encoding}`);
+            throw new ProtocolError(`Unsupported SPP Protocol encoding flag: ${header.encoding}`);
         }
 
         return { header, cells };

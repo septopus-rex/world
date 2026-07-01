@@ -4,7 +4,7 @@ import { IDataSource } from '../core/services/DataSource';
 import { isCid } from '../core/services/ipfs';
 import type { IpfsRouter } from '../core/services/ipfs';
 import { IModelLoader, ModelLoader } from './loaders/ModelLoader';
-import { reportError } from '../core/errors';
+import { reportError, ResourceError } from '../core/errors';
 
 /**
  * ResourceManager — the single load-once-by-id authority for external 3D assets
@@ -382,7 +382,11 @@ export class ResourceManager {
             // Content-addressed: fetch through the router (mock CAS / real IPFS).
             // If the router lacks it, fall back to the public gateway.
             if (this.ipfsRouter) {
-                try { return await this.ipfsRouter.toObjectUrl(raw); } catch { /* fall through to gateway */ }
+                // Only a ResourceError (router miss / integrity) falls through to the
+                // public gateway; a real bug (TypeError etc.) propagates instead of
+                // being catch-all swallowed. Discriminating catch — cf. `ignore`.
+                try { return await this.ipfsRouter.toObjectUrl(raw); }
+                catch (e) { if (!(e instanceof ResourceError)) throw e; /* fall through to gateway */ }
             }
             return `${this.ipfsGateway}${raw}`;
         }

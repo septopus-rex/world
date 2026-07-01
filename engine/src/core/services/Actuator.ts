@@ -1,4 +1,5 @@
 import { World, EntityId } from '../World';
+import { reportError, AdjunctError } from '../errors';
 import { TriggerAction } from '../types/Trigger';
 import { SystemMode, asExitPolicy } from '../types/SystemMode';
 import { AdjunctComponent } from '../components/AdjunctComponents';
@@ -69,7 +70,7 @@ export class LocalActuator implements IActuator {
                 if (action.method === 'log') console.log('[Actuator]', ...(action.params ?? []));
                 break;
             default:
-                console.warn(`[Actuator] unknown action type '${action.type}'`);
+                reportError(`unknown action type '${action.type}'`, { tag: '[Actuator]', severity: 'warn' });
         }
     }
 
@@ -92,7 +93,7 @@ export class LocalActuator implements IActuator {
         } else if (action.method === 'take') {
             events?.emit('item.consume', { itemId, amount: count }, { actor: ctx.playerId });
         } else {
-            console.warn(`[Actuator] unknown bag method '${action.method}'`);
+            reportError(`unknown bag method '${action.method}'`, { tag: '[Actuator]', severity: 'warn' });
         }
     }
 
@@ -135,7 +136,7 @@ export class LocalActuator implements IActuator {
         if (action.method === 'damage' || action.method === 'heal') {
             ctx.world.emitSimple(`player:${action.method}`, { amount }, ctx.playerId);
         } else {
-            console.warn(`[Actuator] unknown player method '${action.method}'`);
+            reportError(`unknown player method '${action.method}'`, { tag: '[Actuator]', severity: 'warn' });
         }
     }
 
@@ -172,7 +173,7 @@ export class LocalActuator implements IActuator {
             : Promise.resolve(String(action.target));   // direct URL/path fallback
         resolve.then(url => {
             (world.renderEngine as any)?.playSpatialSound?.(url, position, volume);
-        }).catch(e => console.warn(`[Actuator] sound ${action.target} failed`, e?.message ?? e));
+        }).catch(e => reportError(e, { tag: '[Actuator]', severity: 'warn', code: 'RESOURCE_LOAD' }));
     }
 
     // ── adjunct (live world mutation) ─────────────────────────────────────────
@@ -222,7 +223,7 @@ export class LocalActuator implements IActuator {
             adjunct.stdData.oz += amount;
             if (trans) { trans.position[1] += amount; trans.dirty = true; }
         } else {
-            console.warn(`[Actuator] unknown adjunct method '${method}'`);
+            reportError(new AdjunctError(`unknown adjunct method '${method}'`), { tag: '[Actuator]', severity: 'warn' });
         }
     }
 }

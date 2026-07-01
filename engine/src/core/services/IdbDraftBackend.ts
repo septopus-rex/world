@@ -11,6 +11,7 @@
  */
 import { openDB, IDBPDatabase } from 'idb';
 import { BlockDraft, IDraftBackend } from './DraftStore';
+import { reportError } from '../errors';
 
 const DB_NAME = 'septopus';
 const DB_VERSION = 1;
@@ -117,7 +118,7 @@ export class IdbDraftBackend implements IDraftBackend {
                 localStorage.removeItem(k);
                 migrated++;
             } catch (e) {
-                console.warn(`[IdbDraftBackend] failed to migrate legacy draft ${k}`, e);
+                reportError(e, { tag: '[IdbDraftBackend]', severity: 'warn', code: 'PERSIST_IDB', id: `migrate ${k}` });
             }
         }
         if (migrated > 0) console.log(`[IdbDraftBackend] migrated ${migrated} legacy localStorage draft(s) to IndexedDB`);

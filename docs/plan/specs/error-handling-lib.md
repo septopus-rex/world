@@ -10,7 +10,8 @@
 >
 > **不改的底线**：本 lib 统一的是**机制 + 报告 + 类型**，**不是每个站点的策略**。`try/catch` 控制流不撤；降级值、重试次数仍由站点按参数传入。别指望 lib 替你决定「该不该重试/兜底成什么」。
 >
-> **状态**：✅ **P0 + P1 已落地**（`core/errors/` lib + `engine.error` 事件 + WorldEventSink + World 装配 + ResourceManager 上报 + 客户端 Toaster）；✅ **P2 batch-1 已迁**（4 个 ⚠️ 危险静默点 + AdjunctLoader retry/preload）；🔲 P2 其余站点分批待迁。测试：`tests/unit/errors.test.ts`(12) + `tests/systems/error-reporting.test.ts`(2)，全套 342 pass。
+> **状态**：✅ **P0 + P1 + P2 全部已落地**（`core/errors/` lib + `engine.error` 事件 + WorldEventSink + World 装配 + ResourceManager 上报 + 客户端 Toaster；P2 batch-1 = 4 个 ⚠️ 危险静默点 + AdjunctLoader retry/preload；**P2 A/B/C 已补齐**——见 §9）。测试：`tests/unit/errors.test.ts`(12) + `tests/systems/error-reporting.test.ts`(2)，全套 342 pass，engine+client tsc 绿、层边界零 `from 'three'`。
+> **有意留在原样**（非遗漏）：`AdjunctSandbox` worker-source 内的 `throw`（跑在 Web Worker 里，无从 import）；`Actuator` 两处「ignored outside Game mode」（预期的模式门控，非错误）；`RenderEngine:868` AudioContext resume 的良性 catch（抛的是原生 `DOMException` 非 `EngineError`，`ignore` 会误上抛，且已审计单语句注释）；`Engine.ts`/`DefaultUIProvider.ts`/`GameRuntime.ts`/`RenderEngine.ts` 的边界 `throw`（不在 §7 迁移表内，本就是 fail-loud 边界校验）。
 > **配套**：事件队列见 `specs/event-bus-design.md`；上轮「错误进 world.events 合理吗」的讨论结论即本文第 3 节。
 >
 > **落地时的两处方案微调**（比原稿更简）：
@@ -255,7 +256,11 @@ ignore<T>(expected: new (...a:any[]) => EngineError, fn: () => T, fallback: T): 
 
 - **P0 — lib 骨架（零行为变更）** ✅：`EngineError` + 6 子类 + `reportError` + `ConsoleSink` + `attempt/attemptAsync/retry/ignore` + `index` + `tests/unit/errors.test.ts`(12)。纯新增。
 - **P1 — 接线** ✅：`EventTypes` 加 `engine.error`；`WorldEventSink` + `World` 构造 `addSink`/`dispose` 卸载；`ResourceManager` 两个静默 catch → `reportError`（**首次真正 emit `resource.failed`**）；客户端 `<Toaster>`（App 挂载）订阅 `engine.error`+`resource.failed`；`tests/systems/error-reporting.test.ts`(2)。
-- **P2 — 迁移站点（分批）** 🟡：✅ batch-1 = 4 个 ⚠️ 危险静默点（`TriggerSystem` 条件求值、`ResourceManager` model/texture 掉缓存、`AdjunctLoader` verifyCodeHash）+ `AdjunctLoader.fetchFromIPFS`→`retry` + `preload`→`reportError`。🔲 待迁：`ExportService`/`ModelLoader`/`CollapseCodec`/`DynamicAdjunct`/`AdjunctSandbox`/`ipfs`/`AdjunctRegistry` 的 throw→typed；`DraftStore`/`IdbDraftBackend`/`Actuator`/`GameRuntimeSystem`/`AdjunctFactory`/`EntityFactory`/`RenderEngine` 的 warn→`reportError`；`EditSystem:522`、`RenderEngine:868`(→`ignore`)、`ResourceManager:377`(→`ignore`)。每批跑全套测试。
+- **P2 — 迁移站点** ✅ **全部完成**：
+  - **batch-1** ✅：4 个 ⚠️ 危险静默点（`TriggerSystem` 条件求值、`ResourceManager` model/texture 掉缓存、`AdjunctLoader` verifyCodeHash）+ `AdjunctLoader.fetchFromIPFS`→`retry` + `preload`→`reportError`。
+  - **A（throw→typed）** ✅：`ExportService`(→`ProtocolError`)、`CollapseCodec`(→`ProtocolError`)、`AdjunctSandbox`(→`AdjunctError`)、`DynamicAdjunct`(→`AdjunctError`,`ADJUNCT_DESCRIPTOR`)、`AdjunctRegistry`(→`AdjunctError`,`ADJUNCT_REGISTRY`)、`ipfs/{Cid,IpfsRouter}`(→`ResourceError`,`RESOURCE_MISSING`/`_FORMAT`)、`ModelLoader`(→`ResourceError`,`RESOURCE_FORMAT`)。`throw` 语义不变、只加类型+code+tag。
+  - **B（warn→reportError）** ✅：`Actuator`(sound catch + 3 处 unknown-method/type)、`DraftStore`(clearWorld/loadMeta/saveMeta×2/write-behind，**dirty 重试策略不动**)、`IdbDraftBackend`、`GameRuntimeSystem`(resolve/start/end)、`AdjunctFactory`(module/texture 降级)、`EntityFactory`(avatar 降级)、`RenderEngine`(audio load)、`ModelLoader.computeBounds`(→`attempt`)。资源降级类**不带 `kind`**（避免与 ResourceManager 首报 `resource.failed` 双 toast）。
+  - **C（ignore/discriminate）** ✅：`EditSystem:522`→`reportError`；`ResourceManager:377`→判别式 catch（`if (!(e instanceof ResourceError)) throw e`，router miss/integrity 落 gateway、真 bug 上抛——`ignore` 的异步等价）。`RenderEngine:868` 有意留原样（见状态行"有意留在原样"）。
 
 ---
 

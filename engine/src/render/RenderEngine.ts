@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { RenderHandle } from '../core/types/Adjunct';
+import { reportError } from '../core/errors';
 import { MeshFactory } from './MeshFactory';
 
 export interface RenderEngineConfig {
@@ -889,7 +890,7 @@ export class RenderEngine {
                 sound.setVolume(volume);
                 sound.play();
             }
-        }).catch((e) => console.warn(`[RenderEngine] audio ${url} failed to load`, e?.message ?? e));
+        }).catch((e) => reportError(e, { tag: '[RenderEngine]', severity: 'warn', code: 'RESOURCE_LOAD', id: url }));
     }
 
     // ── Skeletal animation ────────────────────────────────────────────────────

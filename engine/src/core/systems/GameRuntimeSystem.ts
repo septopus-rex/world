@@ -1,4 +1,5 @@
 import { World, ISystem } from '../World';
+import { reportError } from '../errors';
 import { SystemMode } from '../types/SystemMode';
 import { GameSetting } from '../types/GameSetting';
 import { GameRuntime } from '../services/GameRuntime';
@@ -71,7 +72,7 @@ export class GameRuntimeSystem implements ISystem {
             })
             .catch((e: unknown) => {
                 if (seq === this.fetchSeq) world.gameSetting = null;
-                console.warn('[GameRuntime] failed to resolve game setting', gameRef, e);
+                reportError(e, { tag: '[GameRuntime]', severity: 'warn', id: `resolve setting ${gameRef}` });
             });
     }
 
@@ -95,7 +96,7 @@ export class GameRuntimeSystem implements ISystem {
                 rt.started = true;
                 world.events.emit('game.started', { game: setting.game, session });
             })
-            .catch((e: unknown) => console.warn('[GameRuntime] start failed', e));
+            .catch((e: unknown) => reportError(e, { tag: '[GameRuntime]', severity: 'warn', id: 'start' }));
     }
 
     /** Leave Game: call `end` (if any) and tear the session down. */
@@ -107,7 +108,7 @@ export class GameRuntimeSystem implements ISystem {
         const finish = (result: any) => world.events.emit('game.ended', { game, result });
         if (rt.allows('end')) {
             rt.call('end', [rt.session]).then(finish).catch((e: unknown) => {
-                console.warn('[GameRuntime] end failed', e);
+                reportError(e, { tag: '[GameRuntime]', severity: 'warn', id: 'end' });
                 finish(null);
             });
         } else {
