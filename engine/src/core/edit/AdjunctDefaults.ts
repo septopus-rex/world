@@ -33,6 +33,8 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: AdjunctType.Particle, label: 'SPP Cell' },
     { typeId: AdjunctType.Motif, label: 'Motif' },
     { typeId: AdjunctType.Link, label: 'Link' },
+    { typeId: AdjunctType.Audio, label: 'Audio' },
+    { typeId: AdjunctType.Video, label: 'Video' },
 ];
 
 export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[] | null {
@@ -68,6 +70,10 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             return [[x, y, z], 'totem', Math.abs(Math.round(x * 131 + y * 977)) % 100000, null];
         case AdjunctType.Link: // link: [size, pos, rot, resource, repeat, animate, stop, url, texture?]
             return [[2, 0.1, 2], [x, y, z + 1], [0, 0, 0], 0, [1, 1], null, null, 'https://example.com'];
+        case AdjunctType.Audio: // audio: [size, pos, rot, source, autoplay, loop, volume, refDistance]
+            return [[0.4, 0.4, 0.4], [x, y, z + 0.4], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 8];
+        case AdjunctType.Video: // video: [size, pos, rot, source, autoplay, loop, muted, volume]
+            return [[3.2, 0.1, 1.8], [x, y, z + 1.2], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 1];
         default:
             return null;
     }

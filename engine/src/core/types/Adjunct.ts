@@ -54,6 +54,25 @@ export interface MaterialConfig {
     fit?: boolean;                  // 贴图贴满整面（0..1 UV，标签/贴花），而非按尺寸平铺
 }
 
+/**
+ * A/V media directive on a render part (audio emitter / video screen adjuncts).
+ * The plugin declares it purely (source + playback params); the render layer
+ * materializes it — audio → PositionalAudio, video → VideoTexture on the mesh's
+ * material. Pure-core: no Three/DOM here. See specs/av-media-adjuncts.md.
+ */
+export interface MediaConfig {
+    kind: 'audio' | 'video';
+    /** Audio/video resource id, URL, or CID (resolved via ResourceManager). */
+    source: string;
+    autoplay?: boolean;
+    loop?: boolean;
+    /** Video only — start muted (browsers block autoplay-with-sound pre-gesture). */
+    muted?: boolean;
+    volume?: number;
+    /** Audio only — PositionalAudio distance-attenuation reference radius. */
+    refDistance?: number;
+}
+
 export interface RenderObject {
     type: string; // Keep as string for now to support custom types, but MeshType is preferred
     index?: number;
@@ -63,6 +82,8 @@ export interface RenderObject {
      *  used by touch-enabled trigger volumes. */
     invisible?: boolean;
     material?: MaterialConfig;
+    /** A/V media to attach to this part's mesh (audio emitter / video screen). */
+    media?: MediaConfig;
     stop?: any; // ColliderMaterial
     animate?: any; // AnimateRef
     event?: any;

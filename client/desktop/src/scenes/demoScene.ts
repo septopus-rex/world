@@ -26,7 +26,7 @@ export const DEMO_AVATAR_ID = 30;  // rigged human avatar
  */
 export interface DemoAsset {
     id: number;
-    type: 'module' | 'avatar' | 'audio' | 'texture';
+    type: 'module' | 'avatar' | 'audio' | 'texture' | 'video';
     format: string;
     src: string;                  // seed path under public/assets (CAS ingest source)
     repeat?: [number, number];    // texture-only
@@ -42,6 +42,11 @@ export const DEMO_ASSETS: DemoAsset[] = [
     { id: 29, type: 'module', format: 'glb', src: '/assets/fox.glb' },
     { id: DEMO_AVATAR_ID, type: 'avatar', format: 'glb', src: '/assets/avatar.glb' },
     { id: 31, type: 'audio', format: 'wav', src: '/assets/ding.wav' },
+    // Video screen source (e3). Local + same-origin → no CORS issue for the
+    // VideoTexture. Not shipped (no binary in the repo): drop ANY .mp4 here to
+    // see it play; without the file the panel just renders dark (graceful).
+    // Or swap src for a CORS-enabled URL / a CID. NOT YouTube (spec §9).
+    { id: 32, type: 'video', format: 'mp4', src: '/assets/sample.mp4' },
 ];
 
 /**
@@ -93,6 +98,22 @@ export function injectDemoAssets(data: any): void {
     data.raw[2].push([AdjunctType.Module, modules]);
     data.raw[2].push([AdjunctType.Box, texturedBoxes]);
     data.raw[2].push([AdjunctType.Stop, stops]);
+
+    // ── A/V media adjuncts (spec: av-media-adjuncts.md) ──────────────────
+    // e3 video screen: a 16:9 panel on the south wall facing the court, source
+    //   32 → /assets/sample.mp4 (autoplay+loop+muted; renders dark until a file
+    //   is dropped). e2 audio emitter: a small marker looping the ding sound
+    //   (source 31) — audible once the AudioContext unlocks on first click.
+    // audio raw: [size, pos, rot, source, autoplay, loop, volume, refDistance]
+    // video raw: [size, pos, rot, source, autoplay, loop, muted, volume]
+    const audioEmitters = [
+        [[0.4, 0.4, 0.4], [11, 2, 1], [0, 0, 0], 31, 1, 1, 0.7, 10],
+    ];
+    const videoScreens = [
+        [[3.6, 0.1, 2.0], [8, 1.5, 2.6], [0, 0, 0], 32, 1, 1, 1, 1],
+    ];
+    data.raw[2].push([AdjunctType.Audio, audioEmitters]);
+    data.raw[2].push([AdjunctType.Video, videoScreens]);
 
     // ── Trigger court (north half of the spawn block) ────────────────────
     // Interactive trigger test scene; everything gives VISIBLE feedback via

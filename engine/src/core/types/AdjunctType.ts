@@ -28,6 +28,8 @@ export const AdjunctType = {
     Track: 0x00c1,    // tube rail (coaster)
     Motif: 0x00c2,    // generative content (seed + template → standard adjuncts)
     Link: 0x00e1,     // clickable URL / QR panel
+    Audio: 0x00e2,    // spatial audio emitter (source → PositionalAudio)
+    Video: 0x00e3,    // video screen (source → VideoTexture on a plane)
 } as const;
 
 export type AdjunctTypeId = (typeof AdjunctType)[keyof typeof AdjunctType];

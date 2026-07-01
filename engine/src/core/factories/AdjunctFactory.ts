@@ -1,6 +1,6 @@
 import { World } from '../World';
 import { reportError, ResourceError } from '../errors';
-import { RenderHandle, AdjunctDefinition, RenderObject } from '../types/Adjunct';
+import { RenderHandle, AdjunctDefinition, RenderObject, MediaConfig } from '../types/Adjunct';
 import { Coords } from '../utils/Coords';
 import { MeshFactory } from '../../render/MeshFactory';
 import { Color } from '../utils/Math';
@@ -91,6 +91,12 @@ export class AdjunctFactory {
                     // Mutually exclusive with module — a module placeholder must not
                     // also pin a texture it never shows.
                     this.scheduleTextureSwap(world, meshGroup, mesh, renderItem);
+                }
+
+                // A/V media (audio emitter / video screen): resolve the source, then
+                // attach a PositionalAudio / VideoTexture on the mesh (render layer).
+                if (renderItem.media?.source) {
+                    this.scheduleMediaAttach(world, meshGroup, mesh, renderItem.media);
                 }
             }
         } catch (error) {
@@ -207,6 +213,34 @@ export class AdjunctFactory {
     /** True if a handle has been removed/disposed (set by RenderEngine.removeHandle). */
     private static isHandleRemoved(handle: RenderHandle): boolean {
         return !!(handle as any)?.userData?.__removed;
+    }
+
+    /**
+     * Resolve an A/V media source to a URL (ResourceManager, same IPFS spine as
+     * models/textures) then attach it in the render layer: audio → a looping
+     * PositionalAudio on the mesh, video → a VideoTexture on its material. The
+     * <video>/audio are stopped + freed by RenderEngine.removeHandle on eviction.
+     * If the group is evicted mid-resolve, skip (never attach to a dead mesh).
+     * See specs/av-media-adjuncts.md.
+     */
+    private static scheduleMediaAttach(world: World, meshGroup: RenderHandle, mesh: RenderHandle, media: MediaConfig): void {
+        const rm = (world as any).resourceManager as ResourceManager | undefined;
+        if (!rm) return;
+        const resolve = media.kind === 'video' ? rm.getVideoUrl(media.source) : rm.getAudioUrl(media.source);
+        resolve.then((url: string) => {
+            if (this.isHandleRemoved(meshGroup)) return; // evicted mid-load
+            if (media.kind === 'video') {
+                world.renderEngine.attachVideoScreen(mesh, url, {
+                    autoplay: media.autoplay, loop: media.loop, muted: media.muted, volume: media.volume,
+                });
+            } else {
+                world.renderEngine.attachAudioEmitter(mesh, url, {
+                    autoplay: media.autoplay, loop: media.loop, volume: media.volume, refDistance: media.refDistance,
+                });
+            }
+        }).catch((err: unknown) => {
+            reportError(new ResourceError(`media ${media.kind} '${media.source}' failed to attach`, { cause: err }), { tag: '[AdjunctFactory]', severity: 'warn' });
+        });
     }
 
     /**

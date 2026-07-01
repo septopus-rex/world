@@ -28,6 +28,13 @@ export interface IDataSource {
     audio?(ids: number[]): Promise<any>;
 
     /**
+     * Get video definitions (record shape: { raw, format }, raw = CID/URL/path).
+     * Optional and first-class, same as audio(); ResourceManager falls back to
+     * module() when absent.
+     */
+    video?(ids: number[]): Promise<any>;
+
+    /**
      * Resolve a Game Setting resource (game.md §2): the playable block's `game`
      * field carries this resource id. Returns the GameSetting, or null if the id
      * resolves to nothing (then the block is a bare playable zone with no game).

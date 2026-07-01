@@ -169,6 +169,32 @@ export class ResourceManager {
         return entry.then(r => r.url);
     }
 
+    // id → resolved URL. Deduped so N screens of one video share ONE fetch/blob.
+    // NOT LRU-revoked like audio: a live <video> streams from the blob for its whole
+    // lifetime, so revoking on a cap would break playback. Reclaim is tied to screen
+    // removal instead (RenderEngine.removeHandle) — MVP leaves the blob (spec §10).
+    private videoUrls = new Map<string, Promise<string>>();
+
+    /** Resolve a video resource id (or direct URL/CID) to a playable URL. */
+    async getVideoUrl(resourceId: string | number): Promise<string> {
+        const id = String(resourceId);
+        let promise = this.videoUrls.get(id);
+        if (!promise) {
+            promise = (async () => {
+                const direct = isCid(id) || /^(https?:|data:|blob:|file:)/.test(id);
+                if (direct) return this.resolveUrl(id);
+                const fetchVideo = this.datasource.video ?? this.datasource.module;
+                const records = await fetchVideo.call(this.datasource, [Number(id)]);
+                const rec = records?.[id] ?? records?.[Number(id)];
+                if (!rec?.raw) throw new Error(`[ResourceManager] no video record for id ${id}`);
+                return this.resolveUrl(rec.raw);
+            })();
+            this.videoUrls.set(id, promise);
+            promise.catch(() => { if (this.videoUrls.get(id) === promise) this.videoUrls.delete(id); });
+        }
+        return promise;
+    }
+
     /** Evict LRU audio entries past the cap; revoke any blob: URL they still hold. */
     private evictAudioOverCap(): void {
         while (this.audioUrls.size > this.maxAudioUrls) {

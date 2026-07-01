@@ -905,6 +905,99 @@ export class RenderEngine {
         }).catch((e) => reportError(e, { tag: '[RenderEngine]', severity: 'warn', code: 'RESOURCE_LOAD', id: url }));
     }
 
+    // ── A/V media adjuncts (e2 audio emitter / e3 video screen) ────────────────
+    // The <video>/PositionalAudio live ON the mesh handle (userData.__media) so
+    // removeHandle stops + frees them on block eviction. See specs/av-media-adjuncts.md.
+
+    /**
+     * Attach a looping spatial sound to a mesh (audio emitter, e2). Unlike the
+     * one-shot playSpatialSound, the PositionalAudio rides the mesh (moves with it,
+     * stops on eviction). Reuses the decoded-buffer LRU cache. Headless → no-op.
+     */
+    public attachAudioEmitter(
+        handle: RenderHandle,
+        url: string,
+        opts: { autoplay?: boolean; loop?: boolean; volume?: number; refDistance?: number } = {},
+    ): void {
+        const mesh = handle as THREE.Object3D;
+        if (typeof (globalThis as any).AudioContext === 'undefined'
+            && typeof (globalThis as any).webkitAudioContext === 'undefined') return; // headless
+        if (!this.audioListener) { this.audioListener = new THREE.AudioListener(); this.mainCamera.add(this.audioListener); }
+        const listener = this.audioListener;
+        try { (listener.context as AudioContext)?.resume?.(); } catch { /* pre-gesture: stays suspended */ }
+        if (!this.audioLoader) this.audioLoader = new THREE.AudioLoader();
+
+        let buffer = this.audioBuffers.get(url);
+        if (buffer) { this.audioBuffers.delete(url); this.audioBuffers.set(url, buffer); }
+        else {
+            buffer = this.audioLoader.loadAsync(url);
+            this.audioBuffers.set(url, buffer);
+            while (this.audioBuffers.size > RenderEngine.MAX_AUDIO_BUFFERS) {
+                const victim = this.audioBuffers.keys().next().value; if (victim === undefined) break;
+                this.audioBuffers.delete(victim);
+            }
+        }
+
+        const sound = new THREE.PositionalAudio(listener);
+        (mesh.userData ??= {}).__media = { audio: sound };
+        buffer.then((buf) => {
+            if (mesh.userData?.__removed) return; // evicted mid-load
+            sound.setBuffer(buf);
+            sound.setLoop(opts.loop !== false);
+            sound.setRefDistance(opts.refDistance ?? 8);
+            sound.setVolume(opts.volume ?? 1);
+            mesh.add(sound);
+            if (opts.autoplay !== false) sound.play();
+        }).catch((e) => reportError(e, { tag: '[RenderEngine]', severity: 'warn', code: 'RESOURCE_LOAD', id: url }));
+    }
+
+    /**
+     * Attach a live VideoTexture to a mesh's material (video screen, e3). Streams a
+     * `<video>` → THREE.VideoTexture (auto-updates each render) → material.map, on a
+     * clone-on-write material so it never bleeds onto shared cached mats. Muted by
+     * default (browsers block autoplay-with-sound before a user gesture). Headless
+     * (no DOM) → no-op. See spec §4.
+     */
+    public attachVideoScreen(
+        handle: RenderHandle,
+        url: string,
+        opts: { autoplay?: boolean; loop?: boolean; muted?: boolean; volume?: number } = {},
+    ): void {
+        if (typeof document === 'undefined') return; // headless
+        const mesh = handle as THREE.Object3D;
+        const video = document.createElement('video');
+        video.src = url;
+        video.crossOrigin = 'anonymous';
+        video.loop = opts.loop !== false;
+        video.muted = opts.muted !== false;
+        (video as any).playsInline = true;
+        video.volume = opts.volume ?? 1;
+
+        const texture = new THREE.VideoTexture(video);
+        (texture as any).colorSpace = THREE.SRGBColorSpace;
+        if (mesh instanceof THREE.Mesh) {
+            const mat = RenderEngine.isolateMaterial(mesh);
+            mat.map = texture;
+            mat.color.setHex(0xffffff); // white base so the video shows true (not tinted)
+            mat.side = THREE.DoubleSide; // visible from both sides of the panel
+            mat.needsUpdate = true;
+        }
+        (mesh.userData ??= {}).__media = { video, texture };
+        if (opts.autoplay !== false) {
+            video.play().catch(() => { /* autoplay may need a gesture — click-to-play is P1 */ });
+        }
+    }
+
+    /** Stop + free any A/V media attached to a mesh (called from removeHandle). */
+    private static disposeMediaResources(child: any): void {
+        const m = child?.userData?.__media;
+        if (!m) return;
+        if (m.audio) { try { m.audio.stop(); } catch { /* not playing */ } m.audio.disconnect?.(); m.audio.parent?.remove(m.audio); }
+        if (m.video) { try { m.video.pause(); } catch { /* already stopped */ } m.video.removeAttribute('src'); m.video.load?.(); }
+        m.texture?.dispose?.();
+        child.userData.__media = undefined;
+    }
+
     // ── Skeletal animation ────────────────────────────────────────────────────
 
     /** Movement-state → clip-name heuristics (case-insensitive substring). */
@@ -1011,7 +1104,10 @@ export class RenderEngine {
         }
 
         // Recursive disposal, guarded against shared resources (see disposeMeshResources).
-        obj.traverse((child) => RenderEngine.disposeMeshResources(child));
+        obj.traverse((child) => {
+            RenderEngine.disposeMediaResources(child);   // stop <video>/PositionalAudio first
+            RenderEngine.disposeMeshResources(child);
+        });
     }
 
     /**

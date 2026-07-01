@@ -14,6 +14,8 @@ import { BasicWaterAdjunct } from '../../plugins/adjunct/basic_water';
 import { AdjunctLink } from '../../plugins/adjunct/adjunct_link';
 import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
 import { AdjunctMotif } from '../../plugins/adjunct/adjunct_motif';
+import { AdjunctAudio } from '../../plugins/adjunct/adjunct_audio';
+import { AdjunctVideo } from '../../plugins/adjunct/adjunct_video';
 import { AdjunctError } from '../errors';
 
 /**
@@ -43,6 +45,8 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Track, AdjunctTrack as unknown as AdjunctDefinition],        // track (tube rail; coaster)
     [AdjunctType.Motif, AdjunctMotif as unknown as AdjunctDefinition],        // motif (generative content)
     [AdjunctType.Link, AdjunctLink as unknown as AdjunctDefinition],          // link / QR panel (clickable)
+    [AdjunctType.Audio, AdjunctAudio as unknown as AdjunctDefinition],        // spatial audio emitter
+    [AdjunctType.Video, AdjunctVideo as unknown as AdjunctDefinition],        // video screen (VideoTexture)
 ]);
 
 export function getBuiltinAdjunct(typeId: number): AdjunctDefinition | undefined {

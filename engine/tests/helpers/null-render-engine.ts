@@ -46,7 +46,7 @@ export function createNullRenderEngine() {
   // count group creation, child adds, and removals (the swap adds the model clone
   // then removes the placeholder; eviction removes the group).
   const counts = {
-    groups: 0, added: 0, removed: 0, lastAnimState: '', soundsPlayed: [] as string[],
+    groups: 0, added: 0, removed: 0, lastAnimState: '', soundsPlayed: [] as string[], videosAttached: [] as string[],
     lastAppearance: null as { color?: number; opacity?: number } | null,
     lastUVOffset: null as [number, number] | null,
     lastMorph: null as number[] | null,
@@ -138,6 +138,9 @@ export function createNullRenderEngine() {
 
     // Audio (recorded for asserts)
     playSpatialSound: (url: string) => { counts.soundsPlayed.push(url); },
+    // A/V media adjuncts — no-op headless (real <video>/WebAudio need a browser).
+    attachAudioEmitter: (_h: Handle, url: string) => { counts.soundsPlayed.push(url); },
+    attachVideoScreen: (_h: Handle, url: string) => { counts.videosAttached.push(url); },
 
     // Misc
     getMaxAnisotropy: () => 1,
