@@ -35,6 +35,7 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: AdjunctType.Link, label: 'Link' },
     { typeId: AdjunctType.Audio, label: 'Audio' },
     { typeId: AdjunctType.Video, label: 'Video' },
+    { typeId: AdjunctType.Spawner, label: 'Spawner' },
 ];
 
 export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[] | null {
@@ -74,6 +75,9 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             return [[0.4, 0.4, 0.4], [x, y, z + 0.4], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 8];
         case AdjunctType.Video: // video: [size, pos, rot, source, autoplay, loop, muted, volume]
             return [[3.2, 0.1, 1.8], [x, y, z + 1.2], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 1];
+        case AdjunctType.Spawner: // spawner: [pos, template, interval, maxAlive, autoStart, seed]
+            // Default template: a small box popping up 1m above the spawner every 5s (max 3).
+            return [[x, y, z], [AdjunctType.Box, [[0.5, 0.5, 0.5], [0, 0, 1], [0, 0, 0], 2, [1, 1], 0, 0]], 5, 3, 1, 0];
         default:
             return null;
     }

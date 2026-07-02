@@ -61,12 +61,16 @@ export interface TriggerLogicNode {
 }
 
 export interface TriggerAction {
-    /** Action category: 'adjunct' | 'flag' | 'system' */
+    /** Action category: 'adjunct' | 'flag' | 'bag' | 'player' | 'sound' |
+     *  'system' | 'delay' | 'spawn' | 'despawn' */
     type: string;
     /** Target reference — adjunctId, flag key, or system name. */
     target: string | number;
     method: string;
     params: any[];
+    /** Nested actions for composite types (F1 spec §1.1): `delay` executes these
+     *  params[0] seconds later. Optional — absent on every legacy action. */
+    actions?: TriggerAction[];
 }
 
 // -----------------------------------------------------------------------------

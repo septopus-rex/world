@@ -230,7 +230,7 @@ export class BlockSystem implements ISystem {
      * component set; AdjunctSystem builds the mesh on the next frame. The caller
      * persists (saveBlockDraft) — this only mutates the live world.
      */
-    public spawnAdjunct(world: World, blockEid: EntityId, typeId: number, rawRow: any[]): EntityId | null {
+    public spawnAdjunct(world: World, blockEid: EntityId, typeId: number, rawRow: any[], extraStd?: Record<string, any>): EntityId | null {
         const block = world.getComponent<BlockComponent>(blockEid, "BlockComponent");
         const definition = getAdjunct(typeId);
         const std = definition?.attribute?.deserialize?.(rawRow);
@@ -245,7 +245,9 @@ export class BlockSystem implements ISystem {
 
         const adjId = world.createEntity();
         const sourceId = `adj_${block.x}_${block.y}_${typeId}_${idx}`;
-        this.attachAdjunctComponents(world, blockEid, adjId, { ...std, typeId }, definition, sourceId);
+        // extraStd: runtime-spawn markers (e.g. derivedFrom = the spawner/trigger
+        // that produced this entity — serializer-skipped, dies with the block).
+        this.attachAdjunctComponents(world, blockEid, adjId, { ...std, typeId, ...extraStd }, definition, sourceId);
 
         // Source adjuncts (b6/c2): expand into standard derived pieces immediately
         // so a palette-placed source is visible without a reload (block-load does
@@ -273,6 +275,30 @@ export class BlockSystem implements ISystem {
                 dDef, `${sourceId}_d${k}`
             );
         });
+    }
+
+    /**
+     * Despawn ONE runtime-spawned entity cleanly (mesh + resources + entity) and
+     * emit spawn.removed. RESTRICTED to derived entities (stdData.derivedFrom set)
+     * — despawning an AUTHORED adjunct would silently drop it from the next draft
+     * save (serializeBlockToRaw scans live entities) = content loss. Returns
+     * false (reported) for authored/unknown targets.
+     */
+    public despawnRuntime(world: World, eid: EntityId, reason: 'despawn' | 'evict' | 'spawner_deleted' = 'despawn'): boolean {
+        const a = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
+        if (!a) return false;
+        if (!a.stdData?.derivedFrom) {
+            reportError(new AdjunctError(`[despawn] '${a.adjunctId}' is authored content — refuse (would drop from the next draft save)`, { code: 'ADJUNCT_VALIDATE', id: String(a.adjunctId) }), {
+                tag: '[BlockSystem]', severity: 'warn',
+            });
+            return false;
+        }
+        const adjunctId = a.adjunctId;
+        this.releaseResources(world, eid);
+        this.freeMesh(world, eid);
+        world.destroyEntity(eid);
+        world.events?.emit?.('spawn.removed', { adjunctId, reason });
+        return true;
     }
 
     /** Destroy every derived piece of a b6 source (free meshes + resources). */

@@ -4,6 +4,7 @@ import { TriggerAction } from '../types/Trigger';
 import { SystemMode, asExitPolicy } from '../types/SystemMode';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
+import { spawnRelative } from '../utils/Spawn';
 
 /**
  * Actuator — the execution layer for trigger actions (roadmap P2).
@@ -69,9 +70,78 @@ export class LocalActuator implements IActuator {
             case 'system':
                 if (action.method === 'log') console.log('[Actuator]', ...(action.params ?? []));
                 break;
+            case 'delay':
+                this.execDelay(action, ctx);
+                break;
+            case 'spawn':
+                this.execSpawn(action, ctx);
+                break;
+            case 'despawn':
+                this.execDespawn(action, ctx);
+                break;
             default:
                 reportError(`unknown action type '${action.type}'`, { tag: '[Actuator]', severity: 'warn' });
         }
+    }
+
+    // ── F1 scheduler-and-spawn actions (spec §1.1) ────────────────────────────
+
+    /**
+     * delay: run the nested `actions` params[0] seconds later (SIMULATION time —
+     * world.scheduler). The context is re-derived AT FIRE TIME: `mode` is re-read
+     * from the world so a delayed bag/player action still hits the gameonly
+     * permission matrix as of when it actually runs (a delay must never smuggle a
+     * Game-only action across a mode exit).
+     */
+    private execDelay(action: TriggerAction, ctx: ActuatorContext): void {
+        const nested = action.actions;
+        if (!Array.isArray(nested) || nested.length === 0) return;
+        const seconds = Number(action.params?.[0]);
+        const world = ctx.world;
+        const playerId = ctx.playerId;
+        const sourceEntity = ctx.sourceEntity ?? null;
+        world.scheduler.after(Number.isFinite(seconds) ? seconds : 0, () => {
+            for (const a of nested) {
+                this.execute(a, { world, playerId, mode: world.mode, sourceEntity });
+            }
+        });
+    }
+
+    /**
+     * spawn: create ONE runtime entity in the firing block. params = [typeId,
+     * rawRow] — the template's position slot is RELATIVE to the firing entity's
+     * anchor (spec §2.3), shifted generically via the type's own std round-trip.
+     * The entity is marked derivedFrom the firing adjunct: serializer-skipped
+     * (never baked into a draft) and dies with the block.
+     */
+    private execSpawn(action: TriggerAction, ctx: ActuatorContext): void {
+        const world = ctx.world;
+        const typeId = Number(action.params?.[0]);
+        const rawRow = action.params?.[1];
+        if (!Number.isFinite(typeId) || !Array.isArray(rawRow)) {
+            reportError(`spawn: params must be [typeId, rawRow]`, { tag: '[Actuator]', severity: 'warn' });
+            return;
+        }
+        const src = ctx.sourceEntity != null
+            ? world.getComponent<AdjunctComponent>(ctx.sourceEntity, "AdjunctComponent") : null;
+        if (!src || src.parentBlockEntityId == null) {
+            reportError(`spawn: no firing adjunct to anchor to (sourceEntity required)`, { tag: '[Actuator]', severity: 'warn' });
+            return;
+        }
+        const spawned = spawnRelative(world, src.parentBlockEntityId, typeId, rawRow, src.stdData, String(src.adjunctId));
+        if (spawned) {
+            world.events?.emit?.('spawn.created', { adjunctId: spawned.adjunctId, typeId, spawnerId: String(src.adjunctId) });
+        }
+    }
+
+    /** despawn: destroy a runtime-spawned entity by adjunctId (authored content
+     *  is refused — see BlockSystem.despawnRuntime). */
+    private execDespawn(action: TriggerAction, ctx: ActuatorContext): void {
+        const world = ctx.world;
+        const eid = this.resolveAdjunct(world, action.target);
+        if (eid === null) return;
+        const blocks: any = world.systems.findSystemByName('BlockSystem');
+        blocks?.despawnRuntime?.(world, eid, 'despawn');
     }
 
     // ── bag (Game mode only — game.md permission matrix) ─────────────────────

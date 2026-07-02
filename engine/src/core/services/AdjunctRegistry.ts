@@ -16,6 +16,7 @@ import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
 import { AdjunctMotif } from '../../plugins/adjunct/adjunct_motif';
 import { AdjunctAudio } from '../../plugins/adjunct/adjunct_audio';
 import { AdjunctVideo } from '../../plugins/adjunct/adjunct_video';
+import { AdjunctSpawner } from '../../plugins/adjunct/adjunct_spawner';
 import { AdjunctError } from '../errors';
 
 /**
@@ -47,6 +48,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Link, AdjunctLink as unknown as AdjunctDefinition],          // link / QR panel (clickable)
     [AdjunctType.Audio, AdjunctAudio as unknown as AdjunctDefinition],        // spatial audio emitter
     [AdjunctType.Video, AdjunctVideo as unknown as AdjunctDefinition],        // video screen (VideoTexture)
+    [AdjunctType.Spawner, AdjunctSpawner as unknown as AdjunctDefinition],    // timed runtime generator (F1)
 ]);
 
 export function getBuiltinAdjunct(typeId: number): AdjunctDefinition | undefined {

@@ -65,6 +65,9 @@ export interface EventMap {
     'inventory.updated': { entity: EntityId; inventory: unknown };
     'inventory.full': { entity: EntityId; itemId: string };
     'effect.spawn': { position: [number, number, number]; type: string };
+    // ── runtime spawn (F1 scheduler-and-spawn) ──
+    'spawn.created': { adjunctId: string; typeId: number; spawnerId?: string };
+    'spawn.removed': { adjunctId: string; reason: 'despawn' | 'evict' | 'spawner_deleted' };
     // ── edit ──
     'edit.draft_saved': { blockKey: string };
     'edit.upload_request': { drafts: unknown };

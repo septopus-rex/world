@@ -11,6 +11,9 @@ import { BlockCas } from './services/BlockCas';
 
 // Systems (Imported only for registration in constructor or specialized logic)
 import { PhysicsSystem } from './systems/PhysicsSystem';
+import { ScheduleSystem } from './systems/ScheduleSystem';
+import { SpawnerSystem } from './systems/SpawnerSystem';
+import { Scheduler } from './services/Scheduler';
 import { LiveSystem } from './systems/LiveSystem';
 import { CharacterController } from './movement/CharacterController';
 import { InputProvider } from './systems/InputProvider';
@@ -127,6 +130,10 @@ export class World {
      *  CID (spec mock-ipfs-block.md). The data-source layer (LocalDataSource)
      *  routes scene seeds through this so block content is content-addressed too. */
     public readonly blockCas: BlockCas;
+    /** Deterministic simulation-time task queue (F1 scheduler-and-spawn spec):
+     *  after/every/cancel on dt-accumulated time, driven by ScheduleSystem.
+     *  Pending tasks are NOT persisted (spec §2.2 — re-armed on re-entry). */
+    public readonly scheduler = new Scheduler();
 
     // 3. Simulation State
     private lastTime: number = 0;
@@ -309,6 +316,10 @@ export class World {
         // LiveSystem first: external realtime messages enter here and become
         // same-frame-visible to every system registered after it.
         this.systems.addSystem(new LiveSystem());
+        // ScheduleSystem in the "time input" slot (after LiveSystem, before all
+        // consumers): due tasks fire at the top of the frame so their effects
+        // (spawns, delayed actions) are visible to every later system this frame.
+        this.systems.addSystem(new ScheduleSystem());
         this.systems.addSystem(new CharacterController(this, inputProvider));
         this.systems.addSystem(new RaycastInteractionSystem());
         this.systems.addSystem(new TriggerSystem());
@@ -324,6 +335,9 @@ export class World {
         this.systems.addSystem(new GameRuntimeSystem());
         this.systems.addSystem(new BlockSystem());
         this.systems.addSystem(new AdjunctSystem());
+        // SpawnerSystem after AdjunctSystem: newly initialized b9 spawners arm the
+        // same frame their entities appear; disarms track entity disappearance.
+        this.systems.addSystem(new SpawnerSystem());
         this.systems.addSystem(new BlockLODSystem());
         this.systems.addSystem(new EnvironmentSystem(this));
         this.systems.addSystem(new AnimationSystem());
