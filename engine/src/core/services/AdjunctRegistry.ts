@@ -17,6 +17,7 @@ import { AdjunctMotif } from '../../plugins/adjunct/adjunct_motif';
 import { AdjunctAudio } from '../../plugins/adjunct/adjunct_audio';
 import { AdjunctVideo } from '../../plugins/adjunct/adjunct_video';
 import { AdjunctSpawner } from '../../plugins/adjunct/adjunct_spawner';
+import { AdjunctNpc } from '../../plugins/adjunct/adjunct_npc';
 import { AdjunctError } from '../errors';
 
 /**
@@ -49,6 +50,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Audio, AdjunctAudio as unknown as AdjunctDefinition],        // spatial audio emitter
     [AdjunctType.Video, AdjunctVideo as unknown as AdjunctDefinition],        // video screen (VideoTexture)
     [AdjunctType.Spawner, AdjunctSpawner as unknown as AdjunctDefinition],    // timed runtime generator (F1)
+    [AdjunctType.Npc, AdjunctNpc as unknown as AdjunctDefinition],            // autonomous agent (F2)
 ]);
 
 export function getBuiltinAdjunct(typeId: number): AdjunctDefinition | undefined {

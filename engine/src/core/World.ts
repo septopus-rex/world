@@ -13,6 +13,7 @@ import { BlockCas } from './services/BlockCas';
 import { PhysicsSystem } from './systems/PhysicsSystem';
 import { ScheduleSystem } from './systems/ScheduleSystem';
 import { SpawnerSystem } from './systems/SpawnerSystem';
+import { NPCSystem } from './systems/NPCSystem';
 import { Scheduler } from './services/Scheduler';
 import { LiveSystem } from './systems/LiveSystem';
 import { CharacterController } from './movement/CharacterController';
@@ -338,6 +339,9 @@ export class World {
         // SpawnerSystem after AdjunctSystem: newly initialized b9 spawners arm the
         // same frame their entities appear; disarms track entity disappearance.
         this.systems.addSystem(new SpawnerSystem());
+        // NPCSystem after SpawnerSystem: agents spawned this frame get driven the
+        // same frame; movement writes Transform+dirty → VisualSync same frame.
+        this.systems.addSystem(new NPCSystem());
         this.systems.addSystem(new BlockLODSystem());
         this.systems.addSystem(new EnvironmentSystem(this));
         this.systems.addSystem(new AnimationSystem());

@@ -68,6 +68,8 @@ export interface EventMap {
     // ── runtime spawn (F1 scheduler-and-spawn) ──
     'spawn.created': { adjunctId: string; typeId: number; spawnerId?: string };
     'spawn.removed': { adjunctId: string; reason: 'despawn' | 'evict' | 'spawner_deleted' };
+    // ── NPC agents (F2 npc-agents) ──
+    'npc.state': { adjunctId: string; from: string; to: string };
     // ── edit ──
     'edit.draft_saved': { blockKey: string };
     'edit.upload_request': { drafts: unknown };

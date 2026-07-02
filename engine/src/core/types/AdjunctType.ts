@@ -26,6 +26,7 @@ export const AdjunctType = {
     Particle: 0x00b6, // string-particle (SPP); expands to standard adjuncts
     Trigger: 0x00b8,
     Spawner: 0x00b9,  // timed runtime generator (template + interval + maxAlive; F1)
+    Npc: 0x00ba,      // autonomous agent (visual + behavior state machine; F2)
     Track: 0x00c1,    // tube rail (coaster)
     Motif: 0x00c2,    // generative content (seed + template → standard adjuncts)
     Link: 0x00e1,     // clickable URL / QR panel

@@ -36,6 +36,7 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: AdjunctType.Audio, label: 'Audio' },
     { typeId: AdjunctType.Video, label: 'Video' },
     { typeId: AdjunctType.Spawner, label: 'Spawner' },
+    { typeId: AdjunctType.Npc, label: 'NPC' },
 ];
 
 export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[] | null {
@@ -75,6 +76,14 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             return [[0.4, 0.4, 0.4], [x, y, z + 0.4], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 8];
         case AdjunctType.Video: // video: [size, pos, rot, source, autoplay, loop, muted, volume]
             return [[3.2, 0.1, 1.8], [x, y, z + 1.2], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 1];
+        case AdjunctType.Npc: // npc: [pos, visual, behavior, seed] — friendly wanderer demo
+            return [[x, y, z], { shape: 'box', size: [0.6, 0.6, 1.7], color: 0xcc8844 }, {
+                initial: 'idle',
+                states: {
+                    idle: { move: { kind: 'stay' }, transitions: [{ when: { '>': [{ var: 'npc.timeInState' }, 2] }, to: 'wander' }] },
+                    wander: { move: { kind: 'wander', speed: 1.2, radius: 3 }, transitions: [{ when: { '<': [{ var: 'npc.distToPlayer' }, 2] }, to: 'idle' }] },
+                },
+            }, 0];
         case AdjunctType.Spawner: // spawner: [pos, template, interval, maxAlive, autoStart, seed]
             // Default template: a small box popping up 1m above the spawner every 5s (max 3).
             return [[x, y, z], [AdjunctType.Box, [[0.5, 0.5, 0.5], [0, 0, 1], [0, 0, 0], 2, [1, 1], 0, 0]], 5, 3, 1, 0];
