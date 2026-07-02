@@ -92,7 +92,7 @@ cd engine && yarn build                            # tsc
 
 - `docs/plan/STANDALONE_ENGINE_ROADMAP.md` — 开发路线图（链剥离记录 + 旧引擎退役 + 后续 P1–P5）。
 - `docs/plan/PLAYABLE_CHECKLIST.md` — **可玩化落地清单**（从技术 demo 到用户可玩的 gap 追踪 + 首迭代；内容/产品视角）。
-- `docs/plan/GAME_SYSTEMS_BACKLOG.md` — **游戏引擎系统缺口清单**（引擎原语视角：F1 调度/生成 · F2 NPC/AI · F3 战斗 · F4 对话任务；逐个处理。联网=外部已定，game-mode 已定）。
+- `docs/plan/GAME_SYSTEMS_BACKLOG.md` — **游戏引擎系统缺口清单**（引擎原语视角：F1 调度/生成 · F2 NPC/AI · F3 战斗 · F4 对话任务；逐个处理。联网=外部已定，game-mode 已定）。**F 系列统一设计模式已预决策（2026-07-02，见该文档同名节）**：authored 源(adjunct)→运行时派生实体 · 定义(模板/文档)→实例(不持久化) · 条件=JSONLogic/效果=actuator · 定时=仿真时间/门控=世界时间进条件。F1 定时器跑 dt 累积（链高度历法只作条件源）；F2 NPC=spawner adjunct+运行时活体；F3 定义数据化+实例世界空间跨块（静态伤害体积现有 trigger 已可做）；F4 对话树=纯数据文档（走树状态机，零新执行原语，锚点=可交互物能力非独立 adjunct）。
 - `docs/plan/specs/phase0-engine-consolidation.md` — 引擎收敛规格。
 - `docs/plan/specs/coaster-via-spp.md` — **用 SPP 搭过山车**设计稿（连通→theme 几何 + CoasterSystem 运动；未落地）。
 - `docs/plan/specs/2d-map.md` — **2D 世界地图**设计规格（解除"有意不移植"；视口窗口化按需流式、复用 `block.need` 块通道、非全局索引；参考旧引擎 `control_2d.js`+`render_2d.js` 的逐块顶面俯视投影；**规划中**）。

@@ -91,11 +91,30 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 
 ---
 
+## F 系列统一设计模式（2026-07-02 预决策，已与用户确认）
+
+四个 F 的设计收敛到同一个已被代码库验证的模式（先例：b5 物品、tumble 塔、SPP b6 源、coaster 车、e1 link）：
+
+```
+authored 源（adjunct，进 block raw）→ 运行时派生实体（不受块驱逐绑架）
+定义（模板/文档，协议推导）        → 实例（运行时态，不持久化）
+条件 = JSONLogic 上下文             → 效果 = actuator 词汇
+定时 = 仿真时间（dt 累积）          → 门控 = 世界时间（进条件上下文）
+```
+
+各 spec 开篇引用此模式展开，不再各自发明。
+
 ## F1 · 运行时调度 / 定时器 / 通用生成 🔲 —— 地基，最先做
 
 > **现状（核实）**：完全没有。`grep cooldown/scheduler/spawnActor/wave` 全空。actuator 动作是**瞬时**的（`Actuator.ts`）；帧循环**没有一次性任务队列**（`SystemManager.update` 只遍历常驻 system，见与用户讨论）；运行时生成只有原生游戏自己 spawn 棋子 + 掉落物 `ItemDropSystem`，**没有通用 `spawnActor`**。唯一的时间原语是 trigger 的 `hold`。
 >
 > **为什么最先做**：游戏时时刻刻要「N 秒后刷一波 / 冷却 / 做完 X 过 2 秒做 Y / 敌人 30 秒后重生」。而且它是 **NPC、战斗、任务都要踩着走的依赖**。范围小、零返工风险。
+>
+> **设计预决策（2026-07-02）**：世界有两套时间，职责分明——**定时器一律跑仿真时间**
+> （dt 累积，同 AnimationSystem/trigger hold；确定性 = game.md §9 重放可验证的前提），
+> **世界时间（链高度历法）只作条件源**进 JSONLogic 上下文（如 `{"var":"world.hour"}`
+> 门控"晚 8 点后才刷"）——链高度会跳（mock 每 2s 跳 24 游戏分），挂定时器会补发/跳段。
+> 调度器 = 排序 System 每帧结算到期任务、按 (frame,seq) 发事件；零 setTimeout/墙钟（既有铁律）。
 
 - [ ] 🔲 **Scheduler/Timer 系统**：注册「delay 后执行 / 每 N 秒 / 冷却」的定时回调，`step(dt)` 驱动、确定性、可持久化（存活跨帧）。（对齐之前讨论的「帧循环缺一次性 task 队列」——可先给 `SystemManager` 加个 one-shot 队列，或独立 `ScheduleSystem`。）
 - [ ] 🔲 **通用 spawn/despawn API**：运行时创建/销毁标准实体（adjunct 或轻量 actor），复用现有 mesh/碰撞/触发装配；生命周期挂 block/zone（离开即清，复用原生游戏 teardown 的教训——根除悬空实体）。
@@ -113,7 +132,11 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 
 - [ ] 🔲 **行为层**：非玩家实体的状态机 / 行为树（idle/patrol/chase/flee/interact）。可先做轻量状态机 System，数据驱动声明。
 - [ ] 🔲 **寻路**：navmesh 或 block 网格 A*（世界是 16×16m 网格 + adjunct 障碍，格子 A* 起步最简）。
-- [ ] 🔲 **NPC 数据模型**：怎么 author 一个 NPC——新 adjunct 类型？spawn point？绑定行为 + 外观（module 模型 + 动画状态机已就绪）。
+- [x] ✅ **NPC 数据模型（预决策 2026-07-02）**：**NPC spawner = adjunct**（进 block raw：
+  模板 id + 行为参数 + seed——放置自由/随块流式/CAS 发布全套白拿）；**活 NPC = 运行时实体**
+  （spawner 派生，可游走跨块，不在块 raw 间"搬家"；块驱逐 → 销毁，重进 → spawner 重生成，
+  符合"可推导之物不持久化"）。先例：b5→拾取、tumble spawner→刚体、b6 源→派生实体。
+  外观绑 module 模型 + 动画状态机（已就绪）。
 - [ ] 🔲 **感知/触发**：NPC 对玩家距离/视线/flag 的反应（复用 trigger/条件思路）。
 - [ ] 📄 `specs/npc-agents.md`。
 
@@ -124,6 +147,11 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 > **现状（核实）**：**半个**。`HealthSystem` 只有**挨打侧**（damage/heal/fell → died/respawned）。`grep projectile/hitbox/hurtbox/melee/weapon/combat` 全空——**没有打人这一侧**。ShootingRange 是定制原生游戏，不是通用框架。
 >
 > **依赖**：F1（抛射物 = spawn + 定时）。**优先级看游戏类型**：动作/战斗向就大，社交/解谜/探索向可暂缓。
+>
+> **设计预决策（2026-07-02）**：**定义 = 数据**（武器/弹道模板：速度/伤害/半径，同物品模板
+> 性质进协议）；**实例 = 世界空间运行时实体**（跨块自由——先例 player 自身与 coaster 车
+> `rideActive`；带 TTL，飞出流式窗口即销毁）。**静态伤害体积不等 F3**：b8 trigger +
+> `player:damage` 动作现在就能做尖刺陷阱——F3 真正新增的是**会动的**战斗对象。
 
 - [ ] 🔲 **伤害-施加侧**：一个实体对另一个造成伤害的通用通道（接到既有 `player:damage` / HealthSystem）。
 - [ ] 🔲 **抛射物**：spawn 一个带速度/寿命的实体，命中判定 → 伤害（复用 F1 spawn + 物理）。
@@ -139,7 +167,14 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 >
 > **可合流**：对话内容 = 文本/语音/视频，**正好接刚做的 A/V 媒体 adjunct** + UI 层。与 `PLAYABLE_CHECKLIST` G2「目标/进度系统」有重叠——本项做**引擎原语**，那边做**内容 HUD**。
 
-- [ ] 🔲 **对话系统**：节点式会话（文本 + 分支选择 + 触发动作），trigger/interact 启动；可挂 A/V。
+- [x] ✅ **对话数据模型（预决策 2026-07-02）**：**对话树 = 纯数据文档**，节点 =
+  `{text, 条件(JSONLogic), 选项 → 动作(actuator 词汇)}`——条件复用 `inventory.*`/flags 上下文
+  （"有钥匙才出现此选项"），动作复用 flag/bag/player 面（"选了 → 给物品+设旗标"）；
+  **引擎只加一个走树状态机，零新执行原语**。**锚点 = 可交互物的能力**（NPC adjunct 带
+  `dialogue: <文档id>` 字段 / 立牌类同理，走 `interact.primary`——先例 e1 link），
+  **不发明独立对话 adjunct**。存储：短对话内联 raw（如 trigger actions），长树 = 资源文档
+  按 id 引用（IDataSource/CAS，可跨 NPC 复用、可单独发布）。UI 面板归客户端。
+- [ ] 🔲 **对话系统实现**：走树状态机 System + interact 启动；可挂 A/V（媒体 adjunct 已就绪）。
 - [ ] 🔲 **任务/目标**：objective 追踪（状态：未接/进行/完成），基于 flag + 新增轻量结构；完成触发 actuator 动作。
 - [ ] 🔲 **进度存档**：接 DraftStore meta（flags/位置/背包已在同通道，任务状态并入）。
 - [ ] 🔲 客户端 UI：对话框 / 目标 HUD（与 `PLAYABLE_CHECKLIST` G2 协同）。
