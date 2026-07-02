@@ -350,6 +350,22 @@ export class Engine {
         return this.world?.blockCas ?? null;
     }
 
+    // ── dialogue (F4) — host UI renders events, calls back through these ─────
+
+    /** Snapshot of the active conversation (null = none). */
+    public dialogueState() {
+        const d = this.world?.activeDialogue;
+        return d ? { adjunctId: d.adjunctId, nodeId: d.nodeId } : null;
+    }
+    /** Choose the i-th VISIBLE option of the current dialogue node. */
+    public chooseDialogue(visibleIndex: number): void {
+        this.world?.chooseDialogue(visibleIndex);
+    }
+    /** Close the active conversation. */
+    public endDialogue(): void {
+        this.world?.endDialogue();
+    }
+
     /** External realtime transport (ILiveSource) feeding world.events via
      *  LiveSystem. The client subscribes()/pushes through its own implementation;
      *  this exposes whatever was injected. Null before bootWorld. */

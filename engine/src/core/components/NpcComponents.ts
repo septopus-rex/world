@@ -22,4 +22,27 @@ export interface BehaviorComponent {
     entered: boolean;
     /** True when the last step actually moved the agent (drives walk/idle anim). */
     lastMoved?: boolean;
+    /** Runtime hit points (combat spec §1.2). 0 with maxHp 0 = invulnerable.
+     *  Never persisted — block reload = full-health respawn (arcade semantics). */
+    hp: number;
+    maxHp: number;
+    /** Dead agents are inert + hidden. AUTHORED agents stay as hidden entities
+     *  (destroying them would drop their row from the next draft save — content
+     *  loss); block reload revives them. Spawner-DERIVED agents are despawned
+     *  instead (frees the maxAlive slot). */
+    dead: boolean;
+}
+
+/** A projectile in flight (combat spec §1.3) — a runtime-derived entity moved
+ *  by ProjectileSystem on simulation time. */
+export interface ProjectileComponent {
+    /** Velocity in ENGINE coords (m/s). */
+    velocity: [number, number, number];
+    damage: number;
+    /** Hit-sphere radius (m). */
+    radius: number;
+    /** Remaining lifetime (simulation seconds). */
+    ttl: number;
+    /** The shooter's adjunctId — never hits its own shooter. */
+    shooterId: string;
 }

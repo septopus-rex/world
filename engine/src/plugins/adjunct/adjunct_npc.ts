@@ -66,7 +66,8 @@ const NpcTransform: AdjunctTransform = {
 };
 
 const NpcAttribute: AdjunctAttribute = {
-    /** Slot map: [pos, visual, behavior, seed] — spec §1. */
+    /** Slot map: [pos, visual, behavior, seed, hp?, dialogue?] — npc spec §1,
+     *  combat spec §1.2 (hp), dialogue spec §1 (dialogue document). */
     deserialize: (data: any[]): STDObject => {
         const visual = (data[1] && typeof data[1] === 'object') ? data[1] : {};
         const size: [number, number, number] = Array.isArray((visual as any).size)
@@ -79,6 +80,10 @@ const NpcAttribute: AdjunctAttribute = {
             visual,
             behavior: (data[2] && typeof data[2] === 'object') ? data[2] : null,
             seed: (data[3] ?? 0) >>> 0,
+            // hp > 0 = damageable (combat spec §1.2); absent/0 = invulnerable ambience.
+            hp: typeof data[4] === 'number' && data[4] > 0 ? data[4] : 0,
+            // Dialogue document (dialogue spec §1); null = not talkable.
+            dialogue: (data[5] && typeof data[5] === 'object') ? data[5] : null,
         };
     },
     serialize: (std: STDObject) => ([
@@ -86,6 +91,8 @@ const NpcAttribute: AdjunctAttribute = {
         std.visual ?? {},
         std.behavior ?? null,
         std.seed ?? 0,
+        std.hp ?? 0,
+        std.dialogue ?? null,
     ]),
 };
 

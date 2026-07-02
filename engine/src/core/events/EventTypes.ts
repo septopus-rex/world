@@ -70,6 +70,13 @@ export interface EventMap {
     'spawn.removed': { adjunctId: string; reason: 'despawn' | 'evict' | 'spawner_deleted' };
     // ── NPC agents (F2 npc-agents) ──
     'npc.state': { adjunctId: string; from: string; to: string };
+    // ── combat (F3 combat-damage) ──
+    'combat.hit': { targetKind: 'player' | 'npc'; adjunctId?: string; amount: number };
+    'npc.died': { adjunctId: string };
+    // ── dialogue (F4 dialogue-quests) ──
+    'dialogue.started': { adjunctId: string; nodeId: string; text: string; options: string[] };
+    'dialogue.node': { adjunctId: string; nodeId: string; text: string; options: string[] };
+    'dialogue.ended': { adjunctId: string };
     // ── edit ──
     'edit.draft_saved': { blockKey: string };
     'edit.upload_request': { drafts: unknown };

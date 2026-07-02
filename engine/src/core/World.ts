@@ -14,6 +14,8 @@ import { PhysicsSystem } from './systems/PhysicsSystem';
 import { ScheduleSystem } from './systems/ScheduleSystem';
 import { SpawnerSystem } from './systems/SpawnerSystem';
 import { NPCSystem } from './systems/NPCSystem';
+import { ProjectileSystem } from './systems/ProjectileSystem';
+import { DialogueSystem } from './systems/DialogueSystem';
 import { Scheduler } from './services/Scheduler';
 import { LiveSystem } from './systems/LiveSystem';
 import { CharacterController } from './movement/CharacterController';
@@ -135,6 +137,21 @@ export class World {
      *  after/every/cancel on dt-accumulated time, driven by ScheduleSystem.
      *  Pending tasks are NOT persisted (spec §2.2 — re-armed on re-entry). */
     public readonly scheduler = new Scheduler();
+    /** The single active NPC conversation (F4 dialogue spec §2), or null.
+     *  Set by DialogueSystem on interact; advanced via chooseDialogue(). */
+    public activeDialogue: import('./systems/DialogueSystem').ActiveDialogue | null = null;
+
+    /** Advance the active dialogue by choosing the i-th VISIBLE option. */
+    public chooseDialogue(visibleIndex: number): void {
+        const sys = this.systems.findSystemByName('DialogueSystem') as any;
+        sys?.choose?.(this, visibleIndex);
+    }
+
+    /** End the active dialogue (host UI close button / walk-away). */
+    public endDialogue(): void {
+        const sys = this.systems.findSystemByName('DialogueSystem') as any;
+        sys?.end?.(this);
+    }
 
     // 3. Simulation State
     private lastTime: number = 0;
@@ -342,6 +359,8 @@ export class World {
         // NPCSystem after SpawnerSystem: agents spawned this frame get driven the
         // same frame; movement writes Transform+dirty → VisualSync same frame.
         this.systems.addSystem(new NPCSystem());
+        this.systems.addSystem(new ProjectileSystem());
+        this.systems.addSystem(new DialogueSystem());
         this.systems.addSystem(new BlockLODSystem());
         this.systems.addSystem(new EnvironmentSystem(this));
         this.systems.addSystem(new AnimationSystem());

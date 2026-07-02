@@ -5,6 +5,10 @@ import { SystemMode, asExitPolicy } from '../types/SystemMode';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
 import { spawnRelative } from '../utils/Spawn';
+import { damageNpc } from '../utils/Combat';
+import { setEntityColor } from '../utils/Appearance';
+import { AdjunctType } from '../types/AdjunctType';
+import type { ProjectileComponent } from '../components/NpcComponents';
 
 /**
  * Actuator — the execution layer for trigger actions (roadmap P2).
@@ -79,6 +83,12 @@ export class LocalActuator implements IActuator {
             case 'despawn':
                 this.execDespawn(action, ctx);
                 break;
+            case 'damage':
+                this.execDamage(action, ctx);
+                break;
+            case 'projectile':
+                this.execProjectile(action, ctx);
+                break;
             default:
                 reportError(`unknown action type '${action.type}'`, { tag: '[Actuator]', severity: 'warn' });
         }
@@ -142,6 +152,94 @@ export class LocalActuator implements IActuator {
         if (eid === null) return;
         const blocks: any = world.systems.findSystemByName('BlockSystem');
         blocks?.despawnRuntime?.(world, eid, 'despawn');
+    }
+
+    // ── F3 combat actions (spec combat-damage.md §1) — GAME MODE ONLY ────────
+
+    /** damage: the generic damage channel. target 'player' → HealthSystem;
+     *  target = NPC adjunctId → its hp (death flow in damageNpc). */
+    private execDamage(action: TriggerAction, ctx: ActuatorContext): void {
+        if (ctx.mode !== SystemMode.Game) {
+            console.warn(`[Actuator] damage ignored outside Game mode`);
+            return;
+        }
+        const amount = Number(action.params?.[0]) || 0;
+        if (amount <= 0) return;
+        if (action.target === 'player') {
+            if (ctx.playerId == null) return;
+            ctx.world.events?.emit?.('combat.hit', { targetKind: 'player', amount });
+            ctx.world.emitSimple('player:damage', { amount }, ctx.playerId);
+            return;
+        }
+        const eid = this.resolveAdjunct(ctx.world, action.target);
+        if (eid !== null) damageNpc(ctx.world, eid, amount);
+    }
+
+    /**
+     * projectile: spawn a moving damage body from the firing entity (spec §1.3).
+     * params[0] = { speed, damage, radius, ttl, at:'player' | dir:[E,N,Alt], visual? }.
+     * The instance is a derived Ball adjunct + ProjectileComponent; flight, hit
+     * test and expiry belong to ProjectileSystem.
+     */
+    private execProjectile(action: TriggerAction, ctx: ActuatorContext): void {
+        if (ctx.mode !== SystemMode.Game) {
+            console.warn(`[Actuator] projectile ignored outside Game mode`);
+            return;
+        }
+        const world = ctx.world;
+        const spec = (action.params?.[0] && typeof action.params[0] === 'object') ? action.params[0] : {};
+        const src = ctx.sourceEntity != null
+            ? world.getComponent<AdjunctComponent>(ctx.sourceEntity, "AdjunctComponent") : null;
+        const srcTrans = ctx.sourceEntity != null
+            ? world.getComponent<TransformComponent>(ctx.sourceEntity, "TransformComponent") : null;
+        if (!src || !srcTrans || src.parentBlockEntityId == null) {
+            reportError(`projectile: needs a firing adjunct (sourceEntity)`, { tag: '[Actuator]', severity: 'warn' });
+            return;
+        }
+
+        const size = Number(spec.visual?.size) > 0 ? Number(spec.visual.size) : 0.3;
+        // A Ball row at the shooter's position (relative [0,0,~chest]) — full
+        // standard assembly (mesh/LOD) for free; NOT solid (no stop slot).
+        const ballRow = [[size, size, size], [0, 0, 1.0], [0, 0, 0], 0, [1, 1], 0, 0];
+        const spawned = spawnRelative(world, src.parentBlockEntityId, AdjunctType.Ball, ballRow, src.stdData, String(src.adjunctId));
+        if (!spawned) return;
+
+        // Velocity in ENGINE coords: explicit SPP dir, or locked onto the player
+        // at fire time.
+        const speed = Number(spec.speed) > 0 ? Number(spec.speed) : 8;
+        let v: [number, number, number] | null = null;
+        if (Array.isArray(spec.dir)) {
+            const e = Number(spec.dir[0]) || 0, n = Number(spec.dir[1]) || 0, a = Number(spec.dir[2]) || 0;
+            const len = Math.hypot(e, a, n) || 1;
+            v = [(e / len) * speed, (a / len) * speed, (-n / len) * speed]; // SPP→engine: [E, Alt, −N]
+        } else {
+            const pTrans = ctx.playerId != null
+                ? world.getComponent<TransformComponent>(ctx.playerId, "TransformComponent") : null;
+            const pt = world.getComponent<TransformComponent>(spawned.entityId, "TransformComponent");
+            if (pTrans && pt) {
+                const dx = pTrans.position[0] - pt.position[0];
+                const dy = (pTrans.position[1] + 1.0) - pt.position[1]; // chest height
+                const dz = pTrans.position[2] - pt.position[2];
+                const len = Math.hypot(dx, dy, dz) || 1;
+                v = [(dx / len) * speed, (dy / len) * speed, (dz / len) * speed];
+            }
+        }
+        if (!v) { // no player to aim at and no dir — drop the shot
+            const blocks: any = world.systems.findSystemByName('BlockSystem');
+            blocks?.despawnRuntime?.(world, spawned.entityId, 'despawn');
+            return;
+        }
+
+        world.addComponent<ProjectileComponent>(spawned.entityId, "ProjectileComponent", {
+            velocity: v,
+            damage: Number(spec.damage) > 0 ? Number(spec.damage) : 10,
+            radius: Number(spec.radius) > 0 ? Number(spec.radius) : 0.35,
+            ttl: Number(spec.ttl) > 0 ? Number(spec.ttl) : 3,
+            shooterId: String(src.adjunctId),
+        });
+        if (typeof spec.visual?.color === 'number') {
+            setEntityColor(world, spawned.entityId, spec.visual.color);
+        }
     }
 
     // ── bag (Game mode only — game.md permission matrix) ─────────────────────

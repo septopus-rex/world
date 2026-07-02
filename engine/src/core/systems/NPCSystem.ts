@@ -42,7 +42,10 @@ export class NPCSystem implements ISystem {
 
             let b = world.getComponent<BehaviorComponent>(eid, "BehaviorComponent");
             if (!b) b = this.attach(world, eid, adj, trans);
-            if (!b.doc) continue; // inert (malformed doc — reported at attach)
+            if (!b.doc || b.dead) continue; // inert (malformed doc / dead until block reload)
+            // In-dialogue agents hold still (dialogue spec §3) — the conversation
+            // partner shouldn't wander off mid-sentence.
+            if ((world as any).activeDialogue?.npcEid === eid) continue;
 
             const stateDef = b.doc.states?.[b.state];
             if (!stateDef) continue;
@@ -117,6 +120,7 @@ export class NPCSystem implements ISystem {
                 code: 'ADJUNCT_VALIDATE', id: String(adj.adjunctId),
             }), { tag: '[NPCSystem]', severity: 'warn' });
         }
+        const hp = typeof adj.stdData?.hp === 'number' && adj.stdData.hp > 0 ? adj.stdData.hp : 0;
         const b: BehaviorComponent = {
             doc,
             state: doc?.initial ?? 'idle',
@@ -125,6 +129,9 @@ export class NPCSystem implements ISystem {
             rng: mulberry32((adj.stdData?.seed ?? 0) >>> 0),
             wanderTarget: null,
             entered: false,
+            hp,
+            maxHp: hp,
+            dead: false,
         };
         world.addComponent<BehaviorComponent>(eid, "BehaviorComponent", b);
         return world.getComponent<BehaviorComponent>(eid, "BehaviorComponent")!;
