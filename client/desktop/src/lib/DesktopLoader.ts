@@ -556,25 +556,50 @@ export class DesktopLoader implements IDataSource {
     }
 
     /**
+     * Authored-scene registry: coord "x_y" → builder, assembled ONCE at class
+     * init. A duplicate coordinate THROWS at boot instead of silently shadowing
+     * a scene — the maze vanished for a month under the native-mahjong table
+     * when both sat at [2047,2048] and the earlier if/else dispatch won.
+     */
+    private static buildSceneRegistry(): Map<string, (x: number, y: number) => any[]> {
+        const entries: ReadonlyArray<[readonly [number, number], (x: number, y: number) => any[], string]> = [
+            [MAHJONG_BLOCK, buildMahjongScene, 'mahjong'],
+            [NATIVE_MAHJONG_BLOCK, buildMahjong3DScene, 'mahjong3d'],
+            [SHOOTING_BLOCK, buildShootingScene, 'shooting'],
+            [TUMBLE_BLOCK, buildTumbleScene, 'tumble'],
+            [POOL_BLOCK, buildPoolScene, 'pool'],
+            [MAZE_BLOCK, buildMazeScene, 'maze'],
+            [SANDBOX_BLOCK, buildSandboxScene, 'sandbox'],
+            [DYN_BLOCK, buildDynamicAdjunctScene, 'dynamic-adjunct'],
+            [DEMO_BLOCK, buildDemoScene, 'demo'],
+        ];
+        const map = new Map<string, (x: number, y: number) => any[]>();
+        const owner = new Map<string, string>();
+        for (const [[x, y], builder, name] of entries) {
+            const key = `${x}_${y}`;
+            if (map.has(key)) {
+                throw new Error(
+                    `[Loader] scene coordinate collision at [${x},${y}]: '${name}' would silently shadow '${owner.get(key)}' — every authored scene needs its own block`,
+                );
+            }
+            map.set(key, builder);
+            owner.set(key, name);
+        }
+        return map;
+    }
+    private readonly sceneRegistry = DesktopLoader.buildSceneRegistry();
+
+    /**
      * SceneProvider seed: the base (authored/procedural) raw for a block, BEFORE
-     * local drafts (LocalDataSource overlays those). Dispatches the three base
-     * sources by the world's fixed level — the former fetchBlock body, sync.
+     * local drafts (LocalDataSource overlays those) — level document, else the
+     * collision-checked scene registry, else the procedural mock.
      */
     private sceneBlock(x: number, y: number): any[] {
         // Authored level (parkour/coaster): the level document's block for
         // authored coords, empty block elsewhere — pure data, no generators.
         if (this.levelProvider) return this.levelProvider.block(x, y);
-        // The mahjong table block (game zone) and the demo showcase block are
-        // authored in scenes/; the loader just dispatches.
-        if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);
-        if (x === NATIVE_MAHJONG_BLOCK[0] && y === NATIVE_MAHJONG_BLOCK[1]) return buildMahjong3DScene(x, y);
-        if (x === SHOOTING_BLOCK[0] && y === SHOOTING_BLOCK[1]) return buildShootingScene(x, y);
-        if (x === TUMBLE_BLOCK[0] && y === TUMBLE_BLOCK[1]) return buildTumbleScene(x, y);
-        if (x === POOL_BLOCK[0] && y === POOL_BLOCK[1]) return buildPoolScene(x, y);
-        if (x === MAZE_BLOCK[0] && y === MAZE_BLOCK[1]) return buildMazeScene(x, y);
-        if (x === SANDBOX_BLOCK[0] && y === SANDBOX_BLOCK[1]) return buildSandboxScene(x, y);
-        if (x === DYN_BLOCK[0] && y === DYN_BLOCK[1]) return buildDynamicAdjunctScene(x, y);
-        if (x === DEMO_BLOCK[0] && y === DEMO_BLOCK[1]) return buildDemoScene(x, y);
+        const authored = this.sceneRegistry.get(`${x}_${y}`);
+        if (authored) return authored(x, y);
         return MockBlockData(x, y).raw;
     }
 

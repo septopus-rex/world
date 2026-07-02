@@ -98,6 +98,7 @@ cd engine && yarn build                            # tsc
 - `docs/plan/specs/2d-map.md` — **2D 世界地图**设计规格（解除"有意不移植"；视口窗口化按需流式、复用 `block.need` 块通道、非全局索引；参考旧引擎 `control_2d.js`+`render_2d.js` 的逐块顶面俯视投影；**规划中**）。
 - `protocol/cn|en/avatar-animation.md` — **虚拟化身动画协议**（形象/动作/状态三层分离；规范基准 VRM 1.0 humanoid 骨架 + VRMA）。**v1 状态契约已落地（2026-07）**：状态集 idle/walk/run/air + 阈值派生（IDLE_MAX 0.5 / WALK_MAX=walk×1.2）+ 剪辑名相等契约 + 回退链进引擎，正则启发式降级为不合规素材兜底；**形象/动作分离（v2 重定向）与 VRM 原生（v3）未做**（动作仍绑死在 avatar GLB）。
 - `protocol/cn|en/item.md` — **物品协议（规范级）**：实例=`{templateId, seed}`，mulberry32 PRNG + 稀有度 roll + 属性抽取顺序逐位钉死（跨引擎同 seed 同物品）；模板=世界内容（引擎零内置，demo 目录 `core/mocks/ItemTemplates.ts`）。天气/时间确定性派生同理规范于 `protocol/cn|en/world.md §3.1`（hash 切片语义）。
+- `protocol/cn|en/game.md §9` — **游戏会话与验证协议**：会话=「(seed, 操作序列) 源 + 确定性重放」（局面/结果不持久化）；成就真实性=**服务器签名收据**（裸 hash 只证完整性；防伪须签名 + 服务器权威计数；local-first 单机不设防，跨信任边界才验证）；棋牌发牌=seed 推导 + commit-reveal（不存快照），隐藏信息 ⇒ Pattern A。缺口（YAGNI，有服务器需求再落）：Pattern B 局终上报 seam、收据字段约定。
 - `docs/architecture/{overview,ecs,coordinate,pipeline,performance}.md`、`docs/systems/*.md`、`docs/features/spp*.md`（弦粒子 SPP）。
 
 ## 开发注意事项

@@ -2,6 +2,12 @@
 
 Septopus World 采用一套语义化的三维坐标系统，旨在将现实世界的地理直觉与 3D 渲染引擎的内部数值建立规范的映射关系。
 
+> **术语注记（防撞名）**：代码中 `Coords.sppToEngine` / `engineToSpp` / `SPPPlayerState`
+> 等名字里的 **"spp" 是 "Septopus" 的缩写**，指本文的 **Septopus 世界坐标系（语义层）**——
+> 与**弦粒子协议 SPP（String Particle Protocol**，外部授权协议，管 b6 粒子/CollapseCodec
+> 二进制，见 `docs/features/spp*.md`）**是两回事**，仅缩写撞名。凡涉及坐标的 "SPP/spp"
+> 一律读作 "Septopus 语义坐标"；凡涉及粒子/二进制协议的 SPP 才是弦粒子。
+
 ## 1. 坐标系定义对比
 
 由于 Septopus 在设计之初即考虑到全链存储的语义性，其坐标轴方向符合常规真实世界的地图理解，这与最终用于渲染的 Three.js 默认坐标系有所区别。

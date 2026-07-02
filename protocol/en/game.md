@@ -333,3 +333,99 @@ Both WASM instances must produce identical output for identical input:
 
 > [!TIP]
 > Most casual mini-games (parkour, mazes, puzzles) only need L1/L2 sync and no WASM. WASM is only introduced when authoritative arbitration is needed (e.g., PvP damage calculation).
+
+## 9. Game Session & Verification
+
+> Goal: answer "how do achievements/rewards become trustworthy" under the
+> **local-first, chain-optional** architecture — e.g. "play 100 pool games,
+> earn a medal". Headline conclusion: **a bare hash cannot prevent forgery**
+> (anyone can hash anything; a hash proves integrity, not authenticity).
+> Authenticity = a **signature (hash + a key the player does not hold)**, and a
+> signature presupposes a **counter the player cannot write to** (server
+> authority).
+
+### 9.1 Trust Boundaries (when anti-forgery matters at all)
+
+```
+Purely local (single player)      →  no defenses. Cheating your own save file =
+                                     editing a single-player save; local-first by design.
+Showing / trading / multiplayer / on-chain →  crossing a trust boundary — only
+                                     then do you need proof.
+```
+
+### 9.2 The Server Is Another Interpreter of the Same Protocol
+
+A verification server is a **VM without a renderer** (this engine runs headless
+— the test suite is the proof; a verifier can literally reuse the engine for
+replay). "Following the protocol" has two layers:
+
+1. **Rules layer**: verification/replay rules match the client bit-for-bit
+   (physics stepping, deal derivation, scoring);
+2. **Data layer**: results are presented from the same data vocabulary
+   (items `{templateId, seed}`, receipts, Septopus coordinates).
+
+### 9.3 Canonical Session Shape: Source + Replay (Normative)
+
+**One game session = `(seed, input trace)`** — the only "source" that gets
+stored; positions and results are **derived by deterministic replay and never
+persisted** (same law as item.md: nothing derivable is persisted). The engine's
+determinism (`step(dt)`, seeded PRNGs everywhere, no `Math.random`/wall clock)
+is what makes replay possible.
+
+```
+one session  = (seed, input trace)          ← the only stored source
+state/result = deterministic replay(source) ← derived, not stored
+fairness     = commitment (lock the seed pre-game, §9.5) ← the CORRECT use of a hash
+authenticity = server-signed receipt (§9.4) ← the credential across trust boundaries
+```
+
+### 9.4 Achievement Credential: the Signed Receipt
+
+When the server-authoritative counter completes (e.g. the 100th reported game):
+
+```
+receipt = sign(server_key, { player, achievement, seed, issued_at })
+```
+
+- The medal item stays `{templateId, seed}` (item.md); the **receipt goes in
+  `metadata`**;
+- A local bag can still forge the item — but any verifier checks the signature
+  against the server's public key and a fake medal is exposed at once: **the
+  trust anchor moves from "the data itself" to "the issuer's key"**;
+- The upgrade path is continuous: once a chain plugin ships, the same receipt
+  is anchored on-chain.
+
+### 9.5 Session Shapes by Game Type
+
+The discriminator is **hidden information**:
+
+| Game | Randomness | Hidden info | Minimal verifiable storage | Hosting |
+|---|---|---|---|---|
+| Maze | none (fixed-seed carve, authored) | none | **input trace** only | C/B |
+| Pool | none / fixed rack | none | **seed + shot trace** | B + spot-check replay |
+| Card/tile (mahjong) | **the deal** | **yes** (hands/wall secret) | **deal seed (+commitment) + action trace** | **A** (server authority) |
+
+**Card-game norm**: the deal is **stored as a seed, not a snapshot** — the wall
+is a pure function `shuffle(seededRng(seed))` (the same DNA as item seed
+derivation). Fairness closes with **commit-reveal**:
+
+```
+pre-game : server publishes commitment = hash(seed ‖ salt)
+in-game  : deal derives from the seed; the action trace is recorded
+post-game: reveal seed + salt → anyone verifies:
+           ① hash(seed‖salt) == commitment  (deal was fixed pre-game, not swapped)
+           ② replay(seed + action trace) == the claimed result
+```
+
+Hidden information dictates hosting: mid-game only the server may know the wall
+(else opponents' hands leak) — this is the concrete form of the pattern rule
+"server authority → Pattern A"; games with no hidden info (maze/pool) can run
+Pattern B locally with spot-check replays.
+
+### 9.6 Current State & Gaps
+
+| Have | Missing |
+|---|---|
+| `IGameApi` + methods whitelist + `FetchGameApi` (server channel; mahjong `?mjserver` demonstrates it) | Pattern-B games (pool/tumble) have **no end-of-session result-report seam** (Systems only mutate local state) |
+| Items `{templateId, seed}` + `metadata` (a home for receipts) | Concrete receipt fields + key-distribution convention |
+| Engine determinism (the replay foundation) | An input-trace recorder (add when replay verification is actually built — YAGNI) |

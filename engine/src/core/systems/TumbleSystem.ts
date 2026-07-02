@@ -7,6 +7,7 @@ import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent } from '../components/PlayerComponents';
 import { setEntityColor } from '../utils/Appearance';
 import { TumbleBlockComponent, TumbleTowerComponent } from '../components/TumbleComponents';
+import { reportError, EngineError } from '../errors';
 
 /**
  * TumbleSystem — a native in-world block-tower (Jenga) game driven by REAL
@@ -37,7 +38,17 @@ import { TumbleBlockComponent, TumbleTowerComponent } from '../components/Tumble
 let _rapierReady = false;
 let _rapierInit: Promise<void> | null = null;
 export function initTumblePhysics(): Promise<void> {
-    if (!_rapierInit) _rapierInit = RAPIER.init().then(() => { _rapierReady = true; });
+    if (!_rapierInit) {
+        _rapierInit = RAPIER.init().then(() => { _rapierReady = true; }).catch((e) => {
+            // WASM load can fail (offline / CSP / hosting misconfig). Without this
+            // catch it's an UNHANDLED rejection and tumble just silently never
+            // spawns — report it, and clear the memo so a later entry can retry.
+            _rapierInit = null;
+            reportError(EngineError.from(e, { code: 'PHYSICS_INIT', userMessage: '物理引擎加载失败,叠叠乐暂不可用' }), {
+                tag: '[TumbleSystem]', severity: 'error',
+            });
+        });
+    }
     return _rapierInit;
 }
 export function isTumblePhysicsReady(): boolean { return _rapierReady; }
