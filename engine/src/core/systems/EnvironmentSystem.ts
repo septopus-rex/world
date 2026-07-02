@@ -27,10 +27,12 @@ export class EnvironmentSystem implements ISystem {
         startHeight: GlobalConfig.time.epoch
     };
 
-    // Legacy Weather Mapping (Deterministic categories)
+    // Deterministic weather mapping — NORMATIVE cross-engine contract:
+    // protocol/{cn,en}/world.md §3.1 (hash slice positions, category table,
+    // mod-4 grade, storm predicate). Do not change without updating the spec.
     private weatherCategories = ["clear", "cloud", "rain", "snow"] as const;
     private hashSlices = {
-        categoryRange: [10, 2], // Substring start, length
+        categoryRange: [10, 2], // Substring start, length (post-0x, spec §3.1)
         gradeRange: [12, 2]
     };
 
@@ -90,6 +92,8 @@ export class EnvironmentSystem implements ISystem {
         this.simulateWeatherHash(state, hash);
     }
 
+    // NORMATIVE time derivation (protocol/{cn,en}/world.md §3.1): fixed-unit
+    // calendar over elapsed = (height − epoch) × interval × speed.
     private simulateTimeBreakdown(state: EnvironmentStateComponent, height: number, interval: number): void {
         let diff = Math.max(0, (height - this.timeConfig.startHeight)) * interval * this.timeConfig.speed;
         // Always assign every unit (the old engine reset lower units too). The

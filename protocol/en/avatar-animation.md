@@ -142,7 +142,7 @@ layer; neither replaces the other.
 | form: load / scale-to-height / placeholder swap / hide in first-person | ✅ |
 | embedded clips decoded + registered on a mixer (rigged `avatar.glb`; e2e `avatar.spec.ts` asserts clipCount/mixerCount > 0) | ✅ |
 | state derivation + `setAnimationState` crossfade + **per-frame mixer advance** (`RenderEngine.updateAnimation`, `CharacterController:587`) | ✅ **embedded clips do play** |
-| state → clip mapping | ⚠️ **heuristic clip-name regex** (`ANIM_STATE_PATTERNS`: idle/walk/run/air) + fallback to `clips[0]`; walk/run/air only differentiate if the asset ships matching clips — **no standard skeleton/naming contract** (exactly what §1/§3 normalize) |
+| state → clip mapping | ✅ **v1 landed**: normative contract first (§3 case-insensitive name equality) + §2 fallback chains (`run→walk→idle`, `air→jump→idle`, `land→idle`) + §2 threshold derivation (`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` linear, `CameraRig`); the old regex heuristics remain only as a **degrade for non-compliant assets** (`ANIM_STATE_PATTERNS`) |
 | skeleton validation / facing normalization | ❌ |
 | **form/motion separation** (`avatar.motion` shared retargetable library) / retargeting / built-in default set | ❌ **clips must be embedded in each avatar GLB; no Mixamo-style cross-model reuse** |
 | native VRM / VRMA loading (`@pixiv/three-vrm`) | ❌ (`ModelLoader` has no .vrm support) |
@@ -154,9 +154,11 @@ layer; neither replaces the other.
 
 ### Phasing
 
-- **v1 (normalize the state contract)**: **replace** the ad-hoc `ANIM_STATE_PATTERNS` regex
-  with the §2 state set + §3 clip-naming/fallback contract; validate/normalize skeleton
-  facing (§1). Motion still from embedded clips, no cross-model retarget yet.
+- **v1 (normalize the state contract)**: **landed (2026-07)** — §2 state set + threshold
+  derivation + §3 clip naming (name equality first) + fallback chains are in the engine; the
+  old regex heuristics degrade-only for non-compliant assets. **Not included**: skeleton
+  facing validation/normalization (§1 — goes with v2 retargeting). Motion still from
+  embedded clips, no cross-model retarget yet.
 - **v2 (form/motion separation)**: consume `avatar.motion`; implement humanoid retargeting +
   a built-in default motion set; normalize glTF/FBX bone names to VRM humanoid (appendix A).
   **This step is where "motion separate from form" actually lands.**

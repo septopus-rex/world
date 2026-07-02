@@ -27,11 +27,18 @@ export const MockWorldNormal: WorldConfig = {
             rotation: [0, 0, 0]
         },
         body: { shoulder: 0.5, chest: 0.22, body: [0.3, 0.4, 0.2, 0.8], head: [0.25, 0.05], hand: [0.2, 0.2, 0.1], leg: [0.5, 0.5, 0.1] },
+        // Capacity is LIVE config (EntityFactory / CharacterController consume it).
+        // This block used to be dead (declared, never read) with aspirational
+        // numbers; when it was wired up, values were aligned to the engine's
+        // long-shipped behavior so wiring changed nothing.
         capacity: {
-            rotate: 0.05,
-            speed: 10.0,       // Standard walk speed
-            jumpForce: 15.0,   // Standard jump
-            gravityMultiplier: 1.0 // Standard Gravity
+            rotate: 0.05,           // reserved (not consumed yet)
+            speed: 10.0,            // RUN speed baseline (m/s)
+            walkSpeed: 5.0,         // walk speed (m/s)
+            jumpForce: 8.0,         // standard jump impulse
+            gravityMultiplier: 1.0, // standard gravity
+            ghostFlySpeed: 6.0,     // ghost-mode vertical fly (m/s)
+            voidRecover: 20         // void-recovery net depth (m)
         },
         bag: { max: 100 },
         avatar: { max: 2097152, scale: [1, 1, 1] },
@@ -71,8 +78,8 @@ export const MockWorldGhostMoon: WorldConfig = {
         body: { shoulder: 0.5, chest: 0.22, body: [0.3, 0.4, 0.2, 0.8], head: [0.25, 0.05], hand: [0.2, 0.2, 0.1], leg: [0.5, 0.5, 0.1] },
         capacity: {
             rotate: 0.08,      // Can look around faster
-            speed: 18.0,       // Fast gliding run
-            jumpForce: 35.0,   // Massive moon jumps
+            speed: 18.0,       // RUN baseline: fast gliding run (m/s)
+            jumpForce: 35.0,   // Massive moon jumps (live config — applies if this world is used)
             gravityMultiplier: 0.16 // Moon gravity (1/6th of normal)
         },
         bag: { max: 10 },    // King forces survival mode (tiny inventory)

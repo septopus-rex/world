@@ -5,7 +5,12 @@
  * instance stores only `{templateId, seed}`; rarity and attributes are DERIVED
  * by a pure seeded function, so every client computes identical values and
  * nothing derivable is ever persisted (or forgeable).
- * Spec: docs/plan/specs/inventory-local-first.md.
+ *
+ * NORMATIVE cross-engine contract: protocol/{cn,en}/item.md pins the PRNG
+ * (mulberry32), the rarity roll, the attribute draw ORDER and formulas — another
+ * engine (UE) must reproduce the exact same item from the same (template, seed).
+ * Do not change any formula here without updating that spec.
+ * Design: docs/plan/specs/inventory-local-first.md.
  */
 
 export enum ItemCategory {
@@ -112,29 +117,6 @@ export function getItemTemplate(id: number): ItemTemplate | undefined {
     return templates.get(id);
 }
 
-/** Built-in demo templates (world content can register more). */
-export const BUILTIN_ITEM_TEMPLATES: ItemTemplate[] = [
-    {
-        id: 1, name: 'Gem', category: ItemCategory.Collectible, stackable: 0,
-        visual: { shape: 'sphere', size: [0.4, 0.4, 0.4], color: 0x22ccee },
-        attributes: [
-            { name: 'magic', baseRange: [10, 50], rarityScale: 0.5 },
-            { name: 'luster', baseRange: [20, 90], rarityScale: 0.2 },
-        ],
-        rarityWeights: [50, 25, 15, 8, 2],
-    },
-    {
-        id: 2, name: 'Key', category: ItemCategory.Key, stackable: 9,
-        visual: { shape: 'box', size: [0.3, 0.3, 0.6], color: 0xeebb33 },
-        attributes: [],
-        rarityWeights: [1],
-    },
-    {
-        id: 3, name: 'Potion', category: ItemCategory.Consumable, stackable: 5,
-        visual: { shape: 'cone', size: [0.35, 0.35, 0.5], color: 0xdd3355 },
-        attributes: [{ name: 'heal', baseRange: [5, 25], rarityScale: 0.4 }],
-        rarityWeights: [70, 30],
-    },
-];
-
-for (const t of BUILTIN_ITEM_TEMPLATES) registerItemTemplate(t);
+// NOTE: the engine ships NO templates — item templates are world CONTENT, not
+// engine vocabulary. Hosts register their catalogue via registerItemTemplate;
+// the demo catalogue lives in core/mocks/ItemTemplates.ts (explicit opt-in).

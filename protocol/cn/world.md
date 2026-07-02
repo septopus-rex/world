@@ -29,6 +29,33 @@ Septopus 元宇宙由固定数量的顶层世界组成。
 - **天体系统 (Celestial Bodies)**: 标准化的天空盒配置（1 个太阳，3 个月亮）。
 - **最大地块扩展 (Maximum Block Expansion)**: 硬性限制为 `4096 x 4096`。
 
+### 3.1 时间与天气的确定性推导（规范 / Normative）
+
+> 「数据即逻辑」：世界时间与天气由**链高度 + 链 hash** 纯函数推导，任何引擎（TS / UE）
+> 对同一输入必须得出**同一时刻、同一场雨**。实现参照 `engine/src/core/systems/EnvironmentSystem.ts`。
+
+**输入**：`height`（链块高度）、`hash`（`0x` 前缀十六进制串，长度 ≥ 20）、`interval`（链出块间隔，秒）、
+`epoch`（创世起始高度，默认 0）、`speed`（时间流速倍率，默认 1.0）。
+
+**世界时间**（固定单位历法）：
+```
+elapsed = max(0, height − epoch) × interval × speed        （秒）
+year  = elapsed ÷ 31104000（= 360 天），取余后依次：
+month = ÷ 2592000（= 30 天） · day = ÷ 86400 · hour = ÷ 3600 · minute = ÷ 60 · second = 余数
+```
+每级**无条件赋值**（跨日边界时低位必须归零，不得保留旧值）。
+
+**天气**（hash 切片，字符位置按**去掉 `0x` 前缀后**计，0 起）：
+```
+category = parseInt(hash[10..11], 16) mod 4  →  0 clear · 1 cloud · 2 rain · 3 snow
+grade    = parseInt(hash[12..13], 16) mod 4  →  0..3（强度梯度）
+```
+切片解析失败按 0 处理。**雷暴判定**：`category == rain 且 grade ≥ 1`。
+
+**语义 / 渲染边界**：`(时间, category, grade, 雷暴判定)` 是**语义**（跨引擎必须一致）；
+太阳角度、光照强度、闪电闪光包络、粒子密度等是**渲染器自定义**（行为等效即可，
+参照 adjunct 协议 §6 的「same effect」边界）。
+
 ### 可变配置 (领主级 / Lord Level)
 存储在智能合约中，可由世界的领主进行配置。
 ```json

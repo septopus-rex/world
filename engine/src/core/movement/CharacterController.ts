@@ -46,10 +46,17 @@ export class CharacterController implements ISystem {
     /** Grounded-flag flicker tolerance (standing still alternates the flag). */
     private _airFrames = 0;
 
-    /** Fall this far (m) below the last grounded spot -> treat as a void fall and recover. */
+    /** Fall this far (m) below the last grounded spot -> treat as a void fall and
+     *  recover. Engine DEFAULT — override via config player.capacity.voidRecover. */
     private static readonly VOID_RECOVER = 20;
-    /** Ghost-mode vertical fly speed (m/s). */
+    /** Ghost-mode vertical fly speed (m/s). Engine DEFAULT — override via config
+     *  player.capacity.ghostFlySpeed. */
     private static readonly GHOST_FLY_SPEED = 6;
+
+    /** player.capacity from the king's config (absent in bare tests → {}). */
+    private capacityOf(world: World): any {
+        return (world.config?.player as any)?.capacity ?? {};
+    }
 
     constructor(_world: World, inputProvider: InputProvider) {
         this.inputProvider = inputProvider;
@@ -107,7 +114,7 @@ export class CharacterController implements ISystem {
         if (world.mode === SystemMode.Ghost) {
             this.computeDesiredVelocity(world, input, body);
             const fly = (input.jump ? 1 : 0) - (input.run ? 1 : 0);
-            body.velocity[1] = fly * CharacterController.GHOST_FLY_SPEED;
+            body.velocity[1] = fly * (this.capacityOf(world).ghostFlySpeed ?? CharacterController.GHOST_FLY_SPEED);
             input.jump = false;
             trans.position[0] += body.velocity[0] * dt;
             trans.position[1] += body.velocity[1] * dt;
@@ -141,7 +148,9 @@ export class CharacterController implements ISystem {
         if (!groundBelow) {
             body.velocity[1] = 0;            // over unloaded/void area -> wait for ground
         } else if (!body.isGrounded) {
-            body.velocity[1] += ENGINE_CONSTANTS.GRAVITY * dt;
+            // Base gravity is an engine constant; the per-world dial is the
+            // capacity.gravityMultiplier landing on body.gravity (default 1).
+            body.velocity[1] += ENGINE_CONSTANTS.GRAVITY * (body.gravity ?? 1) * dt;
         }
 
         this.collider.integrateAndCollide(world, body, trans, dt, stepHeight);
@@ -216,7 +225,7 @@ export class CharacterController implements ISystem {
     private voidRecovery(world: World, body: RigidBodyComponent, trans: TransformComponent): void {
         if (body.isGrounded) {
             this._safe = [trans.position[0], trans.position[1], trans.position[2]];
-        } else if (this._safe && trans.position[1] < this._safe[1] - CharacterController.VOID_RECOVER) {
+        } else if (this._safe && trans.position[1] < this._safe[1] - (this.capacityOf(world).voidRecover ?? CharacterController.VOID_RECOVER)) {
             trans.position[0] = this._safe[0];
             trans.position[1] = this._safe[1];
             trans.position[2] = this._safe[2];

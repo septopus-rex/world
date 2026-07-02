@@ -9,7 +9,11 @@
  */
 export type Rng = () => number;
 
-/** mulberry32 — seed in, deterministic stream of floats in [0, 1). */
+/** mulberry32 — seed in, deterministic stream of floats in [0, 1).
+ *  Same normative algorithm as protocol/{cn,en}/item.md §2, with ONE variant a
+ *  port must reproduce: here seed 0 is coerced to 1 (a zero seed locks the
+ *  generator). Per-template motif EXPANSION remains implementation-defined
+ *  (open half of audit item C1). */
 export function makeRng(seed: number): Rng {
     let a = (seed >>> 0) || 1; // a seed of 0 locks the generator → force 1
     return function () {

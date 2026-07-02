@@ -29,6 +29,40 @@ Set upon the genesis of the Septopus Engine and cannot be altered by individual 
 - **Celestial Bodies**: Standardized skybox configurations (1 Sun, 3 Moons).
 - **Maximum Block Expansion**: The hard limit of `4096 x 4096`.
 
+### 3.1 Deterministic Time & Weather Derivation (Normative)
+
+> "Data is logic": world time and weather derive as pure functions of **chain
+> height + chain hash** — any engine (TS / UE) must produce the SAME moment and
+> the SAME rain for the same inputs. Reference implementation:
+> `engine/src/core/systems/EnvironmentSystem.ts`.
+
+**Inputs**: `height` (chain block height), `hash` (`0x`-prefixed hex string,
+length ≥ 20), `interval` (chain block interval, seconds), `epoch` (genesis start
+height, default 0), `speed` (time-flow multiplier, default 1.0).
+
+**World time** (fixed-unit calendar):
+```
+elapsed = max(0, height − epoch) × interval × speed        (seconds)
+year  = elapsed ÷ 31104000 (= 360 days), then with the remainder:
+month = ÷ 2592000 (= 30 days) · day = ÷ 86400 · hour = ÷ 3600 · minute = ÷ 60 · second = remainder
+```
+Every unit is assigned **unconditionally** (crossing a day boundary must reset
+the lower units to 0, never keep stale values).
+
+**Weather** (hash slices; character positions count **after stripping the `0x`
+prefix**, 0-based):
+```
+category = parseInt(hash[10..11], 16) mod 4  →  0 clear · 1 cloud · 2 rain · 3 snow
+grade    = parseInt(hash[12..13], 16) mod 4  →  0..3 (intensity)
+```
+A slice that fails to parse counts as 0. **Thunderstorm predicate**:
+`category == rain && grade ≥ 1`.
+
+**Semantic / renderer boundary**: `(time, category, grade, storm predicate)` are
+**semantic** (must match across engines); sun angle, light intensities, the
+lightning flash envelope and particle density are **renderer-defined**
+(behavior-equivalent, per the adjunct protocol §6 "same effect" boundary).
+
 ### Mutable Configuration (Lord Level)
 Stored in a smart contract and configurable by the World's Lord.
 ```json

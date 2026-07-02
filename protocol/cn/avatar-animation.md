@@ -130,7 +130,7 @@ morph/blendshape 落地（与 SPP 的 `morph` 动画通道复用 `RenderEngine.s
 | 形象：load / scale-to-height / 占位 swap / 第一人称隐藏 | ✅ |
 | 内嵌剪辑解码 + 注册 mixer（rigged `avatar.glb`；e2e `avatar.spec.ts` 断言 clipCount/mixerCount>0）| ✅ |
 | 状态派生 + `setAnimationState` crossfade + **每帧推进 mixer**（`RenderEngine.updateAnimation`，`CharacterController:587`）| ✅ **内嵌剪辑确实在播** |
-| 状态→剪辑映射 | ⚠️ **靠剪辑名正则启发式**（`ANIM_STATE_PATTERNS`：idle/walk/run/air）+ 回退 `clips[0]`；仅当素材自带对应命名剪辑时 walk/run/air 才区分——**无标准骨架/命名契约**（§1/§3 要规范化的正是这块）|
+| 状态→剪辑映射 | ✅ **v1 已落地**：规范契约（§3 名称相等、大小写不敏感）优先 + §2 回退链（`run→walk→idle`、`air→jump→idle`、`land→idle`）+ §2 阈值派生（`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` 线性，`CameraRig`）；旧正则启发式仅作**不合规素材的降级兜底**（`ANIM_STATE_PATTERNS`）|
 | 标准骨架校验 / 朝向归一化 | ❌ |
 | **形象/动作分离**（`avatar.motion` 共享可重定向动作库）/ 重定向 / 内置默认动作集 | ❌ **动作必须内嵌进每个 avatar GLB，无法 Mixamo 式跨模型复用** |
 | VRM / VRMA 原生加载（`@pixiv/three-vrm`）| ❌（`ModelLoader` 暂不支持 .vrm）|
@@ -140,8 +140,9 @@ morph/blendshape 落地（与 SPP 的 `morph` 动画通道复用 `RenderEngine.s
 
 ### 落地分期
 
-- **v1（规范化状态契约）**：用 §2 状态集 + §3 剪辑命名/回退契约**取代**现有临时
-  `ANIM_STATE_PATTERNS` 正则启发式；校验/归一化骨架朝向（§1）。动作仍取内嵌剪辑、暂不跨模型重定向。
+- **v1（规范化状态契约）**：**已落地（2026-07）**——§2 状态集 + 阈值派生 + §3 剪辑命名（名称相等优先）
+  + 回退链进引擎；旧正则启发式降级为不合规素材兜底。**未含**：骨架朝向校验/归一化（§1，随 v2 重定向一起做）。
+  动作仍取内嵌剪辑、暂不跨模型重定向。
 - **v2（形象/动作分离）**：消费 `avatar.motion`；实现 humanoid 重定向 + 内置默认动作集；
   glTF/FBX 骨名按附录 A 归一化到 VRM humanoid。**这一步才真正实现"动作和形象分开"。**
 - **v3（VRM 原生）**：引入 `@pixiv/three-vrm` / `@pixiv/three-vrm-animation`，原生加载

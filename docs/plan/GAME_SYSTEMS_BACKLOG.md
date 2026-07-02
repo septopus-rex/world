@@ -44,11 +44,11 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 
 **C. 灰区 / 潜在可移植性风险（真正的审查价值）—— 看着数据驱动、实则 TS-implementation-defined**：
 
-- [ ] 🔲 **C1 · seed→派生（重灾区）**：`ItemRegistry`（`mulberry32` PRNG 推 rarity/属性）+ `MotifExpander`（`makeRng`+per-template TS 展开）。**纯确定、无 Math.random**——但「identical anywhere」的 anywhere = **任何 TS runtime**，算法定义在 TS，**UE 换个 PRNG/roll 顺序就得到不同结果**。且故意**不 persist**（省空间/防伪）→ 唯一出路是**把 PRNG + 派生 + 模板几何 specify 进 `protocol/`**（或接受「TS 权威，别的引擎读 baked 结果」）。这是铁律红线的现实标本。
-- [ ] 🔲 **C2 · avatar 动画状态映射**：`RenderEngine.ANIM_STATE_PATTERNS`（`/idle|stand|breath/i` 剪辑名正则启发式）——TS 定义的 state→clip 映射，**未落** `protocol/avatar-animation.md` 契约。UE 载同一 GLB 需同款启发式或标准契约才映射一致。
+- [x] ✅⚠️ **C1 · seed→派生（重灾区）——物品侧已闭，motif 侧仍开**：**物品推导已规范化**（`protocol/{cn,en}/item.md`：mulberry32 逐位定义 + 稀有度 roll + 属性抽取**顺序**即协议 + 身份/堆叠 + 显示色公式；`BUILTIN_ITEM_TEMPLATES` 迁出引擎 → `core/mocks/ItemTemplates.ts`，模板=世界内容、宿主显式注册，2026-07）。**仍开**：`MotifExpander` per-template TS 展开（PRNG 同款 mulberry32、`Rng.ts` 已注 seed-0→1 变体并交叉引用 item.md §2，但每个 motif 模板的展开算法仍是 implementation-defined）。
+- [x] ✅ **C2 · avatar 动画状态映射**：**v1 已落地（2026-07）**——规范契约（§3 剪辑名相等、大小写不敏感）优先 + §2 回退链（run→walk→idle · air→jump→idle · land→idle）+ §2 阈值派生（IDLE_MAX 0.5 / WALK_MAX=maxSpeedWalk×1.2 线性）进引擎；正则启发式降级为不合规素材兜底。骨架朝向校验随 v2。
 - [ ] 🔲 **C3 · coaster/track 运动**：`CoasterSystem` 沿轨运动逻辑在 TS（轨道几何是数据，运动是 TS）——Pattern-B 味。要么 specify 运动语义为原语，要么归入 B。
-- [ ] 🔲 **C4 · 移动手感常量**：`GRAVITY: -9.81*2 // for game feel`、`CONTROL_CONSTANTS`（TURN/AUTO_LEVEL_SPEED）硬编在 `Constants.ts`；部分经 body 参数(config)。UE 用自己的常量→**手感不同**（行为等价 vs 精确）。手感常量宜下沉进 world config(data)。
-- [ ] 🔲 **C5 · 环境/相机 juice**：闪电定时（grade 派生）、相机摔落抖屏——TS-specific 表现。多为观感 juice（行为等价可接受）；但「确定性派生」部分（闪电定时）性质同 C1。
+- [x] ✅ **C4 · 移动手感常量**：**capacity config 已接活（2026-07）**——原来 `player.capacity`（speed/jumpForce/gravityMultiplier）**声明了但引擎从不消费**（EntityFactory 硬编码）；现 walk/run/jump/gravityMultiplier + 新增 ghostFlySpeed/voidRecover 均从 config 读（mock 值对齐既有行为=零变化；`body.gravity` 乘数真正落到重力积分）。**留作引擎常量**（有意）：GRAVITY 基值（世界侧旋钮=gravityMultiplier）、`CONTROL_CONSTANTS`（鼠标灵敏度/转速=宿主输入表现，非语义）。
+- [x] ✅⚠️ **C5 · 环境/相机 juice——语义侧已规范，表现侧有意保留**：**天气/时间确定性派生已进协议**（`protocol/{cn,en}/world.md §3.1`：hash 切片位置、类别表、mod-4 grade、雷暴判定、固定历法分解——跨引擎语义）；闪电闪光包络、相机摔落抖屏=渲染器自定义（行为等价，有意不规范）。
 
 ### 3D/渲染层契约审查（A1~A6，2026-07 已处理）
 
@@ -58,11 +58,20 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 - ✅ **A1 · 旋转欧拉序+坐标系**：补进 `coordinate.md §3.1`——Adjunct = 引擎系 `XYZ` 序、弧度、绕中心、**不经 heading 换算**（仅玩家 yaw 走）；相机 `YXZ`。代码 `setObjectRotation` 加交叉引用。
 - ✅ **A4 · 世界空间 UV 平铺**：补进 `protocol/adjunct.md §6`——`每面 repeat = 面米数 / TILE_METERS(=2)`；`material.repeat` 是叠加乘子。代码 `TextureScale` 加引用。
 - ✅ **A6 · box 索引调色板**：`adjunct.md §6` 标为**遗留/非规范**，跨引擎内容存 hex；`basic_box` 代码加注。
-- [ ] 🔲 **C2（承上）avatar 状态映射**：仍 open——`ANIM_STATE_PATTERNS` 剪辑名启发式未落 `avatar-animation.md` 契约。是唯一未闭的渲染层契约缺口。
+- [x] ✅ **C2（承上）avatar 状态映射**：**已闭（2026-07 v1）**——契约进引擎（名称相等优先 + 回退链 + 阈值派生），启发式仅作不合规素材降级。渲染层契约缺口清零。
 
 > **像素级差异（着色/光照/tonemapping/阴影/相机/分段数）是合法的行为等价，有意不碰**——协议 §6「同效果边界」已写明。
 
 **审查结论**：核心数据脊(A)干净——主目标在最要紧处成立。冲突集中在 **B（自觉逃生舱，不慌）** 和 **C（潜在陷阱）**。**C1 最该先处理**（seed 派生是 iNFT/物品核心，已在 item+motif 两处，最易被误以为「已可移植」）。**3D 层 A1/A4/A6 本轮已补齐规范**（无需改行为，只写下约定）；C 类**不阻塞 F 系列**（F1 纯调度/生成最干净）；作为独立「协议化」工作项推进，或碰到时补。
+
+### 硬编码清理（2026-07 批次，C1/C2/C4/C5 勾选见上）
+
+以「数据即逻辑」为尺重扫硬编码后集中处理的一批（除 C 系列外的新发现）：
+
+- ✅ **关卡数据化**：`core/levels/parkour.ts`+`coaster.ts`（authored 内容以 TS 住在引擎核心——最重的越界）**已删除**。关卡=纯数据文档 **`AuthoredLevel` JSON**（format/version/start/completeFlag/blocks[coord→raw]），内容随客户端（`client/desktop/src/levels/*.level.json`，由退役生成器一次性冻结导出）；引擎只留词汇 `core/services/AuthoredLevel.ts`（类型+`validateAuthoredLevel`+`levelSceneProvider`，空块回退）。接入既有块管线不变（LocalDataSource overlay/CAS publish 照常）。引擎场景测试用冻结 fixture（`tests/fixtures/levels/`）。
+- ✅ **物品模板迁出引擎**：`BUILTIN_ITEM_TEMPLATES` → `core/mocks/ItemTemplates.ts`（对齐 BlockMocks 惯例）；引擎登记表默认**空**，宿主显式 `registerDemoItemTemplates()`。
+- **有意保留的硬编码**（合法，勿再翻案）：TILE_METERS=2（协议契约）、渲染光照/阴影常量（renderer-defined）、`CONTROL_CONSTANTS`（宿主输入表现）、SPP theme 实现（注册表词汇，同 adjunct 定义）、Pattern B 五 System（逃生舱已裁定）、demo 场景坐标 dispatch（客户端内容层——后续随「场景 JSON 化」二期处理，非引擎越界）。
+- 🔲 **场景 JSON 化二期（候选）**：10 个 `client/scenes/*.ts` 手写生成器 + `sceneBlock` 坐标 if/else 同样可走 AuthoredLevel 路（生成器跑一次→冻结 JSON→publish 进 CAS）。当前属客户端内容层（不违反引擎边界），优先级让位 F1。
 
 ---
 

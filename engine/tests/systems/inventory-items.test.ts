@@ -5,8 +5,13 @@ import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 import {
     deriveItemAttributes, getItemTemplate, itemIdFor, mulberry32,
 } from '../../src/core/services/ItemRegistry';
+import { registerDemoItemTemplates } from '../../src/core/mocks/ItemTemplates';
 import { ItemAttribute } from '../../src/plugins/adjunct/adjunct_item';
 import { SystemMode } from '../../src/core/types/SystemMode';
+
+// Templates are world content now — the engine registry starts EMPTY. These
+// tests exercise the demo catalogue (ids 1–3), so register it like a host would.
+registerDemoItemTemplates();
 
 // L3 — local-first inventory (P0–P2): bag.max wiring, b5 item pipeline,
 // atomic pickup/drop (world ⇄ bag with draft persistence), JSONLogic

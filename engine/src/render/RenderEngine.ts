@@ -1003,7 +1003,10 @@ export class RenderEngine {
 
     // ── Skeletal animation ────────────────────────────────────────────────────
 
-    /** Movement-state → clip-name heuristics (case-insensitive substring). */
+    /** LEGACY heuristics for NON-COMPLIANT assets only — the normative clip
+     *  naming contract (protocol avatar-animation.md §3) is case-insensitive
+     *  NAME EQUALITY to the state name. Assets predating the contract degrade
+     *  to this substring match so they keep animating. */
     private static readonly ANIM_STATE_PATTERNS: Record<string, RegExp> = {
         idle: /idle|stand|breath/i,
         walk: /walk/i,
@@ -1013,9 +1016,14 @@ export class RenderEngine {
 
     /**
      * Register a handle's clips with a mixer and start its default state.
-     * Clips are indexed BOTH by movement state (name heuristics) and by raw
-     * clip name; states with no matching clip fall back at setAnimationState
-     * time (run→walk→idle→first clip), so a one-clip model still animates.
+     * State → clip mapping per protocol avatar-animation.md §3 (v1 contract):
+     *   1. NORMATIVE: clip name equals the state name, case-insensitive
+     *      (`Walk` == `walk`).
+     *   2. LEGACY degrade: substring heuristics (ANIM_STATE_PATTERNS) fill
+     *      states the normative pass left unmapped.
+     * Clips are also indexed by raw name; states with no matching clip fall
+     * back at play time through the §2 chain (run→walk→idle · air→jump→idle ·
+     * land→idle → first clip), so a one-clip model still animates.
      */
     public startAnimation(handle: RenderHandle, clips: THREE.AnimationClip[]): void {
         if (!clips.length) return;
@@ -1026,8 +1034,14 @@ export class RenderEngine {
         for (const clip of clips) {
             const action = mixer.clipAction(clip);
             actions.set(clip.name, action);
+            // Normative (§3): case-insensitive name equality takes precedence.
+            const lower = clip.name.toLowerCase();
+            if (!actions.has(lower)) actions.set(lower, action);
+        }
+        // Legacy degrade: fill still-unmapped states via substring heuristics.
+        for (const clip of clips) {
             for (const [state, pattern] of Object.entries(RenderEngine.ANIM_STATE_PATTERNS)) {
-                if (!actions.has(state) && pattern.test(clip.name)) actions.set(state, action);
+                if (!actions.has(state) && pattern.test(clip.name)) actions.set(state, mixer.clipAction(clip));
             }
         }
         if (!actions.has('idle')) actions.set('idle', mixer.clipAction(clips[0]));
@@ -1049,10 +1063,15 @@ export class RenderEngine {
     }
 
     private playRigState(rig: { mixer: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; current: string | null }, state: string, fadeSec: number): void {
+        // NORMATIVE fallback chains — protocol avatar-animation.md §2: any state
+        // must eventually resolve to `idle` (a compliant motion set carries at
+        // least `idle`; a non-compliant one has clips[0] registered as idle).
         const FALLBACK: Record<string, string[]> = {
             run: ['run', 'walk', 'idle'],
             walk: ['walk', 'idle'],
-            air: ['air', 'idle'],
+            air: ['air', 'jump', 'idle'],
+            jump: ['jump', 'air', 'idle'],
+            land: ['land', 'idle'],
             idle: ['idle'],
         };
         let next: THREE.AnimationAction | undefined;

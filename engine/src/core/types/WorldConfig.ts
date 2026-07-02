@@ -61,11 +61,17 @@ export interface WorldConfig {
             hand: [number, number, number];         // upper, lower, hand
             leg: [number, number, number];          // thigh, calf, foot
         };
+        // Movement capacity — CONSUMED by EntityFactory.setupPlayer (rigid body)
+        // and CharacterController (ghost fly / void recovery). The king's config
+        // is authoritative; engine defaults only cover absent fields.
         capacity: {
-            rotate: number;          // Mouse turn speed limit
-            speed: number;           // Walking baseline modifier
-            jumpForce: number;       // Base jump force 
-            gravityMultiplier: number; // 1.0 is default Gravity. 
+            rotate: number;          // Mouse turn speed limit (reserved, not consumed yet)
+            speed: number;           // RUN speed baseline (m/s) → RigidBody.maxSpeedRun
+            walkSpeed?: number;      // Walk speed (m/s) → maxSpeedWalk (default 5)
+            jumpForce: number;       // Jump impulse → RigidBody.jumpForce
+            gravityMultiplier: number; // 1.0 is default Gravity.
+            ghostFlySpeed?: number;  // Ghost-mode vertical fly speed (m/s, default 6)
+            voidRecover?: number;    // Fall this far below last grounded spot → recover (m, default 20)
         };
         // Items & Size ceilings
         bag: { max: number };

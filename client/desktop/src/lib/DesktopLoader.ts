@@ -19,10 +19,14 @@ import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { TransformComponent } from '@engine/core/components/PlayerComponents';
 import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
 import { MockBlockData } from '@engine/core/mocks/BlockMocks';
+import { registerDemoItemTemplates } from '@engine/core/mocks/ItemTemplates';
 import { IDataSource } from '@engine/core/services/DataSource';
 import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataSource';
-import { buildParkourBlock, PARKOUR_START } from '@engine/core/levels/parkour';
-import { buildCoasterBlock, COASTER_START } from '@engine/core/levels/coaster';
+// Authored levels are pure DATA (AuthoredLevel JSON) — content lives here with
+// the client, the engine only supplies the vocabulary (levelSceneProvider).
+import { AuthoredLevel, levelSceneProvider } from '@engine/core/services/AuthoredLevel';
+import parkourLevelJson from '../levels/parkour.level.json';
+import coasterLevelJson from '../levels/coaster.level.json';
 import { Coords } from '@engine/core/utils/Coords';
 import type { GameSetting } from '@engine/core/types/GameSetting';
 import type { IGameApi } from '@engine/core/services/IGameApi';
@@ -93,6 +97,14 @@ export class DesktopLoader implements IDataSource {
         ? new URLSearchParams(window.location.search).get('level') : null;
     private isParkour = this.level === 'parkour';
     private isCoaster = this.level === 'coaster';
+
+    /** The active authored level (data document) + its block provider. Levels
+     *  are JSON in src/levels/ — the engine holds no level content. */
+    private activeLevel: AuthoredLevel | null =
+        this.isParkour ? (parkourLevelJson as unknown as AuthoredLevel)
+        : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
+        : null;
+    private levelProvider = this.activeLevel ? levelSceneProvider(this.activeLevel) : null;
 
     /** True while the player stands in a playable (game-enabled) block — the
      *  precondition the UI gates Game-mode entry on (set by game.zone_enter/exit). */
@@ -248,6 +260,10 @@ export class DesktopLoader implements IDataSource {
     public async init(containerId: string, ui?: any) {
         if (this.engine) return;
 
+        // Demo item catalogue (templates are world CONTENT — the host registers
+        // its own; the engine ships none). The demo scenes' b5 rows use ids 1–3.
+        registerDemoItemTemplates();
+
         // Build one transport per registered game and route by name. `?mjserver`
         // dials each game's real server (FetchGameApi → its baseurl); otherwise the
         // in-page loopback mock (offline). Existing demo/e2e behaviour preserved.
@@ -362,16 +378,12 @@ export class DesktopLoader implements IDataSource {
             }
         });
 
-        // Parkour starts on the course's start platform (not the demo/saved spawn).
-        if (this.isParkour) {
+        // An authored level starts at its own spawn (not the demo/saved spawn).
+        if (this.activeLevel) {
+            const s = this.activeLevel.start;
             this.playerState = {
                 ...this.playerState,
-                block: PARKOUR_START.block, position: PARKOUR_START.position, rotation: PARKOUR_START.rotation,
-            };
-        } else if (this.isCoaster) {
-            this.playerState = {
-                ...this.playerState,
-                block: COASTER_START.block, position: COASTER_START.position, rotation: COASTER_START.rotation,
+                block: s.block, position: s.position, rotation: s.rotation,
             };
         }
 
@@ -426,7 +438,7 @@ export class DesktopLoader implements IDataSource {
         // The engine now holds the authoritative player location (restored, or
         // the fallback spawn). Mirror it locally and preload the neighborhood
         // around the block the player will actually appear in.
-        const authored = this.isParkour ? PARKOUR_START : this.isCoaster ? COASTER_START : null;
+        const authored = this.activeLevel?.start ?? null;
         const restored = this.engine.getPlayerSppLocation();
         if (restored && !authored) {
             this.playerState = {
@@ -549,13 +561,9 @@ export class DesktopLoader implements IDataSource {
      * sources by the world's fixed level — the former fetchBlock body, sync.
      */
     private sceneBlock(x: number, y: number): any[] {
-        // Parkour: course segment for course blocks, empty block elsewhere.
-        if (this.isParkour) return buildParkourBlock(x, y);
-        // Coaster: the spawn block holds the b6 coaster source; elsewhere empty.
-        if (this.isCoaster) {
-            return (x === COASTER_START.block[0] && y === COASTER_START.block[1])
-                ? buildCoasterBlock() : [0, 1, [], []];
-        }
+        // Authored level (parkour/coaster): the level document's block for
+        // authored coords, empty block elsewhere — pure data, no generators.
+        if (this.levelProvider) return this.levelProvider.block(x, y);
         // The mahjong table block (game zone) and the demo showcase block are
         // authored in scenes/; the loader just dispatches.
         if (x === MAHJONG_BLOCK[0] && y === MAHJONG_BLOCK[1]) return buildMahjongScene(x, y);

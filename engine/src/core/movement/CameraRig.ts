@@ -173,14 +173,17 @@ export class CameraRig {
                 && world.mode !== SystemMode.Ghost;
             world.renderEngine.setObjectVisible(avatar.handle, show);
 
-            // Movement state → animation (render layer crossfades; falls back
-            // run→walk→idle for models with fewer clips).
+            // Movement state → animation. NORMATIVE derivation — protocol
+            // avatar-animation.md §2: idle ≤ IDLE_MAX (0.5 m/s) < walk ≤
+            // WALK_MAX (maxSpeedWalk × 1.2, linear) < run; !grounded → air.
+            // Compared squared to avoid the sqrt on the hot path.
             const hSpeedSq = body.velocity[0] * body.velocity[0] + body.velocity[2] * body.velocity[2];
-            const walkSq = body.maxSpeedWalk * body.maxSpeedWalk;
+            const walkMax = body.maxSpeedWalk * 1.2;   // WALK_MAX (§2)
+            const IDLE_MAX = 0.5;                       // m/s (§2)
             let animState = 'idle';
             if (!body.isGrounded) animState = 'air';
-            else if (hSpeedSq > walkSq * 1.2) animState = 'run';
-            else if (hSpeedSq > 0.25) animState = 'walk';
+            else if (hSpeedSq > walkMax * walkMax) animState = 'run';
+            else if (hSpeedSq > IDLE_MAX * IDLE_MAX) animState = 'walk';
             (world.renderEngine as any).setAnimationState?.(avatar.handle, animState);
             (world.renderEngine as any).updateAnimation(avatar.handle, dt);
         }

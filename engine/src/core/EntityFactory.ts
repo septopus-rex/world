@@ -19,15 +19,20 @@ export class EntityFactory {
             scale: [1, 1, 1]
         });
 
+        // Movement capacity comes from the king's config (player.capacity) — the
+        // engine values below are only fallbacks for absent fields. `speed` is the
+        // RUN baseline (walkSpeed is its own optional field). This is where the
+        // previously-dead capacity config actually lands on the rigid body.
+        const cap = (world.config.player as any)?.capacity ?? {};
         world.addComponent<RigidBodyComponent>(player, "RigidBodyComponent", {
             size: [0.6, 1.8, 0.6],
             offset: [0, 0, 0],
             velocity: [0, 0, 0],
             mass: 1,
-            maxSpeedWalk: 5,
-            maxSpeedRun: 10,
-            jumpForce: 8,
-            gravity: 1,
+            maxSpeedWalk: cap.walkSpeed ?? 5,
+            maxSpeedRun: cap.speed ?? 10,
+            jumpForce: cap.jumpForce ?? 8,
+            gravity: cap.gravityMultiplier ?? 1,
             friction: 0.9,
             isGrounded: false
         });
