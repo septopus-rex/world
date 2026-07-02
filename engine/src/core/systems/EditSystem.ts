@@ -524,6 +524,26 @@ export class EditSystem implements ISystem {
             }
         }
 
+        // block.max (the lord's per-block cap): refuse at the AUTHORING boundary,
+        // not just at inject — otherwise the editor lets you place content that a
+        // reload would silently truncate away (data loss). Counts authored rows
+        // only (ground plate + SPP/motif expansion products are derived).
+        const cap = (world.config as any)?.block?.max;
+        if (typeof cap === 'number' && cap > 0 && this.activeBlockId !== null) {
+            let authored = 0;
+            for (const eid of world.getEntitiesWith(['AdjunctComponent'])) {
+                const a = world.getComponent<any>(eid, 'AdjunctComponent');
+                if (!a || a.parentBlockEntityId !== this.activeBlockId) continue;
+                if (typeof a.adjunctId === 'string' && a.adjunctId.startsWith('ground')) continue;
+                if (a.stdData?.derivedFrom) continue;
+                authored++;
+            }
+            if (authored >= cap) {
+                world.ui?.showToast(`Block is full (${cap} adjunct limit)`);
+                return;
+            }
+        }
+
         const task: EditTask = {
             entityId: -1,
             adjunct: '',

@@ -15,6 +15,7 @@ export type ErrorCode =
     | 'PROTOCOL_DECODE' | 'PROTOCOL_EXPORT' | 'PROTOCOL_BLOCK'
     | 'PERSIST_IDB'
     | 'PHYSICS_INIT'
+    | 'RENDER_CONTEXT'
     | 'CONDITION_EVAL'
     | 'UNKNOWN';
 

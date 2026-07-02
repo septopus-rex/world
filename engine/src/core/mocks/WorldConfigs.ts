@@ -16,7 +16,11 @@ export const MockWorldNormal: WorldConfig = {
     assetBaseUrl: "/assets",
     block: {
         elevation: 0,
-        max: 30,
+        // Per-block AUTHORED adjunct cap — ENFORCED since hardening ① (inject
+        // truncates over-cap rows; the editor refuses to place past it). 64 gives
+        // headroom over the densest authored demo block; derived entities (SPP/
+        // motif expansion) and runtime System spawns don't count.
+        max: 64,
         color: 0x228B22, // Forest Green
         texture: 1
     },

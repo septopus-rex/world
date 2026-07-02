@@ -15,12 +15,21 @@ export async function bootDeterministic(page: Page): Promise<void> {
   await stepEngine(page, 90); // settle physics (land on ground) + render initial frames
 }
 
-/** Wait until window.loader is up and at least one block has loaded. */
+/** Wait until window.loader is up and at least one block has loaded.
+ *
+ *  timeout 60s: right after the initial 25-block materialise (+ engine.stop),
+ *  SwiftShader's shader-compile burst stalls the page main thread ~30s
+ *  (measured on a clean tree — see stamp-scene budget note). A 30s cap sat
+ *  EXACTLY on that stall and made any ready-wait that lands on it a coin flip
+ *  (bit block-streaming's post-boot wait for months of margin <2s). This is a
+ *  readiness GATE, not an assertion — a generous cap costs nothing when healthy.
+ *  polling: interval (not rAF) — a stopped engine produces no frames, and the
+ *  idle headless compositor starves rAF-polled waits. */
 export async function waitForWorldReady(page: Page): Promise<void> {
   await page.waitForFunction(() => {
     const l = (window as any).loader;
     return !!(l && l.engine && l.engine.getWorld() && typeof l.getLoadedBlockCount === 'function' && l.getLoadedBlockCount() > 0);
-  }, undefined, { timeout: 30_000 });
+  }, undefined, { timeout: 60_000, polling: 250 });
 }
 
 /** Advance the simulation n fixed steps (deterministic). */

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { RenderHandle } from '../core/types/Adjunct';
-import { reportError } from '../core/errors';
+import { reportError, EngineError } from '../core/errors';
 import { MeshFactory } from './MeshFactory';
 
 export interface RenderEngineConfig {
@@ -60,6 +60,10 @@ export class RenderEngine {
 
     // O(1) entityId → Object3D index (populated by setObjectUserData)
     private _entityObjectIndex = new Map<string | number, THREE.Object3D>();
+
+    /** True between webglcontextlost and webglcontextrestored — render() no-ops
+     *  (drawing into a dead context throws). Simulation keeps stepping. */
+    private _contextLost = false;
 
     // Skeletal animation: one mixer per animated handle.
     private _mixers = new Map<THREE.Object3D, {
@@ -129,6 +133,26 @@ export class RenderEngine {
         this.renderer.shadowMap.enabled = false;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
+
+        // WebGL context loss (hardening ③): a GPU reset / driver crash fires
+        // `webglcontextlost` — without preventDefault the context can NEVER be
+        // restored and the canvas stays black forever. While lost, render() is a
+        // no-op (drawing into a dead context throws). On restore, Three re-uploads
+        // GPU resources lazily; we just resume drawing. Both edges are reported so
+        // the host can toast the user.
+        this.renderer.domElement.addEventListener('webglcontextlost', (e: Event) => {
+            e.preventDefault(); // required — allows the browser to restore the context
+            this._contextLost = true;
+            reportError(new EngineError('[render] WebGL context lost — rendering paused', {
+                code: 'RENDER_CONTEXT', userMessage: '图形上下文丢失,渲染已暂停(等待恢复)',
+            }), { tag: '[RenderEngine]', severity: 'error' });
+        });
+        this.renderer.domElement.addEventListener('webglcontextrestored', () => {
+            this._contextLost = false;
+            reportError(new EngineError('[render] WebGL context restored — rendering resumed', {
+                code: 'RENDER_CONTEXT', userMessage: '图形上下文已恢复',
+            }), { tag: '[RenderEngine]', severity: 'warn' });
+        });
 
         // 5. Default Lighting (dim ambient so adjunct lights are visible)
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
@@ -332,8 +356,14 @@ export class RenderEngine {
         if (!cur.__isolated) {
             const cloned = cur.clone() as THREE.Material & { __isolated?: boolean };
             cloned.__isolated = true;
-            cloned.userData = { ...cloned.userData, shared: false };
+            // Material.clone deep-copies userData — strip the cache identity so the
+            // clone is a plain owned material (disposed with the mesh), not a
+            // doppelgänger of the cached shared entry.
+            cloned.userData = { ...cloned.userData, shared: false, cacheKey: undefined, cacheKind: undefined };
             child.material = cloned;
+            // The mesh no longer uses the cached shared material — release its ref
+            // so the cache entry can be freed once the last true user is gone.
+            if ((cur as any).userData?.shared) MeshFactory.release(cur);
         }
         return child.material as THREE.MeshStandardMaterial;
     }
@@ -493,6 +523,7 @@ export class RenderEngine {
      * Rendering Logic
      */
     public render(isMinimapActive: boolean): void {
+        if (this._contextLost) return; // context dead — resume on 'webglcontextrestored'
         this.stats?.begin();
         this.maybeRebaseOrigin();
         this.anchorSunShadow();
@@ -1146,21 +1177,38 @@ export class RenderEngine {
      */
     private static disposeMeshResources(child: any): void {
         if (!child || !(child.isMesh || child.isPoints)) return;
+        // Model-clone meshes (ResourceManager instance-many): the TEMPLATE's
+        // geometry/materials are ref-counted by ResourceManager — hands off here.
         if (child.userData?.shared) return;
+        // Idempotence guard: the same mesh can reach here twice (removeHandle +
+        // placeholder-swap paths) — releasing a refcount twice would free an
+        // entry other users still render with.
+        if (child.userData?.__resourcesFreed) return;
+        child.userData.__resourcesFreed = true;
+        // MeshFactory-cached (shared) resources are RELEASED (refcount −1;
+        // disposed at zero); instance-owned ones are disposed directly.
         const geo = child.geometry;
-        if (geo && !geo.userData?.shared) geo.dispose();
-        const mat = child.material;
-        if (Array.isArray(mat)) {
-            mat.forEach((m: any) => { if (m && !m.userData?.shared) m.dispose(); });
-        } else if (mat && !mat.userData?.shared) {
-            mat.dispose();
+        if (geo) {
+            if (geo.userData?.shared) MeshFactory.release(geo);
+            else geo.dispose();
         }
+        const one = (m: any) => {
+            if (!m) return;
+            if (m.userData?.shared) MeshFactory.release(m);
+            else m.dispose();
+        };
+        const mat = child.material;
+        if (Array.isArray(mat)) mat.forEach(one); else one(mat);
     }
 
     public dispose(): void {
         if (this.container && this.renderer.domElement) {
             this.container.removeChild(this.renderer.domElement);
         }
+        // Full teardown of the process-wide mesh caches. Fine for the single-
+        // engine client; a second live engine in the same process would lose its
+        // cache (it would rebuild lazily) — acceptable, tests use NullRenderEngine.
+        MeshFactory.clearCache();
         this.renderer.dispose();
     }
 }

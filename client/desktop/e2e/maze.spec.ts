@@ -4,10 +4,12 @@ import { bootDeterministic, stepEngine, worldFlags } from './helpers';
 // The Athenian labyrinth: a whole PLAYABLE maze authored as ONE b6 SPP row, which
 // the engine expands into ~60 solid marble walls + a goal trigger — proving the
 // "SPP as structural skeleton" workflow. The classical dressing (a2 columns /
-// monument) is layered on top. Block [2047,2048], one west of the demo spawn.
+// monument) is layered on top. Block [2046,2048], two west of the demo spawn
+// (moved from [2047,2048], which the native-mahjong table took over — the
+// earlier sceneBlock dispatch silently shadowed the maze there).
 
-const MAZE_BLOCK: [number, number] = [2047, 2048];
-const PREFIX = 'adj_2047_2048_'; // derived pieces carry their source block in the id
+const MAZE_BLOCK: [number, number] = [2046, 2048];
+const PREFIX = 'adj_2046_2048_'; // derived pieces carry their source block in the id
 
 async function pumpUntil(page: any, cond: () => Promise<boolean>, maxRounds = 50): Promise<boolean> {
   for (let i = 0; i < maxRounds; i++) { await stepEngine(page, 4); if (await cond()) return true; }
@@ -22,7 +24,7 @@ async function census(page: any) {
     for (const eid of w.queryEntities('AdjunctComponent')) {
       const adj = w.getComponent(eid, 'AdjunctComponent');
       const std = adj?.stdData;
-      if (std?.typeId === 0x00b6 && String(adj?.adjunctId ?? '').includes('2047_2048')) source++;
+      if (std?.typeId === 0x00b6 && String(adj?.adjunctId ?? '').includes('2046_2048')) source++;
       if (std?.derivedFrom && String(std.derivedFrom).startsWith(prefix)) {
         if (std.typeId === 0x00a1) { walls++; if (w.getComponent(eid, 'SolidComponent')) solidWalls++; }
         if (std.typeId === 0x00b8) triggers++;

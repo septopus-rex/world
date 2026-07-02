@@ -13,6 +13,8 @@ import { expandParticle } from '../spp/Expander';
 import type { ExpandedRow } from '../spp/Expander';
 import { expandMotif } from '../motif/MotifExpander';
 import { RenderHandle } from '../types/Adjunct';
+import { sanitizeStdTransform } from '../utils/Num';
+import { reportError, AdjunctError } from '../errors';
 
 /**
  * Source adjuncts that render NOTHING themselves and EXPAND into standard
@@ -108,6 +110,15 @@ export class BlockSystem implements ISystem {
             animations = raw[3] || [];
             block.animations = animations;
 
+            // block.max (the lord's per-block adjunct cap, WorldConfig.block.max —
+            // hardening ①, data-layer bound): budget AUTHORED rows at inject.
+            // Derived entities (SPP/motif expansion) and runtime System spawns
+            // (Pattern-B games) are engine-controlled and exempt. Overflow rows
+            // are dropped + reported, bounding hostile/corrupt imports.
+            const capCfg = (world.config as any)?.block?.max;
+            let budget = typeof capCfg === 'number' && capCfg > 0 ? capCfg : Infinity;
+            let truncated = 0;
+
             rawAdjuncts.forEach((adjData: any) => {
                 if (Array.isArray(adjData) && typeof adjData[0] === 'number') {
                     const typeId = adjData[0];
@@ -116,6 +127,8 @@ export class BlockSystem implements ISystem {
 
                     if (definition) {
                         instances.forEach((rawInst: any[], idx: number) => {
+                            if (budget <= 0) { truncated++; return; }
+                            budget--;
                             const std = definition.attribute?.deserialize(rawInst);
                             if (std) {
                                 if (typeof std.animate === 'number' && std.animate > 0) {
@@ -167,6 +180,13 @@ export class BlockSystem implements ISystem {
                     }
                 }
             });
+
+            if (truncated > 0) {
+                reportError(new AdjunctError(
+                    `[block] ${block.x}_${block.y}: ${truncated} adjunct row(s) over the block.max cap (${capCfg}) dropped`,
+                    { code: 'ADJUNCT_VALIDATE' },
+                ), { tag: '[BlockSystem]', severity: 'warn' });
+            }
         } else {
             block.adjuncts.forEach((adjData: any) => {
                 const adjId = world.createEntity();
@@ -289,6 +309,18 @@ export class BlockSystem implements ISystem {
 
     private attachAdjunctComponents(world: World, blockEid: EntityId, adjId: EntityId, data: any, logic: any, id: string) {
         const block = world.getComponent<BlockComponent>(blockEid, "BlockComponent")!;
+
+        // Finite gate (hardening ②): hand-edited/imported content can carry NaN /
+        // Infinity / strings in transform slots — clamp HERE, the one chokepoint
+        // every adjunct passes. `data` IS the stdData used downstream (render,
+        // serialize), so one gate covers the pipeline. Clamps are reported, not
+        // silent: authored garbage should show in the console, not manifest as a
+        // mysteriously vanished world.
+        if (sanitizeStdTransform(data)) {
+            reportError(new AdjunctError(`[block] non-finite transform in ${id} — clamped`, { code: 'ADJUNCT_VALIDATE', id }), {
+                tag: '[BlockSystem]', severity: 'warn',
+            });
+        }
 
         const sppPos: [number, number, number] = [data.ox, data.oy, data.oz];
         const sppBlock: [number, number] = [block.x, block.y];

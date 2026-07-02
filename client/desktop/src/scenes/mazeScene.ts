@@ -28,7 +28,11 @@ import { AdjunctType } from '@engine/core/types/AdjunctType';
  */
 
 /** Maze block — one block WEST of the demo spawn ([2048,2048]). Not a game zone. */
-export const MAZE_BLOCK: [number, number] = [2047, 2048];
+// Two west of the demo spawn. [2047,2048] was the maze's original home until the
+// native-mahjong table landed on the same block (b601422) and its earlier
+// sceneBlock dispatch SHADOWED the maze entirely — coordinate collisions between
+// scenes are silent, so keep this registry collision-free.
+export const MAZE_BLOCK: [number, number] = [2046, 2048];
 
 /** A good spot to drop a player so they START the maze (just inside the gate). */
 export const MAZE_ENTRY: [number, number, number] = [8, 2.5, 3];

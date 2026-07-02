@@ -9,10 +9,16 @@ import { applyBoxWorldUV } from './TextureScale';
  * OPTIMIZATION: Geometry and material instances are cached and reused.
  */
 export class MeshFactory {
+    // REF-COUNTED caches (hardening ①): shared entries used to live forever —
+    // at content scale every unique size/colour is a cache entry, so the old
+    // "freed only on full teardown" policy grew without bound. Each create()
+    // acquires (+1); RenderEngine.disposeMeshResources releases (−1) via
+    // MeshFactory.release(); the entry is disposed + evicted at zero. Mirrors
+    // ResourceManager's model/texture refcounting.
     // Geometry cache keyed by "type:w,h,d"
-    private static _geoCache = new Map<string, THREE.BufferGeometry>();
+    private static _geoCache = new Map<string, { res: THREE.BufferGeometry; refs: number }>();
     // Material cache keyed by "color,opacity"
-    private static _matCache = new Map<string, THREE.MeshStandardMaterial>();
+    private static _matCache = new Map<string, { res: THREE.MeshStandardMaterial; refs: number }>();
 
     /**
      * Creates a Three.js Object3D from a RenderObject definition.
@@ -28,9 +34,13 @@ export class MeshFactory {
                 object = new THREE.GridHelper(params.size[0], params.size[1], material?.color ?? 0x444444, material?.color ?? 0x888888);
                 break;
             case 'wirebox': {
-                // Wireboxes use EdgesGeometry which wraps a BoxGeometry — cache the base
-                const boxGeoWire = this.getGeometry('box', w, h, d);
+                // EdgesGeometry COPIES what it needs from the base box, so build a
+                // throwaway base and dispose it immediately — going through the
+                // ref-counted cache here would acquire a reference nothing ever
+                // releases (the mesh only holds the edges, not the base).
+                const boxGeoWire = new THREE.BoxGeometry(w, h, d);
                 const edges = new THREE.EdgesGeometry(boxGeoWire);
+                boxGeoWire.dispose();
                 const lineMaterial = new THREE.LineBasicMaterial({
                     color: material?.color ?? 0xffffff,
                     transparent: (material?.opacity !== undefined && material.opacity < 1),
@@ -110,8 +120,9 @@ export class MeshFactory {
         // fitUV boxes keep BoxGeometry's natural 0..1 UVs (full image per face), so
         // they need a distinct cache entry from the size-tiled box of the same dims.
         const key = `${type}:${w},${h},${d}${fitUV ? ':fit' : ''}`;
-        let geo = this._geoCache.get(key);
-        if (!geo) {
+        let entry = this._geoCache.get(key);
+        if (!entry) {
+            let geo: THREE.BufferGeometry;
             switch (type) {
                 case 'sphere':
                     geo = new THREE.SphereGeometry(w / 2, 32, 32);
@@ -133,14 +144,36 @@ export class MeshFactory {
                     if (!fitUV) applyBoxWorldUV(geo, [w, h, d]);
                     break;
             }
-            // Tag as shared: this geometry instance is reused by reference across
-            // every block/adjunct of the same size, so RenderEngine.removeHandle
-            // must NOT dispose it on eviction (that corrupts all other live blocks).
-            // It is freed only by MeshFactory.clearCache() on full teardown.
+            // Tag as shared: reused by reference across every block/adjunct of the
+            // same size, so eviction must go through release() (refcount), never a
+            // direct dispose (that would corrupt all other live users).
             geo.userData.shared = true;
-            this._geoCache.set(key, geo);
+            geo.userData.cacheKind = 'geo';
+            geo.userData.cacheKey = key;
+            entry = { res: geo, refs: 0 };
+            this._geoCache.set(key, entry);
         }
-        return geo;
+        entry.refs++;
+        return entry.res;
+    }
+
+    /**
+     * Release one reference to a cached (shared) geometry/material — the
+     * counterpart of the acquire inside create(). Disposes + evicts the entry
+     * when the last user releases. Safe to call with anything: non-cached
+     * resources (no cacheKey) and stale tags (cache cleared/rebuilt) are no-ops.
+     */
+    public static release(res: any): void {
+        const key = res?.userData?.cacheKey;
+        if (!key) return;
+        const map: Map<string, { res: any; refs: number }> =
+            res.userData.cacheKind === 'geo' ? this._geoCache : this._matCache;
+        const entry = map.get(key);
+        if (!entry || entry.res !== res) return; // stale tag — not the live entry
+        if (--entry.refs <= 0) {
+            map.delete(key);
+            entry.res.dispose();
+        }
     }
 
     /**
@@ -194,13 +227,13 @@ export class MeshFactory {
             });
         }
 
-        // Colour-only materials are cached + shared by reference; tag them shared so
-        // removeHandle never disposes one still used by another block (freed only by
-        // clearCache on teardown).
+        // Colour-only materials are cached + shared by reference; tagged shared so
+        // eviction goes through release() (refcount) — disposed + evicted when the
+        // last user releases, never while another block still renders with it.
         const key = `${color},${opacity}`;
-        let mat = this._matCache.get(key);
-        if (!mat) {
-            mat = new THREE.MeshStandardMaterial({
+        let entry = this._matCache.get(key);
+        if (!entry) {
+            const mat = new THREE.MeshStandardMaterial({
                 color,
                 transparent: opacity < 1,
                 opacity,
@@ -211,9 +244,13 @@ export class MeshFactory {
                 shadowSide: THREE.BackSide,
             });
             mat.userData.shared = true;
-            this._matCache.set(key, mat);
+            mat.userData.cacheKind = 'mat';
+            mat.userData.cacheKey = key;
+            entry = { res: mat, refs: 0 };
+            this._matCache.set(key, entry);
         }
-        return mat;
+        entry.refs++;
+        return entry.res;
     }
 
     /**
@@ -289,12 +326,19 @@ export class MeshFactory {
     }
 
     /**
-     * Clear all caches (call on dispose).
+     * Clear all caches (full teardown — RenderEngine.dispose). Disposes every
+     * cached resource regardless of refcount; stale userData tags on already-
+     * handed-out resources become no-ops in release() (entry mismatch).
      */
     public static clearCache(): void {
-        for (const geo of this._geoCache.values()) geo.dispose();
-        for (const mat of this._matCache.values()) mat.dispose();
+        for (const e of this._geoCache.values()) e.res.dispose();
+        for (const e of this._matCache.values()) e.res.dispose();
         this._geoCache.clear();
         this._matCache.clear();
+    }
+
+    /** Diagnostics: live cache entry counts (for stress tests / stats overlays). */
+    public static cacheStats(): { geometries: number; materials: number } {
+        return { geometries: this._geoCache.size, materials: this._matCache.size };
     }
 }

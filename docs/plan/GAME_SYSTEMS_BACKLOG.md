@@ -73,6 +73,14 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 - **有意保留的硬编码**（合法，勿再翻案）：TILE_METERS=2（协议契约）、渲染光照/阴影常量（renderer-defined）、`CONTROL_CONSTANTS`（宿主输入表现）、SPP theme 实现（注册表词汇，同 adjunct 定义）、Pattern B 五 System（逃生舱已裁定）、demo 场景坐标 dispatch（客户端内容层——后续随「场景 JSON 化」二期处理，非引擎越界）。
 - 🔲 **场景 JSON 化二期（候选）**：10 个 `client/scenes/*.ts` 手写生成器 + `sceneBlock` 坐标 if/else 同样可走 AuthoredLevel 路（生成器跑一次→冻结 JSON→publish 进 CAS）。当前属客户端内容层（不违反引擎边界），优先级让位 F1。
 
+### 硬化批次（2026-07-02，内容期前防御）
+
+- ✅ **finite 闸（NaN 防御）**：`core/utils/Num.ts`（`finite`/`sanitizeStdTransform`）在 `BlockSystem.attachAdjunctComponents` 单咽喉点拦 NaN/Infinity/字符串（position/rotation/size），坏值 clamp + 上报不静默——手编 JSON/导入内容不再能悄悄毒化变换/物理（「世界消失」类事故）。
+- ✅ **MeshFactory 缓存 refcount 化**：共享几何/材质从「永不释放」改为引用计数（create 取用 +1、`disposeMeshResources` 经 `MeshFactory.release` −1、归零 dispose+出缓存），双重释放有幂等守卫；wirebox 改用后即弃基础几何（不占缓存）；clone-on-write 换料时释放被顶替的共享材质引用；`clearCache` 接进 `RenderEngine.dispose`。内容规模下缓存跟随活跃内容而非单调增长。模型克隆(mesh 级 shared,ResourceManager refcount)防线不变。
+- ✅ **block.max 执行（原死 config）**：inject 对 authored 行按 `WorldConfig.block.max` 截断+上报（防敌意/损坏导入）；编辑器 add 在上限处**拒绝**（避免「放了→重载被截=丢内容」）；派生实体（SPP/motif 展开）与运行时 System spawn（Pattern B）豁免。mock 值 30→64（对齐最密 demo 块 + 余量;迷宫是 1 行 b6 源，展开物豁免）。
+- ✅ **WebGL context loss**：`RenderEngine` 监听 lost/restored（preventDefault 允许恢复、lost 期间 `render()` no-op、模拟照步、双沿 reportError 带 userMessage）；新错误码 `RENDER_CONTEXT`；常驻 e2e `context-loss.spec.ts`（WEBGL_lose_context 驱动：帧计数冻结→恢复递增、零未捕获错误）。
+- **仍欠（验证债）**：e2e 全量绿背书（等机器空闲）＋数值压测标定（`MeshFactory.cacheStats()` 已备好观测口）。
+
 ---
 
 ## 0. 已就绪的引擎地基（基线，不是 gap）
