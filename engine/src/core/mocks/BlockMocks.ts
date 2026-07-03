@@ -59,19 +59,24 @@ export function MockBlockData(x: number, y: number): any {
     const adjunctsRaw: any[] = [];
 
     // 1. Pillars & Baton — animation showcase, ONE copy only (spawn block).
-    //    The 6m pillar doubles as the spawn pad the fall-through e2e steps off.
     //    Repeating this trio on every block just cluttered the world.
+    //    The spinning baton pillar MUST NOT overlap the [8,8] spawn: it is a
+    //    solid whose collider tracks the animation per frame, so a player
+    //    spawning inside its sweep gets shoved/wedged (the old "spawn pad on
+    //    the pillar top" choreography died with the sub-step AABB collider —
+    //    it cannot stand a 1×1 player on a spinning 0.4×0.4 cap). It now
+    //    spins on clear ground SE of spawn, between the hut and the items.
     if (x === 2048 && y === 2048) {
         const pillars: any[] = [
             // [size, pos, rot, resId, repeat, animation_index, stop]
             [
                 [0.4, 0.4, 6],   // Size
-                [8, 8, 3],       // Position
+                [11.5, 6.5, 3],  // Position — SE showcase spot, clear of spawn
                 [0, 0, 0],       // Rotation
                 1,              // ResId
                 [1, 1],         // Repeat
                 1,              // Animation Index (references animations[0])
-                1               // Stop (spawn pad — the player stands on it)
+                1               // Stop (solid, animated — collider tracks the spin)
             ],
             // Floating Box
             [

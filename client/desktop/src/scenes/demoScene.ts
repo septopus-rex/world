@@ -191,8 +191,8 @@ export function injectDemoAssets(data: any): void {
     // Trigger volumes (b8). Row format: [size, offset, rot, shape, gameOnly, events].
     const triggers = [
         // ① auto door pad (blue): in→open+demo_gate, out→close, hold 800ms→demo_hold.
-        //    Tall (alt 0..6): the player descends from the 6m spawn pillar while
-        //    walking north, so the volume must catch a falling crossing too.
+        //    Tall (alt 0..6): catches an airborne crossing too (jumping or
+        //    falling through), not just a grounded walk-in.
         //    Deep (N 9..13.5): reaches past the door line so it stays open
         //    while you walk through.
         [[4, 4.5, 6], [8, 11.25, 3], [0, 0, 0], 1, 0, [

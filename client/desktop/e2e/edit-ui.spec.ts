@@ -107,7 +107,9 @@ test('UI-placed content survives a real reload (IndexedDB)', async ({ page }) =>
   await page.mouse.move(x, y);
   await page.mouse.click(x, y);
   await stepEngine(page, 4);
-  expect((await adjunctIds(page)).length).toBe(before.length + 1);
+  const afterPlace = await adjunctIds(page);
+  expect(afterPlace.length).toBe(before.length + 1);
+  const placedId = afterPlace.find((id: string) => !before.includes(id))!;
 
   // Exit Edit (saves), let the write-behind land, REAL reload.
   await page.locator('[data-testid="mode-normal"]').click();
@@ -120,17 +122,16 @@ test('UI-placed content survives a real reload (IndexedDB)', async ({ page }) =>
   await page.evaluate(() => (window as any).loader.engine.stop());
   await stepEngine(page, 25);
 
-  // The rebuilt world contains the palette-default 1×1×1 box on the pillar top.
-  const survived = await page.evaluate(() => {
+  // The rebuilt world contains the box we placed — matched by its stable
+  // adjunct id captured at placement time (position heuristics broke when the
+  // spawn-block showcase moved; the id is the durable identity).
+  const survived = await page.evaluate((pid: string) => {
     const w = (window as any).loader.engine.getWorld();
     for (const eid of w.queryEntities('AdjunctComponent')) {
       const adj = w.getComponent(eid, 'AdjunctComponent');
-      const s = adj?.stdData;
-      if (s?.typeId === 0x00a2 && s.x === 1 && s.y === 1 && s.z === 1 && s.oz > 5) {
-        return { id: adj.adjunctId, oz: s.oz };
-      }
+      if (adj?.adjunctId === pid) return { id: pid, oz: adj.stdData?.oz };
     }
     return null;
-  });
+  }, placedId);
   expect(survived, 'UI-placed box rebuilt from the IndexedDB draft').not.toBeNull();
 });

@@ -6,7 +6,8 @@ import { bootDeterministic, stepEngine, playerPosition, mainCanvas, worldFlags, 
 // TriggerSystem). The spawn block's trigger court (DesktopLoader.injectDemoAssets):
 //   auto-door pad @ SPP [8,11.25] — in/out toggle `demo_gate` (+ door), hold(800ms) → `demo_hold`
 //   touch button  @ SPP [12,10.5] — click sets `demo_touch` (+ spins the cone)
-// Player spawns at SPP [8,8] (on the 6m spawn pillar) facing north; assertions
+// Player spawns at SPP [8,8] on clear ground (the spinning showcase pillar
+// sits SE of spawn, off the walk path) facing north; assertions
 // read world.globalFlags.
 
 /** Engine-Y (altitude) of the auto door — the visible reactor of the gate pad. */

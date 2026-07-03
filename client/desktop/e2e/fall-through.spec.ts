@@ -36,6 +36,10 @@ test('large-dt fall lands on the ground (no tunnel through the thin floor)', asy
 // streaming running between frames) at a large dt must never sink into the void —
 // the controller hovers over not-yet-streamed blocks instead of falling through.
 test('walking across blocks at large dt never sinks into the void', async ({ page }) => {
+  // 240s: a REAL 24-sim-second walk crosses ~8 blocks and streams each one in
+  // under SwiftShader. (It used to fit 90s only because the spawn showcase
+  // pillar wedged the player in place — the walk never actually happened.)
+  test.setTimeout(240_000);
   await bootDeterministic(page);
   await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 1));
 

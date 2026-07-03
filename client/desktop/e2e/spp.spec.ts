@@ -20,11 +20,15 @@ async function settle(page: any) {
 async function sppCensus(page: any) {
   return page.evaluate(() => {
     const w = (window as any).loader.engine.getWorld();
+    // Scope to the DEMO block: the 5x5 boot window also streams the maze
+    // (2046,2048) and the SPP sandbox (2047,2049), which carry their own b6
+    // sources — this census is about the demo hut only.
+    const inDemo = (id: any) => String(id ?? '').startsWith('adj_2048_2048_');
     let source = 0, derived = 0, derivedSolid = 0;
     for (const eid of w.queryEntities('AdjunctComponent')) {
       const adj = w.getComponent(eid, 'AdjunctComponent');
-      if (adj?.stdData?.typeId === 0x00b6) source++;
-      if (adj?.stdData?.derivedFrom) {
+      if (adj?.stdData?.typeId === 0x00b6 && inDemo(adj.adjunctId)) source++;
+      if (adj?.stdData?.derivedFrom && inDemo(adj.stdData.derivedFrom)) {
         derived++;
         if (w.getComponent(eid, 'SolidComponent')) derivedSolid++;
       }

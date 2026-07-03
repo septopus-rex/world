@@ -31,7 +31,11 @@ export class DefaultUIProvider implements IUIProvider {
         .sept-ui-group.bottom-left { bottom: 0; left: 0; }
         .sept-ui-group.top-right { top: 0; right: 0; }
         .sept-ui-group.top-left { top: 0; left: 0; }
-        .sept-ui-group.mid-left { top: 50%; left: 0; transform: translateY(-50%); flex-direction: column; }
+        /* Column stack that WRAPS into further columns instead of overflowing the
+         * viewport — the palette has grown past one screen-height of buttons
+         * (18 adjunct types + one per catalogued module), and buttons pushed
+         * beyond the top edge are unclickable. */
+        .sept-ui-group.mid-left { top: 50%; left: 0; transform: translateY(-50%); flex-direction: column; flex-wrap: wrap; max-height: 82vh; align-content: flex-start; }
         .sept-ui-btn {
             background: var(--sept-color-bg); color: var(--sept-color-text);
             border: 1px solid rgba(255, 255, 255, 0.2); padding: 8px 16px;
