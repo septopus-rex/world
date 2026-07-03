@@ -141,7 +141,7 @@ layer; neither replaces the other.
 |---|---|
 | form: load / scale-to-height / placeholder swap / hide in first-person | ✅ |
 | embedded clips decoded + registered on a mixer (rigged `avatar.glb`; e2e `avatar.spec.ts` asserts clipCount/mixerCount > 0) | ✅ |
-| state derivation + `setAnimationState` crossfade + **per-frame mixer advance** (`RenderEngine.updateAnimation`, `CharacterController:587`) | ✅ **embedded clips do play** |
+| state derivation + `setAnimationState` crossfade + **per-frame mixer advance** (`RenderEngine.updateAnimation`, `core/movement/CameraRig.ts:180-188` — `CharacterController` delegates avatar pose/animation to `CameraRig`) | ✅ **embedded clips do play** |
 | state → clip mapping | ✅ **v1 landed**: normative contract first (§3 case-insensitive name equality) + §2 fallback chains (`run→walk→idle`, `air→jump→idle`, `land→idle`) + §2 threshold derivation (`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` linear, `CameraRig`); the old regex heuristics remain only as a **degrade for non-compliant assets** (`ANIM_STATE_PATTERNS`) |
 | skeleton validation / facing normalization | ❌ |
 | **form/motion separation** (`avatar.motion` shared retargetable library) / retargeting / built-in default set | ❌ **clips must be embedded in each avatar GLB; no Mixamo-style cross-model reuse** |

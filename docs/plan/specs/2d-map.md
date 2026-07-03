@@ -1,6 +1,6 @@
 # 2D 世界地图 (2D World Map) — 设计规格
 
-> 状态：**规划中（未实现）**。本文捕获设计与数据模型，避免遗漏；实现分期见 §5。
+> 状态：**v1 已实现（2026-06）**——落点：`client/desktop/src/components/WorldMap2D.tsx` + `DesktopLoader.fetchMapCell` + App.tsx 开关 + e2e `client/desktop/e2e/map2d.spec.ts`。本文捕获设计与数据模型；分期见 §5（v1 已完成，v2+ 仍开放）。
 
 ## 0. 决策变更：解除「有意不移植」
 
@@ -94,9 +94,9 @@ v1 不建议。
 
 ## 5. 分期
 
-- **v1**：2D 渲染面 + 视口流式（平移/缩放/点选/传送）+ 块占用/`game` 上色 + 玩家标记。
-  复用块流式数据通道与 `Coords`；客户端层 canvas/SVG。
-- **v2**：adjunct 顶面 footprint 俯视投影（贴近旧引擎视觉）；多世界切换；标注/所有权（链模式）。
+- **v1 ✅ 已完成（2026-06）**：2D 渲染面 + 视口流式（平移/缩放/点选/传送）+ 块占用/`game` 上色 + 玩家标记。
+  复用块流式数据通道与 `Coords`；客户端层 canvas/SVG。落点：`WorldMap2D.tsx` + `DesktopLoader.fetchMapCell` + e2e `map2d.spec.ts`。
+- **v2（仍开放）**：adjunct 顶面 footprint 俯视投影（贴近旧引擎视觉）；多世界切换；标注/所有权（链模式）。
 
 ## 6. 待定问题
 

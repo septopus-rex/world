@@ -1,5 +1,7 @@
 # Phase 0 · 引擎收敛与迁移 — 详细实施规格
 
+> **状态注记（2026-07-03）**：本 spec 为 P5 存档稿，路径引用已陈旧，正文保留原状、不逐句更新——`engine/src/septopus/` 已随旧引擎退役移至 `engine/backup/`（清理目标已不存在）；`DraftStorage`（localStorage）已被 `core/services/DraftStore.ts` + `IdbDraftBackend.ts`（IndexedDB）取代；`SolanaPublisher` 随 `app/` 封存。PR-0A/0B 规划的 `AdjunctSandbox`/`AdjunctLoader`/`AdjunctRegistry` 已存在于 `core/services/`（Registry 在用；Sandbox/Loader 已迁 TS 但未接入运行时）。
+
 > **上级文档**：[ONCHAIN_ROADMAP.md](../../../chain/docs/ONCHAIN_ROADMAP.md) § Phase 0（已随链剥离归档至 `chain/docs/`）  
 > **目标**：消除双引擎，以新 TS 引擎为唯一运行时；迁移旧引擎沙箱原型；补全空壳 transform；废弃旧引擎。  
 > **前置条件**：无（所有后续 Phase 均依赖本 Phase 完成）  

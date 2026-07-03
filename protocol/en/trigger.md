@@ -107,10 +107,12 @@ Combine multiple conditions with JSONLogic's own `and` / `or` / `!` — there is
 
 ```ts
 interface TriggerAction {
-    type: string;            // 'adjunct' | 'flag' | 'system'
-    target: string | number; // adjunctId, flag key, or system name
+    type: string;              // 'adjunct' | 'flag' | 'bag' | 'player' | 'sound' | 'system'
+                               // | 'delay' | 'spawn' | 'despawn' | 'damage' | 'projectile'
+    target: string | number;   // adjunctId, flag key, or system name
     method: string;
     params: any[];
+    actions?: TriggerAction[]; // 'delay' only: nested actions to run when it fires
 }
 ```
 
@@ -123,6 +125,11 @@ interface TriggerAction {
 | `player` | (unused) | `damage` / `heal` | `[amount]` | Hurt/heal the player (HealthSystem; hp ≤ 0 dies and respawns at the spawn point). **Game mode only.** |
 | `sound` | audio resource id (or a direct URL/path) | `play` | `[volume]` | 3D positional one-shot anchored at the firing volume (flat 2D without a position). Resolved via `ResourceManager.getAudioUrl` (CID/path); buffers deduped by URL. |
 | `system` | (empty) | `log` | `[...any]` | Console log (debugging). |
+| `delay` | (unused) | (empty) | `[seconds]`, plus the nested `actions` field | Deferred scheduling: run the nested `actions` `params[0]` seconds later (**simulation time**, `world.scheduler`; `mode` is re-read **at fire time**, so Game-only actions can't be smuggled past a mode exit). See the [F1 scheduler & spawn spec](../../docs/plan/specs/scheduler-and-spawn.md). |
+| `spawn` | (unused) | (empty) | `[typeId, rawRow]` | Spawn **one derived entity** in the firing volume's block (inline template; the rawRow's pos slot is relative to the firing `sourceEntity` anchor). Marked `derivedFrom`: never baked into a draft, dies with the block. See the [F1 scheduler & spawn spec](../../docs/plan/specs/scheduler-and-spawn.md). |
+| `despawn` | adjunctId (runtime-spawned) | (empty) | `[]` | Remove a **runtime-derived** entity by adjunctId; authored content is refused (`BlockSystem.despawnRuntime`). See the [F1 scheduler & spawn spec](../../docs/plan/specs/scheduler-and-spawn.md). |
+| `damage` | `player` or an NPC adjunctId | (empty) | `[amount]` | The generic damage channel: `player` routes to HealthSystem; an NPC target loses hp (≤ 0 enters the death flow). **Game mode only.** See the [F3 combat spec](../../docs/plan/specs/combat-damage.md). |
+| `projectile` | (unused) | (empty) | `[{ speed, damage, radius, ttl, at:'player' \| dir:[E,N,Alt], visual? }]` | Launch a straight-flying damage body from the firing volume (`sourceEntity`) — a derived Ball entity + `ProjectileSystem` (sphere-distance hit test / self-destructs on TTL expiry). **Game mode only.** See the [F3 combat spec](../../docs/plan/specs/combat-damage.md). |
 
 > Action execution goes through the **actuator layer** (P2, shipped):
 > `TriggerSystem` decides WHAT fires; `world.actuator` (`IActuator`, default

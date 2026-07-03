@@ -1,5 +1,13 @@
 # Septopus World 架构概述
 
+> [!WARNING]
+> **历史设计稿（2026-04 批次，未按此落地）** — 本文是 TypeScript 重构启动前的规划稿，多处与已实现的引擎不符，注记于 2026-07-03：
+> - **系统层表**（"系统层（Systems）"节）所列 `RenderSystem`/`InputSystem`/`EventSystem`/`NetworkSystem`/`SkySystem` 等类**不存在**。实际引擎注册 **31 个系统**（LiveSystem、CharacterController、PhysicsSystem、BlockSystem、EnvironmentSystem、VisualSyncSystem、EditSystem 等），见 `engine/src/core/World.ts` 的系统注册段。
+> - **模块结构树**（"模块结构"节）路径几乎全部过时。实际结构：`core/World.ts` + `core/systems/*System.ts` + `core/components/` + `core/services/` + `plugins/adjunct/*` + `render/RenderEngine.ts`（唯一允许 import Three.js 的层），见 CLAUDE.md 项目结构。
+> - **事件系统章节**的回调式 `EventBus`（priority/once/async emit）已被**帧作用域双缓冲事件队列**取代（`engine/src/core/events/`：emit 不跑回调、系统拉 reader、边界回调仅在 step 尾 flushBoundary 全序派发）。
+>
+> 现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准；本文仅作历史/理念参考。
+
 ## 系统介绍
 
 Septopus World 是一个**全链运行的 3D 开放世界引擎**，采用**协议驱动 + 数据驱动**的核心设计理念。引擎通过分层架构和 ECS（Entity-Component-System）模式，实现模块化、可扩展的虚拟世界构建。

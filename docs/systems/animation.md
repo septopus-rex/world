@@ -1,5 +1,7 @@
 # 特效与动画系统 (Effects & Animation)
 
+> **历史设计稿（2026-04 批次）注记（2026-07-03）**：文中 `Effects.decode`、`VBW.update` 为旧 JS 引擎符号（已归档 `engine/backup/`）；现动画驱动 = `engine/src/core/systems/AnimationSystem.ts`（timeline 步驱动 move/rotate/scale/opacity/color/texture(UV 滚动)/morph）+ `VisualSyncSystem` 落地非 transform 覆盖到渲染 handle。timeline 数据格式的概念仍成立；现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准。
+
 为了使得高度模块化的 Adjunct 和 Block 数据驱动系统能拥有丰富的表现力，且不必在每个拓展包里手写复杂的 `requestAnimationFrame` 缓动逻辑，Septopus 内置了**基于数据流驱动声明式动画机制**。
 
 ## 1. 基础动画定义格式

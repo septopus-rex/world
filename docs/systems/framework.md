@@ -1,5 +1,13 @@
 # 核心模块详细说明
 
+> [!WARNING]
+> **历史设计稿（2026-04 批次，未按此落地）** — 本文自称描述"重构后核心引擎层"，但文中方案与实际实现的引擎不符，注记于 2026-07-03：
+> - `Registry`/`SceneManager`/`Pipeline`/`StateMachine`/`AIInputAdapter` 等类在 `engine/src` 中**不存在**。实际引擎门面是 `engine/src/Engine.ts`，核心是 `engine/src/core/World.ts`（ECS registry + 系统编排 + 主循环一体）；adjunct 注册在 `core/services/AdjunctRegistry.ts`，数据转换走各 adjunct 的 `rawToStd`/`stdToRenderData` 钩子而非 Pipeline 类。
+> - 文中 `registerBuiltinSystems` 注册 6 个系统；实际 `World.ts` 注册 **31 个系统**（LiveSystem、ScheduleSystem、CharacterController、PhysicsSystem、BlockSystem、VisualSyncSystem、EditSystem 等）。
+> - 文中 `Scheduler` = rAF 帧循环 + 命名队列；实际 `core/services/Scheduler.ts` 是**确定性仿真时间任务队列**（dt 累积、(dueTime, seq) 全序、由 ScheduleSystem 驱动，见 `docs/plan/specs/scheduler-and-spawn.md`），帧循环由 `Engine.start()`（rAF）/`Engine.step(dt)` 承担。
+>
+> 现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准；本文仅作历史参考（文末"与旧代码的映射"表映射的是更早的旧 JS 引擎符号）。
+
 本文档详细说明 Septopus World 重构后核心引擎层的各个模块。原 `framework.js` 的"上帝对象"职责被拆分为以下独立模块。
 
 ## 目录

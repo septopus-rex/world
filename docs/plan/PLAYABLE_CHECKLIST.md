@@ -3,7 +3,7 @@
 > **用途**：追踪「从『功能完备的引擎/技术 demo』到『用户能真正玩起来』」的落地进度。
 > 引擎本体（机制/物理/渲染/持久化/编辑原语）已就绪且有测试覆盖；缺口全在其**上层**——内容、分发、产品外壳。
 > **配套**：开发基准与历史见 `STANDALONE_ENGINE_ROADMAP.md`；SPP 分发见 `specs/spp-integration.md`。
-> **更新**：2026-06 创建（gap 评估基线）。改一项就勾一项、并更新本行日期。
+> **更新**：2026-07-03 状态修订（`player.setSpawn` / authored 关卡 / 2D 地图勾选 ✅，目标系统标部分完成）。2026-06 创建（gap 评估基线）。改一项就勾一项、并更新本行日期。
 
 ## 图例
 
@@ -57,10 +57,10 @@
 > 现状：有积木（trigger/flag/HP/item/actuator/SPP 关卡），但没组装成有目标的游戏，无 game-state/目标系统。
 
 - [ ] 🔲 选定首发玩法（推荐**跑酷**：SPP 关卡 + 摔死重生闭环已就绪）
-- [ ] 🔲 目标/进度系统（到达终点 / 计时 / 计分）—— 可基于 flag + 新增轻量 game-state
-- [ ] 🔲 `player.setSpawn` 动作（检查点重生；现死亡固定回 config 出生点）
+- [ ] 🚧 目标/进度系统（到达终点 / 计时 / 计分）—— **部分 ✅**：到达终点已由 flags 配方表达（`AuthoredLevel.completeFlag` / `levelComplete` 旗标）；计时/计分仍无
+- [x] ✅ `player.setSpawn` 动作（检查点重生）—— `core/services/Actuator.ts` `execSetSpawn` + HealthSystem 检查点重生；`parkour.level.json` 3 处在用
 - [ ] 🔲 计时/计分/目标 HUD（客户端 UI）
-- [ ] 🔲 至少一关完整 authored 内容（关卡数据 + 通关验证 e2e）
+- [x] ✅ 至少一关完整 authored 内容（关卡数据 + 通关验证 e2e）—— `client/desktop/src/levels/parkour.level.json` + `coaster.level.json`；e2e `parkour.spec.ts`（断言到达终点）+ `coaster.spec.ts`
 - [ ] ⏸️ 多关卡 / 关卡选择 / 进度存档
 
 ### G3 · 创作 → 分享闭环 🔲
@@ -112,7 +112,7 @@
 ## 3. 有意不做 ❌（非缺失，归档源码可参考）
 
 - [x] ❌ 多链 API（Solana/Bitcoin/Sui）—— 链已解耦，作可选发布插件
-- [ ] 🔄 完整 2D 世界地图 —— **原列"有意不做"，现重新纳入计划**（3D 迁移确认成功后解除）。与 minimap（PiP 3D 俯视小窗）是两回事：2D 地图是独立 canvas/SVG 的可平移世界地图，视口窗口化按需流式（复用 `block.need` 块通道，非全局索引）。设计规格 `specs/2d-map.md`，参考旧引擎 `control_2d.js`+`render_2d.js`。**规划中、未实现**
+- [x] ✅ 完整 2D 世界地图 —— **原列"有意不做"，后重新纳入计划**（3D 迁移确认成功后解除）。与 minimap（PiP 3D 俯视小窗）是两回事：2D 地图是独立 canvas/SVG 的可平移世界地图，视口窗口化按需流式（复用 `block.need` 块通道，非全局索引）。设计规格 `specs/2d-map.md`，参考旧引擎 `control_2d.js`+`render_2d.js`。**v1 已实现（2026-06）**：`client/desktop/src/components/WorldMap2D.tsx` + `DesktopLoader.fetchMapCell` + App.tsx 开关 + e2e `map2d.spec.ts`；v2（footprint 投影等）仍开放
 - [x] ❌ card/news/manual 信息页 —— 属 React 客户端层，按需在客户端做
 
 ---
@@ -120,7 +120,7 @@
 ## 4. 推荐首迭代（若选 Path A：跑酷可玩 v1）
 
 最小可玩集（建议顺序）：
-1. [ ] 🔲 `player.setSpawn` 动作（G2）
+1. [x] ✅ `player.setSpawn` 动作（G2）—— `Actuator.ts` `execSetSpawn`，已实现
 2. [ ] 🔲 一关跑酷内容：SPP 平台 + 检查点 + 终点 trigger（G2）
 3. [ ] 🔲 计时 + 到达终点 HUD（G2）
 4. [ ] 🔲 把这关打包成内置/静态世界，随 PWA 发布（G1 最小版）

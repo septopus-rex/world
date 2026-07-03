@@ -62,7 +62,7 @@ export interface TriggerLogicNode {
 
 export interface TriggerAction {
     /** Action category: 'adjunct' | 'flag' | 'bag' | 'player' | 'sound' |
-     *  'system' | 'delay' | 'spawn' | 'despawn' */
+     *  'system' | 'delay' | 'spawn' | 'despawn' | 'damage' | 'projectile' */
     type: string;
     /** Target reference — adjunctId, flag key, or system name. */
     target: string | number;

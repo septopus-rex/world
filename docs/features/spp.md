@@ -10,6 +10,12 @@
 > [集成规格](../plan/specs/spp-integration.md)。本文其余部分为完整设计
 > （含 M3+ 才落地的部分）。
 
+> [!WARNING]
+> **被取代的旧稿章节（注记 2026-07-03）**：正文以下章节为早期设计稿，已被现行实现/规范取代，照抄前先对照代码：
+> - **ParticleCell 定义**（「数据结构」节的 `interface ParticleCell`，含 rotation/faces[6]/variant 字段）：现行运行时类型见 `engine/src/core/types/ParticleCell.ts`；开发期明文 raw 实际为 `SppRaw = [origin, cells, theme]`，cell 为 `SppCell`（`core/spp/Expander.ts`），**v1 不支持 cell rotation**。
+> - **「链上存储格式（二进制）」的 11B/cell ParticleCodec**：已被 **CollapseCodec（44B header + 4B/cell）** 取代，规范见 `docs/features/spp-protocol.md` 与 `docs/features/efficiency.md`。
+> - **`particleRawToStd` 签名**（「转换管线 / Raw → STD 展开」节）：实际实现为 `expandParticle(raw: SppRaw): ExpandedRow[]`（`ExpandedRow = [typeId, raw]`，`core/spp/Expander.ts`）——展开产物是**独立的标准 adjunct 实体**（由 BlockSystem 落成、带 `derivedFrom`），而非合并进单个 STDData。
+
 ## 概述
 
 弦粒子系统是 Septopus World 的**空间内容快速构建方案**。它包含两个层次：

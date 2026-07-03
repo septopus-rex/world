@@ -1,5 +1,11 @@
 # 附属物系统 (Adjunct)
 
+> [!WARNING]
+> **历史设计稿（2026-04 批次）注记（2026-07-03）**：
+> - 本文的 **§5「动态 Adjunct」重复出现两次**，且两版链上模型互相冲突（前版：双 CID = Schema CID + Impl CID + manifest；后版：单 `ipfs` CID 直指实现代码）。链已解耦封存（合约在 `chain/` 本地存档），该节整体属**未裁定的历史设计**，两版均未落地。
+> - 运行时现状：adjunct 按 type-id 注册于 `engine/src/core/services/AdjunctRegistry.ts`（**18 个内置类型**：a1 wall … b9 spawner、ba npc 等）；动态加载链路 `AdjunctSandbox`（Web Worker 沙箱 + 静态校验）+ `AdjunctLoader` 已迁 TS 但**暂未接入运行时**，随链相关功能启用。
+> - 现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准。
+
 附属物 (Adjunct) 是能够附加安放在 Block 上的任何对象。如果 Block 是这片 3D 世界的地板，那么 Adjunct 就是摆放在地板上的家具、建筑、树木或是游戏规则（如隐形的触发器）。
 
 ## 1. 结构与分类
@@ -30,7 +36,7 @@ const hooks = {
 ```
 
 **多态数据流驱动**：
-同 Block 一样，每种 Adjunct 都必须实现一套 `transform` 接口（如 `raw_std`, `std_3d`）。当 Engine 请求把一个 Block 展现出来时，如果它发现这块地上挂载了多个 Adjunct（譬如 3 个 `basic_box` 和 1 个 `module`），引擎会分别找到这两种组件的控制器，将 Raw 数据传递给它们的 `transform` 并获取返回的三维对象，直接塞入场景。
+同 Block 一样，每种 Adjunct 都必须实现一套 `transform` 接口（如 `rawToStd`, `stdToRenderData`）。当 Engine 请求把一个 Block 展现出来时，如果它发现这块地上挂载了多个 Adjunct（譬如 3 个 `basic_box` 和 1 个 `module`），引擎会分别找到这两种组件的控制器，将 Raw 数据传递给它们的 `transform` 并获取返回的三维对象，直接塞入场景。
 
 ## 3. 重要系统级功能
 
@@ -168,11 +174,11 @@ Block.raw_data 包含未知 short 键（如 "my"）
   → 从 IPFS 拉取 adjunct JS（<100KB）
   → 校验 SHA256 与 CID 一致
   → 在 Web Worker 沙箱中执行，导出 hooks 对象
-  → VBW.register(hooks) 注册进当前引擎实例
+  → registerDynamicAdjunct()（core/services/AdjunctRegistry.ts）注册进当前引擎实例
   → 后续渲染与内建 adjunct 完全相同
 ```
 
-同一个 CID 在会话内只加载一次，注册后缓存在 VBW 里。
+同一个 CID 在会话内只加载一次，注册后缓存在 AdjunctRegistry 的动态表里。
 
 ### 5.3 链上注册模型
 

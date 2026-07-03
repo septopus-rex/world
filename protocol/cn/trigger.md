@@ -106,10 +106,12 @@ interface TriggerLogicNode {
 
 ```ts
 interface TriggerAction {
-    type: string;            // 'adjunct' | 'flag' | 'system'
-    target: string | number; // adjunctId、flag 键名或系统名
+    type: string;              // 'adjunct' | 'flag' | 'bag' | 'player' | 'sound' | 'system'
+                               // | 'delay' | 'spawn' | 'despawn' | 'damage' | 'projectile'
+    target: string | number;   // adjunctId、flag 键名或系统名
     method: string;
     params: any[];
+    actions?: TriggerAction[]; // 仅 'delay'：延时到期后执行的嵌套动作
 }
 ```
 
@@ -122,6 +124,11 @@ interface TriggerAction {
 | `player` | （不使用） | `damage` / `heal` | `[数值]` | 扣减/恢复玩家生命值（HealthSystem；hp≤0 死亡并重生于出生点）。**仅 Game 模式生效**。 |
 | `sound` | 音频资源 id（或直接 URL/路径） | `play` | `[音量]` | 3D 空间音效，锚定在触发体位置（无位置则平面播放）。资源经 `ResourceManager.getAudioUrl` 解析（CID/路径），缓冲按 URL 去重。 |
 | `system` | （空） | `log` | `[...任意]` | 控制台日志（调试用）。 |
+| `delay` | （不使用） | （空） | `[秒]`，另需嵌套字段 `actions` | 延时调度：`params[0]` 秒后逐条执行嵌套 `actions`（**仿真时间**，`world.scheduler`；mode 按**到期时**现值重查，Game-only 动作不被延时绕过）。见 [F1 调度/生成规格](../../docs/plan/specs/scheduler-and-spawn.md)。 |
+| `spawn` | （不使用） | （空） | `[typeId, rawRow]` | 在触发体所在块生成**一个派生实体**（inline 模板；rawRow 的 pos 槽相对发射者 `sourceEntity` 锚点）。生成物标 `derivedFrom`：永不烘进 draft、随块销毁。见 [F1 调度/生成规格](../../docs/plan/specs/scheduler-and-spawn.md)。 |
+| `despawn` | adjunctId（运行时生成物） | （空） | `[]` | 按 adjunctId 移除**运行时派生**实体；authored 内容拒绝（`BlockSystem.despawnRuntime`）。见 [F1 调度/生成规格](../../docs/plan/specs/scheduler-and-spawn.md)。 |
+| `damage` | `player` 或 NPC adjunctId | （空） | `[数值]` | 通用施伤通道：`player` 走 HealthSystem；NPC 目标扣 hp（≤0 进入死亡流程）。**仅 Game 模式生效**。见 [F3 战斗规格](../../docs/plan/specs/combat-damage.md)。 |
+| `projectile` | （不使用） | （空） | `[{ speed, damage, radius, ttl, at:'player' \| dir:[E,N,Alt], visual? }]` | 从触发体（`sourceEntity`）发射直线飞行的伤害体（派生 Ball 实体 + `ProjectileSystem`：球心距命中判定 / TTL 到期自毁）。**仅 Game 模式生效**。见 [F3 战斗规格](../../docs/plan/specs/combat-damage.md)。 |
 
 > 动作执行经 **actuator 分层**（P2 已落地）：`TriggerSystem` 只决定触发什么，
 > `world.actuator`（`IActuator`，缺省 `LocalActuator`，可经 `WorldDeps.actuator` 注入替换）

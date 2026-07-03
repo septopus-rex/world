@@ -4,7 +4,7 @@
 
 > 链剥离已完成（2026-06，审计确认），详见 `docs/plan/STANDALONE_ENGINE_ROADMAP.md`。
 > `chain/`（Solana 合约）与旧 `app/`（链耦合前端）已移出 git 追踪、封存在磁盘；旧 JS 引擎已归档到 `engine/backup/`。
-> **旧引擎 parity 已补齐（2026-06）：可退役。** 新引擎覆盖或超越旧 JS 引擎全部能力；旧引擎中 tube 几何 / texture·morph 动画 / lightning / linger 实为空壳 stub，已在新引擎真正实现。**有意不移植**（非缺失）：多链 API（已解耦）、触屏/移动端输入（超出桌面 PWA 声明范围）、card/news/manual 信息页（属 React 客户端层）。**完整 2D 地图页**原列"有意不移植"，**现已解除**（3D 迁移确认成功后重新纳入计划，视口窗口化流式、复用块数据通道，非全局索引；设计规格见 `docs/plan/specs/2d-map.md`，参考旧引擎 `control_2d.js`+`render_2d.js`）。
+> **旧引擎 parity 已补齐（2026-06）：可退役。** 新引擎覆盖或超越旧 JS 引擎全部能力；旧引擎中 tube 几何 / texture·morph 动画 / lightning / linger 实为空壳 stub，已在新引擎真正实现。**有意不移植**（非缺失）：多链 API（已解耦）、触屏/移动端输入（超出桌面 PWA 声明范围）、card/news/manual 信息页（属 React 客户端层）。**完整 2D 地图页**原列"有意不移植"，**现已解除并实现 v1（2026-06）**：`client/desktop/src/components/WorldMap2D.tsx` + `DesktopLoader.fetchMapCell`，视口窗口化流式、复用块数据通道、非全局索引；规格见 `docs/plan/specs/2d-map.md`。
 
 ## 项目结构
 
@@ -26,7 +26,7 @@ world/
 │   │   │   ├── MeshFactory.ts       # 几何体 + 材质工厂（带缓存）
 │   │   │   ├── RenderPipeline.ts    # 渲染管线
 │   │   │   └── loaders/             # ModelLoader（GLTF/FBX/OBJ/DAE）
-│   │   └── plugins/adjunct/     # adjunct 定义（box/wall/cone/sphere/water/light/trigger/module）
+│   │   └── plugins/adjunct/     # adjunct 定义（18 个内置，见下"编辑 / Adjunct"清单）
 │   ├── tests/               # vitest：unit / systems / integration / scenarios（见 tests/README.md）
 │   └── backup/              # 旧 JS 引擎（septopus/，已归档；gitignore）
 ├── client/desktop/          # React + Vite PWA — 无链 3D 客户端
@@ -70,9 +70,9 @@ cd engine && yarn build                            # tsc
 ## 编辑 / Adjunct
 
 - 编辑经 `EditSystem`（**palette 放置(add)** / select / move / set / delete / undo）→ `DraftStore`（write-behind 内存缓存 + IndexedDB 持久化，另有 `loadMeta/saveMeta` 世界级元数据通道存背包；启动时 `Engine.hydrateDrafts()` 注水，`ExportService` 提供 JSON 导出/导入）。
-- adjunct 按 type-id 注册于 `core/services/AdjunctRegistry.ts`：`a1` wall · `a2` box · `a3` light · `a4` module（3D 模型）· `a5` water · `a6` cone · `a7` ball（sphere）· `b4` stop · `b5` item（可拾取物品）· `b6` particle（弦粒子，展开为标准 adjunct）· `b8` trigger · `e1` link（可点击 URL/QR 面板，点击经 `interact.primary` 由客户端 `window.open`）。module 经 `render/ResourceManager` + `render/loaders/ModelLoader` 加载外部模型，占位→swap 模式、按 id 去重实例化；骨骼动画由 `RenderEngine.startAnimation/setAnimationState`（idle/walk/run/air 状态机 + crossfade，CharacterController 按速度驱动）驱动。
+- adjunct 按 type-id 注册于 `core/services/AdjunctRegistry.ts`：`a1` wall · `a2` box · `a3` light · `a4` module（3D 模型）· `a5` water · `a6` cone · `a7` ball（sphere）· `b4` stop · `b5` item（可拾取物品）· `b6` particle（弦粒子，展开为标准 adjunct）· `b8` trigger · `b9` spawner（定时生成器，F1）· `ba` npc（自主 agent，F2）· `c1` track（tube 轨道，coaster）· `c2` motif（生成式内容）· `e1` link（可点击 URL/QR 面板，点击经 `interact.primary` 由客户端 `window.open`）· `e2` audio（空间音频源）· `e3` video（视频屏幕）——共 **18 个内置**。module 经 `render/ResourceManager` + `render/loaders/ModelLoader` 加载外部模型，占位→swap 模式、按 id 去重实例化；骨骼动画由 `RenderEngine.startAnimation/setAnimationState`（idle/walk/run/air 状态机 + crossfade，CharacterController 按速度驱动）驱动。
 - **SPP 动画协议**（`AnimationSystem`）：timeline 步驱动 move/rotate/scale/opacity/color/**texture(UV 滚动)**/**morph(顶点 blendshape)**；非 transform 覆盖（opacity/color/uvOffset/morph）由 `VisualSyncSystem` 经 `RenderEngine.updateObjectAppearance/setTextureOffset/setMorphInfluences` 落到 handle。**几何**：`MeshFactory` 支持 box/sphere/cylinder/cone/plane/grid + **tube**（Catmull-Rom 沿控制点挤出，轨道/管道/导轨）。
-- **背包/物品**（P0–P2 已落地，规格 `docs/plan/specs/inventory-local-first.md`）：`ItemRegistry`（模板 + seed 确定性推导属性）→ b5 adjunct → `ItemSystem` 原子拾取/丢弃（背包变更 + block raw 重序列化进 draft 同帧完成）；trigger 动作经 `world.actuator`（`IActuator`/`LocalActuator`，可注入）执行，动作面 adjunct/flag/bag/player/sound/system（bag·player 仅 Game 模式），JSONLogic 条件可读 `inventory.*`。
+- **背包/物品**（P0–P2 已落地，规格 `docs/plan/specs/inventory-local-first.md`）：`ItemRegistry`（模板 + seed 确定性推导属性）→ b5 adjunct → `ItemSystem` 原子拾取/丢弃（背包变更 + block raw 重序列化进 draft 同帧完成）；trigger 动作经 `world.actuator`（`IActuator`/`LocalActuator`，可注入）执行，动作面 adjunct/flag/bag/player/sound/system + `delay`/`spawn`/`despawn`（F1）+ `damage`/`projectile`（F3）共 **11 种**（bag·player·damage·projectile 仅 Game 模式），JSONLogic 条件可读 `inventory.*`。
 - **模式**：`Engine.setMode`（Normal/Edit/Game/Ghost/**Observe**）；Ghost = noclip 飞行（Space 升/Shift 降）+ 隐藏 avatar；Observe = 冻结玩家、相机绕目标轨道（拖拽旋转、W/S 缩放、恒朝目标），见 `CharacterController.processObserve` + `RenderEngine.setMainCameraLookAt`。**Game 进入是区域门控**（非自由开关，规格 `docs/systems/game-mode-entry.md`）：block 头部字段 `block.game`（raw[4]）声明"可玩"→ `GameZoneSystem` 每帧派生 `world.gameZoneActive` + 发 `game.zone_enter/exit` → `World.setMode(Game)` 守卫（非 zone 拒绝，`force` 仅引擎/测试绕过）；进入需显式动作（客户端 `enter-game` 确认按钮 / 数据驱动 `player.enterGame` actuator 动作），离开 zone 自动退回 Normal（载客的 `CoasterSystem` 经 `world.rideActive` 冻结 zone 追踪，轨道跨块不甩出）；客户端切换器**不含自由 GAME 按钮**，`mode`/`gameZoneActive` 镜像引擎事件（引擎为真相源）。**会话持久化**：`globalFlags` + oneTime 消耗（`sessionTriggerFired`）随 DraftStore meta 进 IndexedDB，`hydrateDrafts` 还原（背包 + **玩家位置** `'player'` 同通道；位置由 `CharacterController.processPersistence` 节流写、仅 Normal/Game）。
 - **原生在场游戏（Pattern B）**：`PoolSystem`/`MahjongSystem`/`ShootingRangeSystem`/`TumbleSystem`——System 持逻辑、棋子即 adjunct 实体、点击经 `interact.primary` 触发动作（规格 `docs/plan/specs/native-in-world-games.md`，记忆 `native-in-world-game-pattern.md`）。**生命周期区域门控**（复用上条 Game 契约）：块标 `block.game=1`（纯可玩标记，非外部 app id 42/43），`configure` 只**登记(arm)**，每帧 `syncSession` 按「`mode===Game` 且本块＝`world.activeGameBlock`」spawn/teardown——**走出 block（1 格）即自动退回 Normal 拆局**（比 5×5 块驱逐更早，根除悬空实体），armed config 跨驱逐保留→重入即新局（街机柜模型，无中途存档）。**进入＝trigger 承载（已实现 `b601422`）**：游戏富声明在 **game trigger**（`b8`+`enterGame` 带 `exitPolicy`，一块可多台＝一排扭蛋机），`block.game=1` 是粗粒度"此处可玩"门控位；退出按 per-game **`exitPolicy` 三档**（`ephemeral` 走出即拆 / `confirm` 弹框确认 / `persistent` 存档重入），**不新增第二个 SystemMode**（`mode===Game` 仍是唯一玩法门）。**Tumble（叠叠乐）= 第 4 个 B 案例、首个真实刚体物理**：引入 `@dimforge/rapier3d-compat`（headless WASM，落在 `core/`，引擎首个 Three.js 之外的运行时依赖）；`TumbleSystem` 跑**每局独立的 scoped rapier world**（仅本塔 ~45 块 + 静态地面，进入建/退出 `.free()`，玩家与其余实体**不**变刚体），在 engine/Three 空间模拟（重力 −Y），逐帧把 body 位姿写回 `TransformComponent`——位置直写、四元数→Euler-XYZ（`quatToEulerXYZ`，core 内手算匹配 `THREE.Euler`）驱动**旋转**（pool 只同步位置，倒塌必须同步旋转）。坑：rapier 睡眠体在抽块后须 `wakeUp()`、`setEntityColor` 要等 mesh 出现后再上色（延迟 `pendingColor` 排空）。**运行时改色**经 `core/utils/Appearance.ts setEntityColor`（写 `MeshComponent.colorOverride`→`VisualSyncSystem`→`RenderEngine.updateObjectAppearance` clone-on-write 隔离材质，不染共享材质邻居）。**三种托管模式**：A 外部 app（GameRuntime+HUD，逻辑可服务端跑，id 42/43）·B 原生 System（本条）·C 纯数据驱动（authored 块数据 + 通用 Trigger/Actuator/Flag/Health，零专用代码，**跑酷/coaster = `AuthoredLevel` JSON** 于 `client/desktop/src/levels/*.level.json`，引擎只留词汇 `core/services/AuthoredLevel.ts`；旧 `core/levels/*.ts` 生成器已退役删除）；选型口诀**先 C 不行再 B、需服务端权威才 A**。
 - **相机摔落手感**：硬着陆按落差触发相机抖屏 + 下沉（`_camShake` 衰减包络，仅叠加到相机、不污染玩家 transform）——旧引擎 `camera/fall` 的现代化（旧 `linger` 为衰减回位）。
@@ -86,7 +86,7 @@ cd engine && yarn build                            # tsc
 ## 测试
 
 - `engine/tests/`（vitest，node 环境）：`unit/`（CollapseCodec、Coords、adjunct transforms/sandbox/registry/resource-manager）、`integration/`（headless-boot）、`systems/`·`scenarios/`（部分 `todo`）。**务必读 `engine/tests/README.md` 的"局限性"**（无 GPU/浏览器、确定性、scenarios 待补等）。
-- 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（已搭：boot/movement/fall-through/trigger/avatar/persistence/inventory/engine-features/editor-platform/spp；`npm run test:e2e`，SwiftShader 软渲染 + `engine.step(dt)` 确定性驱动）。
+- 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（已搭 **~34 个 spec**：boot/movement/fall-through/trigger/avatar/persistence/inventory/engine-features/editor-platform/spp/coaster/map2d/game-trigger 等；`npm run test:e2e`，SwiftShader 软渲染 + `engine.step(dt)` 确定性驱动）。
 
 ## 文档索引
 
@@ -97,8 +97,8 @@ cd engine && yarn build                            # tsc
 - `docs/plan/specs/npc-agents.md` — **F2 NPC/自主 agent v1(已实现 2026-07-02)**:ba NPC adjunct(pos/visual/behavior/seed)+ 行为=数据状态机(move 原语 stay/wander/follow/flee/return + JSONLogic 转移 npc.* 上下文 + enter 动作走 actuator)+ 确定性 wander(mulberry32 uniform-disk 协议公式)+ authored 行=home 锚点(游走不入 draft);寻路/避障/视线=v2。
 - `docs/plan/specs/scheduler-and-spawn.md` — **F1 调度/定时/生成(已实现 2026-07-02)**:actuator 三动作(delay 嵌套 / spawn inline 模板 / despawn)+ b9 spawner adjunct + 生成物复用 `derivedFrom` + 定时器跑仿真时间、不持久化 + `ScheduleSystem`(LiveSystem 后)。
 - `docs/plan/specs/phase0-engine-consolidation.md` — 引擎收敛规格。
-- `docs/plan/specs/coaster-via-spp.md` — **用 SPP 搭过山车**设计稿（连通→theme 几何 + CoasterSystem 运动；未落地）。
-- `docs/plan/specs/2d-map.md` — **2D 世界地图**设计规格（解除"有意不移植"；视口窗口化按需流式、复用 `block.need` 块通道、非全局索引；参考旧引擎 `control_2d.js`+`render_2d.js` 的逐块顶面俯视投影；**规划中**）。
+- `docs/plan/specs/coaster-via-spp.md` — **用 SPP 搭过山车**（**已实现 2026-06**：`adjunct_track`(c1) + `core/spp/CoasterTheme.ts` 连通→theme 几何 + `CoasterSystem` 沿轨运动；关卡 `client/desktop/src/levels/coaster.level.json` + e2e `coaster.spec.ts`）。
+- `docs/plan/specs/2d-map.md` — **2D 世界地图**（**v1 已实现 2026-06**：`WorldMap2D.tsx` + `DesktopLoader.fetchMapCell` 视口窗口化按需流式、复用块数据通道、非全局索引 + e2e `map2d.spec.ts`；逐块顶面俯视投影参考旧引擎 `control_2d.js`+`render_2d.js`）。
 - `protocol/cn|en/avatar-animation.md` — **虚拟化身动画协议**（形象/动作/状态三层分离；规范基准 VRM 1.0 humanoid 骨架 + VRMA）。**v1 状态契约已落地（2026-07）**：状态集 idle/walk/run/air + 阈值派生（IDLE_MAX 0.5 / WALK_MAX=walk×1.2）+ 剪辑名相等契约 + 回退链进引擎，正则启发式降级为不合规素材兜底；**形象/动作分离（v2 重定向）与 VRM 原生（v3）未做**（动作仍绑死在 avatar GLB）。
 - `protocol/cn|en/item.md` — **物品协议（规范级）**：实例=`{templateId, seed}`，mulberry32 PRNG + 稀有度 roll + 属性抽取顺序逐位钉死（跨引擎同 seed 同物品）；模板=世界内容（引擎零内置，demo 目录 `core/mocks/ItemTemplates.ts`）。天气/时间确定性派生同理规范于 `protocol/cn|en/world.md §3.1`（hash 切片语义）。
 - `protocol/cn|en/game.md §9` — **游戏会话与验证协议**：会话=「(seed, 操作序列) 源 + 确定性重放」（局面/结果不持久化）；成就真实性=**服务器签名收据**（裸 hash 只证完整性；防伪须签名 + 服务器权威计数；local-first 单机不设防，跨信任边界才验证）；棋牌发牌=seed 推导 + commit-reveal（不存快照），隐藏信息 ⇒ Pattern A。缺口（YAGNI，有服务器需求再落）：Pattern B 局终上报 seam、收据字段约定。

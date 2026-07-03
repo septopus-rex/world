@@ -46,7 +46,7 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 
 - [x] ✅⚠️ **C1 · seed→派生（重灾区）——物品侧已闭，motif 侧仍开**：**物品推导已规范化**（`protocol/{cn,en}/item.md`：mulberry32 逐位定义 + 稀有度 roll + 属性抽取**顺序**即协议 + 身份/堆叠 + 显示色公式；`BUILTIN_ITEM_TEMPLATES` 迁出引擎 → `core/mocks/ItemTemplates.ts`，模板=世界内容、宿主显式注册，2026-07）。**仍开**：`MotifExpander` per-template TS 展开（PRNG 同款 mulberry32、`Rng.ts` 已注 seed-0→1 变体并交叉引用 item.md §2，但每个 motif 模板的展开算法仍是 implementation-defined）。
 - [x] ✅ **C2 · avatar 动画状态映射**：**v1 已落地（2026-07）**——规范契约（§3 剪辑名相等、大小写不敏感）优先 + §2 回退链（run→walk→idle · air→jump→idle · land→idle）+ §2 阈值派生（IDLE_MAX 0.5 / WALK_MAX=maxSpeedWalk×1.2 线性）进引擎；正则启发式降级为不合规素材兜底。骨架朝向校验随 v2。
-- [ ] 🔲 **C3 · coaster/track 运动**：`CoasterSystem` 沿轨运动逻辑在 TS（轨道几何是数据，运动是 TS）——Pattern-B 味。要么 specify 运动语义为原语，要么归入 B。
+- [x] ✅⚠️ **C3 · coaster/track 运动——已实现（2026-06），运动语义留 TS**：coaster 已落地——`core/systems/CoasterSystem.ts`（World.ts 注册）+ `core/spp/CoasterTheme.ts`（面对→tube 件，数据侧）+ `plugins/adjunct/adjunct_track.ts`（c1 track adjunct）+ 关卡 `client/desktop/src/levels/coaster.level.json` + e2e `coaster.spec.ts`。**仍开**：轨道几何/连通是数据，cart 沿轨运动语义仍是 TS（Pattern-B 味）——原语化进协议或正式归入 B 逃生舱，待议。
 - [x] ✅ **C4 · 移动手感常量**：**capacity config 已接活（2026-07）**——原来 `player.capacity`（speed/jumpForce/gravityMultiplier）**声明了但引擎从不消费**（EntityFactory 硬编码）；现 walk/run/jump/gravityMultiplier + 新增 ghostFlySpeed/voidRecover 均从 config 读（mock 值对齐既有行为=零变化；`body.gravity` 乘数真正落到重力积分）。**留作引擎常量**（有意）：GRAVITY 基值（世界侧旋钮=gravityMultiplier）、`CONTROL_CONSTANTS`（鼠标灵敏度/转速=宿主输入表现，非语义）。
 - [x] ✅⚠️ **C5 · 环境/相机 juice——语义侧已规范，表现侧有意保留**：**天气/时间确定性派生已进协议**（`protocol/{cn,en}/world.md §3.1`：hash 切片位置、类别表、mod-4 grade、雷暴判定、固定历法分解——跨引擎语义）；闪电闪光包络、相机摔落抖屏=渲染器自定义（行为等价，有意不规范）。
 

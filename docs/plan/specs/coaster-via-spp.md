@@ -1,6 +1,6 @@
 # 用 SPP 搭建过山车 — 设计文档（Coaster via SPP）
 
-> **状态**：设计稿（未落地）。本文把"用 SPP 表达过山车"拆成可落地的部件 + 分期。
+> **状态**：**已实现（2026-06）**——落点：`plugins/adjunct/adjunct_track.ts`（c1 track adjunct）+ `core/spp/CoasterTheme.ts`（coaster theme）+ `core/systems/CoasterSystem.ts`（World.ts 注册）+ 关卡 `client/desktop/src/levels/coaster.level.json` + e2e `client/desktop/e2e/coaster.spec.ts`。本文把"用 SPP 表达过山车"拆成可落地的部件 + 分期（保留为设计记录）。
 > **前提认知**：SPP 管的是**连通/拓扑**(哪些面连通)，**几何如何实现交给 theme**(可插拔)。
 > 所以一段轨道 = 一个 cell + "两个开放面"，开放面对决定这段是直轨/弯轨/坡轨；
 > theme 把"面对"渲成对应的 **tube 几何**。SPP 建"轨道"，一个运动系统让"车"跑起来。
@@ -115,8 +115,8 @@ SPP 给"轨道"，车要跑需要新系统：
 
 | 里程碑 | 内容 | 验证 |
 |---|---|---|
-| **M1** | track adjunct + coaster theme：手写 b6（coaster theme）→ 静态轨道几何可见（直+弯+坡）。复用 expander + tube。 | vitest：面对→件展开正确；e2e：轨道渲染可见 |
-| **M2** | 路径提取 + CoasterSystem：cart 沿静态轨道跑（脚本速度），确定性步进。 | headless：cart 弧长推进、过连接点连续；e2e：cart 跑完一圈 |
+| **M1** ✅ 已落地（2026-06） | track adjunct + coaster theme：手写 b6（coaster theme）→ 静态轨道几何可见（直+弯+坡）。复用 expander + tube。落点：`plugins/adjunct/adjunct_track.ts`(c1) + `core/spp/CoasterTheme.ts` | vitest：面对→件展开正确；e2e：轨道渲染可见 |
+| **M2** ✅ 已落地（2026-06） | 路径提取 + CoasterSystem：cart 沿静态轨道跑（脚本速度），确定性步进。落点：`core/systems/CoasterSystem.ts` + 关卡 `coaster.level.json` + e2e `coaster.spec.ts` | headless：cart 弧长推进、过连接点连续；e2e：cart 跑完一圈 |
 | **M3** | mount/dismount（玩家乘骑）+ 重力驱动 + banking + 多件平滑。 | e2e：上车→过弯→到站 |
 | **M4** | 作者闭环（SPP 编辑器 coaster theme：选开放面）+ 分发（market 角度：一份连通数据换 theme = 过山车/管道/水渠）。 | — |
 
@@ -152,9 +152,9 @@ SPP 给"轨道"，车要跑需要新系统：
 
 ### 9.3 修正后的分期（M0 前置）
 
-- **M0（新，前置）**：建 **tube track adjunct 类型**——渲染图元 → adjunct 数据管线（raw=件类型+控制点、transform 用 tube 图元、序列化、碰撞）。这是一切的前提。
-- **M1**：coaster theme / 直接放置 → 手写一小段轨道（直+弯+坡）静态可见。
-- **M2**：路径提取 + CoasterSystem（cart 脚本速度跑），确定性 e2e。
+- **M0（新，前置）✅ 已落地（2026-06）**：建 **tube track adjunct 类型**——渲染图元 → adjunct 数据管线（raw=件类型+控制点、transform 用 tube 图元、序列化、碰撞）。这是一切的前提。落点：`plugins/adjunct/adjunct_track.ts`（c1）。
+- **M1 ✅ 已落地（2026-06）**：coaster theme / 直接放置 → 手写一小段轨道（直+弯+坡）静态可见。落点：`core/spp/CoasterTheme.ts`。
+- **M2 ✅ 已落地（2026-06）**：路径提取 + CoasterSystem（cart 脚本速度跑），确定性 e2e。落点：`core/systems/CoasterSystem.ts` + e2e `coaster.spec.ts`。
 - **M2.5（新）**：有界区**全缓存机制**（inject-once + 不淘汰，或 `system.preload` 接订阅 / `handleGridRequest` 加 Game 分支）——支持大型跨块过山车；之后全局路径烘焙才按需。
 - **M3**：mount/乘骑 + 重力驱动 + banking + 多件平滑。
 

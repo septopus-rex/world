@@ -1,6 +1,6 @@
 # Mock IPFS — content-addressed resource layer
 
-> **状态**：规划→实现中（2026-06）。落地 `PLAYABLE_CHECKLIST` 的 **G5 资源管线** 第一步、
+> **状态**：**已落地（2026-06）**——落点：`engine/src/core/services/ipfs/{IpfsRouter,Cid,MemoryCasProvider}.ts` + `ResourceManager.resolveUrl` + 单测 `tests/unit/ipfs.test.ts`。落地 `PLAYABLE_CHECKLIST` 的 **G5 资源管线** 第一步、
 > 呼应 ROADMAP **P3 `IResourceResolver`**。把现在写死的 `DEMO_MODELS` / `DEMO_TEXTURE`
 > 路径换成**内容寻址（CID）** + 一个可插拔的 **Router → Provider** 取数链。
 > 设计与真 IPFS 同构，mock = 一个本地 Provider，日后换真 IPFS/OSS 是**换后端**而非改调用点。

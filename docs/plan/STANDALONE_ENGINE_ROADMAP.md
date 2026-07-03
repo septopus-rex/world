@@ -13,7 +13,7 @@
 - `client/desktop` 纯 3D PWA,替代旧 `app/`。依赖只有 react/react-dom/three,构建产物零 `@solana`/anchor/web3(实测 `npm run build` + grep 验证)。
 - `app/`、`chain/`(含合约 + 钱包装配)已移出 git 追踪,封存在磁盘;`deploy/` 瘦身为无链客户端启动器,链上栈归档到 `chain/deploy/`;链相关文档归档到 `chain/docs/`。
 - 零钱包 / validator / RPC / IPFS / 网络即可 build + run。
-- **旧引擎退役（2026-06）**：完成旧 JS 引擎逐模块 parity 审计 + 补齐批次——新增 tube/挤出几何、SPP 动画 texture(UV)/morph 类型（并修复 opacity/color 覆盖此前不落地的潜伏 bug）、雷雨闪电、相机摔落抖屏+linger、link/QR adjunct（e1）、Observe 轨道相机模式（第 5 模式）。旧引擎中这些多为空壳 stub，新引擎为真正实现。验证：engine vitest 202 通过 + 全量 e2e 27 通过。**有意不移植**（非缺失，归档源码可参考）：多链 API（已解耦）、触屏/移动端输入、card/news/manual 信息页（属 React 客户端层）。**完整 2D 地图页**原列此处（"minimap 已覆盖导航"），**现重新纳入计划**——3D 迁移确认成功后解除；与 minimap（PiP 3D 俯视小窗）是两回事，2D 地图是独立 canvas/SVG 的可平移世界地图、视口窗口化按需流式（复用 `block.need` 块通道，非全局索引），参考旧引擎 `control_2d.js`+`render_2d.js`；设计规格 `docs/plan/specs/2d-map.md`。结论：新引擎覆盖或超越旧引擎全部真实能力，旧引擎 `engine/backup/` 转为只读历史参考。
+- **旧引擎退役（2026-06）**：完成旧 JS 引擎逐模块 parity 审计 + 补齐批次——新增 tube/挤出几何、SPP 动画 texture(UV)/morph 类型（并修复 opacity/color 覆盖此前不落地的潜伏 bug）、雷雨闪电、相机摔落抖屏+linger、link/QR adjunct（e1）、Observe 轨道相机模式（第 5 模式）。旧引擎中这些多为空壳 stub，新引擎为真正实现。验证：engine vitest 202 通过 + 全量 e2e 27 通过。**有意不移植**（非缺失，归档源码可参考）：多链 API（已解耦）、触屏/移动端输入、card/news/manual 信息页（属 React 客户端层）。**完整 2D 地图页**原列此处（"minimap 已覆盖导航"），**现重新纳入计划**——3D 迁移确认成功后解除；与 minimap（PiP 3D 俯视小窗）是两回事，2D 地图是独立 canvas/SVG 的可平移世界地图、视口窗口化按需流式（复用 `block.need` 块通道，非全局索引），参考旧引擎 `control_2d.js`+`render_2d.js`；设计规格 `docs/plan/specs/2d-map.md`，**v1 已实现（2026-06，`client/desktop/src/components/WorldMap2D.tsx` + `DesktopLoader.fetchMapCell` + e2e `map2d.spec.ts`）**。结论：新引擎覆盖或超越旧引擎全部真实能力，旧引擎 `engine/backup/` 转为只读历史参考。
 
 **引擎里已经成形的解耦接缝**(后续各 Phase 直接复用):
 
@@ -54,9 +54,9 @@
 |---|---|---|---|
 | **P1** | **本地优先持久化 + 导出** | `DraftStore`(IndexedDB)、`ExportService`、JSON round-trip | **已完成**(2026-06;草稿覆盖在 BlockSystem 层,独立 LocalDataSource 暂不需要) |
 | **P2** | Trigger 本地 actuator | `IActuator` + `LocalActuator`,trigger `contract` 分支 | **主体已完成**(2026-06;`contract` 分支留待 P4) |
-| **P3** | 资源走 OSS / IPFS | `IResourceResolver` + OSS/IPFS 后端 | 待开始 |
+| **P3** | 资源走 OSS / IPFS | `IResourceResolver` + OSS/IPFS 后端 | **mock IPFS 资源层已落地**(2026-06,`core/services/ipfs/` + `ResourceManager.resolveUrl`,见 `specs/mock-ipfs-resource.md`);真实网关/OSS 仍待 |
 | **P4** | **可选**链插件 | `SolanaPublisher implements IChainPublisher`,选中 block 发布 | 待开始（可选/最后） |
-| **P5** | 引擎收敛 + 双构建 | 消除双引擎(纳入 `specs/phase0-engine-consolidation.md`)、纯/含链两个打包目标 | 待开始 |
+| **P5** | 引擎收敛 + 双构建 | 消除双引擎(纳入 `specs/phase0-engine-consolidation.md`)、纯/含链两个打包目标 | 双引擎已消除(旧引擎退役 2026-06,`engine/src/septopus/` 死树已移至 `engine/backup/`);双构建目标待开始 |
 
 > P4（链）刻意排在最后且明确「可选」——呼应审计结论:链现在是 design seam,不是主线。
 
@@ -152,7 +152,7 @@ BlockSystem.load ──同步──→ Map 命中则用草稿,否则 mock
 
 **P4 · 可选链插件**:`SolanaPublisher implements IChainPublisher`(`uploadData` 走 IPFS pin,`commitBlock` 走合约 `update_block`)。接通「提交选中 block」:`DraftStore → CollapseCodec.encode → publisher.uploadData → commitBlock → 删草稿`。纯模式 `publisher=null` 时该入口隐藏。链实现住在(已封存的)`app/`/`chain/` 或独立适配器,**不进 `client/desktop`**。
 
-**P5 · 引擎收敛 + 双构建**:消除「新 TS / 旧 JS」双引擎,以 `engine/src` 为唯一运行时,清掉 `engine/src/septopus/` 死 mock 树(审计指出的 ~49 个 inert .js,`git grep solana` 的来源);详见 `specs/phase0-engine-consolidation.md`。产出纯/含链两个打包目标(纯包 tree-shake 掉链依赖)。
+**P5 · 引擎收敛 + 双构建**:消除「新 TS / 旧 JS」双引擎,以 `engine/src` 为唯一运行时,清掉 `engine/src/septopus/` 死 mock 树(审计指出的 ~49 个 inert .js,`git grep solana` 的来源)——**该树已随旧引擎退役移至 `engine/backup/`,清理目标已不存在/已完成(2026-06)**;详见 `specs/phase0-engine-consolidation.md`。产出纯/含链两个打包目标(纯包 tree-shake 掉链依赖)——仍待。
 
 ---
 
@@ -169,7 +169,7 @@ BlockSystem.load ──同步──→ Map 命中则用草稿,否则 mock
 
 > 本节是已完成里程碑的存档,不再驱动开发。
 
-**结论**(2026-06 审计):git 追踪的出货项目在依赖、源码、产物、构建/运行四轴均无硬链耦合;对抗审计也未找到残留硬耦合。残留均不承重:`IChainPublisher` 可选接口(声明未消费)、`engine/src/septopus/` 死 mock 树(无真 `@solana` 导入、无被追踪的 importer)、`app/`+`chain/` 封存在磁盘(untracked)、文档/注释提及。
+**结论**(2026-06 审计):git 追踪的出货项目在依赖、源码、产物、构建/运行四轴均无硬链耦合;对抗审计也未找到残留硬耦合。残留均不承重:`IChainPublisher` 可选接口(声明未消费)、`engine/src/septopus/` 死 mock 树(无真 `@solana` 导入、无被追踪的 importer;**该树现已移至 `engine/backup/`,不再存在于 src**)、`app/`+`chain/` 封存在磁盘(untracked)、文档/注释提及。
 
 **做了什么**:
 1. 发现引擎本就把链收敛在 `IDataSource`(读)/`IChainPublisher`(写)/`DraftStorage`(本地)三接口之后,编辑链路纯内存——「纯 3D 创作」是对既有结构的打包,不是重写。
@@ -191,5 +191,5 @@ BlockSystem.load ──同步──→ Map 命中则用草稿,否则 mock
 | 客户端数据装载器 | `client/desktop/src/lib/DesktopLoader.ts` |
 | 上链发布接口(P4 可选) | `engine/src/core/services/IChainPublisher.ts` |
 | 引擎收敛规格(P5) | `docs/plan/specs/phase0-engine-consolidation.md` |
-| 新增(P1) | `services/DraftStore.ts`(idb)、`services/LocalDataSource.ts`、`services/ExportService.ts`、`client/desktop/src/lib/db.ts` |
-| 新增(P2/P3/P4) | `services/IActuator.ts`、`services/IResourceResolver.ts`、`services/SolanaPublisher.ts` |
+| 新增(P1) | `services/DraftStore.ts`(idb)、`services/LocalDataSource.ts`、`services/ExportService.ts`、`engine/src/core/services/IdbDraftBackend.ts`(IDB 后端,实际落点) |
+| 新增(P2/P3/P4) | `core/services/Actuator.ts`(`IActuator`+`LocalActuator`,P2 已落地)、`services/IResourceResolver.ts`、`services/SolanaPublisher.ts` |

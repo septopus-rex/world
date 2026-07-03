@@ -1,6 +1,6 @@
 # SPP（弦粒子）引擎集成 — 落地规格
 
-Status: **M1–M2 实施中**（2026-06）。设计来源：`docs/features/spp.md`（引擎侧设计）、
+Status: **M1–M2 已落地**（2026-06）——落点：`plugins/adjunct/adjunct_particle.ts`（b6）+ `core/spp/Expander.ts`。设计来源：`docs/features/spp.md`（引擎侧设计）、
 `docs/features/spp-protocol.md`（链上 L2 二进制，外部授权协议）。
 
 ## 架构决策
@@ -68,8 +68,8 @@ spp.md 的 15° 步长恢复）。faces 缺省 `[1,0]`（Closed·solid）。
 
 | 期 | 内容 | 状态 |
 |---|---|---|
-| M1 | VariantRegistry + Expander + 确定性单测 | 实施中 |
-| M2 | b6 注册、BlockSystem 展开、序列化保真、演示小屋、e2e（census/碰撞/trigger/reload 保真） | 实施中 |
+| M1 | VariantRegistry + Expander + 确定性单测 | ✅ 已落地（2026-06，`core/spp/Expander.ts`） |
+| M2 | b6 注册、BlockSystem 展开、序列化保真、演示小屋、e2e（census/碰撞/trigger/reload 保真） | ✅ 已落地（2026-06，`plugins/adjunct/adjunct_particle.ts`） |
 | M3 | palette 放置 + 面状态/构型编辑；CollapseCodec L2 接入 draft/导出 | 规划 |
 | M4 | L1 Definition Reference → URL/IPFS（随 P3）；上链（随 P4） | 规划 |
 

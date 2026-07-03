@@ -129,7 +129,7 @@ morph/blendshape 落地（与 SPP 的 `morph` 动画通道复用 `RenderEngine.s
 |---|---|
 | 形象：load / scale-to-height / 占位 swap / 第一人称隐藏 | ✅ |
 | 内嵌剪辑解码 + 注册 mixer（rigged `avatar.glb`；e2e `avatar.spec.ts` 断言 clipCount/mixerCount>0）| ✅ |
-| 状态派生 + `setAnimationState` crossfade + **每帧推进 mixer**（`RenderEngine.updateAnimation`，`CharacterController:587`）| ✅ **内嵌剪辑确实在播** |
+| 状态派生 + `setAnimationState` crossfade + **每帧推进 mixer**（`RenderEngine.updateAnimation`，`core/movement/CameraRig.ts:180-188`——`CharacterController` 将 avatar 姿态/动画委托给 `CameraRig`）| ✅ **内嵌剪辑确实在播** |
 | 状态→剪辑映射 | ✅ **v1 已落地**：规范契约（§3 名称相等、大小写不敏感）优先 + §2 回退链（`run→walk→idle`、`air→jump→idle`、`land→idle`）+ §2 阈值派生（`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` 线性，`CameraRig`）；旧正则启发式仅作**不合规素材的降级兜底**（`ANIM_STATE_PATTERNS`）|
 | 标准骨架校验 / 朝向归一化 | ❌ |
 | **形象/动作分离**（`avatar.motion` 共享可重定向动作库）/ 重定向 / 内置默认动作集 | ❌ **动作必须内嵌进每个 avatar GLB，无法 Mixamo 式跨模型复用** |

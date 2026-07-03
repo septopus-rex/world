@@ -1,5 +1,7 @@
 # 渲染系统与 Three.js 集成 (Render Pipeline)
 
+> **历史设计稿（2026-04 批次）注记（2026-07-03）**：文中 `render/render_3d.js`、`render_observe.js`、`render_2d.js` 属旧 JS 引擎，已随其退役归档于 `engine/backup/`；现渲染后端 = `engine/src/render/RenderEngine.ts` + `MeshFactory` + `RenderPipeline`（另有 `ResourceManager` + `loaders/ModelLoader`），Observe 是 `Engine.setMode` 的一种系统模式而非独立渲染器，2D 地图页规划中（`docs/plan/specs/2d-map.md`）；现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准。
+
 考虑到引擎可以跨端运行的基础设定，Septopus 核心包 (Core) 的数据处理管线与视觉渲染管线 (Render Pipeline) 是高度解耦的。当前官方默认提供基于 Three.js 为底层的 3D/2D 渲染系统。
 
 ## 1. 渲染器种类 (Render Types)
@@ -18,8 +20,8 @@
 
 ```mermaid
 graph LR
-A[Block & Adjunct Raw Data] -->|transform.raw_std| B(STD 标准对象表达)
-B -->|transform.std_3d| C(Three.js Mesh 描述)
+A[Block & Adjunct Raw Data] -->|transform.rawToStd| B(STD 标准对象表达)
+B -->|transform.stdToRenderData| C(Three.js Mesh 描述)
 C -->|资源与材质系统| D[加入 Scene 并渲染]
 ```
 

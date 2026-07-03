@@ -1,5 +1,8 @@
 # 物理碰撞与检测系统 (Physics & Collider)
 
+> [!WARNING]
+> **历史设计稿（2026-04 批次）注记（2026-07-03）**：本文描述的玩家碰撞方案（射线"高度差探针"+ 跨越分析表）已**换代**——现行实现为 `engine/src/core/movement/MovementCollider.ts` 的**子步进 AABB 积分 + step-over + 地面探针**（PhysicsSystem 头注释："Operates purely on AABB intersections and Euler Integration for Gravity"），不再依赖 Raycaster。"Stop 标记生成碰撞体"与"物理工作在数据层而非渲染网格"两点仍成立。正文的射线叙述作为历史保留；现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准。另注：Tumble 叠叠乐已引入 `@dimforge/rapier3d-compat` 作局部真刚体物理（scoped world，不影响玩家碰撞主路径）。
+
 Septopus World 为了追求海量实体下的极简运行性能，没有直接引入如 Cannon.js 这类全套真实物理引擎。它的刚体碰撞交互采用了一套自研的基于射线检测的 **“高度差探针与 Stop 物件逻辑”**。
 
 ## 1. 核心碰撞检测逻辑：阻拦器 (Stop) 策略

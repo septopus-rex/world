@@ -1,5 +1,7 @@
 # 世界与环境系统 (Environment & World)
 
+> **历史设计稿（2026-04 批次）注记（2026-07-03）**：本文多为治理/愿景叙述——96 平行世界与立方星球排布、领主治理与黑名单、8 级天气梯度等**均未落地**；引擎已实现的环境能力见 `engine/src/core/systems/EnvironmentSystem.ts`（确定性天气/时间派生、雷雨闪电 `updateLightning`）与 `protocol/cn|en/world.md §3.1`（hash 切片派生规范）。现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准。
+
 在 Septopus 中，“World” 是最大的游戏载体与治理单元。由于这是一个支持多平行宇宙的引擎，不同的世界通过其配置参数（World Settings）展现出截然不同的风貌。
 
 ## 1. 宇宙架构 (Universe Architecture)

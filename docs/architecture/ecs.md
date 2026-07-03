@@ -1,5 +1,7 @@
 # ECS (Entity-Component-System) 架构设计
 
+> **历史设计稿（2026-04 批次）注记（2026-07-03）**：文中的 `Framework` 核心即现今的 `World`（`engine/src/core/World.ts`），组件化/hooks/事件驱动的概念仍成立；现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准。
+
 Septopus World 采用改进型的 ECS (实体-组件-系统) 架构模式，以实现纯数据驱动的 3D 渲染和高弹性的功能扩展。
 
 ## 核心设计概念

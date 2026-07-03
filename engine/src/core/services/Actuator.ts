@@ -45,6 +45,15 @@ export interface IActuator {
  *   sound    target=audio resource id  play [volume] — 3D positional at the
  *            firing trigger (sourceEntity); flat 2D when it has no transform
  *   system   method=log                console passthrough
+ *   delay    (target unused)           params[0]=seconds — nested `actions` run
+ *            later on SIMULATION time via world.scheduler (F1)
+ *   spawn    (target unused)           params=[typeId, rawRow] — one derived
+ *            entity anchored to the firing sourceEntity (F1)
+ *   despawn  target=adjunctId          remove a runtime-SPAWNED entity;
+ *            authored content is refused (F1)
+ *   damage   target='player'|NPC adjunctId  [amount] — GAME MODE ONLY (F3)
+ *   projectile (target unused)         params[0]={speed,damage,radius,ttl,
+ *            at:'player'|dir,visual} fired from sourceEntity — GAME MODE ONLY (F3)
  */
 export class LocalActuator implements IActuator {
     public readonly kind = 'local';

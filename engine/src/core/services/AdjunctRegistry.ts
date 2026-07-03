@@ -29,8 +29,10 @@ import { AdjunctError } from '../errors';
  *   a1 wall · a2 box · a3 light · a4 module(3D model) · a5 water · a6 cone
  *   · a7 ball(sphere) · b4 stop(collider) · b5 item(pickable)
  *   · b6 particle(SPP, expands to standard adjuncts) · b8 trigger
+ *   · b9 spawner(timed runtime generator) · ba npc(autonomous agent)
  *   · c1 track(tube rail; coaster) · c2 motif(generative content)
- *   · e1 link(clickable URL / QR panel)
+ *   · e1 link(clickable URL / QR panel) · e2 audio(spatial emitter)
+ *   · e3 video(VideoTexture screen)
  */
 export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<number, AdjunctDefinition>([
     [AdjunctType.Wall, BasicWallAdjunct as unknown as AdjunctDefinition],     // wall
