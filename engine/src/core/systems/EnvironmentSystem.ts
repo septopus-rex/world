@@ -48,12 +48,24 @@ export class EnvironmentSystem implements ISystem {
         sunBoost: 2.0,     // added to directional intensity at full flash
     };
 
-    // TEMPORARY: freeze lighting to an even, constant flat light — no day/night
-    // swing, no lightning flashes (and shadows are off in RenderEngine). The
-    // dynamic lighting was distractingly unstable; this parks it so other work can
-    // proceed. Flip to false to restore the full day/night + weather cycle.
-    static readonly FLAT_LIGHTING = true;
-    private static readonly FLAT = { sun: 0.55, ambient: 0.9 };
+    // Day/night visual tuning. The two instabilities that once forced a flat-light
+    // park are both handled here:
+    //  • binary pop at the horizon → a smoothstep over a twilight band of sun
+    //    elevation (sin units) fades intensity instead of snapping at sunY=0;
+    //  • world-clock JUMPS (the chain-height calendar advances in ticker steps,
+    //    and can leap) → the VISUAL sun angle and intensities CHASE their targets
+    //    at `chase` per second, so a jump glides over ~a second instead of
+    //    teleporting the sun. (Shadows remain off in RenderEngine — grazing-angle
+    //    moiré needs bias tuning; independent of this cycle.)
+    private static readonly DAYLIGHT = {
+        twilight: 0.12,               // half-width of the sunrise/sunset band
+        sunDay: 1.0, sunNight: 0.1,   // directional intensity range
+        ambDay: 0.4, ambNight: 0.1,   // ambient intensity range
+        chase: 2.5,                   // 1/s — visual catch-up rate on clock jumps
+    };
+    private visAngle: number | null = null; // smoothed sun angle (radians)
+    private visSun = 1.0;                   // smoothed directional intensity
+    private visAmb = 0.4;                   // smoothed ambient intensity
 
     constructor(world: World) {
         // Create singleton Environment Entity
@@ -123,33 +135,41 @@ export class EnvironmentSystem implements ISystem {
 
         // 1. Time progression Visuals (+ lightning flash folded in)
         if (this.sunLight && this.ambientLight) {
-            if (EnvironmentSystem.FLAT_LIGHTING) {
-                // Parked: constant, even light from a fixed sun — no swing, no flash.
-                world.renderEngine.updateDirectionalLight(
-                    this.sunLight, 0xffffff, EnvironmentSystem.FLAT.sun, 50, 100, 50);
-                world.renderEngine.updateAmbientLight(
-                    this.ambientLight, 0xffffff, EnvironmentSystem.FLAT.ambient);
-            } else {
-                const timePercent = (state.hour * 60 + state.minute) / (24 * 60);
-                const angle = timePercent * Math.PI * 2 - Math.PI / 2;
+            const D = EnvironmentSystem.DAYLIGHT;
+            const timePercent = (state.hour * 60 + state.minute) / (24 * 60);
+            const target = timePercent * Math.PI * 2 - Math.PI / 2;
 
-                const sunX = Math.cos(angle) * 100;
-                const sunY = Math.sin(angle) * 100;
-                const sunZ = 50;
+            // Chase the target angle along the SHORTEST arc — a ticker jump
+            // (or a big calendar leap) glides instead of teleporting the sun.
+            if (this.visAngle === null) this.visAngle = target;
+            let dA = target - this.visAngle;
+            dA = ((dA + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+            const blend = Math.min(1, dt * D.chase);
+            this.visAngle += dA * blend;
 
-                const isDay = sunY > 0;
-                const baseIntensity = isDay ? 1.0 : 0.1;
-                this.baseAmbient = isDay ? 0.4 : 0.1;
+            const sunX = Math.cos(this.visAngle) * 100;
+            const sunY = Math.sin(this.visAngle) * 100;
+            const sunZ = 50;
 
-                // Advance the lightning envelope BEFORE applying lights so a strike
-                // brightens the same frame.
-                const flash = this.updateLightning(state, dt);
+            // Smoothstep across the twilight band of sun elevation — dawn/dusk
+            // fade instead of the old binary isDay pop.
+            const s = Math.sin(this.visAngle);
+            const t = Math.min(1, Math.max(0, (s + D.twilight) / (2 * D.twilight)));
+            const dayF = t * t * (3 - 2 * t);
+            const targetSun = D.sunNight + (D.sunDay - D.sunNight) * dayF;
+            const targetAmb = D.ambNight + (D.ambDay - D.ambNight) * dayF;
+            this.visSun += (targetSun - this.visSun) * blend;
+            this.visAmb += (targetAmb - this.visAmb) * blend;
+            this.baseAmbient = this.visAmb;
 
-                world.renderEngine.updateDirectionalLight(
-                    this.sunLight, 0xffffff, baseIntensity + flash * EnvironmentSystem.LIGHTNING.sunBoost, sunX, sunY, sunZ);
-                world.renderEngine.updateAmbientLight(
-                    this.ambientLight, 0xffffff, this.baseAmbient + flash * EnvironmentSystem.LIGHTNING.ambientBoost);
-            }
+            // Advance the lightning envelope BEFORE applying lights so a strike
+            // brightens the same frame.
+            const flash = this.updateLightning(state, dt);
+
+            world.renderEngine.updateDirectionalLight(
+                this.sunLight, 0xffffff, this.visSun + flash * EnvironmentSystem.LIGHTNING.sunBoost, sunX, sunY, sunZ);
+            world.renderEngine.updateAmbientLight(
+                this.ambientLight, 0xffffff, this.visAmb + flash * EnvironmentSystem.LIGHTNING.ambientBoost);
         }
 
         // 2. Weather Visuals

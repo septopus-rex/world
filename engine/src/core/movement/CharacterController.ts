@@ -10,6 +10,7 @@ import { SystemMode } from '../types/SystemMode';
 import { InputProvider } from '../systems/InputProvider';
 import { MovementCollider } from './MovementCollider';
 import { CameraRig } from './CameraRig';
+import { reportError } from '../errors';
 
 /**
  * CharacterController — the ISystem that orchestrates the controlled player's
@@ -45,6 +46,8 @@ export class CharacterController implements ISystem {
     private _safe: [number, number, number] | null = null;
     /** Grounded-flag flicker tolerance (standing still alternates the flag). */
     private _airFrames = 0;
+    /** Edge detector for the embed-rescue warning (report once per episode). */
+    private _wasEmbedded = false;
 
     /** Fall this far (m) below the last grounded spot -> treat as a void fall and
      *  recover. Engine DEFAULT — override via config player.capacity.voidRecover. */
@@ -143,6 +146,20 @@ export class CharacterController implements ISystem {
         // yet (the "walking along, fell below the block" symptom).
         this.collider.ensureSolidCache(world);
         this.collider.carrySupport(world, body, trans);
+
+        // Spawn-inside-solid guard: a spawn/teleport/respawn (or a moving
+        // authored solid) can PLACE the player inside a collider, where face
+        // resolution just wedges them in place. Pop up onto the solid instead.
+        // Report on the rising edge only — an animated solid can re-embed the
+        // player every frame, and one warning per episode is enough.
+        const embedded = this.collider.popOutIfEmbedded(body, trans);
+        if (embedded && !this._wasEmbedded) {
+            reportError('[player] placed inside a solid — popped onto its top face', {
+                tag: '[CharacterController]', severity: 'warn',
+            });
+        }
+        this._wasEmbedded = embedded;
+
         if (!this._safe) this._safe = [trans.position[0], trans.position[1], trans.position[2]];
         const groundBelow = this.collider.hasGroundBelow(trans, body);
         if (!groundBelow) {

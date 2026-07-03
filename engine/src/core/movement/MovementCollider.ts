@@ -45,6 +45,10 @@ export class MovementCollider {
     /** Max metres moved per collision substep (< thinnest ground -> no tunneling). */
     private static readonly STEP_CLAMP = 0.08;
     private static readonly MAX_SUBSTEPS = 48;
+    /** Embed-rescue trigger margin: the test box is shrunk by this much per side,
+     *  so face contact / step-over snapping (≤ STEP_CLAMP per substep) can never
+     *  trip it — only a genuinely-inside placement does. */
+    private static readonly EMBED_SHRINK = 0.1;
 
     /** The controlled player entity — excluded from its own collision tests. */
     public setControlledEntity(entity: EntityId | null): void { this.controlledEntity = entity; }
@@ -108,6 +112,47 @@ export class MovementCollider {
             }
         }
         this._supportLast = [t.position[0], t.position[1], t.position[2]];
+    }
+
+    /**
+     * Deep-embed rescue: if the player's SHRUNKEN box is inside a solid, pop
+     * them onto the highest overlapped top face. Legit motion can never get
+     * here — substeps move ≤ STEP_CLAMP (0.08 m) and both resolvers block at
+     * faces, so an embed deeper than EMBED_SHRINK only happens when a spawn,
+     * teleport, respawn or authored/animated content PLACES the player inside
+     * a solid (the demo spawn once sat inside a spinning showcase pillar: the
+     * rotating depenetration axis wedged the player permanently). Returns true
+     * if a rescue happened.
+     */
+    public popOutIfEmbedded(body: RigidBodyComponent, trans: TransformComponent): boolean {
+        const shrink = MovementCollider.EMBED_SHRINK;
+        const hx = Math.max(0.01, body.size[0] / 2 - shrink);
+        const hy = Math.max(0.01, body.size[1] / 2 - shrink);
+        const hz = Math.max(0.01, body.size[2] / 2 - shrink);
+        let rescued = false;
+        // A pop can land inside a HIGHER solid (stacked content) — iterate.
+        for (let pass = 0; pass < 4; pass++) {
+            const px = trans.position[0] + body.offset[0];
+            const py = trans.position[1] + body.offset[1];
+            const pz = trans.position[2] + body.offset[2];
+            let topY: number | null = null;
+            for (let si = 0; si < this._solids.length; si++) {
+                if (this._solidIds[si] === this.controlledEntity) continue;
+                const w = this._solids[si];
+                if (Math.abs(px - w.px) < w.hx + hx &&
+                    Math.abs(py - w.py) < w.hy + hy &&
+                    Math.abs(pz - w.pz) < w.hz + hz) {
+                    const top = w.py + w.hy;
+                    if (topY === null || top > topY) topY = top;
+                }
+            }
+            if (topY === null) break;
+            trans.position[1] = topY + body.size[1] / 2 - body.offset[1] + PHYSICS_CONSTANTS.EPSILON;
+            body.velocity[1] = 0;
+            trans.dirty = true;
+            rescued = true;
+        }
+        return rescued;
     }
 
     /**

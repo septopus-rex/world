@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngineWith } from '../helpers/make-world';
 import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
-import { EnvironmentSystem } from '../../src/core/systems/EnvironmentSystem';
 
 // Lightning: thunderstorms (rain + grade≥1) pop a flash envelope that brightens
 // the whole scene (ambient + sun) and decays. The old engine only ever stubbed
@@ -33,10 +32,7 @@ function stormPeaks(engine: any, world: any, nullEngine: any, frames: number) {
 }
 
 describe('weather lightning', () => {
-    // Lighting (incl. the lightning flash) is temporarily parked flat — see
-    // EnvironmentSystem.FLAT_LIGHTING. While parked, no flash is applied, so this
-    // strike assertion is skipped; flipping the flag back re-enables it.
-    it.skipIf(EnvironmentSystem.FLAT_LIGHTING)('a thunderstorm strikes — flash pops the ambient + sun', async () => {
+    it('a thunderstorm strikes — flash pops the ambient + sun', async () => {
         const { engine, nullEngine } = await makeHeadlessEngineWith({ api: api() });
         const world = engine.getWorld()!;
         const state = envState(world);
@@ -49,7 +45,7 @@ describe('weather lightning', () => {
         expect(maxAmbient).toBeGreaterThan(0.4 + 1.0);  // base 0.4 + flash boost
     });
 
-    it.skipIf(EnvironmentSystem.FLAT_LIGHTING)('the flash decays back to dark between strikes', async () => {
+    it('the flash decays back to dark between strikes', async () => {
         const { engine, nullEngine } = await makeHeadlessEngineWith({ api: api() });
         const world = engine.getWorld()!;
         const state = envState(world);

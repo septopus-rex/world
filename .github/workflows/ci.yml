@@ -1,0 +1,99 @@
+# Septopus World CI
+#
+# push / pull_request → fast gates: engine unit suite + tsc, the Three.js layer
+#                       boundary, and the client PWA build.
+# nightly / manual    → the full Playwright e2e suite (~1.5 h under software
+#                       rendering), with the report uploaded on failure.
+#
+# The engine workspace uses YARN, client/desktop uses NPM (see CLAUDE.md).
+# client/desktop resolves `@engine` as a SOURCE alias into engine/src, whose
+# imports (three, rapier) live in engine/node_modules — so every client job
+# installs engine dependencies first.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '30 18 * * *'   # nightly e2e — 02:30 Beijing
+  workflow_dispatch:
+
+jobs:
+  engine:
+    name: Engine — boundary + unit tests + tsc
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: engine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+          cache-dependency-path: engine/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - name: Layer boundary — Three.js only under engine/src/render
+        run: |
+          if grep -rn "from 'three'" src/core src/plugins; then
+            echo "::error::Three.js imported outside engine/src/render (see CLAUDE.md layer rules)"
+            exit 1
+          fi
+      - name: Unit / systems / integration / scenarios (vitest)
+        run: yarn test:run
+      - name: Typecheck + build
+        run: yarn build
+
+  client-build:
+    name: Client — PWA build
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/desktop/package-lock.json
+      - name: Install engine deps (source-alias imports resolve there)
+        run: yarn install --frozen-lockfile
+        working-directory: engine
+      - run: npm ci
+        working-directory: client/desktop
+      - run: npm run build
+        working-directory: client/desktop
+
+  e2e:
+    name: E2E — full Playwright suite (nightly / manual)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/desktop/package-lock.json
+      - name: Install engine deps (source-alias imports resolve there)
+        run: yarn install --frozen-lockfile
+        working-directory: engine
+      - run: npm ci
+        working-directory: client/desktop
+      - run: npx playwright install --with-deps chromium
+        working-directory: client/desktop
+      - run: npm run test:e2e
+        working-directory: client/desktop
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failure-artifacts
+          path: |
+            client/desktop/playwright-report
+            client/desktop/test-results
+          retention-days: 7

@@ -2,7 +2,7 @@
 
 确认 3D 引擎"执行正确"的测试。**核心思路**:引擎的逻辑与渲染在导入层面干净分离(`engine/src/core` 零 `three` 导入,Three.js 只在 `engine/src/render`),所以绝大部分正确性在 Node 里 headless 验证,不开浏览器/GPU。真正需要 WebGL 的薄薄一层(像素/raycast/输入/DOM UI)在 `client/desktop/e2e`(Playwright,已搭,34 个 spec)。
 
-> 截至 **2026-07-02**,全套 `yarn test:run`:**428 passed | 2 skipped**,共 **70 个测试文件**。
+> 截至 **2026-07-03**,全套 `yarn test:run`:**434 passed | 0 skipped**,共 **72 个测试文件**(动态光照解锁闪电用例 + 新增 churn 压测、出生守卫)。
 
 ## 怎么跑
 
@@ -46,13 +46,12 @@ engine/tests/
 
 ## todo / skip 现状
 
-全套只剩 **3 个 `describe.todo`**(占位不报红)和 **2 个条件 skip**:
+全套只剩 **3 个 `describe.todo`**(占位不报红),**无 skip**(动态光照恢复后,原先条件跳过的 2 个闪电用例已激活并通过):
 
 | 位置 | 类型 | 说明 |
 |---|---|---|
 | `systems/physics.test.ts` | `describe.todo` ×2 | PhysicsSystem 重力积分、TriggerSystem enter/exit 的直连单测;实际覆盖已由 `trigger-pipeline`/`headless-boot` 等间接给到,占位待填或删 |
 | `scenarios/scenarios.test.ts` | `describe.todo` ×1 | `*.scenario.ts` 自动发现 runner 未接通(其注释里"blocked on renderer DI + fixed-dt"的前置早已完成,todo 本身待处理);`coaster-ride`/`parkour-level` 是不走 runner 的真实场景测试 |
-| `systems/weather-lightning.test.ts` | `it.skipIf(EnvironmentSystem.FLAT_LIGHTING)` ×2 | 闪电的环境光尖峰断言,在平光模式下无意义,条件跳过——即统计里的 2 skipped |
 
 ---
 
