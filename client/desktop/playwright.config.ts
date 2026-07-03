@@ -36,10 +36,22 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://127.0.0.1:7777',
-    reuseExistingServer: true,
-    timeout: 90_000,
-  },
+  webServer: [
+    {
+      command: 'npm run dev',
+      url: 'http://127.0.0.1:7777',
+      reuseExistingServer: true,
+      timeout: 90_000,
+    },
+    {
+      // AI authoring gateway (spec ai-authoring.md). PROVIDER defaults to mock
+      // (deterministic, no API key, CI-safe); export PROVIDER=qwen +
+      // DASHSCOPE_API_KEY before a run for the live provider — the webServer
+      // inherits this process's env.
+      command: 'npm start --prefix ../../services/ai-gateway',
+      url: 'http://127.0.0.1:7788/v0/health',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+  ],
 });

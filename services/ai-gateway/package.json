@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/ai-gateway",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus AI authoring gateway — natural language → validated GenerationDoc (spec docs/plan/specs/ai-authoring.md). Thin & stateless: prompt pack + provider adapters + shared-schema validation + quota. World state never lives here.",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
