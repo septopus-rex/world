@@ -3,7 +3,8 @@
 Status: **largely implemented** (avatar: 51cfb17; trigger mode gating: cb2473d,
 2026-06). Scope was: finish the 4-mode system (Normal / Edit / Game / Ghost) and
 implement the player **avatar** as an IPFS-fetchable model resource reusing the
-existing model pipeline.
+existing model pipeline. A **5th mode, Observe, was added post-spec** (2026-06,
+outside this document's original scope) — see the note under the target table.
 
 **Outcome vs. plan** — one semantic delta remains; the gaps closed 2026-06-12:
 1. Trigger gating shipped with REFINED semantics: triggers evaluate in Normal AND
@@ -21,7 +22,7 @@ work (`ResourceManager`, `ModelLoader`), `engine/src/core/types/SystemMode.ts`.
 
 ---
 
-## Part A — The 4 modes
+## Part A — The 4 modes (+ Observe, added post-spec)
 
 ### Current state (audited — HISTORICAL, pre-cb2473d; kept for context)
 
@@ -55,11 +56,26 @@ work (`ResourceManager`, `ModelLoader`), `engine/src/core/types/SystemMode.ts`.
 | **Game**   | visible | **YES** | no | walk + collide | play — interactive logic active |
 | **Ghost**  | hidden  | no | no | free roam (noclip/fly, P2) | 瞎逛 / spectate, incorporeal |
 | **Edit**   | visible | no | **YES** | walk + collide | build/place adjuncts |
+| **Observe** | visible | — (player frozen) | no | frozen; camera orbits a target | inspect/spectate a fixed subject (5th mode, post-spec) |
 
 The only behavioral deltas are small and surgical: triggers fire **only in Game**,
 the avatar is hidden **only in Ghost**, editing happens **only in Edit** (already
 done). Default boot mode stays **Normal** (least disruptive; lots of code reads
 `!== Edit`).
+
+> **Observe (5th mode, added 2026-06 after this spec)**: freezes the player —
+> `CharacterController` early-returns before movement (`CharacterController.ts:106-110`);
+> the camera orbits the observe target in spherical coordinates: drag to rotate,
+> W/S to zoom, always facing the target (`CameraRig.processObserve`,
+> `CameraRig.ts:193-215`); the avatar stays **visible** (`CameraRig.ts:217-219`);
+> the durable position is never written (saveMeta `'player'` is Normal/Game-only);
+> freely switchable, no entry guard.
+>
+> **Edit movement (clarification)**: `CharacterController` has NO Edit-specific
+> branch — movement is walk + collide, identical to Normal (no freeze). The only
+> side effect is that camera rotation is disabled while dragging an object
+> (`CameraRig` `canRotate`). Like Ghost/Observe, Edit never writes the durable
+> position (`player.state` events still emit in every mode).
 
 ### Implementation (gating points)
 
@@ -78,7 +94,8 @@ done). Default boot mode stays **Normal** (least disruptive; lots of code reads
    (Normal / Game / Ghost / Edit) in `App.tsx` + `useEngine`. `DesktopLoader`
    gains `setMode(mode)` forwarding to `engine.setMode`.
 6. **Ghost free-roam (P2, optional).** `CharacterController`: in Ghost, skip
-   gravity + solid collision (noclip) and allow vertical fly (R/F). Keep out of P1
+   gravity + solid collision (noclip) and allow vertical fly (shipped as
+   Space up / Shift down). Keep out of P1
    if it risks the movement stability already achieved.
 
 ### Open decisions (flag in review)
