@@ -3,6 +3,13 @@
 > 状态:**spec 定稿 + v1 实现(2026-07-02)**。预决策(GAME_SYSTEMS_BACKLOG)照常:
 > 对话树 = 纯数据文档;引擎只加一个**走树状态机**,零新执行原语;锚点 = 可交互物的能力
 > (非独立对话 adjunct);UI 面板归客户端。
+>
+> **客户端对话 UI 已落地(2026-07-04)**:`client/desktop/src/components/DialogueUI.tsx`
+> ——纯视图,镜像 `dialogue.started/node/ended` 事件(文本 + 预过滤的可见选项),按钮回调
+> `Engine.chooseDialogue/endDialogue`。首个完整任务配方实证:仙剑微缩 RPG「灵草记」
+> (`client/desktop/src/levels/xianjian.level.json`,flags 任务三态:接取 when !quest_herb
+> → 交付 when wolf_slain ∧ inventory.tpl_3≥1 → 终局收敛;奖励=spawn 掉落绕 bag 的
+> Game-only 门控),e2e `rpg-xianjian.spec.ts` 经真实 UI 全程通关 + reload 存续。
 
 ## 1. 数据词汇:对话文档(挂在 ba NPC 行 slot 5)
 

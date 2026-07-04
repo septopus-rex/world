@@ -27,6 +27,7 @@ import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataS
 import { AuthoredLevel, levelSceneProvider } from '@engine/core/services/AuthoredLevel';
 import parkourLevelJson from '../levels/parkour.level.json';
 import coasterLevelJson from '../levels/coaster.level.json';
+import xianjianLevelJson from '../levels/xianjian.level.json';
 import { Coords } from '@engine/core/utils/Coords';
 import { validateGenerationDoc, compileGenerationDoc } from '@engine/core/protocol/GenerationDoc';
 import type { GameSetting } from '@engine/core/types/GameSetting';
@@ -98,12 +99,14 @@ export class DesktopLoader implements IDataSource {
         ? new URLSearchParams(window.location.search).get('level') : null;
     private isParkour = this.level === 'parkour';
     private isCoaster = this.level === 'coaster';
+    private isXianjian = this.level === 'xianjian';
 
     /** The active authored level (data document) + its block provider. Levels
      *  are JSON in src/levels/ — the engine holds no level content. */
     private activeLevel: AuthoredLevel | null =
         this.isParkour ? (parkourLevelJson as unknown as AuthoredLevel)
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
+        : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
         : null;
     private levelProvider = this.activeLevel ? levelSceneProvider(this.activeLevel) : null;
 

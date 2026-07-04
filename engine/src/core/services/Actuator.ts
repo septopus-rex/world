@@ -70,6 +70,15 @@ export class LocalActuator implements IActuator {
             case 'flag':
                 // set_flag: target = key, params[0] = value (default true)
                 ctx.world.globalFlags[action.target as string] = action.params?.[0] ?? true;
+                // Persist the gameplay session AT the mutation chokepoint. Every
+                // flag write funnels through here (trigger nodes, dialogue option
+                // actions, NPC enter/onDeath) — TriggerSystem's own save only
+                // covers trigger executions, which let a dialogue-set quest flag
+                // vanish on reload. Fire-and-forget write-behind, same channel.
+                ctx.world.draftStore?.saveMeta?.(0, 'session', {
+                    flags: ctx.world.globalFlags,
+                    triggerFired: ctx.world.sessionTriggerFired ?? {},
+                });
                 break;
             case 'bag':
                 this.execBag(action, ctx);
@@ -166,6 +175,8 @@ export class LocalActuator implements IActuator {
     // ── F3 combat actions (spec combat-damage.md §1) — GAME MODE ONLY ────────
 
     /** damage: the generic damage channel. target 'player' → HealthSystem;
+     *  target 'self' → the FIRING entity (an NPC's authored onInteract can say
+     *  "the player's click hits me" without knowing its own runtime adjunctId);
      *  target = NPC adjunctId → its hp (death flow in damageNpc). */
     private execDamage(action: TriggerAction, ctx: ActuatorContext): void {
         if (ctx.mode !== SystemMode.Game) {
@@ -178,6 +189,10 @@ export class LocalActuator implements IActuator {
             if (ctx.playerId == null) return;
             ctx.world.events?.emit?.('combat.hit', { targetKind: 'player', amount });
             ctx.world.emitSimple('player:damage', { amount }, ctx.playerId);
+            return;
+        }
+        if (action.target === 'self') {
+            if (ctx.sourceEntity != null) damageNpc(ctx.world, ctx.sourceEntity, amount);
             return;
         }
         const eid = this.resolveAdjunct(ctx.world, action.target);

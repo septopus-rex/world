@@ -322,6 +322,26 @@ export class MovementCollider {
             const top = this.topYAt(w, cx, cz);      // slope: surface at the candidate spot
             if (cy - phy >= top || cy + phy <= w.py - w.hy) continue; // vertically clear
 
+            const stepUp = top - feetY;
+
+            // SLOPE: the top face is a continuous walkable plane — "about to step
+            // onto it" never ends, so the grounded gate below (which flickers off
+            // every other standing frame: vy=0 skips the landing probe) cannot
+            // apply. Within step reach the player RIDES the surface — snapped to
+            // the plane whenever the feet are at/under it and not jumping (vy>0
+            // rises through freely; resolveY lands the descent). A walkable-grade
+            // contact is never horizontally blocked; only a too-steep approach
+            // (the vertical back/side of the wedge) falls through to the push-out.
+            if (w.shape === SHAPE_SLOPE && stepUp <= stepHeight) {
+                if (stepUp > 0.001 && body.velocity[1] <= 0.01) {
+                    trans.position[1] = top + body.size[1] / 2 - body.offset[1];
+                    if (body.velocity[1] < 0) body.velocity[1] = 0;
+                    body.isGrounded = true;
+                    this.setSupport(this._solidIds[si]);
+                }
+                continue; // allow the horizontal move
+            }
+
             // Step-over: climb a LOW CURB at the feet instead of blocking. Three
             // guards keep this from becoming a wall-climb:
             //  • grounded only — airborne, a jump (apex ≈ 1.63 m) auto-grabbed any
@@ -333,10 +353,6 @@ export class MovementCollider {
             //    your level, NOT a tall wall you happen to be standing beside the top
             //    of (e.g. on an adjacent raised platform): that wall drops far below
             //    your feet, so dropToBottom rejects it and you can't walk onto it.
-            // On a SLOPE `top` tracks the ramp plane, so walking uphill is this same
-            // branch firing every sub-step with a tiny stepUp (≤ ramp grade × 0.08 m)
-            // — a ramp is a curb that never ends.
-            const stepUp = top - feetY;
             const dropToBottom = feetY - (w.py - w.hy);
             if (body.isGrounded && stepUp > 0.001 && stepUp <= stepHeight && dropToBottom <= stepHeight) {
                 trans.position[1] = top + body.size[1] / 2 - body.offset[1];
@@ -369,18 +385,11 @@ export class MovementCollider {
                     body.velocity[2] = 0;
                 }
             } else if (w.shape === SHAPE_SLOPE) {
-                // Walkable-grade contact (surface within step reach) on a frame the
-                // grounded flag happens to be off — the standing-still grounded
-                // flicker (vy=0 skips the landing probe), or gliding onto the ramp
-                // mid-air. A ramp is a continuous step, so at the ramp foot that
-                // flicker frame used to fall through to the ejection below and
-                // bounce the player off the lip forever. Let the move through;
-                // resolveY owns the surface contact.
-                if (stepUp <= stepHeight) continue;
-                // Too steep here (a side/back-face approach): minimum-translation
-                // push of the player's bounding circle out of the local rect,
-                // rotated back to world. Applied to both axes (the rect is
-                // yaw-rotated, so the push direction generally isn't axis-aligned).
+                // Too steep here (a side/back-face approach — walkable-grade
+                // contact already continued above): minimum-translation push of
+                // the player's bounding circle out of the local rect, rotated
+                // back to world. Applied to both axes (the rect is yaw-rotated,
+                // so the push direction generally isn't axis-aligned).
                 const pr = Math.max(phx, phz);
                 const dx0 = cx - w.px, dz0 = cz - w.pz;
                 const lx = dx0 * w.cosY - dz0 * w.sinY;

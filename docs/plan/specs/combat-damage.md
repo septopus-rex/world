@@ -2,6 +2,16 @@
 
 > 状态:**spec 定稿 + v1 实现(2026-07-02)**。踩 F1(spawn/定时)+ F2(NPC)。
 > 统一设计模式(GAME_SYSTEMS_BACKLOG)照常:定义=数据、实例=运行时、效果=actuator。
+>
+> **v1.1 补齐(2026-07-04,随仙剑微缩 RPG 落地)**:①**玩家攻击动词**(§1.4)——
+> ba slot 6 `interact = { when?, cooldown?(默认 0.4s), actions }`,点击**无对话**的
+> agent 经 actuator 跑其 actions(有对话的点击归 DialogueSystem,对话优先);配套
+> `damage` 动作新增 **target `'self'`** = 打到发起实体自身(authored 行不知道自己的
+> 运行时 adjunctId)。②**随体接触伤害**(§1.5)——ba slot 7 `touch = { damage,
+> interval?(默认 1s), radius?(默认 1.2m) }`,NPCSystem 用每帧已算的 distToPlayer
+> 打点,follow 追上谁就咬谁;走 Game 门控的 damage 通道(Normal 里蹭过不掉血)。
+> 实证:`npc-combat-verbs.test.ts`(冷却/门控/掉落)+ `xianjian-quest.test.ts` +
+> e2e `rpg-xianjian.spec.ts` 全程通关。
 
 ## 0. 范围与已有件
 

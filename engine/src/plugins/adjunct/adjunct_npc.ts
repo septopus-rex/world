@@ -66,8 +66,21 @@ const NpcTransform: AdjunctTransform = {
 };
 
 const NpcAttribute: AdjunctAttribute = {
-    /** Slot map: [pos, visual, behavior, seed, hp?, dialogue?] — npc spec §1,
-     *  combat spec §1.2 (hp), dialogue spec §1 (dialogue document). */
+    /** Slot map: [pos, visual, behavior, seed, hp?, dialogue?, interact?, touch?]
+     *  — npc spec §1, combat spec §1.2 (hp), dialogue spec §1 (dialogue document).
+     *
+     *  interact (slot 6, combat §1.4 — the player's ATTACK VERB, data-declared):
+     *    { when?: JSONLogic, cooldown?: s (default 0.4), actions: TriggerAction[] }
+     *    Clicking the agent runs `actions` through the actuator (sourceEntity =
+     *    the agent, so `damage target:'self'` is "the player hits me"). Only
+     *    consulted when the agent has NO dialogue document — a talkable NPC's
+     *    click belongs to DialogueSystem.
+     *
+     *  touch (slot 7, combat §1.5 — contact damage that FOLLOWS the live agent):
+     *    { damage: n, interval?: s (default 1), radius?: m (default 1.2) }
+     *    NPCSystem ticks it off the same distToPlayer it already derives, so a
+     *    `follow` chaser bites whoever it catches; lands as the Game-mode-gated
+     *    actuator damage channel. */
     deserialize: (data: any[]): STDObject => {
         const visual = (data[1] && typeof data[1] === 'object') ? data[1] : {};
         const size: [number, number, number] = Array.isArray((visual as any).size)
@@ -84,6 +97,8 @@ const NpcAttribute: AdjunctAttribute = {
             hp: typeof data[4] === 'number' && data[4] > 0 ? data[4] : 0,
             // Dialogue document (dialogue spec §1); null = not talkable.
             dialogue: (data[5] && typeof data[5] === 'object') ? data[5] : null,
+            interact: (data[6] && typeof data[6] === 'object' && Array.isArray(data[6].actions)) ? data[6] : null,
+            touch: (data[7] && typeof data[7] === 'object' && Number(data[7].damage) > 0) ? data[7] : null,
         };
     },
     serialize: (std: STDObject) => ([
@@ -93,6 +108,8 @@ const NpcAttribute: AdjunctAttribute = {
         std.seed ?? 0,
         std.hp ?? 0,
         std.dialogue ?? null,
+        std.interact ?? null,
+        std.touch ?? null,
     ]),
 };
 

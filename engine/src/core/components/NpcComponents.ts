@@ -31,6 +31,13 @@ export interface BehaviorComponent {
      *  loss); block reload revives them. Spawner-DERIVED agents are despawned
      *  instead (frees the maxAlive slot). */
     dead: boolean;
+    /** Simulation-clock stamp of the last onInteract fire (attack-verb cooldown,
+     *  combat spec §1.4). Undefined = never fired. */
+    lastInteractAt?: number;
+    /** Simulation-clock stamp of the last touch-damage tick (§1.5). */
+    lastTouchAt?: number;
+    /** Accumulated simulation seconds (the clock the two stamps above read). */
+    clock?: number;
 }
 
 /** A projectile in flight (combat spec §1.3) — a runtime-derived entity moved
