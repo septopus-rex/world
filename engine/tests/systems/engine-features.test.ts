@@ -244,7 +244,10 @@ describe('avatar animation state machine', () => {
 
         const input = comp(world, player, 'InputStateComponent');
         input.jump = true;
-        stepN(engine, 3);
+        // 'air' is coyote-debounced (>0.12 s airborne) so a one-frame grounded
+        // flicker on flat ground can't thrash walk↔air and freeze the clip (the
+        // "stiff avatar" fix). A real jump clears the window in ~8 frames.
+        stepN(engine, 12);
         expect(nullEngine.__counts.lastAnimState).toBe('air');
     });
 });

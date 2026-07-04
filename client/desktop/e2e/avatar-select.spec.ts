@@ -73,6 +73,17 @@ test('化身选择:两套动作契约 + 身体参数 + 重载持久', async ({ p
     i = await walkToMotion(page);
     expect(i.state, 'movement drove the state machine').toMatch(/walk|run/);
     expect(i.activeClip, 'walk/run resolved by NAME EQUALITY').toMatch(/Walk|Run/);
+    // The clip must ADVANCE, not freeze: the grounded flag flickers every frame
+    // on flat ground, and without air-coyote debounce the state thrashed walk↔air
+    // and reset the clip to frame 0 forever (the "stiff avatar"). Sample the mixer
+    // time across a few frames — it must move and stay running.
+    const t0 = (await info(page)).activeTime;
+    await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 1));
+    await stepEngine(page, 12);
+    const j = await info(page);
+    await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));
+    expect(j.activeRunning, 'locomotion clip is running').toBe(true);
+    expect(j.activeTime, 'locomotion clip advances, not frozen at frame 0').toBeGreaterThan(t0 + 0.05);
     await stand(page);
     expect((await info(page)).activeClip).toBe('Idle');
 

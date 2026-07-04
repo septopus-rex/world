@@ -1145,15 +1145,19 @@ export class RenderEngine {
      */
     public getAnimationDebug(handle: RenderHandle): {
         clips: string[]; state: string | null; activeClip: string | null;
+        activeTime: number; activeRunning: boolean;
         height: number; minY: number;
     } | null {
         const obj = handle as THREE.Object3D;
         const rig = this._mixers.get(obj);
         const box = new THREE.Box3().setFromObject(obj);
         let activeClip: string | null = null;
+        let activeTime = 0, activeRunning = false;
         if (rig?.current) {
             const action = rig.actions.get(rig.current);
             activeClip = action?.getClip()?.name ?? null;
+            activeTime = action?.time ?? 0;                 // advances iff the clip is playing
+            activeRunning = action?.isRunning() ?? false;
         }
         const clipNames = new Set<string>();
         rig?.actions.forEach((a) => clipNames.add(a.getClip().name));
@@ -1161,6 +1165,8 @@ export class RenderEngine {
             clips: [...clipNames],
             state: rig?.current ?? null,
             activeClip,
+            activeTime,
+            activeRunning,
             height: Number.isFinite(box.max.y - box.min.y) ? box.max.y - box.min.y : 0,
             minY: Number.isFinite(box.min.y) ? box.min.y : 0,
         };

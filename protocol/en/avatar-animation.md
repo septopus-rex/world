@@ -66,12 +66,21 @@ interpreters agree):
 | `idle` | standing | loop | `isGrounded` and `hSpeed ≤ IDLE_MAX` (default 0.5 m/s) |
 | `walk` | walking | loop | `isGrounded` and `IDLE_MAX < hSpeed ≤ WALK_MAX` (default `maxSpeedWalk·1.2`) |
 | `run`  | running | loop | `isGrounded` and `hSpeed > WALK_MAX` |
-| `air`  | airborne (rise/fall) | loop | `!isGrounded` |
+| `air`  | airborne (rise/fall) | loop | sustained `!isGrounded` beyond **AIR_COYOTE** (default 0.12s) — see the hysteresis note below |
 | `jump` | takeoff (optional) | once | the frame the jump impulse is applied; falls back to `air` |
 | `land` | landing (optional) | once | the frame `air`→`isGrounded`; falls back to `idle/walk/run` |
 
 - `hSpeed` = horizontal speed magnitude (vertical ignored). Thresholds are tunable via
   `PlayerBodyComponent`, but **the semantics and comparison relations are fixed**.
+- **`air` must be debounced (normative, coyote time)**: in many character-controller
+  implementations `isGrounded` **flickers every frame on flat ground** (gravity is skipped
+  while grounded → no downward probe → not re-detected → false → gravity → re-lands → true,
+  flipping each frame). Feeding raw `isGrounded` into the state machine makes `walk/idle`
+  and `air` **thrash every frame**, and each switch `reset()`s the looping clip to frame 0 —
+  the character appears **frozen in its starting pose** (a real, fixed bug — 2026-07-04).
+  So `air` **must be debounced**: only a sustained airborne streak exceeding `AIR_COYOTE`
+  counts as real `air`; a genuine jump/fall far exceeds the window, and a one-frame landing
+  flicker is absorbed. Reference: `CameraRig` accumulates `_airborneSec`, cleared on landing.
 - **v1 core**: `idle/walk/run/air` (matches current `CharacterController`); `jump/land`
   are optional enhancements.
 - **Fallback chain** (when the motion set lacks a state's clip): `run→walk→idle`,

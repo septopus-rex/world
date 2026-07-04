@@ -7,6 +7,14 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
 
 ## [Unreleased]
 
+### 修复
+- **化身运动僵直(stiff avatar)**:平地行走时物理 `isGrounded` 逐帧 true/false 抖动
+  (grounded 跳过重力→无下坠探测→false→施重力→又落地→true),裸喂状态机导致 `walk`
+  与 `air` 每帧互切、每次 `reset()` 把循环剪辑打回第 0 帧——角色卡在起步姿势。修复:
+  `air` 判定加 coyote-time 迟滞(`CameraRig._airborneSec` > 0.12s 才算真 air),吸收
+  单帧落地抖动;实测剪辑时间从恒 0.017 变为连续推进。规范化到 `avatar-animation.md §2`
+  (air 需去抖,cn/en)+ e2e 回归断言(剪辑必须推进不冻结)。
+
 ### 功能
 - **多 Avatar 可选 + 运行时换装**:`Engine.setAvatar`/`EntityFactory.swapAvatar`
   (复用加载路径、释放旧模型引用、重算 scale-to-1.8/footOffset、重启动画状态机)+

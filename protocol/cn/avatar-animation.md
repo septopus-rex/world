@@ -60,12 +60,19 @@ rightUpperLeg rightLowerLeg rightFoot
 | `idle` | 站立待机 | 循环 | `isGrounded` 且 `hSpeed ≤ IDLE_MAX`（默认 0.5 m/s） |
 | `walk` | 行走 | 循环 | `isGrounded` 且 `IDLE_MAX < hSpeed ≤ WALK_MAX`（默认 `maxSpeedWalk·1.2`） |
 | `run`  | 奔跑 | 循环 | `isGrounded` 且 `hSpeed > WALK_MAX` |
-| `air`  | 腾空（上升/下落统称） | 循环 | `!isGrounded` |
+| `air`  | 腾空（上升/下落统称） | 循环 | 持续 `!isGrounded` 超过 **AIR_COYOTE**（默认 0.12s）——见下方迟滞说明 |
 | `jump` | 起跳瞬间（可选） | 单次 | 起跳冲量施加的那一帧；播完回落 `air` |
 | `land` | 落地缓冲（可选） | 单次 | 由 `air` 转 `isGrounded` 的那一帧；播完回落 `idle/walk/run` |
 
 - `hSpeed` = 水平速度模长（忽略竖直分量）。阈值常量随 `PlayerBodyComponent` 可调，但
   **语义与比较关系固定**。
+- **air 需迟滞（规范要求,coyote time）**：许多角色控制实现中 `isGrounded` 在**平地上
+  逐帧抖动**(grounded 时跳过重力→无下坠→探测不到落地→变 false→施重力→又落地→true,
+  如此每帧翻转)。若把裸 `isGrounded` 直接喂状态机,会让 `walk/idle` 与 `air` **每帧
+  互切**,每次切换 `reset()` 把循环剪辑打回第 0 帧——表现为**角色僵在起步姿势**(此坑
+  已实证并修复,2026-07-04)。因此 `air` 判定**必须去抖**:腾空累计时长超过 `AIR_COYOTE`
+  才算真 `air`;真跳跃/坠落远超此窗口,一帧的落地抖动被吸收。实现:`CameraRig` 累加
+  `_airborneSec`,落地清零。
 - **v1 核心**：`idle/walk/run/air`（与现有 `CharacterController` 一致）；`jump/land`
   为可选增强。
 - **缺失回退链**（动作集未提供该状态时）：`run→walk→idle`、`air→jump→idle`、

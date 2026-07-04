@@ -27,6 +27,15 @@ export class CameraRig {
      *  an empty stub — both live here now as one decaying envelope. */
     private _camShake = 0;
     private _shakePhase = 0;
+    /** Airborne accumulator for the animation 'air' state (coyote time). The
+     *  physics `isGrounded` flag flickers true/false EVERY frame on flat ground
+     *  (gravity is skipped while grounded → no downward probe → not re-detected
+     *  → one airborne frame → re-lands…). Feeding that raw into the state machine
+     *  thrashed walk↔air each frame and reset the locomotion clip to frame 0
+     *  (the "stiff avatar"). Only a SUSTAINED airborne streak is real 'air'. */
+    private _airborneSec = 0;
+    /** Coyote window: airborne must exceed this to count as 'air' (seconds). */
+    private static readonly AIR_COYOTE = 0.12;
     private static readonly SHAKE_MIN_DROP = 1.5;   // m: below this, no shake
     private static readonly SHAKE_FULL_DROP = 8;    // m: full-strength shake
     private static readonly SHAKE_DECAY = 0.5;      // s to fade to zero (the "linger")
@@ -183,8 +192,13 @@ export class CameraRig {
             const hSpeedSq = body.velocity[0] * body.velocity[0] + body.velocity[2] * body.velocity[2];
             const walkMax = body.maxSpeedWalk * 1.2;   // WALK_MAX (§2)
             const IDLE_MAX = 0.5;                       // m/s (§2)
+            // Debounce 'air' with coyote time: the physics grounded flag flickers
+            // one frame per two on flat ground, so require a SUSTAINED airborne
+            // streak before animating 'air' — else walk/idle would reset every
+            // other frame and look frozen. A real jump/fall clears the window fast.
+            this._airborneSec = body.isGrounded ? 0 : this._airborneSec + dt;
             let animState = 'idle';
-            if (!body.isGrounded) animState = 'air';
+            if (this._airborneSec > CameraRig.AIR_COYOTE) animState = 'air';
             else if (hSpeedSq > walkMax * walkMax) animState = 'run';
             else if (hSpeedSq > IDLE_MAX * IDLE_MAX) animState = 'walk';
             (world.renderEngine as any).setAnimationState?.(avatar.handle, animState);
