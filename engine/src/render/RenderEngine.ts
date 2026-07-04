@@ -1136,6 +1136,36 @@ export class RenderEngine {
         if (rig) { rig.mixer.stopAllAction(); this._mixers.delete(handle as THREE.Object3D); }
     }
 
+    /**
+     * Debug/verification snapshot of an animated handle: registered clip names,
+     * the current STATE, the actual clip the state resolved to (fallback chains
+     * make these differ — that's the point of asking), and the world-space
+     * bounding size (avatar body-height checks). Render-layer because Box3 and
+     * the mixer registry live here.
+     */
+    public getAnimationDebug(handle: RenderHandle): {
+        clips: string[]; state: string | null; activeClip: string | null;
+        height: number; minY: number;
+    } | null {
+        const obj = handle as THREE.Object3D;
+        const rig = this._mixers.get(obj);
+        const box = new THREE.Box3().setFromObject(obj);
+        let activeClip: string | null = null;
+        if (rig?.current) {
+            const action = rig.actions.get(rig.current);
+            activeClip = action?.getClip()?.name ?? null;
+        }
+        const clipNames = new Set<string>();
+        rig?.actions.forEach((a) => clipNames.add(a.getClip().name));
+        return {
+            clips: [...clipNames],
+            state: rig?.current ?? null,
+            activeClip,
+            height: Number.isFinite(box.max.y - box.min.y) ? box.max.y - box.min.y : 0,
+            minY: Number.isFinite(box.min.y) ? box.min.y : 0,
+        };
+    }
+
     public removeHandle(handle: RenderHandle): void {
         const obj = handle as THREE.Object3D;
 

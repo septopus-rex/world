@@ -35,7 +35,7 @@ import type { IGameApi } from '@engine/core/services/IGameApi';
 import { GAMES, gameById } from '../games/registry';
 import { GameApiRouter } from '../games/GameApiRouter';
 import { FetchGameApi } from '../games/FetchGameApi';
-import { DEMO_BLOCK, DEMO_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
+import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
@@ -202,9 +202,12 @@ export class DesktopLoader implements IDataSource {
 
     public async world(_index: number): Promise<any> {
         // Local Genesis world config + a demo avatar resource so the player has a
-        // real (network-loaded) body instead of the placeholder box.
+        // real (network-loaded) body instead of the placeholder box. Default =
+        // the soldier (33): a full motion set (Idle/Run/Walk) so movement animates
+        // out of the box, unlike the single-clip legacy avatar (30, still
+        // selectable as 旅者). A saved pick overrides this after hydrate.
         const cfg = JSON.parse(JSON.stringify(MockWorldNormal));
-        if (cfg.player?.avatar) cfg.player.avatar.resource = DEMO_AVATAR_ID;
+        if (cfg.player?.avatar) cfg.player.avatar.resource = DEFAULT_AVATAR_ID;
         return cfg;
     }
 
@@ -414,6 +417,15 @@ export class DesktopLoader implements IDataSource {
         // first block materializes (BlockSystem swaps drafts in synchronously),
         // and restore the player's persisted location/inventory/session.
         await this.engine.hydrateDrafts(0);
+
+        // Restore the picked avatar (session meta) — the engine booted with the
+        // default; a differing saved pick swaps through the same runtime seam.
+        try {
+            const savedAvatar = await this.engine.getWorld()!.draftStore.loadMeta(0, 'avatar');
+            if (savedAvatar != null && this.avatarCatalog().some(a => a.id === Number(savedAvatar))) {
+                this.engine.setAvatar(String(savedAvatar));
+            }
+        } catch { /* no saved pick */ }
 
         // The unified block seam: one SceneProvider (mode-dispatched seed) + the
         // now-hydrated DraftStore. All block streaming flows through this.
@@ -789,6 +801,28 @@ export class DesktopLoader implements IDataSource {
 
     /** Teleport the player to an Septopus block + local offset (fast-travel / testing
      *  seam). Sets the live transform directly; the next step settles physics. */
+    /** Selectable avatars (id + label) for the frontend picker. */
+    public avatarCatalog(): { id: number; label: string }[] {
+        return [
+            { id: DEMO_AVATAR_ID, label: '旅者 Wanderer' },
+            { id: 33, label: '士兵 Soldier' },
+            { id: 34, label: '机器人 Robot' },
+        ];
+    }
+
+    /** Live avatar id (mirrors AvatarComponent.resource; catalog default). */
+    public currentAvatar(): number {
+        const info = this.engine?.avatarInfo?.();
+        const n = info?.resource != null ? Number(info.resource) : NaN;
+        return Number.isFinite(n) ? n : DEFAULT_AVATAR_ID;
+    }
+
+    /** Swap the player's avatar (runtime seam) + persist the pick. */
+    public setAvatar(id: number): void {
+        this.engine?.setAvatar(String(id));
+        this.engine?.getWorld()?.draftStore.saveMeta(0, 'avatar', id);
+    }
+
     /** Map fast-travel: funnel through the SAME anchor-gated teleport action a
      *  content portal uses (specs/teleport-portal.md §3) — seeing an anchor on
      *  the map does not bypass its destination-side `when`. */

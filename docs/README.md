@@ -4,11 +4,17 @@
 >
 > | 层 | 去哪里 | 回答什么问题 |
 > |---|---|---|
-> | **协议(规范)** | [`protocol/`](../protocol/README.md)(cn/en 双语) | 数据长什么样?换个引擎怎么保证同一个世界?(**发布物**) |
+> | **协议(规范)** | [`protocol/`](../protocol/README.cn.md)(cn/en 双语,[EN](../protocol/README.md)) | 数据长什么样?换个引擎怎么保证同一个世界?(**发布物**) |
 > | **参考实现(本目录)** | `docs/architecture` · `docs/systems` · `docs/guides` · `docs/api` | 本 TS 引擎怎么实现协议? |
 > | **过程(非规范)** | [`docs/plan/`](plan/) | 为什么这么设计?做到哪了?(roadmap + 18 篇实现规格) |
 >
 > 现行版本记录:根 [CHANGELOG.md](../CHANGELOG.md);发版与部署:[deploy/RELEASE.md](../deploy/RELEASE.md)。
+
+## 🧭 先读:世界总览
+
+不确定 Septopus 世界怎么构成、为什么这么设计?先读协议层的
+[**overview 总览**](../protocol/cn/overview.md)([EN](../protocol/en/overview.md))
+——世界←地块←附属物、时间/天气如何推导、为什么一切都是数据。
 
 ## 🚀 上手 (`guides/`)
 

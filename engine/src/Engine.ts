@@ -11,6 +11,7 @@ import { descriptorToDefinition } from './core/services/DynamicAdjunct';
 import { registerDynamicAdjunct, clearDynamicAdjuncts } from './core/services/AdjunctRegistry';
 import { Coords } from './core/utils/Coords';
 import { GlobalConfig } from './core/GlobalConfig';
+import { EntityFactory } from './core/EntityFactory';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
 import { SystemMode } from './core/types/SystemMode';
 
@@ -379,6 +380,34 @@ export class Engine {
             { type: 'player', method: 'teleport', target: anchor, params: [block] } as any,
             { world, playerId: players[0] ?? null, mode: world.mode, sourceEntity: null },
         );
+    }
+
+    // ── avatar ───────────────────────────────────────────────────────────────
+
+    /** Swap the player's avatar model at runtime (frontend picker seam). The
+     *  resource id resolves through the same ResourceManager pipeline as boot;
+     *  a failed load keeps the current body. */
+    public setAvatar(resourceId: string | number): void {
+        const world = this.world;
+        if (!world) return;
+        EntityFactory.swapAvatar(world, String(resourceId));
+    }
+
+    /** Debug/verification snapshot of the live avatar: resource id, registered
+     *  clips, current animation state + the clip it resolved to, and the
+     *  world-space height/foot line (body-parameter checks in e2e). */
+    public avatarInfo(): { resource?: string; footOffset: number | null; clips: string[]; state: string | null; activeClip: string | null; height: number; minY: number } | null {
+        const world = this.world;
+        if (!world) return null;
+        const players = world.queryEntities("AvatarComponent", "InputStateComponent");
+        if (!players.length) return null;
+        const av = world.getComponent<any>(players[0], "AvatarComponent");
+        if (!av?.handle) return null;
+        const dbg = (world.renderEngine as any).getAnimationDebug?.(av.handle) ?? null;
+        // footOffset = the SCALED source-bbox bottom the controller plants feet by
+        // (deterministic; the live Box3 min.y is unreliable for skinned meshes).
+        const footOffset = typeof av.footOffset === 'number' ? av.footOffset : null;
+        return dbg ? { resource: av.resource, footOffset, ...dbg } : { resource: av.resource, footOffset, clips: [], state: null, activeClip: null, height: 0, minY: 0 };
     }
 
     /** External realtime transport (ILiveSource) feeding world.events via

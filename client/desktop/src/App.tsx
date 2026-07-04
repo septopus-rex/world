@@ -15,6 +15,7 @@ import { LeaveGameDialog } from './components/LeaveGameDialog';
 import { WorldMap2D } from './components/WorldMap2D';
 import { AuthorChat } from './components/AuthorChat';
 import { DialogueUI } from './components/DialogueUI';
+import { AvatarPicker } from './components/AvatarPicker';
 import { MAZE_BLOCK, MAZE_ENTRY } from './scenes/mazeScene';
 import { DYN_BLOCK, DYN_VIEW } from './scenes/dynamicAdjunctScene';
 
@@ -140,6 +141,7 @@ function App() {
       {ready && <InventoryPanel loader={loader} />}
       {ready && <HealthBar loader={loader} />}
       {ready && <DialogueUI loader={loader} />}
+      <AvatarPicker loader={loader} ready={ready} />
       {ready && <Toaster loader={loader} />}
       <ParkourHUD loader={loader} ready={ready} />
       <ShootingHUD loader={loader} ready={ready} />

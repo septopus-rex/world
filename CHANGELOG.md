@@ -7,7 +7,20 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
 
 ## [Unreleased]
 
+### 功能
+- **多 Avatar 可选 + 运行时换装**:`Engine.setAvatar`/`EntityFactory.swapAvatar`
+  (复用加载路径、释放旧模型引用、重算 scale-to-1.8/footOffset、重启动画状态机)+
+  客户端 `AvatarPicker.tsx`(选择持久化 DraftStore meta)。新增两套带动作素材
+  soldier(名称相等契约 Idle/Run/Walk)/robot(正则回退 Idle/Walking/Running/Jump);
+  `Engine.avatarInfo()` 暴露 clips/state/activeClip/height/footOffset 供验证。
+  证实 avatar-animation 引擎链路正常(旧 avatar "无动作" 是素材只带单条未命名剪辑,
+  非引擎问题)。默认化身改为 soldier(33,开箱即有完整行走动作)。e2e `avatar-select.spec.ts`。
+
 ### 文档
+- **新增世界总览(protocol/overview,cn/en 双语)**:一页讲清 Septopus 世界的构成
+  (宇宙←世界←地块←附属物)、环境推导(时间/天气=链源纯函数)、玩法回路与"为什么这样
+  设计",作为协议"从这里开始读"的入口;protocol README、docs README、旧
+  architecture/overview 均交叉指向。
 - **术语根治:SPP 撞名冲突(2026-07-04)**——**SPP 专指弦粒子协议**(String Particle
   Protocol,独立仓 ff13dfly/spp-protocol);坐标一律改称 **Septopus 轴序**、动画改称
   **Septopus 动画**(协议/docs 全量清理,弦粒子正统用法保留);代码标识符同步改名

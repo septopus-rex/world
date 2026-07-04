@@ -15,7 +15,8 @@ import { AdjunctType } from '@engine/core/types/AdjunctType';
 
 export const DEMO_BLOCK: [number, number] = [2048, 2048];
 export const DEMO_TEXTURE_ID = 7;  // checker texture
-export const DEMO_AVATAR_ID = 30;  // rigged human avatar
+export const DEMO_AVATAR_ID = 30;  // legacy single-clip avatar (旅者; selectable)
+export const DEFAULT_AVATAR_ID = 33; // boot default — soldier (Idle/Run/Walk)
 
 /**
  * Demo content's source assets — the SEED for the IPFS content store (the mock
@@ -46,6 +47,12 @@ export const DEMO_ASSETS: DemoAsset[] = [
     { id: 28, type: 'module', format: 'glb', src: asset('/assets/helmet.glb') },
     { id: 29, type: 'module', format: 'glb', src: asset('/assets/fox.glb') },
     { id: DEMO_AVATAR_ID, type: 'avatar', format: 'glb', src: asset('/assets/avatar.glb') },
+    // Selectable avatars (frontend picker). Sources: three.js example models —
+    // soldier (Mixamo rig; clips Idle/Run/Walk = the NORMATIVE name-equality
+    // contract) and RobotExpressive by Tomás Laulhé, CC0 (clips Idle/Walking/
+    // Running/Jump = the LEGACY substring heuristics + air mapping).
+    { id: 33, type: 'avatar', format: 'glb', src: asset('/assets/soldier.glb') },
+    { id: 34, type: 'avatar', format: 'glb', src: asset('/assets/robot.glb') },
     { id: 31, type: 'audio', format: 'wav', src: asset('/assets/ding.wav') },
     // Video screen source (e3). Local + same-origin → no CORS issue for the
     // VideoTexture. Not shipped (no binary in the repo): drop ANY .mp4 here to

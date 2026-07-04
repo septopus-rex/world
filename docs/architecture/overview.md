@@ -1,5 +1,9 @@
 # Septopus World 架构概述
 
+> **想要世界构成的全景?** 见 [protocol/overview 总览](../../protocol/cn/overview.md)
+> ([EN](../../protocol/en/overview.md))——世界←地块←附属物、时间/天气推导、为什么数据驱动。
+> 本文是**引擎实现**层的历史设计稿(下方警告),非全景入口。
+
 > [!WARNING]
 > **历史设计稿（2026-04 批次，未按此落地）** — 本文是 TypeScript 重构启动前的规划稿，多处与已实现的引擎不符，注记于 2026-07-03：
 > - **系统层表**（"系统层（Systems）"节）所列 `RenderSystem`/`InputSystem`/`EventSystem`/`NetworkSystem`/`SkySystem` 等类**不存在**。实际引擎注册 **31 个系统**（LiveSystem、CharacterController、PhysicsSystem、BlockSystem、EnvironmentSystem、VisualSyncSystem、EditSystem 等），见 `engine/src/core/World.ts` 的系统注册段。

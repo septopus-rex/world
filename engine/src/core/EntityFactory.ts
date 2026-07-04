@@ -112,7 +112,24 @@ export class EntityFactory {
      * (CharacterController positions/rotates it each frame). Eviction-safe: keeps
      * the placeholder if the load fails.
      */
-    private static loadAvatarModel(world: World, player: EntityId, resourceId: string, placeholder: any, bodyHeight: number): void {
+    /**
+     * Swap the player's avatar at runtime (the frontend picker seam). Reuses the
+     * exact load path: the CURRENT handle plays the "placeholder" role — removed
+     * only when the new model lands, kept on a failed load. The old model's
+     * ResourceManager refcount is released after a successful swap.
+     */
+    public static swapAvatar(world: World, resourceId: string): void {
+        const players = world.queryEntities("AvatarComponent", "InputStateComponent");
+        const player = players[0];
+        if (player === undefined) return;
+        const av = world.getComponent<AvatarComponent>(player, "AvatarComponent");
+        if (!av || av.resource === resourceId) return;
+        const releaseId = av.resource;      // refcount to drop once the swap lands
+        av.resource = resourceId;
+        EntityFactory.loadAvatarModel(world, player, resourceId, av.handle, 1.8, releaseId);
+    }
+
+    private static loadAvatarModel(world: World, player: EntityId, resourceId: string, placeholder: any, bodyHeight: number, releaseResource?: string): void {
         const rm = (world as any).resourceManager;
         if (!rm?.getModel) return;
         rm.getModel(resourceId).then((entry: any) => {
@@ -147,8 +164,10 @@ export class EntityFactory {
             }
 
             world.renderEngine.add(model);          // into the scene; posed each frame by the controller
-            world.renderEngine.removeHandle(placeholder);
+            world.renderEngine.removeHandle(placeholder);   // also stops its mixer
+            if (releaseResource != null) rm.release?.(releaseResource); // old avatar's instance refcount
             av.handle = model;
+            av.visible = true;
 
             // Wire skeletal animation via the render layer (keeps core Three.js-free).
             // Clips come from the entry (real AnimationClip instances) — clone
