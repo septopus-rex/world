@@ -68,6 +68,15 @@ export class MeshFactory {
                     this.getMaterial(material)
                 );
                 break;
+            case 'wedge':
+                // Slope/ramp collider visual (b4 stop shape 3). Geometry rises toward
+                // local −Z (north at yaw 0) — MUST stay in lockstep with
+                // MovementCollider.topYAt, which is the collision side of this plane.
+                object = new THREE.Mesh(
+                    this.getGeometry('wedge', w, h, d),
+                    this.getMaterial(material)
+                );
+                break;
             case 'tube':
                 // Catmull-Rom sweep through params.path — rails / pipes / coaster
                 // track. Path-dependent, so NOT cached (and NOT tagged shared, so
@@ -132,6 +141,9 @@ export class MeshFactory {
                     break;
                 case 'cylinder':
                     geo = new THREE.CylinderGeometry(w, h, d, 32);
+                    break;
+                case 'wedge':
+                    geo = buildWedgeGeometry(w, h, d);
                     break;
                 case 'box':
                 default:
@@ -341,4 +353,37 @@ export class MeshFactory {
     public static cacheStats(): { geometries: number; materials: number } {
         return { geometries: this._geoCache.size, materials: this._matCache.size };
     }
+}
+
+/**
+ * Wedge (right triangular prism) — the slope-stop ramp. Pivot at the bounding-
+ * box centre; the top face is the inclined plane from the FULL height at the
+ * local-north edge (z = −d/2) down to the floor at the local-south edge
+ * (z = +d/2); the back (north) face is vertical. The collision twin of this
+ * plane is MovementCollider.topYAt — change one, change both.
+ * Non-indexed so computeVertexNormals yields flat per-face shading.
+ */
+function buildWedgeGeometry(w: number, h: number, d: number): THREE.BufferGeometry {
+    const hx = w / 2, hy = h / 2, hz = d / 2;
+    // 6 corners: bottom rectangle A-D, top edge E,F above the north edge.
+    const A = [-hx, -hy, -hz], B = [hx, -hy, -hz], C = [hx, -hy, hz], D = [-hx, -hy, hz];
+    const E = [-hx, hy, -hz], F = [hx, hy, -hz];
+    const tris = [
+        A, C, D, A, B, C, // bottom (−Y)
+        A, E, F, A, F, B, // back, vertical north face (−Z)
+        E, D, C, E, C, F, // inclined top (+Y/+Z-ish)
+        A, D, E,          // west side (−X)
+        B, F, C,          // east side (+X)
+    ];
+    const pos = new Float32Array(tris.length * 3);
+    tris.forEach((v, i) => pos.set(v, i * 3));
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    // Cheap planar UVs (top-down) — stops are untextured, this just keeps any
+    // future textured material from hitting a missing-attribute path.
+    const uv = new Float32Array(tris.length * 2);
+    tris.forEach((v, i) => { uv[i * 2] = (v[0] + hx) / w; uv[i * 2 + 1] = (v[2] + hz) / d; });
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.computeVertexNormals();
+    return geo;
 }

@@ -92,7 +92,12 @@ export interface PlayerBodyComponent {
 // 4. Static Collision Boundaries (e.g. Walls, Floors)
 // -----------------------------------------------------------------------------
 export interface SolidComponent {
-    shape: "box" | "sphere" | "capsule";
+    /** box = AABB (rotation ignored) · cylinder = vertical round pillar (radius =
+     *  size[0]/2, rotation-invariant) · slope = wedge ramp rising toward local
+     *  north, honoring the entity's vertical-axis rotation (TransformComponent
+     *  rotation[1] — engine yaw). Resolved by MovementCollider; PhysicsSystem
+     *  (non-player bodies) still approximates every shape as its AABB. */
+    shape: "box" | "cylinder" | "slope";
     size: [number, number, number];
     offset: [number, number, number];
 }

@@ -26,12 +26,25 @@ import { Coords } from '../../core/utils/Coords';
  * CANONICAL SLOT MAP (cleaned up from the old box-derived layout):
  *   0 = size [x,y,z]   1 = offset [ox,oy,oz]   2 = rotation [rx,ry,rz]
  *   3 = mode (1 BODY · 2 FOOT · 3 HEAD)   4 = animate (optional)
+ *   5 = shape (1 BOX · 2 BALL cylinder · 3 SLOPE wedge; default BOX)
  *
  * Modes are carried for forward-compat; collision currently treats every stop as
  * a full AABB (BODY: blocks horizontally, standable on top, blocks the head).
  * FOOT/HEAD-only differential collision is a follow-up on CharacterController.
+ *
+ * SHAPES (restores the old engine's slot-3 box|ball selector, relocated to slot 5
+ * because the TS port had already claimed slot 3 for mode):
+ *   BALL  — vertical cylinder: circular XY footprint (radius = size[0]/2, height =
+ *           size[2]), flat standable top. The player slides around it instead of
+ *           snagging on AABB corners.
+ *   SLOPE — wedge ramp: at rotation 0 the top face rises from the south edge (y =
+ *           -size[1]/2, ground) to the north edge (full size[2]); walkable via the
+ *           regular step-over channel. Collision honors ONLY the vertical-axis
+ *           rotation (raw ry — engine yaw per coordinate.md §3.1); rx/rz would
+ *           tilt the visual without tilting the collider, so keep them 0.
  */
 export const STOP_MODE = { BODY: 1, FOOT: 2, HEAD: 3 } as const;
+export const STOP_SHAPE = { BOX: 1, BALL: 2, SLOPE: 3 } as const;
 
 export const StopMeta: ComponentMeta = {
     name: "stop",
@@ -53,7 +66,8 @@ const attribute: AdjunctAttribute = {
             rx: data[2]?.[0] ?? 0, ry: data[2]?.[1] ?? 0, rz: data[2]?.[2] ?? 0,
             stop: true,                       // → BlockSystem attaches a SolidComponent
             stopMode: data[3] ?? STOP_MODE.BODY,
-            animate: data[4] ?? null
+            animate: data[4] ?? null,
+            stopShape: data[5] ?? STOP_SHAPE.BOX
         };
     },
     serialize: (std: STDObject) => {
@@ -62,25 +76,36 @@ const attribute: AdjunctAttribute = {
             [std.ox, std.oy, std.oz],
             [std.rx, std.ry, std.rz],
             std.stopMode ?? STOP_MODE.BODY,
-            std.animate
+            std.animate,
+            std.stopShape ?? STOP_SHAPE.BOX
         ];
     }
 };
 
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[]): RenderObject[] => {
-        return stds.map((row, index) => ({
-            type: "box",
-            index,
-            params: {
-                size: Coords.getBoxDimensions([row.x, row.y, row.z]),
-                position: [row.ox, row.oy, row.oz],
-                rotation: [row.rx, row.ry, row.rz],
-            },
-            // Translucent so the collider reads as a "force field", not a solid box.
-            material: { color: STOP_COLOR, opacity: STOP_OPACITY },
-            stop: { opacity: STOP_OPACITY, color: STOP_COLOR }
-        }));
+        return stds.map((row, index) => {
+            const shape = row.stopShape ?? STOP_SHAPE.BOX;
+            // MeshFactory conventions: box/wedge take engine dims [w,h,d];
+            // cylinder takes [radiusTop, radiusBottom, height].
+            const type = shape === STOP_SHAPE.BALL ? "cylinder"
+                : shape === STOP_SHAPE.SLOPE ? "wedge" : "box";
+            const size: [number, number, number] = shape === STOP_SHAPE.BALL
+                ? [row.x / 2, row.x / 2, row.z]
+                : Coords.getBoxDimensions([row.x, row.y, row.z]) as [number, number, number];
+            return {
+                type,
+                index,
+                params: {
+                    size,
+                    position: [row.ox, row.oy, row.oz],
+                    rotation: [row.rx, row.ry, row.rz],
+                },
+                // Translucent so the collider reads as a "force field", not a solid box.
+                material: { color: STOP_COLOR, opacity: STOP_OPACITY },
+                stop: { opacity: STOP_OPACITY, color: STOP_COLOR }
+            };
+        });
     }
 };
 
@@ -116,6 +141,15 @@ const menu = {
                         { label: "Body (full block)", value: STOP_MODE.BODY },
                         { label: "Foot (standable)", value: STOP_MODE.FOOT },
                         { label: "Head (ceiling)", value: STOP_MODE.HEAD },
+                    ]
+                },
+                {
+                    key: "stopShape", label: "Shape", type: "select" as const,
+                    value: std.stopShape ?? STOP_SHAPE.BOX,
+                    options: [
+                        { label: "Box", value: STOP_SHAPE.BOX },
+                        { label: "Ball (cylinder)", value: STOP_SHAPE.BALL },
+                        { label: "Slope (ramp)", value: STOP_SHAPE.SLOPE },
                     ]
                 }
             ]

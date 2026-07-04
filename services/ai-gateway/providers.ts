@@ -85,12 +85,45 @@ export function qwenProvider(apiKey: string, model = process.env.QWEN_MODEL || '
     };
 }
 
+// ── gemini (Generative Language API, OpenAI-compatible) ─────────────────────
+export function geminiProvider(apiKey: string, model = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite'): LlmProvider {
+    return {
+        name: `gemini(${model})`,
+        async complete(messages) {
+            const res = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model,
+                    messages,
+                    temperature: 0.4,
+                    response_format: { type: 'json_object' },
+                    max_tokens: 4000,                      // 2.5 lite spends thinking tokens too
+                }),
+            });
+            if (!res.ok) {
+                const body = await res.text();
+                throw new Error(`gemini HTTP ${res.status}: ${body.slice(0, 300)}`);
+            }
+            const data: any = await res.json();
+            const text = data?.choices?.[0]?.message?.content;
+            if (typeof text !== 'string') throw new Error('gemini: empty completion');
+            return text;
+        },
+    };
+}
+
 export function makeProvider(): LlmProvider {
     const kind = (process.env.PROVIDER || 'mock').toLowerCase();
     if (kind === 'qwen') {
         const key = process.env.DASHSCOPE_API_KEY;
         if (!key) throw new Error('PROVIDER=qwen requires DASHSCOPE_API_KEY');
         return qwenProvider(key);
+    }
+    if (kind === 'gemini') {
+        const key = process.env.GEMINI_API_KEY;
+        if (!key) throw new Error('PROVIDER=gemini requires GEMINI_API_KEY');
+        return geminiProvider(key);
     }
     return mockProvider();
 }

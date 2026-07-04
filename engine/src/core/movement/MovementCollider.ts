@@ -1,22 +1,36 @@
 import { World, EntityId } from '../World';
 import { TransformComponent, RigidBodyComponent, SolidComponent } from '../components/PlayerComponents';
-import { Vector3, Box3 } from '../utils/Math';
 import { PHYSICS_CONSTANTS } from '../Constants';
 
-/** Pre-computed solid AABB for fast, allocation-free collision.
- *  (ox/oy/oz = the SolidComponent offset, kept for in-place position refresh.) */
+/** SolidComponent.shape as branch-cheap int tags. */
+const SHAPE_BOX = 0, SHAPE_CYL = 1, SHAPE_SLOPE = 2;
+
+/** Pre-computed solid entry for fast, allocation-free collision.
+ *  (ox/oy/oz = the SolidComponent offset, kept for in-place position refresh.)
+ *  shape: BOX = AABB · CYL = vertical cylinder, radius = hx (rotation-invariant)
+ *  · SLOPE = wedge ramp rising toward local north, yaw = TransformComponent
+ *  rotation[1] (engine Y = up, per coordinate.md §3.1) cached as cos/sin. */
 interface SolidEntry {
     px: number; py: number; pz: number;
     ox: number; oy: number; oz: number;
     hx: number; hy: number; hz: number;
+    shape: number;
+    cosY: number; sinY: number;
 }
 
 /**
- * MovementCollider — the substepped AABB integration + collision core for the
+ * MovementCollider — the substepped integration + collision core for the
  * controlled player, extracted from CharacterController. Owns the solid cache,
  * step-over, ground probing and the moving-platform carry, operating on the
  * body/transform the controller passes in (it has no ECS ownership of its own).
  * Collision always skips the controlled entity itself.
+ *
+ * SHAPES — three solid kinds (see SolidComponent): box = AABB (rotation
+ * ignored, the historical default), cylinder = vertical round pillar the player
+ * slides around, slope = wedge ramp whose top face is a height FUNCTION
+ * (topYAt) — walking uphill is just the step-over branch firing every sub-step.
+ * All shape branching lives in footprintOverlap/topYAt + the per-shape block
+ * push in resolveHorizontal; everything else consumes those primitives.
  *
  * SUBSTEPPED — each integration sub-step moves at most STEP_CLAMP metres, so a
  * fast fall or a large frame dt can never tunnel through the thin ground. Low
@@ -24,12 +38,6 @@ interface SolidEntry {
  */
 export class MovementCollider {
     private controlledEntity: EntityId | null = null;
-
-    // scratch
-    private _playerBox = new Box3();
-    private _wallBox = new Box3();
-    private _pPos = new Vector3();
-    private _wPos = new Vector3();
 
     // solid cache (rebuilt when solid count changes)
     private _solids: SolidEntry[] = [];
@@ -62,9 +70,9 @@ export class MovementCollider {
     public ensureSolidCache(world: World): void {
         const solids = world.queryEntities('SolidComponent');
         if (solids.length === this._lastSolidCount) {
-            // Same population: refresh POSITIONS in place. Adjuncts move at
-            // runtime (trigger moveZ doors/lifts) and a stale cache would keep
-            // colliding at the old pose — the bug that made "open" doors still
+            // Same population: refresh POSITIONS (and slope yaw) in place. Adjuncts
+            // move at runtime (trigger moveZ doors/lifts) and a stale cache would
+            // keep colliding at the old pose — the bug that made "open" doors still
             // block until block streaming happened to rebuild the cache.
             for (let i = 0; i < this._solidIds.length; i++) {
                 const t = world.getComponent<TransformComponent>(this._solidIds[i], 'TransformComponent');
@@ -73,6 +81,10 @@ export class MovementCollider {
                 entry.px = t.position[0] + entry.ox;
                 entry.py = t.position[1] + entry.oy;
                 entry.pz = t.position[2] + entry.oz;
+                if (entry.shape === SHAPE_SLOPE) {
+                    const yaw = t.rotation[1] || 0;
+                    entry.cosY = Math.cos(yaw); entry.sinY = Math.sin(yaw);
+                }
             }
             return;
         }
@@ -82,12 +94,53 @@ export class MovementCollider {
             const s = world.getComponent<SolidComponent>(sid, 'SolidComponent')!;
             const t = world.getComponent<TransformComponent>(sid, 'TransformComponent');
             const p = t?.position ?? [0, 0, 0];
+            const shape = s.shape === 'cylinder' ? SHAPE_CYL : s.shape === 'slope' ? SHAPE_SLOPE : SHAPE_BOX;
+            const yaw = shape === SHAPE_SLOPE ? (t?.rotation[1] || 0) : 0;
             return {
                 px: p[0] + s.offset[0], py: p[1] + s.offset[1], pz: p[2] + s.offset[2],
                 ox: s.offset[0], oy: s.offset[1], oz: s.offset[2],
                 hx: s.size[0] / 2, hy: s.size[1] / 2, hz: s.size[2] / 2,
+                shape, cosY: Math.cos(yaw), sinY: Math.sin(yaw),
             };
         });
+    }
+
+    // ── shape primitives (the ONLY places that branch on SolidEntry.shape) ──
+
+    /** Horizontal footprint overlap between the player's rect (center cx/cz,
+     *  half-extents phx/phz) and a solid. Slope uses the player's bounding
+     *  circle against the yaw-rotated rect in slope-local frame. */
+    private footprintOverlap(w: SolidEntry, cx: number, cz: number, phx: number, phz: number): boolean {
+        if (w.shape === SHAPE_BOX) {
+            return Math.abs(cx - w.px) < w.hx + phx && Math.abs(cz - w.pz) < w.hz + phz;
+        }
+        if (w.shape === SHAPE_CYL) {
+            // circle vs rect: clamp the cylinder centre to the player rect
+            const qx = Math.max(cx - phx, Math.min(w.px, cx + phx));
+            const qz = Math.max(cz - phz, Math.min(w.pz, cz + phz));
+            const dx = w.px - qx, dz = w.pz - qz;
+            return dx * dx + dz * dz < w.hx * w.hx;
+        }
+        // slope: player bounding circle vs local rect (world→local = R_y(−yaw))
+        const pr = Math.max(phx, phz);
+        const dx = cx - w.px, dz = cz - w.pz;
+        const lx = dx * w.cosY - dz * w.sinY;
+        const lz = dx * w.sinY + dz * w.cosY;
+        const ex = lx - Math.max(-w.hx, Math.min(lx, w.hx));
+        const ez = lz - Math.max(-w.hz, Math.min(lz, w.hz));
+        return ex * ex + ez * ez < pr * pr;
+    }
+
+    /** Top-face height under (x,z): constant for box/cylinder; for slope, the
+     *  ramp plane — +hy at the local-north edge (lz=−hz) down to −hy at the
+     *  local-south edge (lz=+hz), clamped at the edges. Must stay in lockstep
+     *  with the wedge geometry in MeshFactory. */
+    private topYAt(w: SolidEntry, x: number, z: number): number {
+        if (w.shape !== SHAPE_SLOPE) return w.py + w.hy;
+        const dx = x - w.px, dz = z - w.pz;
+        let lz = dx * w.sinY + dz * w.cosY;
+        if (lz < -w.hz) lz = -w.hz; else if (lz > w.hz) lz = w.hz;
+        return w.py - w.hy * (lz / w.hz);
     }
 
     /**
@@ -139,10 +192,9 @@ export class MovementCollider {
             for (let si = 0; si < this._solids.length; si++) {
                 if (this._solidIds[si] === this.controlledEntity) continue;
                 const w = this._solids[si];
-                if (Math.abs(px - w.px) < w.hx + hx &&
-                    Math.abs(py - w.py) < w.hy + hy &&
-                    Math.abs(pz - w.pz) < w.hz + hz) {
-                    const top = w.py + w.hy;
+                if (!this.footprintOverlap(w, px, pz, hx, hz)) continue;
+                const top = this.topYAt(w, px, pz);
+                if (py - hy < top && py + hy > w.py - w.hy) {
                     if (topY === null || top > topY) topY = top;
                 }
             }
@@ -168,8 +220,8 @@ export class MovementCollider {
         for (let si = 0; si < this._solids.length; si++) {
             if (this._solidIds[si] === this.controlledEntity) continue;
             const w = this._solids[si];
-            if (Math.abs(px - w.px) <= w.hx + hx && Math.abs(pz - w.pz) <= w.hz + hz) {
-                if (w.py + w.hy <= feet + 0.2) return true; // a surface at/below the feet
+            if (this.footprintOverlap(w, px, pz, hx, hz)) {
+                if (this.topYAt(w, px, pz) <= feet + 0.2) return true; // a surface at/below the feet
             }
         }
         return false;
@@ -203,8 +255,12 @@ export class MovementCollider {
     private resolveY(body: RigidBodyComponent, trans: TransformComponent, sy: number): void {
         if (sy === 0) return;
         const nextY = trans.position[1] + sy;
-        this._pPos.set(trans.position[0] + body.offset[0], nextY + body.offset[1], trans.position[2] + body.offset[2]);
-        this._playerBox.setFromCenterAndSize(this._pPos, { x: body.size[0], y: body.size[1], z: body.size[2] });
+        const cx = trans.position[0] + body.offset[0];
+        const cz = trans.position[2] + body.offset[2];
+        const phx = body.size[0] / 2, phz = body.size[2] / 2;
+        const halfH = body.size[1] / 2;
+        const pBot = nextY + body.offset[1] - halfH;
+        const pTop = nextY + body.offset[1] + halfH;
 
         // Feet/head BEFORE this sub-step's vertical move. The contact must be a real
         // TOP/BOTTOM face hit, not a side clip: resolveHorizontal pushes the player
@@ -214,7 +270,6 @@ export class MovementCollider {
         // "landed on the wall top" and snapped the player up — the jittery climb up a
         // 2 m wall. Require the feet to have been at/above the top (genuinely coming
         // down onto it); a head/bottom check guards the ceiling case symmetrically.
-        const halfH = body.size[1] / 2;
         const prevFeetY = trans.position[1] + body.offset[1] - halfH;
         const prevHeadY = trans.position[1] + body.offset[1] + halfH;
         const tol = PHYSICS_CONSTANTS.MARGIN;
@@ -222,22 +277,22 @@ export class MovementCollider {
         for (let si = 0; si < this._solids.length; si++) {
             if (this._solidIds[si] === this.controlledEntity) continue;
             const w = this._solids[si];
-            this._wPos.set(w.px, w.py, w.pz);
-            this._wallBox.setFromCenterAndSize(this._wPos, { x: w.hx * 2, y: w.hy * 2, z: w.hz * 2 });
-            if (this._playerBox.intersectsBox(this._wallBox)) {
-                if (sy < 0) { // landing — only if the feet came down ONTO the top
-                    if (prevFeetY < (w.py + w.hy) - tol) continue; // side clip → ignore here
-                    trans.position[1] = (w.py + w.hy) + body.size[1] / 2 - body.offset[1];
-                    body.velocity[1] = 0;
-                    body.isGrounded = true;
-                    this.setSupport(this._solidIds[si]);
-                } else { // ceiling — only if the head came up UNDER the bottom
-                    if (prevHeadY > (w.py - w.hy) + tol) continue; // side clip → ignore here
-                    trans.position[1] = (w.py - w.hy) - body.size[1] / 2 - body.offset[1];
-                    body.velocity[1] = 0;
-                }
-                return;
+            if (!this.footprintOverlap(w, cx, cz, phx, phz)) continue;
+            const top = this.topYAt(w, cx, cz);      // slope: surface under the player
+            const bottom = w.py - w.hy;              // wedge underside is flat
+            if (pBot >= top || pTop <= bottom) continue;
+            if (sy < 0) { // landing — only if the feet came down ONTO the top
+                if (prevFeetY < top - tol) continue; // side clip → ignore here
+                trans.position[1] = top + halfH - body.offset[1];
+                body.velocity[1] = 0;
+                body.isGrounded = true;
+                this.setSupport(this._solidIds[si]);
+            } else { // ceiling — only if the head came up UNDER the bottom
+                if (prevHeadY > bottom + tol) continue; // side clip → ignore here
+                trans.position[1] = bottom - halfH - body.offset[1];
+                body.velocity[1] = 0;
             }
+            return;
         }
         trans.position[1] = nextY;
     }
@@ -250,19 +305,22 @@ export class MovementCollider {
         const nextZ = trans.position[2] + sz;
         const margin = PHYSICS_CONSTANTS.MARGIN, eps = PHYSICS_CONSTANTS.EPSILON;
 
-        this._pPos.set(nextX + body.offset[0], trans.position[1] + body.offset[1], nextZ + body.offset[2]);
-        this._playerBox.setFromCenterAndSize(this._pPos, {
-            x: body.size[0] - margin * 2, y: body.size[1] - eps * 2, z: body.size[2] - margin * 2,
-        });
+        // Margin-shrunk player box at the CANDIDATE position (same shrink as before).
+        const cx = nextX + body.offset[0];
+        const cy = trans.position[1] + body.offset[1];
+        const cz = nextZ + body.offset[2];
+        const phx = body.size[0] / 2 - margin;
+        const phy = body.size[1] / 2 - eps;
+        const phz = body.size[2] / 2 - margin;
 
         const feetY = trans.position[1] + body.offset[1] - body.size[1] / 2;
 
         for (let si = 0; si < this._solids.length; si++) {
             if (this._solidIds[si] === this.controlledEntity) continue;
             const w = this._solids[si];
-            this._wPos.set(w.px, w.py, w.pz);
-            this._wallBox.setFromCenterAndSize(this._wPos, { x: w.hx * 2, y: w.hy * 2, z: w.hz * 2 });
-            if (!this._playerBox.intersectsBox(this._wallBox)) continue;
+            if (!this.footprintOverlap(w, cx, cz, phx, phz)) continue;
+            const top = this.topYAt(w, cx, cz);      // slope: surface at the candidate spot
+            if (cy - phy >= top || cy + phy <= w.py - w.hy) continue; // vertically clear
 
             // Step-over: climb a LOW CURB at the feet instead of blocking. Three
             // guards keep this from becoming a wall-climb:
@@ -275,20 +333,78 @@ export class MovementCollider {
             //    your level, NOT a tall wall you happen to be standing beside the top
             //    of (e.g. on an adjacent raised platform): that wall drops far below
             //    your feet, so dropToBottom rejects it and you can't walk onto it.
-            const stepUp = (w.py + w.hy) - feetY;
+            // On a SLOPE `top` tracks the ramp plane, so walking uphill is this same
+            // branch firing every sub-step with a tiny stepUp (≤ ramp grade × 0.08 m)
+            // — a ramp is a curb that never ends.
+            const stepUp = top - feetY;
             const dropToBottom = feetY - (w.py - w.hy);
             if (body.isGrounded && stepUp > 0.001 && stepUp <= stepHeight && dropToBottom <= stepHeight) {
-                trans.position[1] = (w.py + w.hy) + body.size[1] / 2 - body.offset[1];
+                trans.position[1] = top + body.size[1] / 2 - body.offset[1];
                 if (body.velocity[1] < 0) body.velocity[1] = 0;
                 body.isGrounded = true;
                 this.setSupport(this._solidIds[si]);
                 continue; // allow the horizontal move
             }
 
-            // Block: snap to the NEAREST face on this axis (minimum penetration).
-            // Using velocity direction instead would teleport the player to the far
-            // face when they clip inside the solid from a corner or thin wall.
-            if (axis === 0) {
+            // Block: push out to the nearest surface (minimum penetration). Using
+            // velocity direction instead would teleport the player to the far face
+            // when they clip inside the solid from a corner or thin wall.
+            if (w.shape === SHAPE_CYL) {
+                // Snap along the moving axis to the circle tangent point (player as
+                // a bounding circle) — sliding around the pillar falls out of the
+                // other axis running its own pass.
+                const pr = Math.max(phx, phz);
+                const rSum = w.hx + pr;
+                const cross = axis === 0 ? (cz - w.pz) : (cx - w.px);
+                const gap2 = rSum * rSum - cross * cross;
+                if (gap2 <= 0) continue; // grazing the silhouette edge — no real block
+                const gap = Math.sqrt(gap2);
+                if (axis === 0) {
+                    const side = (trans.position[0] + body.offset[0]) >= w.px ? 1 : -1;
+                    trans.position[0] = w.px + side * gap - body.offset[0];
+                    body.velocity[0] = 0;
+                } else {
+                    const side = (trans.position[2] + body.offset[2]) >= w.pz ? 1 : -1;
+                    trans.position[2] = w.pz + side * gap - body.offset[2];
+                    body.velocity[2] = 0;
+                }
+            } else if (w.shape === SHAPE_SLOPE) {
+                // Walkable-grade contact (surface within step reach) on a frame the
+                // grounded flag happens to be off — the standing-still grounded
+                // flicker (vy=0 skips the landing probe), or gliding onto the ramp
+                // mid-air. A ramp is a continuous step, so at the ramp foot that
+                // flicker frame used to fall through to the ejection below and
+                // bounce the player off the lip forever. Let the move through;
+                // resolveY owns the surface contact.
+                if (stepUp <= stepHeight) continue;
+                // Too steep here (a side/back-face approach): minimum-translation
+                // push of the player's bounding circle out of the local rect,
+                // rotated back to world. Applied to both axes (the rect is
+                // yaw-rotated, so the push direction generally isn't axis-aligned).
+                const pr = Math.max(phx, phz);
+                const dx0 = cx - w.px, dz0 = cz - w.pz;
+                const lx = dx0 * w.cosY - dz0 * w.sinY;
+                const lz = dx0 * w.sinY + dz0 * w.cosY;
+                const qx = Math.max(-w.hx, Math.min(lx, w.hx));
+                const qz = Math.max(-w.hz, Math.min(lz, w.hz));
+                let pushLx = 0, pushLz = 0;
+                if (lx === qx && lz === qz) { // centre inside: exit the nearest local face
+                    const exitX = (w.hx - Math.abs(lx)) + pr;
+                    const exitZ = (w.hz - Math.abs(lz)) + pr;
+                    if (exitX < exitZ) pushLx = lx >= 0 ? exitX : -exitX;
+                    else pushLz = lz >= 0 ? exitZ : -exitZ;
+                } else {
+                    const ex = lx - qx, ez = lz - qz;
+                    const d = Math.hypot(ex, ez);
+                    const need = pr - d;
+                    if (need <= 0 || d < 1e-6) continue; // grazing — no real block
+                    pushLx = (ex / d) * need; pushLz = (ez / d) * need;
+                }
+                // local → world: R_y(yaw)
+                trans.position[0] = nextX + (pushLx * w.cosY + pushLz * w.sinY);
+                trans.position[2] = nextZ + (-pushLx * w.sinY + pushLz * w.cosY);
+                body.velocity[axis] = 0;
+            } else if (axis === 0) {
                 const toPos = (w.px + w.hx) + body.size[0] / 2 - trans.position[0]; // → east face
                 const toNeg = (w.px - w.hx) - body.size[0] / 2 - trans.position[0]; // → west face
                 trans.position[0] += Math.abs(toPos) <= Math.abs(toNeg) ? toPos : toNeg;

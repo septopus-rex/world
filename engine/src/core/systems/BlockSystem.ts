@@ -370,8 +370,12 @@ export class BlockSystem implements ISystem {
 
         const isSolid = data.type === 'box' || data.typeId === AdjunctType.Box || data.stop;
         if (isSolid) {
+            // Stop rows may declare a non-box collider (slot 5: 2 = ball/cylinder,
+            // 3 = slope/wedge — see basic_stop.ts). Everything else stays AABB.
+            const shape = data.stopShape === 2 ? "cylinder"
+                : data.stopShape === 3 ? "slope" : "box";
             world.addComponent<SolidComponent>(adjId, "SolidComponent", {
-                shape: "box",
+                shape,
                 size: Coords.getBoxDimensions([data.x, data.y, data.z]),
                 offset: [0, 0, 0]
             });

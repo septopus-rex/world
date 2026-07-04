@@ -50,7 +50,8 @@ registerMotifTemplate({
             boxes.push({
                 size: [w, d, h],
                 pos: [0, 0, z + h / 2],
-                rot: [0, 0, range(rng, -0.4, 0.4)],
+                // Yaw twist per segment — index 1 (engine Y = up); index 2 is roll.
+                rot: [0, range(rng, -0.4, 0.4), 0],
                 resource: pick(rng, COLORS),
             });
             z += h;
@@ -73,7 +74,8 @@ registerMotifTemplate({
             boxes.push({
                 size: [w, d, h],
                 pos: [range(rng, -spread, spread), range(rng, -spread, spread), h / 2],
-                rot: [0, 0, range(rng, 0, Math.PI)],
+                // Random yaw — index 1 (engine Y = up); index 2 is roll.
+                rot: [0, range(rng, 0, Math.PI), 0],
                 resource: pick(rng, COLORS),
             });
         }
@@ -152,7 +154,12 @@ registerMotifTemplate({
             boxes.push({
                 size: [width, len + width * 0.5, 0.1],   // slight overlap keeps corners closed
                 pos: [(x0 + x1) / 2, (y0 + y1) / 2, 0.05],
-                rot: [0, 0, Math.atan2(dx, dy)],
+                // Adjunct rotation is ENGINE-frame Euler (coordinate.md §3.1): the
+                // vertical-axis yaw is index 1 (engine Y = up), and engine yaw ψ maps
+                // local north to (E,N) = (-sinψ, cosψ) ⇒ ψ = atan2(-dx, dy). The
+                // original wrote atan2 into index 2 — engine ROLL — which stood every
+                // non-north-south road up on its edge as a wall.
+                rot: [0, Math.atan2(-dx, dy), 0],
                 resource: 1,                              // dark: reads as pavement
             });
         }
