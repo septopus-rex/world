@@ -23,6 +23,30 @@ While Blocks define the stable ground and absolute coordinates of the world, **A
 - All Adjuncts mathematically position themselves relative to their parent Block's coordinate system.
 - The Block acts as the spatial anchor. If a Block is moved, all Adjuncts anchored to it move with it.
 
-## 3. Storage and Scaling
+## 3. Block raw format (Normative)
+
+A block's content is a **5-tuple array**:
+
+```
+[ elevation, status, adjuncts, animations, game ]
+```
+
+| Slot | Field | Type/default | Notes |
+|---|---|---|---|
+| 0 | `elevation` | number, default `0` | base altitude (m). Ground and every adjunct lift together — join neighbouring blocks with b4 slopes to shape valleys/plateaus |
+| 1 | `status` | number, default `1` | status bits (reserved; `1` = normal) |
+| 2 | `adjuncts` | `[[typeId, [row…]], …]` | adjunct groups: raw rows grouped by type id. **Per-type slot specs: [adjunct-types.md](adjunct-types.md)** |
+| 3 | `animations` | array, default `[]` | block-level animations (reserved) |
+| 4 | `game` | number, default `0` | **playable flag**: `≥1` = Game mode may be entered in this block (zone gate; the rich game declaration lives on a b8 game trigger — this bit exists for cheap map enumeration) |
+
+- The empty block is `[0, 1, [], [], 0]`; implementations must tolerate missing
+  slots and take the defaults.
+- **Serialization invariant**: runtime-derived entities (SPP/motif expansions,
+  spawned entities) are **never** written back into raw — only source rows
+  persist. Row budgets (reference: 64/block) count authored rows only.
+- A local draft (unpublished edit) overlays the canonical data at the same
+  coordinate; published content may enter content-addressed storage (CID).
+
+## 4. Storage and Scaling
 
 Each Block can be serialized into a specific data format (such as SPP string) as needed. Because of its atomic nature, worlds can be dynamically loaded or unloaded (sharded) on a per-Block basis by the engine, allowing for infinitely scaling environments without overwhelming client memory.

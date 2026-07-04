@@ -26,7 +26,7 @@ Per-node execution flow:
 One `b8` row in block raw is a **positional array**:
 
 ```
-[ size, offset, rotation, shape, gameOnly, events ]
+[ size, offset, rotation, shape, gameOnly, events, anchor? ]
 ```
 
 | Slot | Field | Type | Description |
@@ -37,6 +37,7 @@ One `b8` row in block raw is a **positional array**:
 | 3 | `shape` | `1` \| `2` | `1` = box, `2` = sphere. Default `1`. |
 | 4 | `gameOnly` | `0` \| `1` | `1` = evaluated only in Game mode. **Defaults to `1`** — always-on contraptions must write `0` explicitly. |
 | 5 | `events` | `TriggerLogicNode[]` | Logic node list, below. |
+| 6 | `anchor` | `{ name, when? }` (optional) | **Teleport anchor**: this row is a legal destination of the `player.teleport` action (landing spot = this row's `offset`). `when` is the **destination-side** JSONLogic permission (same context as §conditions). A block without an anchor cannot be teleported into — see the [teleport/portal spec](../../docs/plan/specs/teleport-portal.md). |
 
 **Coordinates**: author `size`/`offset` in SPP order; the engine converts to its internal axes on load (`Coords.getBoxDimensions` etc.).
 
@@ -123,6 +124,9 @@ interface TriggerAction {
 | `flag` | flag key | (empty) | `[value]`, default `true` | Write `world.globalFlags[target]`, readable by other triggers' conditions. |
 | `bag` | itemId (`tpl_{template}` / `itm_{template}_{seed}`) | `give` / `take` | `[count]` | Credit/debit the player's bag. **Game mode only** (warned & skipped elsewhere). |
 | `player` | (unused) | `damage` / `heal` | `[amount]` | Hurt/heal the player (HealthSystem; hp ≤ 0 dies and respawns at the spawn point). **Game mode only.** |
+| | | `setSpawn` | `[]` | Move the respawn point to the firing volume (parkour checkpoints; any mode). |
+| | | `enterGame` / `exitGame` | `[{ exitPolicy? }]` | Data-driven Game-mode entry/exit (**zone-gated**: only succeeds inside a block with `block.game≥1`); `exitPolicy` = `ephemeral` (walk off the block → teardown, default) / `confirm` (leave dialog) / `persistent` (save & resume, planned). |
+| | | `teleport` | `[[nx, ny]]`, `target` = **anchor name** | Anchor-gated teleport (any mode): the block hint `[nx,ny]` is routing only — **legality comes from a matching `anchor` in the destination block** (no anchor → refused; anchor `when` fails → refused). Outcome arrives as `teleport.done` / `teleport.denied` events. See the [teleport/portal spec](../../docs/plan/specs/teleport-portal.md). |
 | `sound` | audio resource id (or a direct URL/path) | `play` | `[volume]` | 3D positional one-shot anchored at the firing volume (flat 2D without a position). Resolved via `ResourceManager.getAudioUrl` (CID/path); buffers deduped by URL. |
 | `system` | (empty) | `log` | `[...any]` | Console log (debugging). |
 | `delay` | (unused) | (empty) | `[seconds]`, plus the nested `actions` field | Deferred scheduling: run the nested `actions` `params[0]` seconds later (**simulation time**, `world.scheduler`; `mode` is re-read **at fire time**, so Game-only actions can't be smuggled past a mode exit). See the [F1 scheduler & spawn spec](../../docs/plan/specs/scheduler-and-spawn.md). |

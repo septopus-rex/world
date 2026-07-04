@@ -19,6 +19,18 @@ Septopus World is built upon the **String Particle Protocol (SPP)**, a semantic 
 
 The core specification is maintained independently at [@ff13dfly/spp-protocol](https://github.com/ff13dfly/spp-protocol) and is formally licensed for use within the Septopus open-source project.
 
+## Documentation
+
+Three tiers — pick the right one:
+
+| Tier | Where | What it answers |
+|---|---|---|
+| **Protocol (normative, bilingual cn/en)** | [`protocol/`](protocol/README.md) | The cross-engine, pure-data 3D world contract: block raw, all 18 adjunct slot maps, trigger/action vocabulary, determinism pins & conformance |
+| **Reference implementation** | [`docs/`](docs/README.md) | How this TypeScript engine implements it (architecture, systems, guides) |
+| **Process (non-normative)** | [`docs/plan/`](docs/plan/) | Roadmap + implementation specs |
+
+Release history: [CHANGELOG.md](CHANGELOG.md) · Releasing & deployment: [deploy/RELEASE.md](deploy/RELEASE.md)
+
 ## Roadmap
 
 ### Step1 ( 6 month ): Devnet version Septopus World

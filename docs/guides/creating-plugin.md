@@ -1,5 +1,10 @@
 # 如何编写系统级插件 (Creating a Plugin)
 
+> ⚠️ **早期设计稿注记(2026-07-04)**:本文写于引擎早期,叙述可能与现行实现有出入。
+> 权威参考:`engine/src/plugins/adjunct/`(18 个内置定义即活样例)与
+> `core/services/AdjunctRegistry.ts`;槽位数据规范见
+> [protocol/cn/adjunct-types.md](../../protocol/cn/adjunct-types.md)。以代码为准。
+
 有别于附属物 (Adjunct) 那样实体化挂接在地形上的积木块，系统级插件 (Plugin) 是用来扩展 Septopus 根框架抽象能力的组件。常见系统插件包括：二维码解析器、外部网络通讯器或定制的 UI 渲染框架。
 
 ## 1. 插件结构

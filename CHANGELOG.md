@@ -7,6 +7,14 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
 
 ## [Unreleased]
 
+### 文档
+- **协议层补齐至发布形态(cn/en 双语)**:新增 `adjunct-types.md`(18 型逐槽位规范)
+  与 `determinism.md`(PRNG 基准、8 个确定性钉点、一致性验收清单);trigger 补全
+  动作词汇(setSpawn/enterGame/teleport + 传送锚点槽);block 补 raw 五元组;
+  world 补坐标与旋转契约;protocol README 版本化(v0.1)+ 三层文档模型。
+- docs 树清理:旧引擎时代文档(旧 changelog、VBW 入门、早期构思稿)归档
+  `docs/legacy/`;`getting-started` 重写对准现行 Engine API;docs/根 README 三层导航。
+
 ## [0.1.0] - 2026-07-04
 
 首个公开版本:独立 3D 虚拟世界引擎(TypeScript ECS)+ 无链 PWA 桌面客户端。

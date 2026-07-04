@@ -25,7 +25,7 @@
 block raw 中一行 `b8` 数据是**位置数组**：
 
 ```
-[ size, offset, rotation, shape, gameOnly, events ]
+[ size, offset, rotation, shape, gameOnly, events, anchor? ]
 ```
 
 | 槽位 | 字段 | 类型 | 说明 |
@@ -36,6 +36,7 @@ block raw 中一行 `b8` 数据是**位置数组**：
 | 3 | `shape` | `1` \| `2` | 形状：`1` = 盒子 (Box)，`2` = 球体 (Sphere)。缺省 `1`。 |
 | 4 | `gameOnly` | `0` \| `1` | `1` = 仅游戏模式参与评估。**缺省为 `1`**——演示/常驻机关需显式写 `0`。 |
 | 5 | `events` | `TriggerLogicNode[]` | 逻辑节点列表，见下文。 |
+| 6 | `anchor` | `{ name, when? }`（可选） | **传送锚点**：本行是 `player.teleport` 动作的合法目的地（落点=本行 `offset`）。`when` 为**到达侧** JSONLogic 许可（上下文同 §条件）。无锚点的地块无法被传送抵达——见 [传送/传送门规格](../../docs/plan/specs/teleport-portal.md)。 |
 
 **坐标说明**：`size`/`offset` 按 SPP 轴序书写，引擎装载时经 `Coords.getBoxDimensions` 等转换到内部轴序，创作者无需关心。
 
@@ -122,6 +123,9 @@ interface TriggerAction {
 | `flag` | flag 键名 | （空） | `[值]`，缺省 `true` | 写入 `world.globalFlags[target]`，供其他触发器的条件读取。 |
 | `bag` | itemId（`tpl_{模板}` / `itm_{模板}_{seed}`） | `give` / `take` | `[数量]` | 给予/扣除玩家背包物品。**仅 Game 模式生效**（其余模式警告跳过）。 |
 | `player` | （不使用） | `damage` / `heal` | `[数值]` | 扣减/恢复玩家生命值（HealthSystem；hp≤0 死亡并重生于出生点）。**仅 Game 模式生效**。 |
+| | | `setSpawn` | `[]` | 把重生点移到触发体位置（跑酷检查点；任意模式）。 |
+| | | `enterGame` / `exitGame` | `[{ exitPolicy? }]` | 数据驱动的 Game 模式进入/退出（**区域门控**：仅在 `block.game≥1` 的地块内可成功）；`exitPolicy` = `ephemeral`（走出块即拆局，缺省）/ `confirm`（弹确认）/ `persistent`（存档重入，规划中）。 |
+| | | `teleport` | `[[nx, ny]]`，`target` = **锚点名** | 锚点制传送（任意模式）：目的块提示 `[nx,ny]` 仅作路由，**合法性来自目的块中同名 `anchor`**（无锚点 → 拒绝；锚点 `when` 不过 → 拒绝）。结果经 `teleport.done` / `teleport.denied` 事件。见 [传送/传送门规格](../../docs/plan/specs/teleport-portal.md)。 |
 | `sound` | 音频资源 id（或直接 URL/路径） | `play` | `[音量]` | 3D 空间音效，锚定在触发体位置（无位置则平面播放）。资源经 `ResourceManager.getAudioUrl` 解析（CID/路径），缓冲按 URL 去重。 |
 | `system` | （空） | `log` | `[...任意]` | 控制台日志（调试用）。 |
 | `delay` | （不使用） | （空） | `[秒]`，另需嵌套字段 `actions` | 延时调度：`params[0]` 秒后逐条执行嵌套 `actions`（**仿真时间**，`world.scheduler`；mode 按**到期时**现值重查，Game-only 动作不被延时绕过）。见 [F1 调度/生成规格](../../docs/plan/specs/scheduler-and-spawn.md)。 |

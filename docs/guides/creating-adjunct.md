@@ -1,5 +1,10 @@
 # 如何创建一个附属物 (Creating an Adjunct)
 
+> ⚠️ **早期设计稿注记(2026-07-04)**:本文写于引擎早期,叙述可能与现行实现有出入。
+> 权威参考:`engine/src/plugins/adjunct/`(18 个内置定义即活样例)与
+> `core/services/AdjunctRegistry.ts`;槽位数据规范见
+> [protocol/cn/adjunct-types.md](../../protocol/cn/adjunct-types.md)。以代码为准。
+
 附属物 (Adjunct) 是 Septopus 世界中最关键的构建块（相当于 Mod 或插件组件）。如果你想在三维世界里添加一种新型的“家具”、“武器”或是隐形的“游戏机关”，你就需要编写一个自定义的 Adjunct。
 
 ## 1. 附属物的生命周期结构

@@ -1,43 +1,64 @@
 # 快速开始 (Getting Started)
 
-当你准备将 Septopus 世界嵌入你自己的 Web 项目或是构建新的客户端时，本指南将带你了解引擎引导启动的核心流程。
+> 面向想要**运行世界**或**嵌入/自建客户端**的开发者。协议(数据格式)见
+> [protocol/](../../protocol/README.md);本文对应参考实现(`engine/src`,TypeScript ECS)。
 
-## 1. 引擎的入口
+## 1. 跑起来(桌面 PWA 客户端)
 
-Septopus 是一个以数据为驱动单例应用（Singleton）。它的主入口被封装在 `World` 模块中。启动整个渲染管线和逻辑循环的代码极其简单：
-
-```javascript
-import { World } from "septopus-core";
-
-// DOM 容器的 ID，引擎将在其中织入 Canvas 和 UI
-const containerId = "septopus-container";
-
-// 启动世界
-World.first(containerId);
+```bash
+bash deploy/dev.sh          # = cd client/desktop && npm install && npm run dev
+# → http://127.0.0.1:7777
 ```
 
-## 2. 启动流 (Launch Flow) 在底层做了什么？
+`client/desktop` 是参考宿主:React + Vite PWA,经 `@engine` 源码别名直接消费
+`engine/src`。生产构建 `bash deploy/build.sh` → 静态 `dist/`(发版与在线部署见
+[deploy/RELEASE.md](../../deploy/RELEASE.md))。
 
-当你调用了 `World.first()` 后，引擎会在底层自动执行一系列**高度异步化**的操作：
+## 2. 引擎的最小嵌入
 
-1. **环境准备与 DOM 织入**：在目标容器内构建三维画布（Canvas）和交互浮层（UI Layer）。
-2. **状态探查**：读取本地缓存（LocalStorage）或验证加密签名以获取当前 `玩家 (Player)` 的上一次退出位置（所在的世界 ID 及具体坐标）。如果无存档，将放置于该世界的出生点（Spawn Point）。
-3. **合约与网络握手**：连接数据层并绑定订阅事件，开始提取当前 `世界 (World)` 的基本配置参数（如重力、天气规则等）。
-4. **地块加载与邻近推流**：基于玩家所处的地块，向四周扩散拉取九宫格（由扩展参数决定大小）的地块 Raw 数据。
-5. **解析资源**：找出地块上所需用到的模型 (Module) 与材质 (Texture)，将其推入**帧同步加载队列 (Frame-Sync Queue)** 以避免浏览器阻塞卡顿。
-6. **启动引擎心跳**：挂载 `控制器 (Controller)` 以接受鼠标/键盘输入，并正式利用 `requestAnimationFrame` 唤起 Three.js 渲染器，宣告场景加载成功。
+引擎入口是 `Engine` 门面(`engine/src/Engine.ts`)。宿主注入**服务**(数据源必选,
+渲染器/持久化/执行器可选),然后引导世界:
 
-## 3. 从零搭建提示
+```ts
+import { Engine } from '@engine/Engine';
 
-在开发前，请通过调用 `VBW.detect()` 测试一下当前浏览器的兼容性：
+const engine = new Engine('container-dom-id', {
+    api: myDataSource,          // IDataSource:世界配置 + 地块数据(必选)
+    // renderer: 缺省创建 WebGL 渲染器;测试可注入 NullRenderEngine(无 GPU/DOM)
+    // draftBackend / actuator / gameApi / liveSource:可选注入点
+});
 
-```javascript
-import { VBW } from "septopus-core";
-
-const isSupported = VBW.detect();
-if (!isSupported) {
-    console.error("当前浏览器环境不支持 Septopus WebGL 渲染管线。");
-}
+await engine.bootWorld(0);      // 拉取世界配置、创建 ECS 世界与玩家
+await engine.hydrateDrafts(0);  // 还原本地草稿/背包/flags/位置(IndexedDB)
+engine.injectBlock(...);        // 宿主按 block.need 事件喂块(见 DesktopLoader)
+engine.start();                 // rAF 主循环;测试用 engine.step(1/60) 确定性步进
 ```
 
-所有的环境配置（如自定义 UI 主题等）可以在调用 `first()` 前，通过修改 `VBW.setting` 中对应的配置项注入。
+关键事实:
+
+- **数据流**:`IDataSource` → 地块 raw(纯数据,见协议)→ ECS 实体 → 渲染。
+  宿主监听 `engine.on('block.need', …)` 按需喂块——参考实现
+  `client/desktop/src/lib/DesktopLoader.ts` 是完整样例(流式 5×5、草稿覆盖、
+  关卡装载、AI 造物通道)。
+- **确定性**:`engine.step(dt)` 固定步进 = headless 测试的地基
+  (`engine/tests/` 全部无 GPU 运行)。
+- **层边界**:Three.js 只允许出现在 `engine/src/render/`;`core/` 与
+  `plugins/` 经 `renderEngine.*` 间接操作(CI 强制)。
+
+## 3. 造内容(不写引擎代码)
+
+世界内容全部是数据:地块 raw 五元组 + 18 种附属物行(槽位规范:
+[protocol/cn/adjunct-types.md](../../protocol/cn/adjunct-types.md))。三条路:
+
+1. **编辑器**:客户端 Edit 模式,palette 放置 + 表单调参,草稿自动持久化;
+2. **关卡 JSON**:`AuthoredLevel` 文档(样例 `client/desktop/src/levels/*.level.json`
+   ——跑酷/过山车/RPG 全是纯数据关卡),`?level=<名>` 装载;
+3. **AI 造物**:聊天输入自然语言 → 生成文档 → 预览 → 建造
+   (需启动 `services/ai-gateway`,见 [specs/ai-authoring.md](../plan/specs/ai-authoring.md))。
+
+## 4. 深入
+
+- 扩展新附属物类型:[creating-adjunct.md](creating-adjunct.md) + `engine/src/plugins/adjunct/`
+- 玩法词汇(触发器/动作/条件):[protocol/cn/trigger.md](../../protocol/cn/trigger.md)
+- 架构与系统:[../architecture/](../architecture/overview.md) · [../systems/](../systems/)
+- 测试基建(重要:先读局限性):`engine/tests/README.md`

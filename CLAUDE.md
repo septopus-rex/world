@@ -31,7 +31,7 @@ world/
 │   └── backup/              # 旧 JS 引擎（septopus/，已归档；gitignore）
 ├── client/desktop/          # React + Vite PWA — 无链 3D 客户端
 ├── deploy/                  # dev.sh / build.sh：启动/构建 client/desktop；RELEASE.md 发版指南
-├── docs/                    # 架构与计划文档
+├── docs/                    # 参考实现文档(architecture/systems/guides)+ plan 过程文档;规范在 protocol/
 ├── chain/                   # Solana 合约（已移出 git 追踪，本地存档）
 └── app/                     # 旧链耦合前端（已移出 git 追踪，本地存档）
 ```
@@ -91,6 +91,8 @@ cd engine && yarn build                            # tsc
 - 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（已搭 **~37 个 spec**：boot/movement/fall-through/trigger/avatar/persistence/inventory/engine-features/editor-platform/spp/coaster/map2d/game-trigger/ai-authoring/rpg-xianjian/portal-travel 等；`npm run test:e2e`，SwiftShader 软渲染 + `engine.step(dt)` 确定性驱动）。
 
 ## 文档索引
+
+> **三层文档模型(2026-07-04 定形)**:`protocol/`(**规范**,cn/en 双语,协议 v0.1 随引擎版本——核心是 `adjunct-types.md` 18 型逐槽位规范 + `determinism.md` PRNG/钉点/一致性验收 + trigger 动作词汇 + world §5 坐标旋转契约 + block §3 raw 五元组;规范变更须双语同步)→ `docs/`(**参考实现**)→ `docs/plan/`(**过程**,非规范)。旧引擎时代文档已归档 `docs/legacy/`(含旧 changelog、旧 VBW 入门);`guides/getting-started.md` 已重写对准现行 Engine API。
 
 - `docs/plan/STANDALONE_ENGINE_ROADMAP.md` — 开发路线图（链剥离记录 + 旧引擎退役 + 后续 P1–P5）。
 - `docs/plan/PLAYABLE_CHECKLIST.md` — **可玩化落地清单**（从技术 demo 到用户可玩的 gap 追踪 + 首迭代；内容/产品视角）。
