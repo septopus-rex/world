@@ -387,16 +387,16 @@ export class Engine {
     /** Swap the player's avatar model at runtime (frontend picker seam). The
      *  resource id resolves through the same ResourceManager pipeline as boot;
      *  a failed load keeps the current body. */
-    public setAvatar(resourceId: string | number): void {
+    public setAvatar(resourceId: string | number, facing?: number): void {
         const world = this.world;
         if (!world) return;
-        EntityFactory.swapAvatar(world, String(resourceId));
+        EntityFactory.swapAvatar(world, String(resourceId), facing);
     }
 
     /** Debug/verification snapshot of the live avatar: resource id, registered
      *  clips, current animation state + the clip it resolved to, and the
      *  world-space height/foot line (body-parameter checks in e2e). */
-    public avatarInfo(): { resource?: string; footOffset: number | null; clips: string[]; state: string | null; activeClip: string | null; height: number; minY: number } | null {
+    public avatarInfo(): { resource?: string; footOffset: number | null; facing: number | null; clips: string[]; state: string | null; activeClip: string | null; height: number; minY: number } | null {
         const world = this.world;
         if (!world) return null;
         const players = world.queryEntities("AvatarComponent", "InputStateComponent");
@@ -407,7 +407,8 @@ export class Engine {
         // footOffset = the SCALED source-bbox bottom the controller plants feet by
         // (deterministic; the live Box3 min.y is unreliable for skinned meshes).
         const footOffset = typeof av.footOffset === 'number' ? av.footOffset : null;
-        return dbg ? { resource: av.resource, footOffset, ...dbg } : { resource: av.resource, footOffset, clips: [], state: null, activeClip: null, height: 0, minY: 0 };
+        const facing = typeof av.facing === 'number' ? av.facing : null;
+        return dbg ? { resource: av.resource, footOffset, facing, ...dbg } : { resource: av.resource, footOffset, facing, clips: [], state: null, activeClip: null, height: 0, minY: 0 };
     }
 
     /** External realtime transport (ILiveSource) feeding world.events via

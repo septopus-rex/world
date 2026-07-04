@@ -166,7 +166,10 @@ export class CameraRig {
                 ? (trans.position[1] + body.offset[1] - body.size[1] / 2) - avatar.footOffset
                 : trans.position[1];
             world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], avatarY, trans.position[2]);
-            world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + CameraRig.AVATAR_FACING, 0);
+            // Per-model facing correction (external models disagree on forward);
+            // falls back to the legacy default when the avatar didn't declare one.
+            const facing = avatar.facing !== undefined ? avatar.facing : CameraRig.AVATAR_FACING;
+            world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + facing, 0);
             // Visible only in third-person — in first-person the camera is inside
             // the avatar. Ghost mode always hides it (incorporeal).
             const show = avatar.visible !== false && this.viewMode === 'third'

@@ -78,11 +78,13 @@ export class EntityFactory {
         const avatarHandle = world.renderEngine.createAvatarMesh();
         world.renderEngine.setObjectPosition(avatarHandle, position[0], position[1], position[2]);
 
-        const avatarRes = (world.config.player as any)?.avatar?.resource;
+        const avatarCfg = (world.config.player as any)?.avatar ?? {};
+        const avatarRes = avatarCfg.resource;
         world.addComponent<AvatarComponent>(player, "AvatarComponent", {
             handle: avatarHandle,
             visible: true,
-            resource: avatarRes != null ? String(avatarRes) : undefined
+            resource: avatarRes != null ? String(avatarRes) : undefined,
+            facing: typeof avatarCfg.facing === 'number' ? avatarCfg.facing : undefined,
         });
 
         // The avatar is just a model resource (IPFS-fetchable) — reuse the model
@@ -118,7 +120,7 @@ export class EntityFactory {
      * only when the new model lands, kept on a failed load. The old model's
      * ResourceManager refcount is released after a successful swap.
      */
-    public static swapAvatar(world: World, resourceId: string): void {
+    public static swapAvatar(world: World, resourceId: string, facing?: number): void {
         const players = world.queryEntities("AvatarComponent", "InputStateComponent");
         const player = players[0];
         if (player === undefined) return;
@@ -126,6 +128,7 @@ export class EntityFactory {
         if (!av || av.resource === resourceId) return;
         const releaseId = av.resource;      // refcount to drop once the swap lands
         av.resource = resourceId;
+        if (typeof facing === 'number') av.facing = facing; // per-model orientation
         EntityFactory.loadAvatarModel(world, player, resourceId, av.handle, 1.8, releaseId);
     }
 
@@ -135,6 +138,11 @@ export class EntityFactory {
         rm.getModel(resourceId).then((entry: any) => {
             const av = world.getComponent<AvatarComponent>(player, "AvatarComponent");
             if (!av) return;
+            // Stale-load guard: a newer swap may have set av.resource to a
+            // different id while this load was in flight (boot-default vs restore
+            // race, or rapid picker clicks). Drop this result so the LATEST
+            // requested avatar always wins, never whichever model decodes last.
+            if (av.resource !== resourceId) return;
             const model = rm.instance(resourceId);
 
             // Uniform scale-to-body (preserve aspect). Guard against a degenerate

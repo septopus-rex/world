@@ -143,7 +143,7 @@ layer; neither replaces the other.
 | embedded clips decoded + registered on a mixer (rigged `avatar.glb`; e2e `avatar.spec.ts` asserts clipCount/mixerCount > 0) | ✅ |
 | state derivation + `setAnimationState` crossfade + **per-frame mixer advance** (`RenderEngine.updateAnimation`, `core/movement/CameraRig.ts:180-188` — `CharacterController` delegates avatar pose/animation to `CameraRig`) | ✅ **embedded clips do play** |
 | state → clip mapping | ✅ **v1 landed**: normative contract first (§3 case-insensitive name equality) + §2 fallback chains (`run→walk→idle`, `air→jump→idle`, `land→idle`) + §2 threshold derivation (`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` linear, `CameraRig`); the old regex heuristics remain only as a **degrade for non-compliant assets** (`ANIM_STATE_PATTERNS`) |
-| skeleton validation / facing normalization | ❌ |
+| facing normalization (per-model) | ✅ **v1.1 (2026-07-04)**: `AvatarComponent.facing` (yaw radians) corrects each GLTF's forward mismatch; `CameraRig` applies `playerYaw + facing`. Verified on 3 assets: soldier −Z (0), legacy + robot +Z (π) — **no universal value; each model carries its own**. Still TODO: skeleton bone-name validation / humanoid normalization |
 | **form/motion separation** (`avatar.motion` shared retargetable library) / retargeting / built-in default set | ❌ **clips must be embedded in each avatar GLB; no Mixamo-style cross-model reuse** |
 | native VRM / VRMA loading (`@pixiv/three-vrm`) | ❌ (`ModelLoader` has no .vrm support) |
 | expression system | ❌ |
@@ -152,12 +152,39 @@ layer; neither replaces the other.
 > state switching guesses by clip name, and there is no standard skeleton or reusable motion
 > library** — this protocol normalizes that.
 
+### 7.1 Per-model correction parameters
+
+Importing an external GLTF/GLB avatar is not normalized by "scale-to-height"
+alone — models **disagree on which way is forward** (+Z vs −Z), so applying the
+player yaw directly can render the character back-to-front. Each avatar therefore
+carries a small set of correction parameters that align it to the Septopus frame:
+
+| Parameter | Meaning | Source |
+|---|---|---|
+| **facing** | yaw correction (radians): `CameraRig` applies `playerYaw + facing`, aligning the model's forward to Septopus north (−Z) | authored per model (client avatar catalog) |
+| **height→scale** | uniform scale so the bbox height = body height (1.8 m) | automatic (derived from `bounds` at load) |
+| **footOffset** | scaled bbox bottom relative to the origin; planting at `feetY − footOffset` puts the feet on the ground regardless of the pivot | automatic |
+
+**Empirical facing values (v1.1, 3 demo assets):**
+
+| Avatar | facing | forward convention |
+|---|---|---|
+| legacy `avatar.glb` (Wanderer) | `π` | +Z |
+| `soldier.glb` (three.js Mixamo) | `0` | −Z |
+| `RobotExpressive.glb` | `π` | +Z |
+
+**There is no universal value** — the soldier is opposite to the other two, so
+`facing` must be calibrated per model. A compliant avatar (§1 standard skeleton)
+will eventually drop the manual `facing` (its skeleton is already oriented); this
+parameter carries non-compliant assets in the meantime.
+
 ### Phasing
 
 - **v1 (normalize the state contract)**: **landed (2026-07)** — §2 state set + threshold
   derivation + §3 clip naming (name equality first) + fallback chains are in the engine; the
-  old regex heuristics degrade-only for non-compliant assets. **Not included**: skeleton
-  facing validation/normalization (§1 — goes with v2 retargeting). Motion still from
+  old regex heuristics degrade-only for non-compliant assets. Orientation is handled per
+  model by the §7.1 `facing` parameter (v1.1); **skeleton bone-name validation /
+  humanoid normalization** still goes with v2 retargeting. Motion still from
   embedded clips, no cross-model retarget yet.
 - **v2 (form/motion separation)**: consume `avatar.motion`; implement humanoid retargeting +
   a built-in default motion set; normalize glTF/FBX bone names to VRM humanoid (appendix A).

@@ -131,17 +131,40 @@ morph/blendshape 落地（与 Septopus 动画的 `morph` 通道复用 `RenderEng
 | 内嵌剪辑解码 + 注册 mixer（rigged `avatar.glb`；e2e `avatar.spec.ts` 断言 clipCount/mixerCount>0）| ✅ |
 | 状态派生 + `setAnimationState` crossfade + **每帧推进 mixer**（`RenderEngine.updateAnimation`，`core/movement/CameraRig.ts:180-188`——`CharacterController` 将 avatar 姿态/动画委托给 `CameraRig`）| ✅ **内嵌剪辑确实在播** |
 | 状态→剪辑映射 | ✅ **v1 已落地**：规范契约（§3 名称相等、大小写不敏感）优先 + §2 回退链（`run→walk→idle`、`air→jump→idle`、`land→idle`）+ §2 阈值派生（`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` 线性，`CameraRig`）；旧正则启发式仅作**不合规素材的降级兜底**（`ANIM_STATE_PATTERNS`）|
-| 标准骨架校验 / 朝向归一化 | ❌ |
+| 朝向归一化(per-model facing) | ✅ **v1.1（2026-07-04）**：`AvatarComponent.facing`(yaw 弧度) 逐模型修正 GLTF 朝前差异，`CameraRig` 应用 `playerYaw + facing`；实证 3 素材:soldier −Z(0)、legacy+robot +Z(π)——**无通用值,每模型自带**。仍未做:骨架命名校验/humanoid 归一化 |
 | **形象/动作分离**（`avatar.motion` 共享可重定向动作库）/ 重定向 / 内置默认动作集 | ❌ **动作必须内嵌进每个 avatar GLB，无法 Mixamo 式跨模型复用** |
 | VRM / VRMA 原生加载（`@pixiv/three-vrm`）| ❌（`ModelLoader` 暂不支持 .vrm）|
 | 表情系统 | ❌ |
 
 > 一句话现状：**能动**（内嵌剪辑在播），但**动作绑死在形象里、状态切换靠剪辑名瞎猜、没有标准骨架与可复用动作库**——本协议要把这块规范化。
 
+### 7.1 外部模型对齐参数(per-model correction)
+
+引入外部 GLTF/GLB 化身时,单靠"缩放到身高"不足以归一化——**模型的"朝前"方向不统一**
+(有的 +Z、有的 −Z),直接套用会导致人物背对/正对镜头颠倒。因此每个化身自带一组
+对齐参数,把它修正到 Septopus 系:
+
+| 参数 | 语义 | 来源 |
+|---|---|---|
+| **facing** | yaw 修正(弧度):`CameraRig` 实际施加 `playerYaw + facing`。align 模型 forward → Septopus 北(−Z) | 逐模型 author(客户端 avatar 目录) |
+| **height→scale** | 均匀缩放使包围盒高 = 身体高(1.8m) | 自动(装载时 `bounds` 推导) |
+| **footOffset** | 缩放后包围盒底相对原点的 Y;落地时 `feetY − footOffset` 使脚贴地(无论 pivot 在脚还是身体中心) | 自动 |
+
+**实证对齐值(v1.1,3 个 demo 素材)**:
+
+| 化身 | facing | 朝前约定 |
+|---|---|---|
+| legacy `avatar.glb`(旅者) | `π` | +Z |
+| `soldier.glb`(三.js Mixamo) | `0` | −Z |
+| `RobotExpressive.glb` | `π` | +Z |
+
+**没有通用值**——soldier 与另两者相反,facing 必须逐模型标定。合规化身(§1 标准骨架)
+未来可省掉手工 facing(骨架已朝向归一);当前非合规素材靠此参数兜住。
+
 ### 落地分期
 
 - **v1（规范化状态契约）**：**已落地（2026-07）**——§2 状态集 + 阈值派生 + §3 剪辑命名（名称相等优先）
-  + 回退链进引擎；旧正则启发式降级为不合规素材兜底。**未含**：骨架朝向校验/归一化（§1，随 v2 重定向一起做）。
+  + 回退链进引擎；旧正则启发式降级为不合规素材兜底。朝向经 §7.1 per-model `facing` 参数逐模型修正（v1.1）；**骨架命名校验/humanoid 归一化**仍随 v2 重定向一起做。
   动作仍取内嵌剪辑、暂不跨模型重定向。
 - **v2（形象/动作分离）**：消费 `avatar.motion`；实现 humanoid 重定向 + 内置默认动作集；
   glTF/FBX 骨名按附录 A 归一化到 VRM humanoid。**这一步才真正实现"动作和形象分开"。**

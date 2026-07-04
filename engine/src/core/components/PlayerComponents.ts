@@ -125,4 +125,9 @@ export interface AvatarComponent {
      *  GLTF's pivot is. Undefined for the centred box placeholder (placed at the
      *  body centre, as before). */
     footOffset?: number;
+    /** Per-model yaw correction (radians) that aligns the GLTF's authored
+     *  forward with Septopus north — external models disagree on which way is
+     *  "front" (+Z vs −Z). The controller applies playerYaw + facing. Default
+     *  Math.PI (the legacy avatar's convention). See protocol avatar-animation.md. */
+    facing?: number;
 }

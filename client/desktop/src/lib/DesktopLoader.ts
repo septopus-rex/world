@@ -207,7 +207,12 @@ export class DesktopLoader implements IDataSource {
         // out of the box, unlike the single-clip legacy avatar (30, still
         // selectable as 旅者). A saved pick overrides this after hydrate.
         const cfg = JSON.parse(JSON.stringify(MockWorldNormal));
-        if (cfg.player?.avatar) cfg.player.avatar.resource = DEFAULT_AVATAR_ID;
+        if (cfg.player?.avatar) {
+            cfg.player.avatar.resource = DEFAULT_AVATAR_ID;
+            // Boot facing must match the default avatar (soldier faces −Z → 0),
+            // else the very first body renders reversed before any pick.
+            cfg.player.avatar.facing = 0;
+        }
         return cfg;
     }
 
@@ -423,7 +428,7 @@ export class DesktopLoader implements IDataSource {
         try {
             const savedAvatar = await this.engine.getWorld()!.draftStore.loadMeta(0, 'avatar');
             if (savedAvatar != null && this.avatarCatalog().some(a => a.id === Number(savedAvatar))) {
-                this.engine.setAvatar(String(savedAvatar));
+                this.setAvatar(Number(savedAvatar)); // routes through the catalog facing lookup
             }
         } catch { /* no saved pick */ }
 
@@ -801,12 +806,17 @@ export class DesktopLoader implements IDataSource {
 
     /** Teleport the player to an Septopus block + local offset (fast-travel / testing
      *  seam). Sets the live transform directly; the next step settles physics. */
-    /** Selectable avatars (id + label) for the frontend picker. */
-    public avatarCatalog(): { id: number; label: string }[] {
+    /** Selectable avatars for the frontend picker. `facing` = per-model yaw
+     *  correction (radians) that aligns each GLTF's authored forward with
+     *  Septopus north — external models disagree on which way is "front"
+     *  (protocol avatar-animation.md). Empirically: soldier faces −Z (0);
+     *  the legacy avatar and RobotExpressive face +Z (π). Each model is its
+     *  own correction — there is no universal value. */
+    public avatarCatalog(): { id: number; label: string; facing: number }[] {
         return [
-            { id: DEMO_AVATAR_ID, label: '旅者 Wanderer' },
-            { id: 33, label: '士兵 Soldier' },
-            { id: 34, label: '机器人 Robot' },
+            { id: DEMO_AVATAR_ID, label: '旅者 Wanderer', facing: Math.PI },
+            { id: 33, label: '士兵 Soldier', facing: 0 },
+            { id: 34, label: '机器人 Robot', facing: Math.PI },
         ];
     }
 
@@ -817,9 +827,11 @@ export class DesktopLoader implements IDataSource {
         return Number.isFinite(n) ? n : DEFAULT_AVATAR_ID;
     }
 
-    /** Swap the player's avatar (runtime seam) + persist the pick. */
+    /** Swap the player's avatar (runtime seam) + persist the pick. Passes the
+     *  catalog's per-model facing so external models orient correctly. */
     public setAvatar(id: number): void {
-        this.engine?.setAvatar(String(id));
+        const facing = this.avatarCatalog().find(a => a.id === id)?.facing;
+        this.engine?.setAvatar(String(id), facing);
         this.engine?.getWorld()?.draftStore.saveMeta(0, 'avatar', id);
     }
 

@@ -15,6 +15,11 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
   `Engine.avatarInfo()` 暴露 clips/state/activeClip/height/footOffset 供验证。
   证实 avatar-animation 引擎链路正常(旧 avatar "无动作" 是素材只带单条未命名剪辑,
   非引擎问题)。默认化身改为 soldier(33,开箱即有完整行走动作)。e2e `avatar-select.spec.ts`。
+- **化身朝向逐模型修正(per-model facing)**:外部 GLTF 各有各的"朝前"约定(±Z),
+  原全局 `AVATAR_FACING=π` 常量对不齐——soldier 会背对颠倒。改为
+  `AvatarComponent.facing`(yaw 弧度)逐模型参数,`CameraRig` 施加 `playerYaw+facing`,
+  经 avatar 目录 author + 持久。实证:soldier=0、legacy/robot=π(无通用值)。
+  规范化到 `avatar-animation.md §7.1`(对齐参数:facing/scale/footOffset)。
 
 ### 文档
 - **新增世界总览(protocol/overview,cn/en 双语)**:一页讲清 Septopus 世界的构成
