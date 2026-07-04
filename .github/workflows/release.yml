@@ -1,0 +1,93 @@
+# Septopus World — release on tag push
+#
+# `git push origin vX.Y.Z` → verify (engine tests + tsc + layer boundary +
+# client build) → package the PWA dist → create the GitHub Release with the
+# matching CHANGELOG.md section as its notes and the dist zip attached.
+#
+# Versioning + the full release procedure: deploy/RELEASE.md.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write   # gh release create
+
+jobs:
+  release:
+    name: Verify · build · publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # ── verify (same gates as CI push checks) ─────────────────────────────
+      - name: Engine — install
+        working-directory: engine
+        run: yarn install --frozen-lockfile
+      - name: Engine — layer boundary
+        working-directory: engine
+        run: |
+          if grep -rn "from 'three'" src/core src/plugins; then
+            echo "::error::Three.js imported outside engine/src/render"
+            exit 1
+          fi
+      - name: Engine — tests + tsc
+        working-directory: engine
+        run: |
+          yarn test:run
+          yarn build
+
+      # ── tag ↔ version lockstep guard ──────────────────────────────────────
+      - name: Version matches the tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          for PKG in client/desktop/package.json engine/package.json; do
+            V=$(node -p "require('./$PKG').version")
+            if [ "$V" != "$TAG" ]; then
+              echo "::error::$PKG version ($V) != tag ($TAG) — bump before tagging (deploy/RELEASE.md)"
+              exit 1
+            fi
+          done
+
+      # ── build + package the PWA ───────────────────────────────────────────
+      - name: Client — install + build
+        working-directory: client/desktop
+        run: |
+          npm ci
+          npm run build
+      - name: Package dist
+        working-directory: client/desktop
+        run: |
+          cp dist/version.json "septopus-world-version-${GITHUB_REF_NAME}.json"
+          (cd dist && zip -qr "../septopus-world-client-${GITHUB_REF_NAME}.zip" .)
+
+      # ── release notes = the CHANGELOG section for this version ────────────
+      - name: Extract CHANGELOG section
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          awk -v ver="$TAG" '
+            $0 ~ "^## \\[" ver "\\]" { grab=1; next }
+            grab && /^## \[/ { exit }
+            grab { print }
+          ' CHANGELOG.md > RELEASE_NOTES.md
+          if [ ! -s RELEASE_NOTES.md ]; then
+            echo "_（CHANGELOG.md 缺少 [$TAG] 段落 — 以下为提交清单）_" > RELEASE_NOTES.md
+            PREV=$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)
+            git log --pretty='- %s' ${PREV:+$PREV..}${GITHUB_REF_NAME} >> RELEASE_NOTES.md
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "Septopus World ${GITHUB_REF_NAME}" \
+            --notes-file RELEASE_NOTES.md \
+            "client/desktop/septopus-world-client-${GITHUB_REF_NAME}.zip" \
+            "client/desktop/septopus-world-version-${GITHUB_REF_NAME}.json"

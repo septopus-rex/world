@@ -126,6 +126,7 @@ function App() {
         {/* Pure label — must NOT intercept clicks meant for engine UI beneath. */}
         <div className="pointer-events-none select-none">
           <span className="text-[10px] font-black tracking-[0.3em] text-cyan-400/70 uppercase">Septopus · Desktop</span>
+          <span data-testid="app-version" title={__APP_COMMIT__} className="ml-2 text-[9px] font-mono text-cyan-400/40">v{__APP_VERSION__}</span>
         </div>
         {/* Compass = heading + block coord in its centre, and the entry to the 3D
             region preview (satellite view). The big telemetry panel is gone. */}

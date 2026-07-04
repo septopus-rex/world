@@ -59,6 +59,10 @@ export interface MapCell {
     count: number;       // adjunct instance count
     game: number;        // block.game flag (playable zone) — raw[4]
     elevation: number;   // block elevation — raw[0]
+    /** Teleport anchors authored in this block (b8 slot 6) — the map's
+     *  fast-travel destinations. Only STREAMED cells reveal anchors, which is
+     *  the "discovered" semantic for free (specs/teleport-portal.md §3). */
+    anchors: { name: string; e: number; n: number }[];
 }
 
 export interface SPPPlayerState {
@@ -785,6 +789,13 @@ export class DesktopLoader implements IDataSource {
 
     /** Teleport the player to an SPP block + local offset (fast-travel / testing
      *  seam). Sets the live transform directly; the next step settles physics. */
+    /** Map fast-travel: funnel through the SAME anchor-gated teleport action a
+     *  content portal uses (specs/teleport-portal.md §3) — seeing an anchor on
+     *  the map does not bypass its destination-side `when`. */
+    public fastTravel(anchor: string, block: [number, number]): void {
+        this.engine?.requestTeleport(anchor, block);
+    }
+
     public teleportSpp(block: [number, number], pos: [number, number, number] = [8, 8, 3]): void {
         const w = this.engine?.getWorld();
         if (!w) return;
@@ -1115,15 +1126,28 @@ export class DesktopLoader implements IDataSource {
             const raw: any[] = this.localData ? this.localData.blockAt(x, y).raw : this.sceneBlock(x, y);
             const groups: any[] = Array.isArray(raw[2]) ? raw[2] : [];
             let count = 0;
-            for (const g of groups) count += Array.isArray(g?.[1]) ? g[1].length : 0;
+            const anchors: { name: string; e: number; n: number }[] = [];
+            for (const g of groups) {
+                const rows = Array.isArray(g?.[1]) ? g[1] : [];
+                count += rows.length;
+                if (g?.[0] === 0x00b8) { // b8 trigger — slot 6 may declare an anchor
+                    for (const row of rows) {
+                        const a = row?.[6];
+                        if (a && typeof a === 'object' && typeof a.name === 'string') {
+                            anchors.push({ name: a.name, e: row?.[1]?.[0] ?? 8, n: row?.[1]?.[1] ?? 8 });
+                        }
+                    }
+                }
+            }
             return {
                 x, y, count,
                 occupied: count > 0,
                 game: typeof raw[4] === 'number' ? raw[4] : 0,
                 elevation: typeof raw[0] === 'number' ? raw[0] : 0,
+                anchors,
             };
         } catch {
-            return { x, y, count: 0, occupied: false, game: 0, elevation: 0 };
+            return { x, y, count: 0, occupied: false, game: 0, elevation: 0, anchors: [] };
         }
     }
 

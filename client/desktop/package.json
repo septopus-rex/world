@@ -1,7 +1,7 @@
 {
   "name": "desktop",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Septopus World — desktop 3D client. Pure engine, chain-free. Replaces /app.",
   "type": "module",
   "scripts": {

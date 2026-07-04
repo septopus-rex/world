@@ -1,0 +1,59 @@
+# Septopus World — deploy the PWA to GitHub Pages
+#
+# Fires on the SAME `vX.Y.Z` tag push as release.yml (a separate workflow on
+# purpose: a Release created with GITHUB_TOKEN cannot trigger other workflows,
+# so `on: release` would never fire) + manual dispatch for redeploys.
+#
+# One-time repo setting: Settings → Pages → Source = "GitHub Actions".
+# Live URL: https://septopus-rex.github.io/world/  (custom-domain option:
+# deploy/RELEASE.md §6). Build uses VITE_BASE=/world/ so assets + PWA scope
+# resolve under the project sub-path.
+
+name: Deploy Pages
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build · publish to Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # @engine source alias resolves three/rapier from engine/node_modules.
+      - name: Engine deps
+        working-directory: engine
+        run: yarn install --frozen-lockfile
+      - name: Client build (sub-path base)
+        working-directory: client/desktop
+        env:
+          VITE_BASE: /world/
+        run: |
+          npm ci
+          npm run build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/desktop/dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

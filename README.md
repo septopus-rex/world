@@ -10,6 +10,7 @@
 ## Demo
 
 * 3D Engine Demo: [https://world.septopus.xyz](https://world.septopus.xyz)
+* Latest release (GitHub Pages, auto-deployed on every version tag): [https://septopus-rex.github.io/world/](https://septopus-rex.github.io/world/) — see [Releases](https://github.com/septopus-rex/world/releases) / [CHANGELOG](CHANGELOG.md) for what each version ships.
 * Contract: [https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet](https://solscan.io/account/4uJZCdH5RjJrSiRxVSkYqy3MUWBCFR3BxLXUcoKQkEr2?cluster=devnet)
 
 ## Core Protocol

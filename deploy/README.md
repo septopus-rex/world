@@ -7,6 +7,7 @@
 | `bash deploy/dev.sh` | 起开发服务器 → `http://127.0.0.1:7777`(首次自动 `npm install`) |
 | `bash deploy/build.sh` | 生产构建 → `client/desktop/dist`(静态 PWA,可托管到任意静态服务器 / OSS / CDN) |
 | `bash deploy/build.sh --preview` | 构建后本地预览 |
+| `git push origin vX.Y.Z` | **发版 + 上线**:GitHub Release(附 dist zip)+ GitHub Pages 部署(见 [`RELEASE.md`](RELEASE.md)) |
 
 ## 链相关部分去哪了?
 

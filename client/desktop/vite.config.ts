@@ -3,12 +3,14 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { execSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-// ── Build-time version info (qr client pattern) ───────────────────────────────
-// Injected into index.html as <meta> and emitted as /version.json for deploy
-// inspection. UI does not display it; purely for internal tracking.
+// ── Build-time version info ───────────────────────────────────────────────────
+// Version comes from package.json (the repo-wide release version, see
+// deploy/RELEASE.md). Injected into index.html as <meta>, emitted as
+// /version.json for deploy inspection, and exposed to the UI via define
+// (__APP_VERSION__/__APP_COMMIT__ — shown in the HUD brand corner).
 const gitCommit = (() => {
   try { return execSync('git rev-parse --short HEAD').toString().trim() }
   catch { return 'dev' }
@@ -17,8 +19,12 @@ const gitDirty = (() => {
   try { return execSync('git status --porcelain').toString().trim().length > 0 }
   catch { return false }
 })()
+const pkgVersion = (() => {
+  try { return JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).version as string }
+  catch { return '0.0.0' }
+})()
 const versionInfo = {
-  version: '1.0.0',
+  version: pkgVersion,
   commit: gitCommit + (gitDirty ? '-dirty' : ''),
   buildTime: new Date().toISOString(),
 }
@@ -35,7 +41,13 @@ const versionPlugin = () => ({
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/',
+  // Deploy base: '/' for root-domain hosting (dev / world.septopus.xyz),
+  // '/world/' when served from GitHub Pages project path (deploy/RELEASE.md §6).
+  base: process.env.VITE_BASE ?? '/',
+  define: {
+    __APP_VERSION__: JSON.stringify(versionInfo.version),
+    __APP_COMMIT__: JSON.stringify(versionInfo.commit),
+  },
   resolve: {
     alias: {
       // Pure 3D engine source (TypeScript). The client depends ONLY on the

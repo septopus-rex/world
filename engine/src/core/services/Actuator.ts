@@ -1,13 +1,16 @@
+import jsonLogic from 'json-logic-js';
 import { World, EntityId } from '../World';
 import { reportError, AdjunctError } from '../errors';
 import { TriggerAction } from '../types/Trigger';
 import { SystemMode, asExitPolicy } from '../types/SystemMode';
 import { AdjunctComponent } from '../components/AdjunctComponents';
-import { TransformComponent } from '../components/PlayerComponents';
+import { TransformComponent, RigidBodyComponent } from '../components/PlayerComponents';
+import { BlockComponent } from '../components/BlockComponent';
 import { spawnRelative } from '../utils/Spawn';
 import { damageNpc } from '../utils/Combat';
 import { setEntityColor } from '../utils/Appearance';
 import { AdjunctType } from '../types/AdjunctType';
+import { Coords } from '../utils/Coords';
 import type { ProjectileComponent } from '../components/NpcComponents';
 
 /**
@@ -299,6 +302,14 @@ export class LocalActuator implements IActuator {
             return;
         }
 
+        // teleport — anchor-gated relocation (specs/teleport-portal.md). Any
+        // mode, like setSpawn: portals are Normal-world furniture, and leaving
+        // a Game zone through one hands off to GameZoneSystem's exit semantics.
+        if (action.method === 'teleport') {
+            void this.execTeleport(action, ctx); // async (may fetch the destination raw)
+            return;
+        }
+
         // enterGame / exitGame — the DATA-DRIVEN Game-mode entry contract: a
         // trigger placed inside a playable block requests the mode switch, which
         // funnels into the zone-gated World.setMode (so it can only succeed where
@@ -330,6 +341,117 @@ export class LocalActuator implements IActuator {
         } else {
             reportError(`unknown player method '${action.method}'`, { tag: '[Actuator]', severity: 'warn' });
         }
+    }
+
+    // ── teleport (anchor-gated, specs/teleport-portal.md) ────────────────────
+
+    /**
+     * player.teleport: target = ANCHOR NAME (never bare coordinates — a block
+     * with no authored anchor is unreachable by mechanism, not by rule),
+     * params[0] = destination block hint [nx, ny] (pure routing; legality never
+     * comes from it). Resolution: live entities first (loaded block — the
+     * anchor's ACTUAL pose wins over the hint), then dataSource.view for an
+     * unloaded far block. The anchor's optional `when` is the DESTINATION-side
+     * permission. Landing reuses the three existing safety nets: streaming
+     * follows the player, hasGroundBelow=false hovers until ground arrives,
+     * popOutIfEmbedded rescues a bad spot.
+     */
+    private async execTeleport(action: TriggerAction, ctx: ActuatorContext): Promise<void> {
+        const world = ctx.world;
+        const name = typeof action.target === 'string' ? action.target : '';
+        const hint = action.params?.[0];
+        const emitDenied = (block: [number, number], reason: 'bad-args' | 'no-anchor' | 'refused') => {
+            world.events?.emit?.('teleport.denied', { anchor: name, block, reason });
+        };
+        if (!name || !Array.isArray(hint) || !Number.isFinite(Number(hint[0])) || !Number.isFinite(Number(hint[1]))) {
+            reportError(`teleport: needs an anchor name + destination block hint`, { tag: '[Actuator]', severity: 'warn' });
+            emitDenied([0, 0], 'bad-args');
+            return;
+        }
+        const bx = Number(hint[0]), by = Number(hint[1]);
+
+        const anchor = this.findLiveAnchor(world, name) ?? await this.findRawAnchor(world, bx, by, name);
+        if (!anchor) { emitDenied([bx, by], 'no-anchor'); return; }
+
+        // Destination-side permission (flags / inventory / time / weather).
+        if (anchor.when != null) {
+            let ok = false;
+            try { ok = !!jsonLogic.apply(anchor.when, this.conditionCtx(world, ctx.playerId)); }
+            catch (e) { reportError(e, { tag: '[Actuator]', severity: 'warn' }); }
+            if (!ok) { emitDenied(anchor.block, 'refused'); return; }
+        }
+
+        const playerId = ctx.playerId;
+        if (playerId == null) return;
+        const trans = world.getComponent<TransformComponent>(playerId, "TransformComponent");
+        const body = world.getComponent<RigidBodyComponent>(playerId, "RigidBodyComponent");
+        if (!trans) return;
+        trans.position[0] = anchor.pos[0];
+        trans.position[1] = anchor.pos[1] + 1.2;   // arrive slightly above the pad
+        trans.position[2] = anchor.pos[2];
+        trans.dirty = true;
+        if (body) { body.velocity[0] = 0; body.velocity[1] = 0; body.velocity[2] = 0; }
+        world.events?.emit?.('teleport.done', { anchor: name, block: anchor.block });
+    }
+
+    /** Anchor in the LIVE world (destination block loaded): the b8 entity whose
+     *  stdData.anchor.name matches. Engine-space position comes straight from
+     *  its transform (elevation already applied). */
+    private findLiveAnchor(world: World, name: string):
+        { pos: [number, number, number]; block: [number, number]; when: any } | null {
+        for (const eid of world.queryEntities("AdjunctComponent")) {
+            const adj = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
+            const a = adj?.stdData?.anchor;
+            if (adj?.stdData?.typeId !== AdjunctType.Trigger || a?.name !== name) continue;
+            const t = world.getComponent<TransformComponent>(eid, "TransformComponent");
+            if (!t) continue;
+            const block = adj.parentBlockEntityId != null
+                ? world.getComponent<BlockComponent>(adj.parentBlockEntityId, "BlockComponent") : null;
+            return {
+                pos: [t.position[0], t.position[1], t.position[2]],
+                block: block ? [block.x, block.y] : [0, 0],
+                when: a.when ?? null,
+            };
+        }
+        return null;
+    }
+
+    /** Anchor in an UNLOADED block: fetch the hinted block's effective raw
+     *  through the data source (draft overlay included) and scan its b8 rows. */
+    private async findRawAnchor(world: World, bx: number, by: number, name: string):
+        Promise<{ pos: [number, number, number]; block: [number, number]; when: any } | null> {
+        let raw: any[] | null = null;
+        try {
+            const view = await world.dataSource.view(bx, by, 0, 0);
+            const cell = Array.isArray(view)
+                ? view.find((b: any) => b?.x === bx && b?.y === by) ?? view[0] : view;
+            raw = Array.isArray(cell?.raw) ? cell.raw : null;
+        } catch { /* no data source (headless) → unresolvable */ }
+        if (!raw) return null;
+        const elevation = typeof raw[0] === 'number' ? raw[0] : 0;
+        const groups: any[] = Array.isArray(raw[2]) ? raw[2] : [];
+        for (const [typeId, rows] of groups) {
+            if (typeId !== AdjunctType.Trigger || !Array.isArray(rows)) continue;
+            for (const row of rows) {
+                const a = row?.[6];
+                if (!a || typeof a !== 'object' || a.name !== name) continue;
+                const off = Array.isArray(row[1]) ? row[1] : [8, 8, 0];
+                const pos = Coords.sppToEngine([off[0] ?? 8, off[1] ?? 8, off[2] ?? 0], [bx, by]);
+                pos[1] += elevation;
+                return { pos: pos as [number, number, number], block: [bx, by], when: a.when ?? null };
+            }
+        }
+        return null;
+    }
+
+    /** JSONLogic context for destination-side permission — same surface as
+     *  DialogueSystem/NPCSystem conditions (flags / inventory / time / weather). */
+    private conditionCtx(world: World, playerId: EntityId | null): any {
+        const inventory: Record<string, number> = {};
+        const inv = playerId != null
+            ? world.getComponent<{ items?: { id: string; quantity?: number }[] }>(playerId, "InventoryComponent") : null;
+        if (inv?.items) for (const it of inv.items) inventory[it.id] = (inventory[it.id] ?? 0) + (it.quantity ?? 0);
+        return { flags: world.globalFlags, inventory, time: world.time, weather: world.weather };
     }
 
     /** Move the respawn point to the checkpoint (the firing trigger), lifted a

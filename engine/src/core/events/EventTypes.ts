@@ -73,6 +73,9 @@ export interface EventMap {
     // ── combat (F3 combat-damage) ──
     'combat.hit': { targetKind: 'player' | 'npc'; adjunctId?: string; amount: number };
     'npc.died': { adjunctId: string };
+    // ── teleport (specs/teleport-portal.md) ──
+    'teleport.done': { anchor: string; block: [number, number] };
+    'teleport.denied': { anchor: string; block: [number, number]; reason: 'bad-args' | 'no-anchor' | 'refused' };
     // ── dialogue (F4 dialogue-quests) ──
     'dialogue.started': { adjunctId: string; nodeId: string; text: string; options: string[] };
     'dialogue.node': { adjunctId: string; nodeId: string; text: string; options: string[] };

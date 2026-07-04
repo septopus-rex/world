@@ -31,22 +31,27 @@ export interface DemoAsset {
     src: string;                  // seed path under public/assets (CAS ingest source)
     repeat?: [number, number];    // texture-only
 }
+/** Deploy-base-aware asset path: vite injects BASE_URL ('/' locally, '/world/'
+ *  on GitHub Pages — deploy/RELEASE.md §6). Bare absolute '/assets/…' would 404
+ *  the whole demo catalog under a sub-path deploy. */
+const asset = (p: string) => import.meta.env.BASE_URL.replace(/\/$/, '') + p;
+
 export const DEMO_ASSETS: DemoAsset[] = [
     // World block-ground baselines (WorldConfigs block.texture): 1 = forest (Normal),
     // 5 = moon (GhostMoon). Tiled across the 16 m ground via the record repeat.
-    { id: 1, type: 'texture', format: 'png', src: '/assets/ground-forest.png', repeat: [8, 8] },
-    { id: 5, type: 'texture', format: 'png', src: '/assets/ground-moon.png', repeat: [8, 8] },
-    { id: DEMO_TEXTURE_ID, type: 'texture', format: 'png', src: '/assets/checker.png', repeat: [1, 1] },
-    { id: 27, type: 'module', format: 'gltf', src: '/assets/pyramid.gltf' },
-    { id: 28, type: 'module', format: 'glb', src: '/assets/helmet.glb' },
-    { id: 29, type: 'module', format: 'glb', src: '/assets/fox.glb' },
-    { id: DEMO_AVATAR_ID, type: 'avatar', format: 'glb', src: '/assets/avatar.glb' },
-    { id: 31, type: 'audio', format: 'wav', src: '/assets/ding.wav' },
+    { id: 1, type: 'texture', format: 'png', src: asset('/assets/ground-forest.png'), repeat: [8, 8] },
+    { id: 5, type: 'texture', format: 'png', src: asset('/assets/ground-moon.png'), repeat: [8, 8] },
+    { id: DEMO_TEXTURE_ID, type: 'texture', format: 'png', src: asset('/assets/checker.png'), repeat: [1, 1] },
+    { id: 27, type: 'module', format: 'gltf', src: asset('/assets/pyramid.gltf') },
+    { id: 28, type: 'module', format: 'glb', src: asset('/assets/helmet.glb') },
+    { id: 29, type: 'module', format: 'glb', src: asset('/assets/fox.glb') },
+    { id: DEMO_AVATAR_ID, type: 'avatar', format: 'glb', src: asset('/assets/avatar.glb') },
+    { id: 31, type: 'audio', format: 'wav', src: asset('/assets/ding.wav') },
     // Video screen source (e3). Local + same-origin → no CORS issue for the
     // VideoTexture. Not shipped (no binary in the repo): drop ANY .mp4 here to
     // see it play; without the file the panel just renders dark (graceful).
     // Or swap src for a CORS-enabled URL / a CID. NOT YouTube (spec §9).
-    { id: 32, type: 'video', format: 'mp4', src: '/assets/sample.mp4' },
+    { id: 32, type: 'video', format: 'mp4', src: asset('/assets/sample.mp4') },
 ];
 
 /**

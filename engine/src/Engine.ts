@@ -366,6 +366,21 @@ export class Engine {
         this.world?.endDialogue();
     }
 
+    // ── teleport (specs/teleport-portal.md) ──────────────────────────────────
+
+    /** Anchor-gated fast travel — the SAME actuator action a content portal
+     *  fires, so the destination's `when` permission applies to UI travel too.
+     *  Outcome arrives as teleport.done / teleport.denied events. */
+    public requestTeleport(anchor: string, block: [number, number]): void {
+        const world = this.world;
+        if (!world) return;
+        const players = world.queryEntities("TransformComponent", "InputStateComponent");
+        world.actuator.execute(
+            { type: 'player', method: 'teleport', target: anchor, params: [block] } as any,
+            { world, playerId: players[0] ?? null, mode: world.mode, sourceEntity: null },
+        );
+    }
+
     /** External realtime transport (ILiveSource) feeding world.events via
      *  LiveSystem. The client subscribes()/pushes through its own implementation;
      *  this exposes whatever was injected. Null before bootWorld. */

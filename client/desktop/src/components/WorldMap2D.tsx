@@ -68,6 +68,16 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open, loader]);
 
+    // Fast travel succeeded → the map's job is done; close and let the 3D take over.
+    // (A denied teleport leaves the map open — the anchor's `when` said no.)
+    useEffect(() => {
+        if (!open || !loader?.engine) return;
+        const done = () => onClose();
+        loader.engine.on('teleport.done', done);
+        return () => loader.engine?.off('teleport.done', done);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, loader]);
+
     function tick() {
         const canvas = canvasRef.current, wrap = wrapRef.current;
         if (!canvas || !wrap || !loader) return;
@@ -100,6 +110,15 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
             }
         }
         if (cache.current.size > CACHE_CAP) evict(bx0 - 8, by0 - 8, bx1 + 8, by1 + 8);
+
+        // Selecting a cell BEFORE its fetch lands snapshots the empty fallback —
+        // refresh the inspect panel once the real cell arrives (reference check:
+        // one setSelected per landing, then they're identical).
+        const sel = selectedRef.current;
+        if (sel) {
+            const fresh = cache.current.get(`${sel.x}_${sel.y}`);
+            if (fresh && fresh !== sel) setSelected(fresh);
+        }
 
         draw(ctx, W, H);
 
@@ -154,6 +173,20 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
                     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
                     ctx.lineWidth = 1;
                     ctx.strokeRect(left + 0.5, top + 0.5, c, c);
+                }
+                // Teleport anchors (fast-travel destinations) — a violet diamond
+                // per anchor at its in-block position. Only streamed cells carry
+                // anchors = "discovered" semantics (specs/teleport-portal.md §3).
+                if (mc?.anchors?.length && c >= 8) {
+                    ctx.fillStyle = '#c084fc';
+                    for (const a of mc.anchors) {
+                        const ax = sx(bx + a.e / 16), ay = sy(by + a.n / 16);
+                        const r = Math.max(3, c * 0.16);
+                        ctx.beginPath();
+                        ctx.moveTo(ax, ay - r); ctx.lineTo(ax + r, ay); ctx.lineTo(ax, ay + r); ctx.lineTo(ax - r, ay);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
                 }
             }
         }
@@ -219,7 +252,7 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
         const bx = Math.floor(u), by = Math.floor(v);
         const [rangeX, rangeY] = loader.worldRange;
         if (bx < 1 || by < 1 || bx > rangeX || by > rangeY) { setSelected(null); return; }
-        setSelected(cache.current.get(`${bx}_${by}`) ?? { x: bx, y: by, occupied: false, count: 0, game: 0, elevation: 0 });
+        setSelected(cache.current.get(`${bx}_${by}`) ?? { x: bx, y: by, occupied: false, count: 0, game: 0, elevation: 0, anchors: [] });
     }
     function onWheel(e: React.WheelEvent) {
         const rect = canvasRef.current!.getBoundingClientRect();
@@ -288,6 +321,19 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
                         <p>内容 Adjuncts: <span className="text-cyan-400">{selected.count}</span></p>
                         <p>可玩 Game: <span className={selected.game >= 1 ? 'text-green-400' : 'text-gray-400'}>{selected.game >= 1 ? 'yes' : 'no'}</span></p>
                         <p>海拔 Elev: <span className="text-cyan-400">{selected.elevation}</span></p>
+                        {(selected.anchors?.length ?? 0) > 0 && (
+                            <div className="mt-2 pt-2 border-t border-cyan-400/30">
+                                <p className="text-[10px] text-purple-300 font-bold uppercase mb-1">传送锚点 Anchors</p>
+                                {selected.anchors.map((a) => (
+                                    <button
+                                        key={a.name}
+                                        data-testid={`map2d-travel-${a.name}`}
+                                        onClick={() => loader?.fastTravel(a.name, [selected.x, selected.y])}
+                                        className="mt-1 w-full py-1 text-[10px] bg-purple-500/20 text-purple-200 rounded border border-purple-400/40 hover:bg-purple-500/35"
+                                    >⟡ {a.name} · 传送 Travel</button>
+                                ))}
+                            </div>
+                        )}
                         <button
                             onClick={() => setSelected(null)}
                             className="mt-2 w-full py-1 text-[10px] bg-white/10 text-gray-300 rounded border border-white/20 hover:bg-white/20"

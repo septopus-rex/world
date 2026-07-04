@@ -111,10 +111,13 @@ export const TriggerMenu: AdjunctMenu = {
 // -----------------------------------------------------------------------------
 export const TriggerAttribute: AdjunctAttribute = {
     /**
-     * Slot map: [size, offset, rotation, shape, gameOnly, events]
+     * Slot map: [size, offset, rotation, shape, gameOnly, events, anchor?]
      *
      * slot 5 = events: TriggerLogicNode[]
      *   { type, conditions?, actions, fallbackActions?, oneTime? }
+     * slot 6 = anchor (specs/teleport-portal.md §2.1): this row is a legal
+     *   `player.teleport` destination — { name, when? }; `when` is the
+     *   DESTINATION-side JSONLogic permission, landing spot = this row's centre.
      *
      * Backward-compat: if slot 5 is a plain array (old format) it is kept as-is
      * and deserialized into a single 'in' event with no conditions.
@@ -140,6 +143,8 @@ export const TriggerAttribute: AdjunctAttribute = {
             shape: data[3] ?? 1,     // 1: box, 2: sphere
             gameOnly: data[4] ?? 1,
             events,
+            anchor: (data[6] && typeof data[6] === 'object' && typeof (data[6] as any).name === 'string')
+                ? data[6] : null,
         };
     },
     serialize: (std: STDObject) => {
@@ -150,6 +155,7 @@ export const TriggerAttribute: AdjunctAttribute = {
             std.shape ?? 1,
             std.gameOnly ?? 1,
             std.events ?? [],
+            std.anchor ?? null,
         ];
     }
 };
