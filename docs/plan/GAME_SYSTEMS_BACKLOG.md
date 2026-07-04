@@ -37,7 +37,7 @@
 按「数据即逻辑」审查现有功能。冲突分三类：
 
 **A. 干净对齐（可移植脊）✅** —— 主目标在最要紧处成立：
-adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLogic 条件/flag/health（原语词汇）· SPP 粒子 b6（Expander 纯函数展开）· SPP 动画 timeline（数据驱动 move/rotate/scale/opacity/color/texture/morph）· 背包拾取/丢弃机制 · 持久化 · 编辑 · 渲染 · A/V 媒体 adjunct · 模式 · 事件队列。
+adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLogic 条件/flag/health（原语词汇）· SPP 粒子 b6（Expander 纯函数展开）· Septopus 动画 timeline（数据驱动 move/rotate/scale/opacity/color/texture/morph）· 背包拾取/丢弃机制 · 持久化 · 编辑 · 渲染 · A/V 媒体 adjunct · 模式 · 事件队列。
 
 **B. 已知/有意的不可移植岛（Pattern A/B 逃生舱）—— 冲突但自觉** ⚠️：
 `PoolSystem`/`MahjongSystem`/`ShootingRangeSystem`/`TumbleSystem`（游戏逻辑焊 TS）+ `GameRuntimeSystem`（Pattern A 外部 app）。选型口诀「先 C 不行再 B」已认这是逃生舱；**移植到 UE = 逐个重写**。不是意外，记录在案即可。
@@ -85,7 +85,7 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 
 ## 0. 已就绪的引擎地基（基线，不是 gap）
 
-物理（角色控制 + 碰撞/stop + 移动平台 + rapier 特例 Tumble）· 渲染/资源（load-once/instance-many + 引用计数 + 有界缓存 + blob 回收 + **A/V 媒体 adjunct**）· trigger/actuator/JSONLogic 条件 · 背包/物品（b5）· 生命（**挨打侧** damage/heal/respawn）· 5 模式 + zone 门控 Game 进入 · 事件队列（帧作用域）· 持久化（DraftStore + IDB：草稿/flags/位置/背包）· 编辑器（palette 放置/改参/undo）· 空间音频 · 天气/日夜/LOD · 骨骼+SPP 动画 · 错误处理（`core/errors`）。
+物理（角色控制 + 碰撞/stop + 移动平台 + rapier 特例 Tumble）· 渲染/资源（load-once/instance-many + 引用计数 + 有界缓存 + blob 回收 + **A/V 媒体 adjunct**）· trigger/actuator/JSONLogic 条件 · 背包/物品（b5）· 生命（**挨打侧** damage/heal/respawn）· 5 模式 + zone 门控 Game 进入 · 事件队列（帧作用域）· 持久化（DraftStore + IDB：草稿/flags/位置/背包）· 编辑器（palette 放置/改参/undo）· 空间音频 · 天气/日夜/LOD · 骨骼+Septopus 动画 · 错误处理（`core/errors`）。
 
 **结论：单机 authored 内容，引擎地基扎实。** 缺的是下面这些「让内容活起来」的原语。
 

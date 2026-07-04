@@ -49,4 +49,4 @@ A block's content is a **5-tuple array**:
 
 ## 4. Storage and Scaling
 
-Each Block can be serialized into a specific data format (such as SPP string) as needed. Because of its atomic nature, worlds can be dynamically loaded or unloaded (sharded) on a per-Block basis by the engine, allowing for infinitely scaling environments without overwhelming client memory.
+Each Block can be serialized into a specific data format (such as the String Particle Protocol collapse string) as needed. Because of its atomic nature, worlds can be dynamically loaded or unloaded (sharded) on a per-Block basis by the engine, allowing for infinitely scaling environments without overwhelming client memory.

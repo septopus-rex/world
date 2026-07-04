@@ -30,7 +30,7 @@ test('enter a playable zone, play mahjong via the external-API runtime, leave', 
 
   // Teleport onto the table block (positioning is setup; the game flow is the
   // feature). The block's raw[4] = MAHJONG_GAME_ID makes it a playable zone.
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [3, 3, 3]), MAHJONG_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [3, 3, 3]), MAHJONG_BLOCK);
   await settle(page, 20);
 
   // GameZoneSystem derives the zone from block.game; the engine is the source
@@ -39,7 +39,7 @@ test('enter a playable zone, play mahjong via the external-API runtime, leave', 
     const w = (window as any).loader.engine.getWorld();
     const ids = w.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
     const t = w.getComponent(ids[0], 'TransformComponent');
-    // engineToSpp inverse, BLOCK_SIZE 16: which block is the player on?
+    // engineToSeptopus inverse, BLOCK_SIZE 16: which block is the player on?
     const bx = Math.floor(t.position[0] / 16) + 1;
     const by = Math.floor(-t.position[2] / 16) + 1;
     return { bx, by, zone: w.gameZoneActive };

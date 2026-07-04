@@ -201,7 +201,7 @@ export class AnimationSystem implements ISystem {
     private getAxisIndex(axis?: string): number {
         if (axis === 'X') return 0;
         if (axis === 'Y') return 2; // SPP North -> Engine -Z
-        if (axis === 'Z') return 1; // SPP Alt -> Engine Y
+        if (axis === 'Z') return 1; // Septopus Alt -> Engine Y
         return -1;
     }
 }

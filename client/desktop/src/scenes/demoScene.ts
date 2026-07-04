@@ -95,7 +95,7 @@ export function injectDemoAssets(data: any): void {
         [[6, 6, 0.3], [3, 4, 0.15], [0, 0, 0], 0, [1, 1], 0, 0, DEMO_TEXTURE_ID],   // floor slab
     ];
     // Stop adjuncts (colliders). Format: [size, offset, rot, mode, animate]
-    // SPP coords: X=East Y=North Z=Alt. This wall sits at N=5, E=1..15,
+    // Septopus coords: X=East Y=North Z=Alt. This wall sits at N=5, E=1..15,
     // south of the spawn pillar — the southern showcase stays fenced off.
     const stops = [
         [[14, 0.4, 2.5], [8, 5, 1.25], [0, 0, 0], 1, 0],

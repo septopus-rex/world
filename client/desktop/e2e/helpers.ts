@@ -97,7 +97,7 @@ export async function enterGameAt(
   block: [number, number],
   pos: [number, number, number],
 ): Promise<boolean> {
-  await page.evaluate(([b, p]) => (window as any).loader.teleportSpp(b, p), [block, pos] as any);
+  await page.evaluate(([b, p]) => (window as any).loader.teleportSeptopus(b, p), [block, pos] as any);
   // Poll setMode: GameZoneSystem needs a frame or two to register the zone, and
   // setMode('game') is refused until it has — so retry until it sticks (tolerant
   // of variable software-WebGL frame pacing) rather than betting on a fixed wait.

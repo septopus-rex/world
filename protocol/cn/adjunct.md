@@ -12,7 +12,7 @@
 
 附属物在一个隔离的环境（沙盒）中被解析和执行，以防止恶意代码访问敏感的全局 API（如 `window`、`document` 或 `fetch`）。
 
-- **坐标系统**：附属物在标准的 SPP 地块坐标系统内运行。
+- **坐标系统**：附属物在标准的 Septopus 地块坐标系统内运行。
 - **数据流**：引擎将原始地块数据输入到附属物中。附属物将这些原始数据转换为标准的 3D 参数（`position` 位置、`scale` 缩放、`rotation` 旋转、`material` 材质），然后引擎的渲染管线将这些参数转换为 Three.js 的对象网格 (meshes)。
 - **可扩展性**：不同的 Septopus “世界”可以白名单特定的附属物，以创造独特的视觉风格和游戏机制（例如：通过白名单允许使用“激光门”和“跳跃板”附属物）。
 
@@ -29,11 +29,11 @@ export const CustomAdjunct = {
         reg: () => {}            
     },
     transform: {
-        // 链上压缩的原始数组 -> SPP 标准数据
+        // 链上压缩的原始数组 -> Septopus 标准数据 (STD)
         raw_std: (arr: any[], cvt: number) => {},
-        // SPP 标准数据 -> 原始压缩数组 (用于保存为字符串)
+        // Septopus 标准数据 (STD) -> 原始压缩数组 (用于保存为字符串)
         std_raw: (arr: any[]) => {},
-        // 将 SPP 标准数据数组转换为特定的 3D 渲染/引擎参数
+        // 将 Septopus 标准数据 (STD) 数组转换为特定的 3D 渲染/引擎参数
         std_3d: (stds: any[], elevation: number) => {} 
     },
     menu: {
@@ -97,7 +97,7 @@ export const CustomAdjunct = {
 
 > 「数据即逻辑」要求 std_3d 的**几何/材质如何 realize** 也写死，否则换引擎（UE）造出的世界会不同。以下为规范；旋转/坐标见 [坐标系统](../../docs/architecture/coordinate.md#31-旋转的欧拉序与坐标系跨引擎契约)。
 
-- **尺寸轴映射**：std `size = [x, y, z]` 是 **SPP [东, 北, 高]** 全长；映射到引擎盒尺寸 **[宽=东, 高=Alt, 深=北]**（`Coords.getBoxDimensions`）。**枢轴 = 几何中心。**
+- **尺寸轴映射**：std `size = [x, y, z]` 是 **Septopus [东, 北, 高]** 全长；映射到引擎盒尺寸 **[宽=东, 高=Alt, 深=北]**（`Coords.getBoxDimensions`）。**枢轴 = 几何中心。**
 - **基元语义**：`box(w,h,d)` 居中全长；`sphere` 半径 = `w/2`；`cylinder/cone(w,h,d)`；`plane(w,h)`；`tube` 沿控制点 Catmull-Rom 挤出。**分段数（如球 32×32）是像素级细节，各引擎可不同**（观感等价即可）。
 - **世界空间 UV 平铺（贴图密度恒定）**：贴图按**世界尺寸**平铺而非按面拉伸——`每面 repeat = 面世界尺寸(米) / TILE_METERS`，`TILE_METERS = 2`（每 2 米一个 tile）。故 16m 地板与 1m 箱子贴图**同样清晰**。`material.repeat` 是**叠加在此之上的额外乘子**。（UE 需实现同一密度公式才对齐观感。）
 - **颜色**：**规范是直接 author 十六进制色**（`material.color`）。box 的 `resource 索引 → 调色板颜色`（如 `10→#eee`、`1→#555`）是**遗留 demo 便利、非规范**——跨引擎内容请存 hex，勿依赖索引调色板。

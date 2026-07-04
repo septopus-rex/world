@@ -39,7 +39,7 @@ test('the labyrinth expands from one b6 source into solid marble walls + a goal 
   await bootDeterministic(page);
 
   // Drop the player at the south gate; block streaming loads the maze.
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 2.5, 3]), MAZE_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 2.5, 3]), MAZE_BLOCK);
   expect(await pumpUntil(page, async () => (await census(page)).source >= 1)).toBe(true);
   await stepEngine(page, 20);
 
@@ -55,7 +55,7 @@ test('the labyrinth expands from one b6 source into solid marble walls + a goal 
 
 test('the maze is NOT a game zone (it is a normal explorable block)', async ({ page }) => {
   await bootDeterministic(page);
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 2.5, 3]), MAZE_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 2.5, 3]), MAZE_BLOCK);
   await pumpUntil(page, async () => (await census(page)).source >= 1);
   await stepEngine(page, 20);
   expect(await page.evaluate(() => (window as any).loader.engine.getWorld().gameZoneActive)).toBe(false);
@@ -66,13 +66,13 @@ test('reaching the heart of the labyrinth fires the goal trigger', async ({ page
   await bootDeterministic(page);
 
   // Start at the gate — the goal flag is not yet set.
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 2.5, 3]), MAZE_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 2.5, 3]), MAZE_BLOCK);
   await pumpUntil(page, async () => (await census(page)).source >= 1);
   await stepEngine(page, 20);
   expect((await worldFlags(page)).maze_solved).toBeUndefined();
 
   // Reach the centre cell (3,3) → SPP 'in' trigger sets maze_solved.
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 7.4, 3]), MAZE_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 7.4, 3]), MAZE_BLOCK);
   expect(await pumpUntil(page, async () => (await worldFlags(page)).maze_solved === true)).toBe(true);
 
   await page.screenshot({ path: 'test-results/maze-heart.png' });
@@ -82,7 +82,7 @@ test('overview screenshot: the labyrinth + Athenian framing', async ({ page }) =
   test.setTimeout(90_000);
   await bootDeterministic(page);
   // Load the maze block first (on the ground at the gate).
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 2.5, 3]), MAZE_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 2.5, 3]), MAZE_BLOCK);
   await pumpUntil(page, async () => (await census(page)).source >= 1);
   await stepEngine(page, 20);
   // First-person so the camera obeys our aim, then lift to a south-high vantage and
@@ -91,7 +91,7 @@ test('overview screenshot: the labyrinth + Athenian framing', async ({ page }) =
   await page.evaluate(() => {
     const loader = (window as any).loader;
     loader.setCameraView('first');
-    loader.teleportSpp([2047, 2048], [8, -7, 13]);
+    loader.teleportSeptopus([2047, 2048], [8, -7, 13]);
     loader.engine.getWorld().renderEngine?.setMainCameraRotation?.(-0.62, 0, 0);
     loader.engine.step(1 / 60);
     loader.engine.getWorld().renderEngine?.setMainCameraRotation?.(-0.62, 0, 0);

@@ -87,7 +87,7 @@ export class CoasterSystem implements ISystem {
                     origin[1] + cell.position[1] * s + s / 2,
                     origin[2] + cell.position[2] * s + s / 2,
                 ];
-                const e = Coords.sppToEngine(center, [block.x, block.y]);
+                const e = Coords.septopusToEngine(center, [block.x, block.y]);
                 e[1] += block.elevation || 0;
                 pts.push(e);
             }

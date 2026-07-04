@@ -4,13 +4,13 @@ The **Septopus Engine** is a 3D content execution environment built upon a found
 
 The **String Particle Protocol (SPP)** is a semantic spatial organization protocol. It collapses complex adjunct combinations into a "string" description, enabling AI-native 3D generation and rapid distribution. Within the Septopus Engine, SPP logic is encapsulated within a special **`spp` Meta-Adjunct**, which acts as an announcer to resolve and restore complex spatial structures.
 
-This framework protocol outlines the core architectural principles, coordinate systems, and the application of SPP within the engine's data pipeline.
+This framework protocol outlines the core architectural principles, coordinate systems, and the application of the String Particle Protocol (SPP) within the engine's data pipeline.
 
 ## 1. Global Coordinate Systems
 
-SPP strictly defines multiple interconnected coordinate systems to manage data efficiency and rendering logic. A key distinction in SPP is that the **Z-axis represents the vertical (up/down) direction** (where the player stands), which differs from default Three.js coordinates.
+Septopus strictly defines multiple interconnected coordinate systems to manage data efficiency and rendering logic. A key distinction is that the **Z-axis represents the vertical (up/down) direction** (where the player stands), which differs from default Three.js coordinates.
 
-| System | SPP Notation | Primary Function |
+| System | Septopus Notation | Primary Function |
 |---|---|---|
 | **Block Coordinates** | `A` System | Local coordinates relative to a single Block's origin. Used for highly compressed, repeatable storage of Adjuncts on a single piece of land. |
 | **World Coordinates** | `B` System | Global absolute coordinates. Used for stitching multiple Blocks together and determining dynamic loading (frustum culling) regions. |
@@ -18,7 +18,7 @@ SPP strictly defines multiple interconnected coordinate systems to manage data e
 
 ## 2. Operating Modes
 
-The engine must reliably switch between predefined environmental states. SPP provides the data organizational boundaries for these transitions.
+The engine must reliably switch between predefined environmental states. the String Particle Protocol (SPP) provides the data organizational boundaries for these transitions.
 
 ### 2.1 Mode Definition Table
 

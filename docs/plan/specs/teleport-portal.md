@@ -79,7 +79,7 @@ damage"完全同构。
   地图**只显示已流式过的 cell 的锚点** = 天然"已发现"语义,零全局索引。
 - 点击锚点标记 → `Engine.requestTeleport(name, [x,y])` → **同一个 actuator
   动作**(到达侧 when 照常裁决)。地图上看得见 ≠ 去得了。
-- dev/test 旁路:直接写 Transform 的 `loader.teleportSpp` 保留(与 `setMode
+- dev/test 旁路:直接写 Transform 的 `loader.teleportSeptopus` 保留(与 `setMode
   force` 同例),不经门控。
 
 ## 4. 边界与定位

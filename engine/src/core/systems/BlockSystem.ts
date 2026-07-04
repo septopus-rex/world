@@ -73,7 +73,7 @@ export class BlockSystem implements ISystem {
         }
 
         const [bw, bl] = world.config.world.block;
-        const worldPos = Coords.sppToEngine([0, 0, 0], [block.x, block.y]);
+        const worldPos = Coords.septopusToEngine([0, 0, 0], [block.x, block.y]);
         const minX = worldPos[0];
         const minZ = worldPos[2];
 
@@ -348,9 +348,9 @@ export class BlockSystem implements ISystem {
             });
         }
 
-        const sppPos: [number, number, number] = [data.ox, data.oy, data.oz];
-        const sppBlock: [number, number] = [block.x, block.y];
-        const enginePos = Coords.sppToEngine(sppPos, sppBlock);
+        const septopusPos: [number, number, number] = [data.ox, data.oy, data.oz];
+        const septopusBlock: [number, number] = [block.x, block.y];
+        const enginePos = Coords.septopusToEngine(septopusPos, septopusBlock);
 
         enginePos[1] += (block.elevation || 0);
 

@@ -117,7 +117,7 @@ test('3D mahjong: a REAL mouse click on a hand tile discards it (truly playable)
     await page.evaluate(() => {
         const l = (window as any).loader;
         l.engine.setCameraView('first');
-        l.teleportSpp([2047, 2048], [8, 4.0, 2]);
+        l.teleportSeptopus([2047, 2048], [8, 4.0, 2]);
     });
     await stepEngine(page, 25); // land + camera settle
 

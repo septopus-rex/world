@@ -38,7 +38,7 @@ test('3D shooting: zone-gated — enter Game to spawn, click to recolour, leave 
 
     // Walk onto the range block (south of spawn). In Normal mode it's just furniture
     // — no targets yet — and the explicit "Enter Game" affordance appears.
-    await page.evaluate(([b]) => (window as any).loader.teleportSpp(b, [8, 6.0, 2]), [RANGE_BLOCK] as any);
+    await page.evaluate(([b]) => (window as any).loader.teleportSeptopus(b, [8, 6.0, 2]), [RANGE_BLOCK] as any);
     await stepEngine(page, 12);
     expect(await targetCount(page), 'no targets before entering Game').toBe(0);
     await expect(page.locator('[data-testid="enter-game"]'), 'Enter Game affordance shown in the zone').toBeVisible();
@@ -118,7 +118,7 @@ test('3D shooting: WALKING out of the zone auto-exits Game and tears the round d
     await bootDeterministic(page);
 
     // Stand on the range block, face north (yaw 0), enter Game → 5 targets spawn.
-    await page.evaluate(([b]) => (window as any).loader.teleportSpp(b, [8, 6.0, 2]), [RANGE_BLOCK] as any);
+    await page.evaluate(([b]) => (window as any).loader.teleportSeptopus(b, [8, 6.0, 2]), [RANGE_BLOCK] as any);
     await page.evaluate(() => (window as any).loader.engine.getWorld().renderEngine.setMainCameraRotation(0, 0, 0));
     await stepEngine(page, 8);
     expect(await page.evaluate(() => (window as any).loader.setMode('game')), 'entered Game in the zone').toBe(true);
@@ -130,7 +130,7 @@ test('3D shooting: WALKING out of the zone auto-exits Game and tears the round d
     await stepEngine(page, 2);
     expect((await page.evaluate(() => (window as any).loader.engine.shootingState())).hits, 'one hit on the books').toBe(1);
 
-    const loc0 = await page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+    const loc0 = await page.evaluate(() => (window as any).loader.engine.getPlayerSeptopusLocation());
     expect(loc0.block, 'standing on the range block').toEqual(RANGE_BLOCK);
 
     // WALK EAST (yaw 0 → intent (1,0) is +X = east, the open side — furniture is
@@ -140,7 +140,7 @@ test('3D shooting: WALKING out of the zone auto-exits Game and tears the round d
     let loc = loc0, crossed = false;
     for (let i = 0; i < 80 && !crossed; i++) {
         await stepEngine(page, 8);
-        loc = await page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+        loc = await page.evaluate(() => (window as any).loader.engine.getPlayerSeptopusLocation());
         crossed = loc.block[0] !== RANGE_BLOCK[0] || loc.block[1] !== RANGE_BLOCK[1];
     }
     await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));
@@ -159,7 +159,7 @@ test('3D shooting: WALKING out of the zone auto-exits Game and tears the round d
     let back = false;
     for (let i = 0; i < 80 && !back; i++) {
         await stepEngine(page, 8);
-        const l = await page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+        const l = await page.evaluate(() => (window as any).loader.engine.getPlayerSeptopusLocation());
         back = l.block[0] === RANGE_BLOCK[0] && l.block[1] === RANGE_BLOCK[1];
     }
     await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));

@@ -27,7 +27,7 @@ ItemTemplate = {
   name: string,
   category: 0 Material · 1 Consumable · 2 Equipment · 3 Key · 4 Collectible,
   stackable: number,          // 0 = unique (identity includes seed, never stacks); >0 = stack limit per slot
-  visual: { shape: 'box'|'sphere'|'cone', size: [x,y,z] (SPP order, metres), color: 0xRRGGBB },
+  visual: { shape: 'box'|'sphere'|'cone', size: [x,y,z] (Septopus order, metres), color: 0xRRGGBB },
   attributes: AttributeRule[],  // rules; ARRAY ORDER IS THE DRAW ORDER (§3)
   rarityWeights: number[],      // probability weights Common..Legendary
 }

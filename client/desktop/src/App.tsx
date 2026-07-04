@@ -287,8 +287,8 @@ function App() {
         {([
           { id: 'stamp-scene', icon: '🧪', title: '导入测试场景 · Stamp test scene onto current block', onClick: () => { const b = loader?.playerState?.block; if (b) loader?.stampTestScene(b[0], b[1]); } },
           { id: 'enter-sandbox', icon: '🏖️', title: 'SPP 沙盘 · Sandbox diorama', onClick: () => { loader?.enterSandbox(); setSandbox(true); } },
-          { id: 'goto-maze', icon: '🏛️', title: '迷宫 · Athenian labyrinth', onClick: () => loader?.teleportSpp(MAZE_BLOCK, MAZE_ENTRY) },
-          { id: 'goto-dynamic', icon: '🧩', title: '动态 Adjunct · Dynamic showcase', onClick: () => loader?.teleportSpp(DYN_BLOCK, DYN_VIEW) },
+          { id: 'goto-maze', icon: '🏛️', title: '迷宫 · Athenian labyrinth', onClick: () => loader?.teleportSeptopus(MAZE_BLOCK, MAZE_ENTRY) },
+          { id: 'goto-dynamic', icon: '🧩', title: '动态 Adjunct · Dynamic showcase', onClick: () => loader?.teleportSeptopus(DYN_BLOCK, DYN_VIEW) },
           { id: 'map2d-toggle', icon: '🗺️', title: '2D 地图 · World map', onClick: () => setShow2DMap(true) },
         ] as const).map((a) => (
           <button

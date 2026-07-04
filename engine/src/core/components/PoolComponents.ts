@@ -2,7 +2,7 @@
  * Pool (3D in-world billiards) ECS components.
  *
  * The PoolSystem owns the physics; these components are the DATA it integrates.
- * All positions are SPP block-local metres (X = East, Y = North); the system
+ * All positions are Septopus block-local metres (X = East, Y = North); the system
  * derives each ball's engine TransformComponent from them every frame (the same
  * data→behaviour split as everything else — the adjunct/entity is data, the
  * System is the logic).
@@ -19,7 +19,7 @@ export interface PoolBallComponent {
     radius: number;   // metres
 }
 
-/** The pool table: playfield geometry + pockets (SPP block-local metres). */
+/** The pool table: playfield geometry + pockets (Septopus block-local metres). */
 export interface PoolTableComponent {
     block: [number, number];      // which block the table sits on
     cx: number; cy: number;       // table centre (block-local)

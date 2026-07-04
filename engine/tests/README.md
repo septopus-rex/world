@@ -64,7 +64,7 @@ engine/tests/
 
 3. **CollapseCodec 无 `encodePayload`**:整 buffer 只能"字节 fixture 进 / cells 出"地测(`decodePayload`),只有 header/cell 粒度能 encode→decode 往返。且**编解码无输入校验**:face 索引 >15 会截断、cellCount 溢出 16 位——当成"已知行为"钉死,别假设它会报错。
 
-4. **Coords**:`engineToSpp` 用 `Math.floor`,往返恒等只在块内 `[0, BLOCK_SIZE)` 成立;边界/负坐标是刻意的边界 fixture,不是 bug。`Coords.BLOCK_SIZE` 是可变静态,**测试必须在 setup 里 pin**,否则会耦合全局初始化顺序。
+4. **Coords**:`engineToSeptopus` 用 `Math.floor`,往返恒等只在块内 `[0, BLOCK_SIZE)` 成立;边界/负坐标是刻意的边界 fixture,不是 bug。`Coords.BLOCK_SIZE` 是可变静态,**测试必须在 setup 里 pin**,否则会耦合全局初始化顺序。
 
 5. **TriggerSystem 不发"已触发"事件**:没有 `trigger.fired` emit;动作经 `world.actuator` 执行。"断言触发器触发了"只能读组件状态或注入 fake actuator 观察副作用,不能监听事件。
 

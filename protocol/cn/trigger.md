@@ -30,15 +30,15 @@ block raw 中一行 `b8` 数据是**位置数组**：
 
 | 槽位 | 字段 | 类型 | 说明 |
 |---|---|---|---|
-| 0 | `size` | `[x, y, z]` | 体积尺寸（米），**SPP 轴序**（X东 Y北 Z高），盒子为各轴全长；球体取 `x` 为半径。 |
-| 1 | `offset` | `[x, y, z]` | 相对地块原点的位置（米），SPP 轴序，与其他 adjunct 的 `pos` 同语义。 |
+| 0 | `size` | `[x, y, z]` | 体积尺寸（米），**Septopus 轴序**（X东 Y北 Z高），盒子为各轴全长；球体取 `x` 为半径。 |
+| 1 | `offset` | `[x, y, z]` | 相对地块原点的位置（米），Septopus 轴序，与其他 adjunct 的 `pos` 同语义。 |
 | 2 | `rotation` | `[x, y, z]` | **预留**。当前 in/out/hold 的包含判定是轴对齐盒（AABB），不参与旋转；仅 `touch` 的射线命中网格会应用此旋转。 |
 | 3 | `shape` | `1` \| `2` | 形状：`1` = 盒子 (Box)，`2` = 球体 (Sphere)。缺省 `1`。 |
 | 4 | `gameOnly` | `0` \| `1` | `1` = 仅游戏模式参与评估。**缺省为 `1`**——演示/常驻机关需显式写 `0`。 |
 | 5 | `events` | `TriggerLogicNode[]` | 逻辑节点列表，见下文。 |
 | 6 | `anchor` | `{ name, when? }`（可选） | **传送锚点**：本行是 `player.teleport` 动作的合法目的地（落点=本行 `offset`）。`when` 为**到达侧** JSONLogic 许可（上下文同 §条件）。无锚点的地块无法被传送抵达——见 [传送/传送门规格](../../docs/plan/specs/teleport-portal.md)。 |
 
-**坐标说明**：`size`/`offset` 按 SPP 轴序书写，引擎装载时经 `Coords.getBoxDimensions` 等转换到内部轴序，创作者无需关心。
+**坐标说明**：`size`/`offset` 按 Septopus 轴序书写，引擎装载时经 `Coords.getBoxDimensions` 等转换到内部轴序，创作者无需关心。
 
 ## 3. 事件 (Events)
 
@@ -118,7 +118,7 @@ interface TriggerAction {
 
 | `type` | `target` | `method` | `params` | 效果 |
 |---|---|---|---|---|
-| `adjunct` | adjunctId，格式 `adj_{bx}_{by}_{type十进制}_{idx}`（如 `adj_2048_2048_161_0` = 该地块第 0 面墙） | `moveZ` | `[米]` | 目标沿 SPP 高度轴平移（同步更新 Transform 与 stdData，碰撞随动）。 |
+| `adjunct` | adjunctId，格式 `adj_{bx}_{by}_{type十进制}_{idx}`（如 `adj_2048_2048_161_0` = 该地块第 0 面墙） | `moveZ` | `[米]` | 目标沿 Septopus 高度轴平移（同步更新 Transform 与 stdData，碰撞随动）。 |
 | | | `rotateY` | `[弧度]` | 目标绕竖直轴旋转。 |
 | `flag` | flag 键名 | （空） | `[值]`，缺省 `true` | 写入 `world.globalFlags[target]`，供其他触发器的条件读取。 |
 | `bag` | itemId（`tpl_{模板}` / `itm_{模板}_{seed}`） | `give` / `take` | `[数量]` | 给予/扣除玩家背包物品。**仅 Game 模式生效**（其余模式警告跳过）。 |

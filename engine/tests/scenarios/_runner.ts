@@ -11,7 +11,7 @@
  * helpers/make-world.ts `makeHeadlessEngine` + `integration/headless-boot.test.ts`).
  * `runScenario` is implementable now; remaining work is (a) loading the scenario's
  * `world.blocks` fixtures and (b) mapping `step.input` to `engine.setMoveIntent` /
- * `engine.jump`, then reading the player back via `Coords.engineToSpp`. Left as the
+ * `engine.jump`, then reading the player back via `Coords.engineToSeptopus`. Left as the
  * next step. The TYPES + authoring format below are stable.
  */
 

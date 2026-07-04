@@ -31,15 +31,15 @@ One `b8` row in block raw is a **positional array**:
 
 | Slot | Field | Type | Description |
 |---|---|---|---|
-| 0 | `size` | `[x, y, z]` | Volume extents (meters) in **SPP axis order** (X=East, Y=North, Z=Alt); full lengths for a box; `x` is the radius for a sphere. |
-| 1 | `offset` | `[x, y, z]` | Position relative to the block origin (meters), SPP order — same semantics as other adjuncts' `pos`. |
+| 0 | `size` | `[x, y, z]` | Volume extents (meters) in **Septopus axis order** (X=East, Y=North, Z=Alt); full lengths for a box; `x` is the radius for a sphere. |
+| 1 | `offset` | `[x, y, z]` | Position relative to the block origin (meters), Septopus order — same semantics as other adjuncts' `pos`. |
 | 2 | `rotation` | `[x, y, z]` | **Reserved.** The in/out/hold containment test is axis-aligned (AABB) and ignores rotation; only the `touch` raycast mesh applies it. |
 | 3 | `shape` | `1` \| `2` | `1` = box, `2` = sphere. Default `1`. |
 | 4 | `gameOnly` | `0` \| `1` | `1` = evaluated only in Game mode. **Defaults to `1`** — always-on contraptions must write `0` explicitly. |
 | 5 | `events` | `TriggerLogicNode[]` | Logic node list, below. |
 | 6 | `anchor` | `{ name, when? }` (optional) | **Teleport anchor**: this row is a legal destination of the `player.teleport` action (landing spot = this row's `offset`). `when` is the **destination-side** JSONLogic permission (same context as §conditions). A block without an anchor cannot be teleported into — see the [teleport/portal spec](../../docs/plan/specs/teleport-portal.md). |
 
-**Coordinates**: author `size`/`offset` in SPP order; the engine converts to its internal axes on load (`Coords.getBoxDimensions` etc.).
+**Coordinates**: author `size`/`offset` in Septopus order; the engine converts to its internal axes on load (`Coords.getBoxDimensions` etc.).
 
 ## 3. Events
 
@@ -119,7 +119,7 @@ interface TriggerAction {
 
 | `type` | `target` | `method` | `params` | Effect |
 |---|---|---|---|---|
-| `adjunct` | adjunctId, format `adj_{bx}_{by}_{typeDecimal}_{idx}` (e.g. `adj_2048_2048_161_0` = wall #0 on that block) | `moveZ` | `[meters]` | Translate the target along the SPP altitude axis (updates Transform AND stdData; collision follows). |
+| `adjunct` | adjunctId, format `adj_{bx}_{by}_{typeDecimal}_{idx}` (e.g. `adj_2048_2048_161_0` = wall #0 on that block) | `moveZ` | `[meters]` | Translate the target along the Septopus altitude axis (updates Transform AND stdData; collision follows). |
 | | | `rotateY` | `[radians]` | Rotate the target around the vertical axis. |
 | `flag` | flag key | (empty) | `[value]`, default `true` | Write `world.globalFlags[target]`, readable by other triggers' conditions. |
 | `bag` | itemId (`tpl_{template}` / `itm_{template}_{seed}`) | `give` / `take` | `[count]` | Credit/debit the player's bag. **Game mode only** (warned & skipped elsewhere). |

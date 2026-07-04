@@ -13,12 +13,12 @@
 
 - A **raw row** is a JSON array; a block's `adjuncts` slot carries rows grouped
   as `[typeId, [row, row, …]]` (see [block.md](block.md) §raw).
-- **Coordinates/sizes**: always **SPP axis order** (X east, Y north, Z up,
+- **Coordinates/sizes**: always **Septopus axis order** (X east, Y north, Z up,
   metres), relative to the block origin (south-west corner). Engines convert to
   their internal frames on load; the data never carries engine internals.
 - **Rotation**: `[rx, ry, rz]` in radians, **engine-frame Euler XYZ about the
   geometric centre** — yaw about the vertical axis lives at **index 1**. This
-  asymmetry (positions in the SPP frame, rotations in the engine frame) is
+  asymmetry (positions in the Septopus frame, rotations in the engine frame) is
   deliberate; details in [world.md](world.md) §Coordinate & Rotation Contract.
 - **Trailing optional slots** may be omitted entirely; defaults are given per
   table. Implementations must not fail on missing trailing slots.
@@ -65,7 +65,7 @@
 | 2 | `rot` | `[rx, ry, rz]`, default `[0,0,0]` | engine-frame Euler (see §0) |
 | 3 | `resource` | number, default `0` | colour/material index (world resource catalog) |
 | 4 | `repeat` | `[u, v]`, default `[1,1]` | texture tiling |
-| 5 | `animation` | animation object / `null` | SPP animation timeline, see [animation.md](animation.md) |
+| 5 | `animation` | animation object / `null` | Septopus animation timeline, see [animation.md](animation.md) |
 | 6 | `stop` | any / `null` | non-null ⇒ solid (a2 ignores this slot and is always solid) |
 | 7 | `texture` | resource id / CID (a2 only, optional) | explicit texture, resolved through the resource pipeline (may be an IPFS CID) |
 
@@ -114,7 +114,7 @@ over native model size). Skeletal-clip naming contract:
 |---|---|---|---|
 | 0–2 | size/pos/rot | — | as in the standard slots |
 | 3 | `mode` | `1` | `1` BODY (full block) · `2` FOOT · `3` HEAD (forward-compat; v1 treats all as full volume) |
-| 4 | `animate` | `null` | SPP animation |
+| 4 | `animate` | `null` | Septopus animation |
 | 5 | `shape` | `1` | **`1` box (AABB; rotation does not affect collision) · `2` ball/cylinder (radius = `size[0]/2`, height = `size[2]`, circular footprint) · `3` slope wedge (top face rises from 0 at the south edge to `size[2]` at the north edge; collision honours ONLY the vertical-axis yaw = `rot[1]`)** |
 
 A slope's top face is a **height function** (linear plane); a walking engine

@@ -128,8 +128,8 @@ export class TumbleSystem implements ISystem {
         const woodDark = c.woodDark ?? 0xb5894f;
 
         // Tower centre anchored in engine/Three space (Y = up). Mirror PoolSystem:
-        // sppToEngine does NOT include block elevation, so add it onto Y.
-        const base = Coords.sppToEngine([c.origin[0], c.origin[1], surfaceZ], c.block);
+        // septopusToEngine does NOT include block elevation, so add it onto Y.
+        const base = Coords.septopusToEngine([c.origin[0], c.origin[1], surfaceZ], c.block);
         const elevation = this.blockElevation(world, c.block);
         base[1] += elevation;
 

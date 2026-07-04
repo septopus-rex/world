@@ -42,7 +42,7 @@ async function spawnBlockState(page: any) {
 
 /** The local player's SPP location {block, position, rotation} from the engine. */
 async function playerSpp(page: any) {
-  return page.evaluate(() => (window as any).loader.engine.getPlayerSppLocation());
+  return page.evaluate(() => (window as any).loader.engine.getPlayerSeptopusLocation());
 }
 
 test('player location survives a reload (engine meta channel)', async ({ page }) => {

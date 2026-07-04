@@ -3,14 +3,14 @@
 Within the **Septopus engine**, the "Player" is not just a viewpoint but an interactive unit that follows physical rules and has a visual representation (Avatar) in the world. Its position and state are tracked in real time by the engine and interact deeply with content organized via SPP.
 
 > This document maps to the implementation: state container & persistence in
-> `client/desktop/src/lib/DesktopLoader.ts` (`SPPPlayerState`), state reporting in
+> `client/desktop/src/lib/DesktopLoader.ts` (`SeptopusPlayerState`), state reporting in
 > `engine/src/core/movement/CharacterController.ts`, avatar loading in
 > `engine/src/core/EntityFactory.ts`, component definitions in
 > `engine/src/core/components/PlayerComponents.ts`.
 
 ## 1. Player Spatial State
 
-The player's core persisted state format (client-side `SPPPlayerState`, stored in
+The player's core persisted state format (client-side `SeptopusPlayerState`, stored in
 localStorage `spp_player_state`, restored on reload for seamless continuation):
 
 ```json
@@ -30,8 +30,8 @@ localStorage `spp_player_state`, restored on reload for seamless continuation):
 | Field | Description | Status |
 |---|---|---|
 | `block` | `[X, Y]` coordinates of the player's current block. | ✅ dynamically reported by the engine |
-| `position` | `[X, Y, Z]` coordinates **relative to the current block** (SPP axes, Z = altitude). | ✅ dynamically reported |
-| `rotation` | View Euler rotation `[X, Y, Z]` (SPP convention). | ✅ dynamically reported |
+| `position` | `[X, Y, Z]` coordinates **relative to the current block** (Septopus axes, Z = altitude). | ✅ dynamically reported |
+| `rotation` | View Euler rotation `[X, Y, Z]` (Septopus convention). | ✅ dynamically reported |
 | `world` | World ID (`string \| number`). | ⚠️ carried in the container; engine is single-world for now, never updated dynamically |
 | `extend` | Viewport loading radius (rings of neighboring blocks; `2` = 5×5). | ✅ used by the client streamer (clamped to ≥ 2); a static twin also exists in world config `player.extend` |
 | `stop` | What the player stands on (`on`/`adjunct`/`index`), the fall reference. | 🚧 **Reserved** — kept in the container, never updated by the engine (groundedness lives internally in `RigidBodyComponent.isGrounded`) |
@@ -41,8 +41,8 @@ localStorage `spp_player_state`, restored on reload for seamless continuation):
 
 The engine does not persist every frame: `CharacterController.processPersistence`
 emits a `player:state` event when movement/rotation **crosses a threshold**, with
-payload **`{ block, position, rotation }`** (converted back to SPP coordinates via
-`Coords.engineToSpp`). The client merges it into the container above and writes
+payload **`{ block, position, rotation }`** (converted back to Septopus coordinates via
+`Coords.engineToSeptopus`). The client merges it into the container above and writes
 localStorage — the remaining fields (`stop`/`posture` etc.) ride along as container
 defaults.
 

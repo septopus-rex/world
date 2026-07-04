@@ -10,7 +10,7 @@
 
 ## 0. 核心模型
 
-把过山车重映射到 SPP 的 cell/face 模型（face 顺序 = `[Top, Bottom, Front(S), Back(N), Left(W), Right(E)]`，SPP 坐标 X=东 Y=北 Z=高）：
+把过山车重映射到 SPP 的 cell/face 模型（face 顺序 = `[Top, Bottom, Front(S), Back(N), Left(W), Right(E)]`，Septopus 坐标 X=东 Y=北 Z=高）：
 
 | 过山车概念 | SPP 表达 |
 |---|---|

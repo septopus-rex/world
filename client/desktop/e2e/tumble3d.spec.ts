@@ -15,7 +15,7 @@ const tumble = (p: any) => p.evaluate(() => (window as any).loader.engine.tumble
 const blockCount = (p: any) => p.evaluate(() =>
     (window as any).loader.engine.getWorld().getEntitiesWith(['TumbleBlockComponent']).length);
 const teleport = (p: any, block: [number, number], pos: [number, number, number]) =>
-    p.evaluate(([b, q]: any) => (window as any).loader.teleportSpp(b, q), [block, pos] as any);
+    p.evaluate(([b, q]: any) => (window as any).loader.teleportSeptopus(b, q), [block, pos] as any);
 // Pieces actually rotate (not just translate): a piece's local up-axis is tilted
 // from world up. tumbleState().maxTilt (radians, yaw-invariant) reads this from the
 // physics quaternions — STANDING ≈ 0 (upright at any yaw), FALLEN ≈ π/2 (on its

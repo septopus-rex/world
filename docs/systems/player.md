@@ -22,8 +22,8 @@
 | `InventoryComponent` | 背包 | `items` `maxCapacity` |
 
 **持久化**：`CharacterController` 在位移/转角超过阈值时发出 `player:state` 事件
-（`{block, position, rotation}`，SPP 坐标）；客户端将其合并进
-`SPPPlayerState` 容器并写入 localStorage（`spp_player_state`）实现断线位置续传。
+（`{block, position, rotation}`，Septopus 坐标）；客户端将其合并进
+`SeptopusPlayerState` 容器并写入 localStorage（`spp_player_state`）实现断线位置续传。
 容器中的 `stop{}`、`posture` 字段为**预留**（引擎不更新），合约同步属后续规划。
 **模式门控**：`player.state` 事件在 Normal / Edit / Game / Ghost 各模式都发；但 **durable
 位置**（DraftStore `saveMeta` 的 `'player'` 通道，重载还原/重生的真相源）**仅 Normal / Game 写**

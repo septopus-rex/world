@@ -123,14 +123,14 @@ A **motion set** = a form-independent collection of humanoid clips **keyed by §
 
 VRM defines a standardized expression system (presets `happy/angry/sad/relaxed/surprised`
 + visemes `aa/ih/ou/ee/oh` + `blink/lookAt`). Avatar expressions **normatively reuse VRM
-expression presets**, landed via render-layer morph/blendshape (reusing SPP's `morph`
+expression presets**, landed via render-layer morph/blendshape (reusing the Septopus animation `morph`
 channel through `RenderEngine.setMorphInfluences`). **Not implemented in v1**; named only
 to reserve the namespace.
 
-## 6. Relationship to SPP animation (do not conflate)
+## 6. Relationship to Septopus animation (do not conflate)
 
 This protocol is **humanoid skeletal/locomotion** animation. It is a **separate mechanism**
-from [SPP timeline animation](../../docs/systems/animation.md) (the adjunct/block
+from [Septopus timeline animation](../../docs/systems/animation.md) (the adjunct/block
 declarative `timeline`: move/rotate/scale/opacity/color/texture/morph): the former drives
 **rigged characters**, the latter drives **adjunct transforms**. Both land via the render
 layer; neither replaces the other.

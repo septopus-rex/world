@@ -1,7 +1,7 @@
 /**
  * AdjunctDefaults — sensible starter raw rows for palette placement.
  *
- * `pos` is the clicked surface point in SPP coords (block-local, z = surface
+ * `pos` is the clicked surface point in Septopus coords (block-local, z = surface
  * altitude); each entry lifts volumetric types by half their height so the
  * new object sits ON the surface instead of straddling it. Creators refine
  * everything afterwards through the edit form.

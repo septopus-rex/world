@@ -31,7 +31,7 @@ const beh = (world: any, eid: number) => world.getComponent(eid, 'BehaviorCompon
 function movePlayer(world: any, e: number, n: number, alt = 1) {
     const p = world.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0];
     const t = world.getComponent(p, 'TransformComponent');
-    const [x, y, z] = Coords.sppToEngine([e, n, alt], [BX, BY]);
+    const [x, y, z] = Coords.septopusToEngine([e, n, alt], [BX, BY]);
     t.position[0] = x; t.position[1] = y; t.position[2] = z; t.dirty = true;
 }
 

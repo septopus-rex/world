@@ -114,12 +114,12 @@ rightUpperLeg rightLowerLeg rightFoot
 
 VRM 定义了标准化表情系统（presets：`happy/angry/sad/relaxed/surprised` + 口型
 `aa/ih/ou/ee/oh` + `blink/lookAt`）。化身表情**规范沿用 VRM expression presets**，经渲染层
-morph/blendshape 落地（与 SPP 的 `morph` 动画通道复用 `RenderEngine.setMorphInfluences`）。
+morph/blendshape 落地（与 Septopus 动画的 `morph` 通道复用 `RenderEngine.setMorphInfluences`）。
 **v1 不实现**，仅占位命名以免未来撞名。
 
-## 6. 与 SPP 动画的关系（别混淆）
+## 6. 与 Septopus 动画的关系（别混淆）
 
-本协议是**人形骨骼/运动**动画。它与 [SPP 时间线动画](../../docs/systems/animation.md)
+本协议是**人形骨骼/运动**动画。它与 [Septopus 时间线动画](../../docs/systems/animation.md)
 （adjunct/block 的声明式 `timeline`：move/rotate/scale/opacity/color/texture/morph）是**两套
 独立机制**：前者驱动**有骨架的角色**，后者驱动**附属物变换**。二者都经渲染层落地，互不替代。
 

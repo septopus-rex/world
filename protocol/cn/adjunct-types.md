@@ -11,10 +11,10 @@
 
 - **raw 行** = 一个 JSON 数组;地块 raw 的 `adjuncts` 槽按 `[typeId, [行, 行, …]]`
   分组承载(见 [block.md](block.md) §raw)。
-- **坐标/尺寸**:一律 **SPP 轴序**(X东、Y北、Z高,米),相对地块原点(西南角);
+- **坐标/尺寸**:一律 **Septopus 轴序**(X东、Y北、Z高,米),相对地块原点(西南角);
   引擎装载时自行转换到内部轴序,创作者与数据不关心内部表示。
 - **旋转**:`[rx, ry, rz]` 弧度,**引擎系 Euler XYZ、绕几何中心**——绕竖直轴的
-  yaw 在 **index 1**。这是刻意的不对称(位置按 SPP 系、旋转按引擎系),规范细节
+  yaw 在 **index 1**。这是刻意的不对称(位置按 Septopus 系、旋转按引擎系),规范细节
   见 [world.md](world.md) §坐标与旋转契约。
 - **可省尾槽**:行尾的可选槽位可整体省略,缺省值见各表;实现不得因尾槽缺失报错。
 - **solid(可碰撞)**:`a2` 恒为 solid;标准 7 槽类型的 slot 6 `stop` 非空即 solid;
@@ -58,7 +58,7 @@
 | 2 | `rot` | `[rx, ry, rz]`,缺省 `[0,0,0]` | 引擎系 Euler(见 §0) |
 | 3 | `resource` | number,缺省 `0` | 颜色/材质索引(世界资源目录) |
 | 4 | `repeat` | `[u, v]`,缺省 `[1,1]` | 贴图平铺 |
-| 5 | `animation` | 动画对象/`null` | SPP 动画时间轴,见 [animation.md](animation.md) |
+| 5 | `animation` | 动画对象/`null` | Septopus 动画时间轴,见 [animation.md](animation.md) |
 | 6 | `stop` | 任意/`null` | 非空 ⇒ solid(a2 无视此槽恒 solid) |
 | 7 | `texture` | 资源 id/CID(仅 a2,可选) | 显式贴图;设置后按资源管线解析(可为 IPFS CID) |
 
@@ -104,7 +104,7 @@
 |---|---|---|---|
 | 0–2 | size/pos/rot | — | 同标准槽 |
 | 3 | `mode` | `1` | `1` BODY(全阻挡)· `2` FOOT · `3` HEAD(前向兼容;v1 一律按全体积) |
-| 4 | `animate` | `null` | SPP 动画 |
+| 4 | `animate` | `null` | Septopus 动画 |
 | 5 | `shape` | `1` | **`1` 盒(AABB,旋转不参与碰撞)· `2` 球柱(半径=`size[0]/2`,高=`size[2]`,圆形足迹)· `3` 楔形坡(顶面从南缘 0 升到北缘 `size[2]`;碰撞只认竖直轴 yaw=`rot[1]`)** |
 
 坡的顶面是**高度函数**(线性平面);行走引擎必须支持沿坡连续行走(参考实现:

@@ -19,9 +19,9 @@ import { Coords } from '../../core/utils/Coords.js';
  * no collider is attached.
  *
  * Raw: [ pos[ox,oy,oz], path[[x,y,z]...] (SPP, relative to pos), radius ]
- *   pos  — the piece origin (SPP block-local); positioned like any adjunct.
+ *   pos  — the piece origin (Septopus block-local); positioned like any adjunct.
  *   path — control points relative to pos, in SPP; the transform converts each
- *          to engine-local (localSppToEngine) for the mesh's tube geometry.
+ *          to engine-local (localSeptopusToEngine) for the mesh's tube geometry.
  */
 const reg: ComponentMeta = {
     name: "track",
@@ -54,7 +54,7 @@ const transform: AdjunctTransform = {
             const pts: [number, number, number][] = (row.path ?? []) as any;
             // Control points are SPP offsets relative to the piece origin; the
             // mesh's tube is built in engine-local space, so convert each.
-            const path = pts.map(p => Coords.localSppToEngine(p));
+            const path = pts.map(p => Coords.localSeptopusToEngine(p));
             return {
                 type: "tube",
                 index: i,

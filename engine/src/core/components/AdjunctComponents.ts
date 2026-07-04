@@ -2,7 +2,7 @@ import { EntityId, World } from '../World';
 import { STDObject } from '../types/Adjunct';
 
 /**
- * Component representing a dynamic, external "Adjunct" in the SPP Engine.
+ * Component representing a dynamic, external "Adjunct" in the Septopus engine.
  * Adjuncts act as data-driven bridges for creating complex 3D interactive objects.
  */
 export interface AdjunctComponent {

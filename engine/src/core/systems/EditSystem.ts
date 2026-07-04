@@ -266,7 +266,7 @@ export class EditSystem implements ISystem {
             const res = CONTROL_CONSTANTS.GRID_SNAP_RESOLUTION;
             const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent")!;
             const [bw, bl, bh] = world.config.world.block;
-            const bWorldPos = Coords.sppToEngine([0, 0, 0], [bComp.x, bComp.y]);
+            const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
             const elevation = bComp.elevation || 0;
 
             let newX = Coords.snapToGrid(hit[0], res);
@@ -501,7 +501,7 @@ export class EditSystem implements ISystem {
         const block = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
         if (!block) return;
 
-        const spp = Coords.engineToSpp([point[0], point[1], point[2]]);
+        const spp = Coords.engineToSeptopus([point[0], point[1], point[2]]);
         if (spp.block[0] !== block.x || spp.block[1] !== block.y) {
             world.ui?.showToast('Placement must stay inside the active edit block');
             return; // keep the type armed — let the creator click again

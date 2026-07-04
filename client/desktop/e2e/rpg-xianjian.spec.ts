@@ -12,14 +12,14 @@ const VX = 2048, VY = 2048, PY = 2049, SY = 2050;
 const AUNT_COLOR = 4482252, WOLF_COLOR = 8926003;
 
 /** SPP northing of the player within block row `by`. */
-const sppN = async (page: any, by: number) => {
+const septopusN = async (page: any, by: number) => {
     const [, , z] = await playerPosition(page);
     return -z - (by - 1) * 16;
 };
 const altOf = async (page: any) => (await playerPosition(page))[1];
 
 const teleport = (page: any, block: [number, number], pos: [number, number, number]) =>
-    page.evaluate(([b, p]: any) => (window as any).loader.teleportSpp(b, p), [block, pos] as any);
+    page.evaluate(([b, p]: any) => (window as any).loader.teleportSeptopus(b, p), [block, pos] as any);
 
 const mode = (page: any) => page.evaluate(() => String((window as any).loader.engine.getWorld().mode));
 
@@ -68,7 +68,7 @@ test('灵草记:接任务 → 上山 → 战妖狼 → 采药 → 交任务 → 
     await stepEngine(page, 90); // settle spawn
 
     // ── 村庄:沿路北行,找婶婶接任务(真实对话 UI)────────────────────────
-    expect(await walkUntil(page, [0, 1], async () => (await sppN(page, VY)) >= 8.3, 900),
+    expect(await walkUntil(page, [0, 1], async () => (await septopusN(page, VY)) >= 8.3, 900),
         'walk up the village road').toBe(true);
     expect(await clickNpc(page, AUNT_COLOR), 'aunt within talk range').toBeLessThanOrEqual(3.5);
     await stepEngine(page, 3);
@@ -89,12 +89,12 @@ test('灵草记:接任务 → 上山 → 战妖狼 → 采药 → 交任务 → 
     // ── 山路:踏云梯上山(slope stops,海拔 0 → 4m)────────────────────────
     await teleport(page, [VX, PY], [8, 0.6, 0.5]);
     await stepEngine(page, 20);
-    expect(await walkUntil(page, [0, 1], async () => (await sppN(page, PY)) >= 15.6, 1500),
+    expect(await walkUntil(page, [0, 1], async () => (await septopusN(page, PY)) >= 15.6, 1500),
         'climb both cloud-ladder slopes').toBe(true);
     expect(await altOf(page), 'reached the 4 m summit plateau').toBeGreaterThan(4.5);
 
     // ── 山顶:game trigger 自动进 Game,妖狼追咬,两剑毙之 ───────────────────
-    expect(await walkUntil(page, [0, 1], async () => (await sppN(page, SY)) >= 3, 600),
+    expect(await walkUntil(page, [0, 1], async () => (await septopusN(page, SY)) >= 3, 600),
         'cross into the summit block').toBe(true);
     await stepEngine(page, 10);
     expect(await mode(page), 'trigger-borne Game entry').toBe('game');
@@ -127,7 +127,7 @@ test('灵草记:接任务 → 上山 → 战妖狼 → 采药 → 交任务 → 
     expect((await inventory(page))['tpl_3'] ?? 0, 'herb in the bag').toBeGreaterThanOrEqual(1);
 
     // ── 下山:走出战斗块,ephemeral 自动退回 Normal ─────────────────────────
-    expect(await walkUntil(page, [0, -1], async () => (await sppN(page, SY)) <= -0.5, 2000),
+    expect(await walkUntil(page, [0, -1], async () => (await septopusN(page, SY)) <= -0.5, 2000),
         'walk off the summit').toBe(true);
     await stepEngine(page, 10);
     expect(await mode(page), 'ephemeral exit back to normal').toBe('normal');
@@ -163,7 +163,7 @@ test('灵草记:接任务 → 上山 → 战妖狼 → 采药 → 交任务 → 
     expect(bag['itm_1_777'] ?? 0, 'gem survives reload').toBe(1);
 
     // 终局对话:两个任务选项都收敛,只剩「告辞」——经真实 UI 断言。
-    expect(await walkUntil(page, [0, 1], async () => (await sppN(page, VY)) >= 8.3, 900)).toBe(true);
+    expect(await walkUntil(page, [0, 1], async () => (await septopusN(page, VY)) >= 8.3, 900)).toBe(true);
     await clickNpc(page, AUNT_COLOR);
     await stepEngine(page, 3);
     await expect(page.getByTestId('dialogue-option-0')).toContainText('告辞');

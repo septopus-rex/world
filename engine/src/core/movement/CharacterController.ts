@@ -272,10 +272,10 @@ export class CharacterController implements ISystem {
         const distSq = this._lastPos.distanceToSquared(new Vector3(trans.position[0], trans.position[1], trans.position[2]));
         const rotDist = Math.abs(trans.rotation[1] - this._lastRot[1]);
         if (distSq > CONTROL_CONSTANTS.STATE_EMIT_THRESHOLD ** 2 || rotDist > CONTROL_CONSTANTS.ROT_EMIT_THRESHOLD) {
-            const spp = Coords.engineToSpp(trans.position);
-            const sppRot = Coords.engineRotationToSpp(trans.rotation);
+            const spp = Coords.engineToSeptopus(trans.position);
+            const septopusRot = Coords.engineRotationToSeptopus(trans.rotation);
             world.events.emit('player.state', {
-                block: spp.block, position: spp.pos, rotation: sppRot,
+                block: spp.block, position: spp.pos, rotation: septopusRot,
             });
             // Durably persist the player's location (engine-owned, like inventory
             // and session) so a reload restores it — see Engine.hydrateDrafts. The
@@ -284,7 +284,7 @@ export class CharacterController implements ISystem {
             // the gameplay spawn. saveMeta is write-behind, so this never blocks.
             if (world.mode === SystemMode.Normal || world.mode === SystemMode.Game) {
                 world.draftStore?.saveMeta?.(0, 'player', {
-                    version: 1, block: spp.block, position: spp.pos, rotation: sppRot,
+                    version: 1, block: spp.block, position: spp.pos, rotation: septopusRot,
                 });
             }
             this._lastPos.set(trans.position[0], trans.position[1], trans.position[2]);

@@ -34,7 +34,7 @@ function player(world: any) {
 /** Teleport the player to SPP (e,n,alt) in block (bx,by). */
 function tp(world: any, bx: number, by: number, e: number, n: number, alt: number) {
     const t = world.getComponent(player(world), 'TransformComponent');
-    const [x, y, z] = Coords.sppToEngine([e, n, alt], [bx, by]);
+    const [x, y, z] = Coords.septopusToEngine([e, n, alt], [bx, by]);
     t.position[0] = x; t.position[1] = y; t.position[2] = z; t.dirty = true;
 }
 

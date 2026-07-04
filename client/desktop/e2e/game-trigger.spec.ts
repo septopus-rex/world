@@ -17,7 +17,7 @@ const mode = (page: any) => page.evaluate(() => (window as any).loader.engine.ge
 const targetCount = (page: any) => page.evaluate(() =>
     (window as any).loader.engine.getWorld().getEntitiesWith(['ShootingTargetComponent']).length);
 const teleport = (page: any, block: [number, number], pos: [number, number, number]) =>
-    page.evaluate(([b, p]) => (window as any).loader.teleportSpp(b, p), [block, pos] as any);
+    page.evaluate(([b, p]) => (window as any).loader.teleportSeptopus(b, p), [block, pos] as any);
 
 test('trigger-borne entry: walking into the range trigger enters Game + spawns targets (no setMode)', async ({ page }) => {
     test.setTimeout(180_000);

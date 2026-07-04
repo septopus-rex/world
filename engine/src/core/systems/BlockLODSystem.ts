@@ -53,7 +53,7 @@ export class BlockLODSystem implements ISystem {
             if (!block || !block.isInitialized) continue;
             live.add(blockEid);
 
-            const center = Coords.sppToEngine([8, 8, 0], [block.x, block.y]);
+            const center = Coords.septopusToEngine([8, 8, 0], [block.x, block.y]);
             const dx = player.position[0] - center[0];
             const dz = player.position[2] - center[2];
             const tier: 'near' | 'far' = (forceNear || dx * dx + dz * dz <= nearSq) ? 'near' : 'far';

@@ -64,7 +64,7 @@ export class EditHelperManager {
         }
 
         const bComp = this.world.getComponent<BlockComponent>(activeBlockId, "BlockComponent")!;
-        const bWorldPos = Coords.sppToEngine([0, 0, 0], [bComp.x, bComp.y]);
+        const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
         const elevation = bComp.elevation || 0;
         const offset = 0.01;
 

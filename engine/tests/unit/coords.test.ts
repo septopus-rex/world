@@ -10,25 +10,25 @@ describe('Coords', () => {
     Coords.BLOCK_SIZE = 16;
   });
 
-  it('sppToEngine maps Alt(Z)->EngineY and North(+Y)->Engine -Z', () => {
-    const [ex, ey, ez] = Coords.sppToEngine([8, 8, 1], [1, 1]); // block [1,1] => zero offset
+  it('septopusToEngine maps Alt(Z)->EngineY and North(+Y)->Engine -Z', () => {
+    const [ex, ey, ez] = Coords.septopusToEngine([8, 8, 1], [1, 1]); // block [1,1] => zero offset
     expect(ex).toBe(8);  // East
     expect(ey).toBe(1);  // Alt -> Engine Y
     expect(ez).toBe(-8); // North -> -Z
   });
 
-  it('sppToEngine -> engineToSpp round-trips for in-block positions', () => {
+  it('septopusToEngine -> engineToSeptopus round-trips for in-block positions', () => {
     const block: [number, number] = [2048, 2048];
     const pos: [number, number, number] = [8, 8, 1];
-    const back = Coords.engineToSpp(Coords.sppToEngine(pos, block));
+    const back = Coords.engineToSeptopus(Coords.septopusToEngine(pos, block));
     expect(back.block).toEqual(block);
     expect(back.pos[0]).toBeCloseTo(pos[0]);
     expect(back.pos[1]).toBeCloseTo(pos[1]);
     expect(back.pos[2]).toBeCloseTo(pos[2]);
   });
 
-  it('localSppToEngine flips North to -Z (no block offset)', () => {
-    expect(Coords.localSppToEngine([3, 5, 2])).toEqual([3, 2, -5]);
+  it('localSeptopusToEngine flips North to -Z (no block offset)', () => {
+    expect(Coords.localSeptopusToEngine([3, 5, 2])).toEqual([3, 2, -5]);
   });
 
   it('getBoxDimensions swaps SPP [East,North,Alt] -> Engine [w,h,d]', () => {
@@ -49,11 +49,11 @@ describe('Coords', () => {
     expect(Coords.headingToEngineYaw(Coords.engineYawToHeading(1.23))).toBeCloseTo(1.23);
   });
 
-  it('engineRotationToSpp <-> sppRotationToEngine round-trip (spawn/restore safety)', () => {
+  it('engineRotationToSeptopus <-> septopusRotationToEngine round-trip (spawn/restore safety)', () => {
     const engine: [number, number, number] = [0.1, 1.2, -0.3];
-    const spp = Coords.engineRotationToSpp(engine);
+    const spp = Coords.engineRotationToSeptopus(engine);
     expect(spp[1]).toBeCloseTo(-1.2);                        // yaw reframed to heading
-    const back = Coords.sppRotationToEngine(spp);
+    const back = Coords.septopusRotationToEngine(spp);
     expect(back[0]).toBeCloseTo(engine[0]);                  // pitch passes through
     expect(back[1]).toBeCloseTo(engine[1]);                  // yaw restored exactly
     expect(back[2]).toBeCloseTo(engine[2]);                  // roll passes through

@@ -65,7 +65,7 @@ export interface MapCell {
     anchors: { name: string; e: number; n: number }[];
 }
 
-export interface SPPPlayerState {
+export interface SeptopusPlayerState {
     block: [number, number];
     world: string | number;
     position: [number, number, number]; // [X, Y, Z] (X=East, Y=North, Z=Alt)
@@ -196,7 +196,7 @@ export class DesktopLoader implements IDataSource {
      *  the local draft overlay. Built once draftStore is hydrated (see init). */
     private localData: LocalDataSource | null = null;
 
-    public playerState: SPPPlayerState = { ...DEFAULT_PLAYER_STATE };
+    public playerState: SeptopusPlayerState = { ...DEFAULT_PLAYER_STATE };
 
     // ── IDataSource ───────────────────────────────────────────────────────────
 
@@ -447,7 +447,7 @@ export class DesktopLoader implements IDataSource {
         // the fallback spawn). Mirror it locally and preload the neighborhood
         // around the block the player will actually appear in.
         const authored = this.activeLevel?.start ?? null;
-        const restored = this.engine.getPlayerSppLocation();
+        const restored = this.engine.getPlayerSeptopusLocation();
         if (restored && !authored) {
             this.playerState = {
                 ...this.playerState,
@@ -460,7 +460,7 @@ export class DesktopLoader implements IDataSource {
             const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
             const t = pid !== undefined ? w.getComponent(pid, 'TransformComponent') : null;
             if (t) {
-                const e = Coords.sppToEngine(authored.position, authored.block);
+                const e = Coords.septopusToEngine(authored.position, authored.block);
                 t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;
             }
         }
@@ -655,7 +655,7 @@ export class DesktopLoader implements IDataSource {
         if (!w) return null;
         const ids = w.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
         const t = w.getComponent(ids[0], 'TransformComponent') as any;
-        const { block } = Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]);
+        const { block } = Coords.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
         for (let r = 0; r <= 3; r++) {
             for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
                 if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
@@ -787,7 +787,7 @@ export class DesktopLoader implements IDataSource {
         this.engine?.setMoveIntent(x, y);
     }
 
-    /** Teleport the player to an SPP block + local offset (fast-travel / testing
+    /** Teleport the player to an Septopus block + local offset (fast-travel / testing
      *  seam). Sets the live transform directly; the next step settles physics. */
     /** Map fast-travel: funnel through the SAME anchor-gated teleport action a
      *  content portal uses (specs/teleport-portal.md §3) — seeing an anchor on
@@ -796,13 +796,13 @@ export class DesktopLoader implements IDataSource {
         this.engine?.requestTeleport(anchor, block);
     }
 
-    public teleportSpp(block: [number, number], pos: [number, number, number] = [8, 8, 3]): void {
+    public teleportSeptopus(block: [number, number], pos: [number, number, number] = [8, 8, 3]): void {
         const w = this.engine?.getWorld();
         if (!w) return;
         const ids = w.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
         const t = w.getComponent(ids[0], 'TransformComponent') as any;
         if (!t) return;
-        const e = Coords.sppToEngine(pos, block);
+        const e = Coords.septopusToEngine(pos, block);
         t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
         t.dirty = true;
     }
@@ -826,7 +826,7 @@ export class DesktopLoader implements IDataSource {
         if (this._sandboxActive) return;
         const w = this.engine?.getWorld() as any;
         if (!w) return;
-        this.teleportSpp(SANDBOX_BLOCK, SANDBOX_CENTER);
+        this.teleportSeptopus(SANDBOX_BLOCK, SANDBOX_CENTER);
         // Hide the avatar — it would sit in the middle of the diorama.
         const pid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
         const av = pid != null ? w.getComponent(pid, 'AvatarComponent') : null;
@@ -1095,7 +1095,7 @@ export class DesktopLoader implements IDataSource {
         // returning the raw hit (no .metadata) is what crashed App on click-to-inspect.
         const hit = (this.engine.getWorld() as any)?.minimap.pickBlockFromMinimap(ndcX, ndcY);
         if (!hit?.point) return null;
-        const { block } = Coords.engineToSpp(hit.point);
+        const { block } = Coords.engineToSeptopus(hit.point);
         return { metadata: { x: block[0], y: block[1] }, entityId: hit.entityId };
     }
 
@@ -1156,7 +1156,7 @@ export class DesktopLoader implements IDataSource {
     // Live mirror of the player's location for the minimap/HUD/extend bookkeeping.
     // Durable persistence is engine-owned now (DraftStore meta 'player', restored
     // by Engine.hydrateDrafts) — this no longer writes to localStorage.
-    private _saveState(partial: Partial<SPPPlayerState>) {
+    private _saveState(partial: Partial<SeptopusPlayerState>) {
         this.playerState = { ...this.playerState, ...partial };
         if (!this.playerState.extend || this.playerState.extend < 2) {
             this.playerState.extend = 2;

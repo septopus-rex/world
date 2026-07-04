@@ -22,7 +22,7 @@ import { MahjongTileComponent, MahjongTableComponent, MahjongZone } from '../com
  * Tiles are a2 box adjunct entities physically on the felt; lifecycle is the
  * mechanism — a draw SPAWNS a tile, a discard DESTROYS the hand tile and SPAWNS
  * a face-up tile in the pool (no runtime recolour needed). Each frame it writes
- * every live tile's TransformComponent (SPP→engine) so VisualSync moves the
+ * every live tile's TransformComponent (Septopus→engine) so VisualSync moves the
  * meshes — the same kinematic-driver slot as CoasterSystem/PoolSystem.
  *
  * Determinism: a seeded shuffle (makeRng) + a fixed bot policy (摸打 — discard the
@@ -180,7 +180,7 @@ export class MahjongSystem implements ISystem {
             const tc = world.getComponent<MahjongTileComponent>(eid, 'MahjongTileComponent')!;
             const t = world.getComponent<TransformComponent>(eid, 'TransformComponent')!;
             const spp = this.layoutPos(table, tc);
-            const e = Coords.sppToEngine(spp, table.block);
+            const e = Coords.septopusToEngine(spp, table.block);
             e[1] += elevation;
             if (Math.abs(e[0] - t.position[0]) > 1e-4 || Math.abs(e[1] - t.position[1]) > 1e-4 || Math.abs(e[2] - t.position[2]) > 1e-4) {
                 t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;
@@ -286,7 +286,7 @@ export class MahjongSystem implements ISystem {
 
     // ── layout / helpers ──────────────────────────────────────────────────────
 
-    /** SPP block-local position for a tile, from its zone/seat/slot. */
+    /** Septopus block-local position for a tile, from its zone/seat/slot. */
     private layoutPos(table: MahjongTableComponent, tc: MahjongTileComponent): [number, number, number] {
         const z = table.surfaceZ + table.tileH / 2;
         const sp = table.spacing;

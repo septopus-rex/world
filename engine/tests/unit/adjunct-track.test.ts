@@ -33,7 +33,7 @@ describe('track adjunct (c1)', () => {
         const ro = def.transform.stdToRenderData([std], 0)[0];
         expect(ro.type).toBe('tube');
         expect(ro.params.path).toHaveLength(3);
-        // localSppToEngine([2,0,2]) = [x, z, -y] = [2, 2, 0]
+        // localSeptopusToEngine([2,0,2]) = [x, z, -y] = [2, 2, 0]
         expect(ro.params.path[0]).toEqual([2, 2, -0]);
         expect(ro.params.size[0]).toBe(0.4); // radius
 

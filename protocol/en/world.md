@@ -100,12 +100,12 @@ resolve into differently-posed worlds.
 
 ### 5.1 Axis order
 
-- **SPP (data) axis order**: `X east · Y north · Z up`, metres; in-block
+- **Septopus (data) axis order**: `X east · Y north · Z up`, metres; in-block
   coordinates are relative to the block's **south-west corner**; block ids
   `[bx, by]` start at `[1,1]` (a 4096×4096 world grid).
 - Engines choose their internal frames freely (the reference uses Three.js
   X-right/Y-up/Z-forward with north = −Z), but **data is always written and
-  stored in the SPP axis order**; implementations convert on load/persist.
+  stored in the Septopus axis order**; implementations convert on load/persist.
 
 ### 5.2 Rotation (Euler order and frame)
 
@@ -113,7 +113,7 @@ resolve into differently-posed worlds.
   geometric centre**. It is applied in the engine frame **without** any
   heading conversion — i.e. **yaw about the vertical axis lives at index 1**
   (engine Y = up).
-- This is a deliberate asymmetry: **positions are authored in the SPP frame,
+- This is a deliberate asymmetry: **positions are authored in the Septopus frame,
   rotations in the engine frame**. Author content accordingly; a new engine
   aligns by treating `[rx,ry,rz]` as XYZ Euler angles in a right-handed
   X-right/Y-up/Z-forward frame applied about the centre (perceptual
@@ -125,6 +125,6 @@ resolve into differently-posed worlds.
 
 ### 5.3 Sizes
 
-`size` is always a **full-length bounding box** (not half extents), SPP axis
+`size` is always a **full-length bounding box** (not half extents), Septopus axis
 order `[east-west, north-south, height]`; exceptions (a6 cone, a7 ball
 diameter semantics) are listed in [adjunct-types.md](adjunct-types.md).

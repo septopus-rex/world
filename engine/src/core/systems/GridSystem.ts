@@ -24,14 +24,14 @@ export class GridSystem implements ISystem {
         const t = world.getComponent<TransformComponent>(players[0], "TransformComponent");
         if (!t) return;
 
-        const spp = Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]);
+        const spp = Coords.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
         const blockX = spp.block[0];
         const blockY = spp.block[1];
 
         const currentKey = `${blockX}_${blockY}`;
 
         // NOTE: player:state is emitted ONLY by CharacterController.processPersistence
-        // (movement-thresholded, rotation properly converted via engineRotationToSpp).
+        // (movement-thresholded, rotation properly converted via engineRotationToSeptopus).
         // A second unthrottled emitter here used to spam raw engine-axis rotations
         // into the same persistence channel.
 

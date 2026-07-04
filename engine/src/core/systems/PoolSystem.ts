@@ -14,7 +14,7 @@ import { PoolBallComponent, PoolTableComponent } from '../components/PoolCompone
  * Deterministic per-frame physics on the table plane (SPP X/Y): friction, wall
  * bounce, equal-mass elastic ball-ball collisions, pocket capture. Sub-stepped
  * so fast balls don't tunnel. Each frame it writes every ball entity's
- * TransformComponent (SPP→engine), so VisualSync moves the meshes — runs before
+ * TransformComponent (Septopus→engine), so VisualSync moves the meshes — runs before
  * VisualSyncSystem, exactly like CoasterSystem drives the cart.
  *
  * No mode gating: the balls are always physically present ("在场"). A shot is an
@@ -156,7 +156,7 @@ export class PoolSystem implements ISystem {
         const elevation = this.blockElevation(world, table.block);
         for (const { eid, b } of entries) {
             const z = b.potted ? table.ballZ - 1.4 : table.ballZ; // potted balls drop into the pocket
-            const e = Coords.sppToEngine([b.x, b.y, z], table.block);
+            const e = Coords.septopusToEngine([b.x, b.y, z], table.block);
             e[1] += elevation;
             const t = world.getComponent<TransformComponent>(eid, 'TransformComponent');
             if (t) { t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true; }

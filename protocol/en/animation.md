@@ -1,6 +1,6 @@
 # Septopus Animation Protocol
 
-The **Septopus Engine** includes a set of standardized animation specifications that define how spatial nodes (adjuncts) transform and update over time. The SPP protocol provides the data-driven descriptions for these sequences, ensuring uniform behavior across different environments.
+The **Septopus Engine** includes a set of standardized animation specifications that define how spatial nodes (adjuncts) transform and update over time. Septopus provides the data-driven descriptions for these sequences, ensuring uniform behavior across different environments.
 
 By standardizing animations into a predefined timeline definition, the engine can execute these purely via data-driven systems (like an ECS `AnimationSystem`), removing the need for hardcoded per-object update scripts.
 

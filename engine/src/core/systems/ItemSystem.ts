@@ -124,7 +124,7 @@ export class ItemSystem implements ISystem {
 
         const trans = world.getComponent<TransformComponent>(playerId, "TransformComponent");
         if (!trans) return false;
-        const spp = Coords.engineToSpp(trans.position);
+        const spp = Coords.engineToSeptopus(trans.position);
 
         // The player's current block must be live to receive the item.
         let blockEid: EntityId | null = null;

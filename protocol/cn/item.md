@@ -23,7 +23,7 @@ ItemTemplate = {
   name: string,
   category: 0 Material · 1 Consumable · 2 Equipment · 3 Key · 4 Collectible,
   stackable: number,          // 0 = 唯一（身份含 seed，永不堆叠）；>0 = 每格堆叠上限
-  visual: { shape: 'box'|'sphere'|'cone', size: [x,y,z] (SPP 序, 米), color: 0xRRGGBB },
+  visual: { shape: 'box'|'sphere'|'cone', size: [x,y,z] (Septopus 序, 米), color: 0xRRGGBB },
   attributes: AttributeRule[],  // 属性规则，顺序即抽取顺序（见 §3）
   rarityWeights: number[],      // Common..Legendary 概率权重
 }

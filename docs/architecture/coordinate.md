@@ -2,11 +2,13 @@
 
 Septopus World 采用一套语义化的三维坐标系统，旨在将现实世界的地理直觉与 3D 渲染引擎的内部数值建立规范的映射关系。
 
-> **术语注记（防撞名）**：代码中 `Coords.sppToEngine` / `engineToSpp` / `SPPPlayerState`
-> 等名字里的 **"spp" 是 "Septopus" 的缩写**，指本文的 **Septopus 世界坐标系（语义层）**——
-> 与**弦粒子协议 SPP（String Particle Protocol**，外部授权协议，管 b6 粒子/CollapseCodec
-> 二进制，见 `docs/features/spp*.md`）**是两回事**，仅缩写撞名。凡涉及坐标的 "SPP/spp"
-> 一律读作 "Septopus 语义坐标"；凡涉及粒子/二进制协议的 SPP 才是弦粒子。
+> **术语注记（撞名已根治,2026-07-04）**：**SPP 专指弦粒子协议**（String Particle
+> Protocol,外部独立协议,管 b6 粒子/CollapseCodec 二进制,见 `docs/features/spp*.md`
+> 与 [ff13dfly/spp-protocol](https://github.com/ff13dfly/spp-protocol)）。本文坐标系
+> 一律称 **Septopus 轴序/坐标**。历史上代码曾以 "spp" 作 Septopus 缩写
+> （`sppToEngine` 等）,已全部改名为 `septopusToEngine` / `engineToSeptopus` /
+> `SeptopusPlayerState` 等;仅 localStorage 持久化键 `spp_player_state` 因兼容
+> 既有用户数据保留旧名。
 
 ## 1. 坐标系定义对比
 

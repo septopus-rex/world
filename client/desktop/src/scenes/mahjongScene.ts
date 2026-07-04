@@ -16,7 +16,7 @@ export const MAHJONG_BLOCK: [number, number] = [2049, 2048];
 
 export function buildMahjongScene(bx: number, by: number): any[] {
     const data = MockBlockData(bx, by);
-    // a2 box rows: [size, pos, rot, colorIdx, repeat, animate, stop]. SPP coords
+    // a2 box rows: [size, pos, rot, colorIdx, repeat, animate, stop]. Septopus coords
     // X=East Y=North Z=Alt. Table centred at E8/N8; stop=1 makes pieces solid.
     const C = [8, 8]; // block-centre
     const table = [

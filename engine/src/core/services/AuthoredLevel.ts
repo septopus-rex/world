@@ -21,7 +21,7 @@ export interface AuthoredLevel {
     format: 'septopus.world.level';
     version: 1;
     name: string;
-    /** Player spawn for this level (SPP block + block-local position/rotation). */
+    /** Player spawn for this level (Septopus block + block-local position/rotation). */
     start: {
         block: [number, number];
         position: [number, number, number];

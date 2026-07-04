@@ -35,7 +35,7 @@ export function MockBlockData(x: number, y: number): any {
                 {
                     time: [0, 3000],
                     type: "move",
-                    axis: "Z", // SPP Alt
+                    axis: "Z", // Septopus Alt
                     mode: "set",
                     value: [4, 4.5, 4]
                 }

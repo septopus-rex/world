@@ -60,7 +60,7 @@ test('full game-setting mode end to end: connect to the specified server and pla
     await stepEngine(page, 90);
 
     // Walk onto the table block (positioning is setup; the SERVER FLOW is the feature).
-    await page.evaluate((b) => (window as any).loader.teleportSpp(b, [3, 3, 3]), MAHJONG_BLOCK);
+    await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [3, 3, 3]), MAHJONG_BLOCK);
     await stepEngine(page, 40);
     const zone = await page.evaluate(() => (window as any).loader.engine.getWorld().gameZoneActive);
     expect(zone, 'player is in the playable zone').toBe(true);

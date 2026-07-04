@@ -17,6 +17,20 @@ same data into the same world — the TypeScript engine in this repository
 - **Conformance 一致性**:see [determinism](cn/determinism.md)([EN](en/determinism.md))
   — the base PRNG, the derivation pins, and the acceptance checklist.
 
+## Terminology · 术语约定(规范)
+
+- **SPP** 在本仓**专指** **String Particle Protocol(弦粒子协议)**——空间坍缩/展开
+  协议,独立维护于 [ff13dfly/spp-protocol](https://github.com/ff13dfly/spp-protocol),
+  引擎经 b6 particle 附属物消费。**SPP is reserved exclusively for the String
+  Particle Protocol** (spatial collapse/expansion; consumed via the b6 adjunct).
+- 数据坐标系一律称 **Septopus 轴序 / the Septopus frame**(X东 Y北 Z高)——
+  **不得**写作 "SPP 坐标/轴序"。动画时间轴称 **Septopus 动画**。
+  The data frame is always called the **Septopus axis order / frame**
+  (X east, Y north, Z up) — never "SPP coordinates"; the timeline is the
+  **Septopus animation** protocol.
+- 历史注记:早期文档与部分代码标识符曾把 "spp" 混作 Septopus 坐标的缩写
+  (如 `sppToEngine`),文档已于 2026-07-04 统一;代码标识符以同日改名对齐。
+
 ## Documentation tiers · 文档三层
 
 | 层 Tier | 位置 Location | 性质 Nature |
@@ -37,7 +51,7 @@ same data into the same world — the TypeScript engine in this repository
 | [**determinism 确定性**](cn/determinism.md) | [en](en/determinism.md) | **PRNG 基准、推导钉点、一致性验收清单** |
 | [item 物品](cn/item.md) | [en](en/item.md) | 物品实例 = (模板, seed) 确定性推导(规范级) |
 | [game 游戏](cn/game.md) | [en](en/game.md) | 游戏会话/模式;**§9 会话与验证协议(规范级)** |
-| [animation 动画](cn/animation.md) | [en](en/animation.md) | SPP 数据驱动动画时间轴 |
+| [animation 动画](cn/animation.md) | [en](en/animation.md) | Septopus 数据驱动动画时间轴 |
 | [avatar-animation 化身动画](cn/avatar-animation.md) | [en](en/avatar-animation.md) | 形象/动作/状态三层契约(VRM 基准) |
 | [player 玩家](cn/player.md) | [en](en/player.md) | 玩家能力面与运动语义 |
 | [resource 资源](cn/resource.md) | [en](en/resource.md) | 资源寻址(id/CID/URL)与加载语义 |

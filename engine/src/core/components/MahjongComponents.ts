@@ -6,7 +6,7 @@
  * though — the entity/adjunct is DATA, the MahjongSystem is the LOGIC. Tiles are
  * a2 box adjunct entities physically on the table; the System owns the wall,
  * hands, discards and turn order, mutates entity lifecycle on draw/discard, and
- * derives each live tile's engine TransformComponent every frame (SPP→engine).
+ * derives each live tile's engine TransformComponent every frame (Septopus→engine).
  *
  * It is the adversarial second native case for Plan B: pool proved the per-frame
  * System pattern for physics; mahjong proves it isn't physics-specific — a game

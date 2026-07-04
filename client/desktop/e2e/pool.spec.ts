@@ -22,7 +22,7 @@ test('enter the pool table zone, play via the external-API runtime, leave', asyn
   await bootDeterministic(page);
 
   // Walk onto the pool block (raw[4] = POOL_GAME_ID → playable zone).
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [3, 3, 3]), POOL_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [3, 3, 3]), POOL_BLOCK);
   await settle(page, 20);
   expect(await page.evaluate(() => (window as any).loader.engine.getWorld().gameZoneActive)).toBe(true);
 

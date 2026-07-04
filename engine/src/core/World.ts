@@ -498,14 +498,14 @@ export class World {
         return true;
     }
 
-    /** The SPP block the local player currently stands in, or null if there is no
+    /** The Septopus block the local player currently stands in, or null if there is no
      *  player yet. Used to anchor a game session on Game-mode entry. */
     private computePlayerBlock(): [number, number] | null {
         const players = this.getEntitiesWith(["TransformComponent", "InputStateComponent"]);
         if (players.length === 0) return null;
         const t = this.getComponent<{ position: number[] }>(players[0], "TransformComponent");
         if (!t) return null;
-        return Coords.engineToSpp([t.position[0], t.position[1], t.position[2]]).block;
+        return Coords.engineToSeptopus([t.position[0], t.position[1], t.position[2]]).block;
     }
 
     public setEditMode(active: boolean): void {

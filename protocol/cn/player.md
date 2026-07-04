@@ -3,13 +3,13 @@
 在 **Septopus 引擎**中，"玩家 (Player)" 不仅是一个视点，而是一个遵循物理规则并在世界中具有实体表现（Avatar）的交互单元。其位置与状态由引擎实时追踪，并可与经由 SPP 组织的内容进行深度交互。
 
 > 本文档与实现对应：状态容器与持久化见 `client/desktop/src/lib/DesktopLoader.ts`
-> （`SPPPlayerState`），状态上报见 `engine/src/core/movement/CharacterController.ts`，
+> （`SeptopusPlayerState`），状态上报见 `engine/src/core/movement/CharacterController.ts`，
 > Avatar 装载见 `engine/src/core/EntityFactory.ts`，组件定义见
 > `engine/src/core/components/PlayerComponents.ts`。
 
 ## 1. 玩家空间状态 (Player Spatial State)
 
-玩家的核心持久化状态格式（客户端 `SPPPlayerState`，存于 localStorage
+玩家的核心持久化状态格式（客户端 `SeptopusPlayerState`，存于 localStorage
 `spp_player_state`，刷新后断点续传）：
 
 ```json
@@ -29,8 +29,8 @@
 | 字段 | 说明 | 实现状态 |
 |---|---|---|
 | `block` | 玩家当前所在地块的 `[X, Y]` 坐标。 | ✅ 引擎动态上报 |
-| `position` | **相对于当前地块**的 `[X, Y, Z]` 坐标（SPP 轴序，Z 为高度）。 | ✅ 引擎动态上报 |
-| `rotation` | 视角欧拉旋转 `[X, Y, Z]`（SPP 约定）。 | ✅ 引擎动态上报 |
+| `position` | **相对于当前地块**的 `[X, Y, Z]` 坐标（Septopus 轴序，Z 为高度）。 | ✅ 引擎动态上报 |
+| `rotation` | 视角欧拉旋转 `[X, Y, Z]`（Septopus 约定）。 | ✅ 引擎动态上报 |
 | `world` | 所在世界 ID（`string \| number`）。 | ⚠️ 容器内携带；引擎当前单世界，不动态更新 |
 | `extend` | 视口加载半径（周围加载多少圈相邻地块，`2` = 5×5）。 | ✅ 客户端用于流式加载（下限钳制为 2）；同名静态配置亦存在于 world config `player.extend` |
 | `stop` | 脚下踩踏对象（`on`/`adjunct`/`index`），用于坠落参照。 | 🚧 **预留**——结构在容器中保留，引擎从不更新（接地状态在引擎内部为 `RigidBodyComponent.isGrounded`） |
@@ -40,7 +40,7 @@
 
 引擎不每帧持久化：`CharacterController.processPersistence` 在**位移/转角超过阈值**时
 发出 `player:state` 事件，载荷为 **`{ block, position, rotation }`**（经
-`Coords.engineToSpp` 转回 SPP 坐标）。客户端订阅该事件并合并进上述容器后写入
+`Coords.engineToSeptopus` 转回 Septopus 坐标）。客户端订阅该事件并合并进上述容器后写入
 localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随存随读。
 
 ## 2. 地形与重力计算 (Terrain & Gravity)

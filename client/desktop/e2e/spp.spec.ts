@@ -38,7 +38,7 @@ async function sppCensus(page: any) {
 }
 
 /** Teleport the player to SPP (e, n) at altitude `alt` and settle physics. */
-async function teleportSpp(page: any, e: number, n: number, alt = 1.2) {
+async function teleportSeptopus(page: any, e: number, n: number, alt = 1.2) {
   await page.evaluate(([se, sn, sa]: number[]) => {
     const w = (window as any).loader.engine.getWorld();
     const player = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
@@ -51,7 +51,7 @@ async function teleportSpp(page: any, e: number, n: number, alt = 1.2) {
 }
 
 /** The player's current SPP northing (N). */
-async function sppN(page: any): Promise<number> {
+async function septopusN(page: any): Promise<number> {
   return page.evaluate(() => {
     const w = (window as any).loader.engine.getWorld();
     const player = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
@@ -72,25 +72,25 @@ test('doorway is passable and fires the interior trigger', async ({ page }) => {
   await bootDeterministic(page);
 
   // Through the doorway (E≈7): walk south from outside, end up inside + flagged.
-  await teleportSpp(page, 7, 8.5);
+  await teleportSeptopus(page, 7, 8.5);
   expect((await worldFlags(page)).spp_hut).toBeUndefined();
   const entered = await walkUntil(page, [0, -1],
     async () => (await worldFlags(page)).spp_hut === true, 100);
   expect(entered, 'walked through the doorway into the trigger cell').toBe(true);
-  expect(await sppN(page)).toBeLessThan(6.6);
+  expect(await septopusN(page)).toBeLessThan(6.6);
 });
 
 test("cell A's solid north wall blocks the player outside", async ({ page }) => {
   await bootDeterministic(page);
-  await teleportSpp(page, 3, 8.5);
+  await teleportSeptopus(page, 3, 8.5);
   await walkUntil(page, [0, -1], async () => false, 40); // push south for ~0.7s sim
-  expect(await sppN(page), 'solid wall keeps the player outside').toBeGreaterThan(6.55);
+  expect(await septopusN(page), 'solid wall keeps the player outside').toBeGreaterThan(6.55);
   expect((await worldFlags(page)).spp_hut).toBeUndefined();
 });
 
 test('the hut is genuinely rendered: camera ray hits a visible derived wall whose pixels reach the screen', async ({ page }) => {
   await bootDeterministic(page);
-  await teleportSpp(page, 3, 8.5);   // 1.5m north of cell A's solid wall
+  await teleportSeptopus(page, 3, 8.5);   // 1.5m north of cell A's solid wall
 
   const probe = await page.evaluate(() => {
     const loader = (window as any).loader;

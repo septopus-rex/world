@@ -1,7 +1,7 @@
 /**
  * Motif template registry (c2) — the generators a motif seed drives.
  *
- * A template is a pure function (rng, params) → boxes in motif-LOCAL SPP
+ * A template is a pure function (rng, params) → boxes in motif-LOCAL Septopus
  * meters. The motif expander offsets them by the motif origin and emits one
  * standard a2 box row per box. Mirrors core/spp/Variants.ts (theme registry).
  *
@@ -10,7 +10,7 @@
  */
 import { Rng, range, int, pick } from './Rng';
 
-/** A single box a template wants placed, in motif-LOCAL SPP meters (relative
+/** A single box a template wants placed, in motif-LOCAL Septopus meters (relative
  *  to the motif origin). resource = basic_box colour-palette index. */
 export interface MotifBox {
     size: [number, number, number];

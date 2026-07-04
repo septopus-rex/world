@@ -131,7 +131,7 @@ describe('player location persistence', () => {
         t1.position[0] += 6;
         t1.dirty = true;
         stepN(s1.engine, 30);
-        const moved = s1.engine.getPlayerSppLocation()!;
+        const moved = s1.engine.getPlayerSeptopusLocation()!;
         await s1.world.draftStore.flush();          // flush drains the meta write
 
         const saved = await backend.loadMeta(0, 'player');
@@ -142,7 +142,7 @@ describe('player location persistence', () => {
         // Session 2: same backend, fresh engine — restored to the spot, not spawn.
         const s2 = await boot({ backend });
         await s2.engine.hydrateDrafts(0);
-        const restored = s2.engine.getPlayerSppLocation()!;
+        const restored = s2.engine.getPlayerSeptopusLocation()!;
         expect(restored.block).toEqual(moved.block);
         expect(restored.position[0]).toBeCloseTo(moved.position[0], 1); // east kept
         expect(restored.position[1]).toBeCloseTo(moved.position[1], 1); // north kept
@@ -152,9 +152,9 @@ describe('player location persistence', () => {
         const backend = new InMemoryDraftBackend();
         await backend.saveMeta(0, 'player', { version: 1, block: [2048, 2048], position: [8, 8, -999] });
         const { engine } = await boot({ backend });
-        const before = engine.getPlayerSppLocation()!;
+        const before = engine.getPlayerSeptopusLocation()!;
         await engine.hydrateDrafts(0);                 // void guard rejects alt < -50
-        const after = engine.getPlayerSppLocation()!;
+        const after = engine.getPlayerSeptopusLocation()!;
         expect(after.position[0]).toBeCloseTo(before.position[0], 3);
         expect(after.position[1]).toBeCloseTo(before.position[1], 3);
         expect(after.position[2]).toBeCloseTo(before.position[2], 3);

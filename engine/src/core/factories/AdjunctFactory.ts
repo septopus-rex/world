@@ -34,7 +34,7 @@ export class AdjunctFactory {
         // 2. Set relative position in the group (Spatial logic remains consistent)
         // Note: The factory only creates the mesh, VisualSyncSystem will update its world pose.
         // But for multi-part objects, we need to position parts relative to the meshGroup.
-        const localPos = Coords.localSppToEngine([std.ox, std.oy, std.oz]);
+        const localPos = Coords.localSeptopusToEngine([std.ox, std.oy, std.oz]);
 
         let renderDataList: any[] = [];
         try {
@@ -64,7 +64,7 @@ export class AdjunctFactory {
                 }
 
                 // Position sub-mesh relative to the meshGroup
-                const subEnginePos = Coords.localSppToEngine(renderItem.params.position);
+                const subEnginePos = Coords.localSeptopusToEngine(renderItem.params.position);
                 const relativePos = [
                     subEnginePos[0] - localPos[0],
                     subEnginePos[1] - localPos[1],

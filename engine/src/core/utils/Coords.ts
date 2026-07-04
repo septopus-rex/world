@@ -12,27 +12,27 @@ export class Coords {
      * Three.js is Y-Up. Standard camera looks at -Z. 
      * To map SPP North (+Y) to Engine Forward, we map SPP +Y to Engine -Z.
      */
-    public static sppToEngine(sppPos: [number, number, number], sppBlock: [number, number]): [number, number, number] {
+    public static septopusToEngine(septopusPos: [number, number, number], septopusBlock: [number, number]): [number, number, number] {
         return [
-            (sppBlock[0] - 1) * this.BLOCK_SIZE + sppPos[0], // Engine X (East)
-            sppPos[2],                                      // Engine Y (Alt)
-            -((sppBlock[1] - 1) * this.BLOCK_SIZE + sppPos[1]) // Engine Z (North is -Z)
+            (septopusBlock[0] - 1) * this.BLOCK_SIZE + septopusPos[0], // Engine X (East)
+            septopusPos[2],                                      // Engine Y (Alt)
+            -((septopusBlock[1] - 1) * this.BLOCK_SIZE + septopusPos[1]) // Engine Z (North is -Z)
         ];
     }
 
     /**
      * Engine (Y-Up) -> SPP Protocol (Z-Up)
      */
-    public static engineToSpp(enginePos: [number, number, number]): { block: [number, number], pos: [number, number, number] } {
+    public static engineToSeptopus(enginePos: [number, number, number]): { block: [number, number], pos: [number, number, number] } {
         const bx = Math.floor(enginePos[0] / this.BLOCK_SIZE) + 1;
-        const sppYGlobal = -enginePos[2];
-        const by = Math.floor(sppYGlobal / this.BLOCK_SIZE) + 1;
+        const septopusYGlobal = -enginePos[2];
+        const by = Math.floor(septopusYGlobal / this.BLOCK_SIZE) + 1;
 
         return {
             block: [bx, by],
             pos: [
                 enginePos[0] - (bx - 1) * this.BLOCK_SIZE,
-                sppYGlobal - (by - 1) * this.BLOCK_SIZE,
+                septopusYGlobal - (by - 1) * this.BLOCK_SIZE,
                 enginePos[1]
             ]
         };
@@ -40,9 +40,9 @@ export class Coords {
 
     /**
      * Local SPP (Z-Up) -> Local Engine (Y-Up)
-     * Identical mapping logic to sppToEngine but without block offset.
+     * Identical mapping logic to septopusToEngine but without block offset.
      */
-    public static localSppToEngine(localSpp: [number, number, number]): [number, number, number] {
+    public static localSeptopusToEngine(localSpp: [number, number, number]): [number, number, number] {
         return [
             localSpp[0],  // Engine X (East)
             localSpp[2],  // Engine Y (Alt)
@@ -53,14 +53,14 @@ export class Coords {
     /**
      * SPP Size [East, North, Alt] -> Engine Box Dimensions [width, height, depth]
      * Engine width(X)  = SPP East(X)
-     * Engine height(Y) = SPP Alt(Z)
+     * Engine height(Y) = Septopus Alt(Z)
      * Engine depth(Z)  = SPP North(Y)
      */
-    public static getBoxDimensions(sppSize: [number, number, number]): [number, number, number] {
+    public static getBoxDimensions(septopusSize: [number, number, number]): [number, number, number] {
         return [
-            sppSize[0], // width (East)
-            sppSize[2], // height (Alt)
-            sppSize[1]  // depth (North)
+            septopusSize[0], // width (East)
+            septopusSize[2], // height (Alt)
+            septopusSize[1]  // depth (North)
         ];
     }
 
@@ -88,23 +88,23 @@ export class Coords {
     }
 
     /**
-     * SPP Rotation [Pitch, Heading, Roll] -> Engine [Pitch, Yaw, Roll]. Inverse of
-     * engineRotationToSpp — the spawn/restore round-trip relies on this pair. Only
+     * Septopus Rotation [Pitch, Heading, Roll] -> Engine [Pitch, Yaw, Roll]. Inverse of
+     * engineRotationToSeptopus — the spawn/restore round-trip relies on this pair. Only
      * the heading/yaw axis is reframed; pitch (about East=X, shared by both frames)
      * and roll (≈0 for the player body) pass through.
      */
-    public static sppRotationToEngine(sppRot: [number, number, number]): [number, number, number] {
+    public static septopusRotationToEngine(septopusRot: [number, number, number]): [number, number, number] {
         return [
-            sppRot[0],                          // Pitch
-            this.headingToEngineYaw(sppRot[1]), // Heading -> engine Yaw
-            sppRot[2]                           // Roll
+            septopusRot[0],                          // Pitch
+            this.headingToEngineYaw(septopusRot[1]), // Heading -> engine Yaw
+            septopusRot[2]                           // Roll
         ];
     }
 
     /**
      * Engine Rotation [Pitch, Yaw, Roll] -> SPP [Pitch, Heading, Roll].
      */
-    public static engineRotationToSpp(engineRot: [number, number, number]): [number, number, number] {
+    public static engineRotationToSeptopus(engineRot: [number, number, number]): [number, number, number] {
         return [
             engineRot[0],                          // Pitch
             this.engineYawToHeading(engineRot[1]), // engine Yaw -> Heading

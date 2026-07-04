@@ -37,7 +37,7 @@ test('walk into the SPP structure: solid wall stops, doorway passes + fires the 
   await bootDeterministic(page);
 
   // Stand the player on the sandbox block (normal mode → walkable, not Observe).
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 0.4, 2]), SB);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 0.4, 2]), SB);
   expect(await pumpUntil(page, async () => page.evaluate((tag: string) => {
     const w = (window as any).loader.engine.getWorld();
     return w.queryEntities('AdjunctComponent').some((e: any) => {
@@ -63,7 +63,7 @@ test('walk into the SPP structure: solid wall stops, doorway passes + fires the 
   await stepEngine(page, 10);
 
   // ── STOP: walk NORTH into cell (0,0)'s SOLID south wall (at y≈2). Blocked.
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [4, 0.4, 1]), SB);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [4, 0.4, 1]), SB);
   await stepEngine(page, 8); // land + settle
   const startY = (await localPos(page))[1];
   await walk(page, [0, 1], async () => (await localPos(page))[1] > 2.2, 72); // try to cross the wall
@@ -74,7 +74,7 @@ test('walk into the SPP structure: solid wall stops, doorway passes + fires the 
   await page.screenshot({ path: 'test-results/walk-1-blocked.png' });
 
   // ── PASS + TRIGGER: walk NORTH through cell (1,0)'s DOORWAY (gap x[7.2,8.8]).
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 0.4, 1]), SB);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 0.4, 1]), SB);
   await stepEngine(page, 8);
   const entered = await walk(page, [0, 1], async () =>
     (await localPos(page))[1] > 2.6 && (await worldFlags(page)).sandbox_heart === true, 108);

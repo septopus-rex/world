@@ -19,7 +19,7 @@ export class EditSessionManager {
         if (playerEntities.length === 0) return null;
 
         const playerPos = this.world.getComponent<TransformComponent>(playerEntities[0], "TransformComponent")!.position;
-        const { block } = Coords.engineToSpp(playerPos);
+        const { block } = Coords.engineToSeptopus(playerPos);
 
         const blockEntities = this.world.queryEntities("BlockComponent");
         for (const eid of blockEntities) {

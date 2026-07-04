@@ -12,7 +12,7 @@ Adjuncts are designed to be completely decoupled from the core engine. They can 
 
 Adjuncts are parsed and executed within an isolated environment (or sandbox) to prevent malicious code from accessing sensitive global APIs like `window`, `document`, or `fetch`.
 
-- **Coordinate System**: Adjuncts operate within the standard SPP Block Coordinate System.
+- **Coordinate System**: Adjuncts operate within the standard Septopus Block Coordinate System.
 - **Data Flow**: The engine feeds raw block data into the Adjunct. The Adjunct transforms this raw data into standard 3D parameters (`position`, `scale`, `rotation`, `material`), which the engine's rendering pipeline then converts into Three.js object meshes.
 - **Extensibility**: Different Septopus "Worlds" can whitelist specific Adjuncts to create distinct visual styles and gameplay mechanics (e.g., a whitelist allowing "Laser Door" and "Jump Pad" adjuncts).
 
@@ -29,11 +29,11 @@ export const CustomAdjunct = {
         reg: () => {}            
     },
     transform: {
-        // Raw on-chain compressed array -> SPP Standard Data
+        // Raw on-chain compressed array -> Septopus Standard Data (STD)
         raw_std: (arr: any[], cvt: number) => {},
-        // SPP Standard Data -> Raw compressed array (for saving to string)
+        // Septopus Standard Data (STD) -> Raw compressed array (for saving to string)
         std_raw: (arr: any[]) => {},
-        // Converts SPP Standard Data array into specific 3D render/engine parameters
+        // Converts the Septopus Standard Data (STD) array into specific 3D render/engine parameters
         std_3d: (stds: any[], elevation: number) => {} 
     },
     menu: {
@@ -97,7 +97,7 @@ Adjuncts reference resources via **integer IDs**. For storage format, addressing
 
 > "Data is logic" requires pinning down *how* std_3d geometry/material is realized — otherwise a different engine (UE) builds a different world. Rotation/coordinates: see [Coordinate System](../../docs/architecture/coordinate.md#31-旋转的欧拉序与坐标系跨引擎契约).
 
-- **Size axis mapping**: std `size = [x, y, z]` is **SPP [East, North, Alt]** full extent, mapped to engine box dims **[width=East, height=Alt, depth=North]** (`Coords.getBoxDimensions`). **Pivot = geometry center.**
+- **Size axis mapping**: std `size = [x, y, z]` is **Septopus [East, North, Alt]** full extent, mapped to engine box dims **[width=East, height=Alt, depth=North]** (`Coords.getBoxDimensions`). **Pivot = geometry center.**
 - **Primitive semantics**: `box(w,h,d)` centered full-extent; `sphere` radius = `w/2`; `cylinder/cone(w,h,d)`; `plane(w,h)`; `tube` = Catmull-Rom extrusion along control points. **Segment counts (e.g. sphere 32×32) are pixel-level detail — engines may differ** (behavior-equivalent).
 - **World-space UV tiling (constant texel density)**: textures tile by **world size**, not stretched per face — `repeat_per_face = faceSizeMeters / TILE_METERS`, `TILE_METERS = 2` (one tile per 2 m). So a 16 m floor and a 1 m crate look equally crisp. `material.repeat` is an **additional multiplier on top**. (UE must implement the same density formula to match.)
 - **Color**: the norm is **authoring an explicit hex color** (`material.color`). Box's `resource index → palette color` (e.g. `10→#eee`, `1→#555`) is a **legacy demo convenience, non-normative** — store hex for cross-engine content, don't rely on the index palette.

@@ -108,8 +108,8 @@ export class Engine {
 
         // 3. Coordinate conversion for player start
         const start = playerStart || fullConfig.player.start;
-        const enginePos = Coords.sppToEngine(start.position, start.block);
-        const engineRot = Coords.sppRotationToEngine(start.rotation || [0, 0, 0]);
+        const enginePos = Coords.septopusToEngine(start.position, start.block);
+        const engineRot = Coords.septopusRotationToEngine(start.rotation || [0, 0, 0]);
 
         fullConfig.player.start = { ...start, position: enginePos, rotation: engineRot };
 
@@ -237,8 +237,8 @@ export class Engine {
             const trans = eid !== undefined ? world.getComponent<any>(eid, "TransformComponent") : null;
             const body = eid !== undefined ? world.getComponent<any>(eid, "RigidBodyComponent") : null;
             if (trans) {
-                const pos = Coords.sppToEngine(savedLoc.position, savedLoc.block);
-                const rot = Coords.sppRotationToEngine(savedLoc.rotation || [0, 0, 0]);
+                const pos = Coords.septopusToEngine(savedLoc.position, savedLoc.block);
+                const rot = Coords.septopusRotationToEngine(savedLoc.rotation || [0, 0, 0]);
                 trans.position[0] = pos[0]; trans.position[1] = pos[1]; trans.position[2] = pos[2];
                 trans.rotation[0] = rot[0]; trans.rotation[1] = rot[1]; trans.rotation[2] = rot[2];
                 trans.dirty = true;
@@ -262,18 +262,18 @@ export class Engine {
         return true;
     }
 
-    /** The local player's current location in SPP coords, or null before
+    /** The local player's current location in Septopus coords, or null before
      *  bootWorld. Clients read this AFTER hydrateDrafts to preload the restored
      *  neighborhood (the engine, not the client, owns the persisted spawn). */
-    public getPlayerSppLocation(): { block: [number, number]; position: [number, number, number]; rotation: [number, number, number] } | null {
+    public getPlayerSeptopusLocation(): { block: [number, number]; position: [number, number, number]; rotation: [number, number, number] } | null {
         const world = this.world;
         if (!world) return null;
         const eid = world.queryEntities("TransformComponent", "InputStateComponent")[0];
         if (eid === undefined) return null;
         const trans = world.getComponent<any>(eid, "TransformComponent");
         if (!trans) return null;
-        const spp = Coords.engineToSpp(trans.position);
-        return { block: spp.block, position: spp.pos, rotation: Coords.engineRotationToSpp(trans.rotation) };
+        const spp = Coords.engineToSeptopus(trans.position);
+        return { block: spp.block, position: spp.pos, rotation: Coords.engineRotationToSeptopus(trans.rotation) };
     }
 
     /** Export all local drafts of a world as a versioned JSON string (P1). */

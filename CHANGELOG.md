@@ -8,6 +8,12 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
 ## [Unreleased]
 
 ### 文档
+- **术语根治:SPP 撞名冲突(2026-07-04)**——**SPP 专指弦粒子协议**(String Particle
+  Protocol,独立仓 ff13dfly/spp-protocol);坐标一律改称 **Septopus 轴序**、动画改称
+  **Septopus 动画**(协议/docs 全量清理,弦粒子正统用法保留);代码标识符同步改名
+  (`sppToEngine`→`septopusToEngine`、`teleportSpp`→`teleportSeptopus`、
+  `SPPPlayerState`→`SeptopusPlayerState` 等,49 文件;localStorage 键
+  `spp_player_state` 因用户数据兼容保留)。术语纪律钉入 protocol/README 与 CLAUDE.md。
 - **协议层补齐至发布形态(cn/en 双语)**:新增 `adjunct-types.md`(18 型逐槽位规范)
   与 `determinism.md`(PRNG 基准、8 个确定性钉点、一致性验收清单);trigger 补全
   动作词汇(setSpawn/enterGame/teleport + 传送锚点槽);block 补 raw 五元组;

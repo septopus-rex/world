@@ -231,14 +231,14 @@ export class LocalActuator implements IActuator {
         const spawned = spawnRelative(world, src.parentBlockEntityId, AdjunctType.Ball, ballRow, src.stdData, String(src.adjunctId));
         if (!spawned) return;
 
-        // Velocity in ENGINE coords: explicit SPP dir, or locked onto the player
+        // Velocity in ENGINE coords: explicit Septopus dir, or locked onto the player
         // at fire time.
         const speed = Number(spec.speed) > 0 ? Number(spec.speed) : 8;
         let v: [number, number, number] | null = null;
         if (Array.isArray(spec.dir)) {
             const e = Number(spec.dir[0]) || 0, n = Number(spec.dir[1]) || 0, a = Number(spec.dir[2]) || 0;
             const len = Math.hypot(e, a, n) || 1;
-            v = [(e / len) * speed, (a / len) * speed, (-n / len) * speed]; // SPP→engine: [E, Alt, −N]
+            v = [(e / len) * speed, (a / len) * speed, (-n / len) * speed]; // Septopus→engine: [E, Alt, −N]
         } else {
             const pTrans = ctx.playerId != null
                 ? world.getComponent<TransformComponent>(ctx.playerId, "TransformComponent") : null;
@@ -436,7 +436,7 @@ export class LocalActuator implements IActuator {
                 const a = row?.[6];
                 if (!a || typeof a !== 'object' || a.name !== name) continue;
                 const off = Array.isArray(row[1]) ? row[1] : [8, 8, 0];
-                const pos = Coords.sppToEngine([off[0] ?? 8, off[1] ?? 8, off[2] ?? 0], [bx, by]);
+                const pos = Coords.septopusToEngine([off[0] ?? 8, off[1] ?? 8, off[2] ?? 0], [bx, by]);
                 pos[1] += elevation;
                 return { pos: pos as [number, number, number], block: [bx, by], when: a.when ?? null };
             }
@@ -523,7 +523,7 @@ export class LocalActuator implements IActuator {
      * rebuild here changed nothing visually — the rebuilt sub-mesh cancels its
      * own offset — and orphaned the previous mesh group.
      *
-     * Axis note: SPP Alt maps to engine +Y, SPP yaw maps to engine Y rotation,
+     * Axis note: Septopus Alt maps to engine +Y, Septopus yaw maps to engine Y rotation,
      * so both deltas apply 1:1 to the engine transform.
      */
     private applyAdjunctModification(world: World, entityId: EntityId, adjunct: AdjunctComponent, method: string, params: any[]): void {

@@ -78,7 +78,7 @@ test('dynamic declarative adjunct: loads, renders, collides — driven through t
 
   // (3) COLLISION: drop the player south of the centre monolith (local 8,8) and
   //     walk NORTH into it. The solid must hold the player short of the monolith.
-  await page.evaluate((b) => (window as any).loader.teleportSpp(b, [8, 2.5, 1]), DYN_BLOCK);
+  await page.evaluate((b) => (window as any).loader.teleportSeptopus(b, [8, 2.5, 1]), DYN_BLOCK);
   await stepEngine(page, 8); // land + settle
   const startY = (await localPos(page))[1];
   await walk(page, [0, 1], async () => (await localPos(page))[1] > 7.4, 96);

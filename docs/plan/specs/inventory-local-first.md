@@ -49,7 +49,7 @@ raw 行 = `[ pos, templateId, seed, count, rot ]`：
 
 | 槽位 | 字段 | 说明 |
 |---|---|---|
-| 0 | `pos` `[x,y,z]` | SPP 轴序，相对地块原点（米） |
+| 0 | `pos` `[x,y,z]` | Septopus 轴序，相对地块原点（米） |
 | 1 | `templateId` | ItemRegistry 模板 id |
 | 2 | `seed` | 属性推导种子（0 = 无随机属性） |
 | 3 | `count` | 数量，缺省 1 |
