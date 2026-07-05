@@ -127,6 +127,23 @@ export function injectDemoAssets(data: any): void {
     data.raw[2].push([AdjunctType.Audio, audioEmitters]);
     data.raw[2].push([AdjunctType.Video, videoScreens]);
 
+    // ── Readable book (e4) ───────────────────────────────────────────────
+    // A floating tome 3 m east of the spawn. Click it to open the in-scene
+    // reader and page through a short story; the pages are an inline string[]
+    // (dev明文 — in production this slot may be an IPFS CID resolving to the
+    // same array). book raw: [size, pos, rot, resource, repeat, animate, stop,
+    // pages, title].
+    const books = [
+        [[0.7, 0.2, 0.9], [11, 8, 1.2], [0, 0, 0], 0, [1, 1], null, null, [
+            '《八爪印记 · 残卷》',
+            '第一页\n\n很久以前，世界还没有被折叠成方格。那时的天空是连续的，海也是连续的，没有人需要「传送」——因为哪里都能一步步走到。',
+            '第二页\n\n后来，八爪的守望者把大地收拢进 4096 × 4096 的网格里，每一格十六米见方。附属物落在格子上：墙、水、灯、会说话的人偶……世界从此可以被一份纯数据完整地写下来。',
+            '第三页\n\n守望者留下一句话刻在每一块地的边角：\n「同一份数据，必解出同一个世界。」\n——这是折叠之后，唯一不会走样的承诺。',
+            '第四页\n\n如果你读到这里，说明这本书被正确地翻到了最后一页。合上它，继续你的旅程吧，旅人。\n\n（完）',
+        ], '八爪印记 · 残卷'],
+    ];
+    data.raw[2].push([AdjunctType.Book, books]);
+
     // ── Trigger court (north half of the spawn block) ────────────────────
     // Interactive trigger test scene; everything gives VISIBLE feedback via
     // adjunct actions and writes a flag the e2e suite can assert.

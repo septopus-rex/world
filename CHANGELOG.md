@@ -16,6 +16,16 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
   (air 需去抖,cn/en)+ e2e 回归断言(剪辑必须推进不冻结)。
 
 ### 功能
+- **书本 adjunct(e4 book)**:3D 场景里可点开翻页读文字的面板——藏书/信件/告示/
+  教程/图鉴。e 系媒体面板家族第 4 位(e1 链接 · e2 音频 · e3 视频 · **e4 书**):
+  面板 + 资源 + 点击行为;slot 7 `pages`=内联 `string[]`(开发期明文)或解析为
+  `string[]` 的 IPFS CID(生产,大段文字不入地块行)。点击经 `interact.primary` →
+  客户端 `openBook` → `BookReader.tsx` 翻页(上/下一页 · 页码 N/M · 端点钳制不回环
+  · 方向键/Esc · 重开归零);翻页是**纯视图动作**,页码状态留客户端(同 e1 的
+  `window.open` 纪律),引擎只渲染书体 + 承载文字。定位=对话树的**无生命线性孪生**
+  (同为「台词」文字,书=物件上的线性阅读、对话=角色上的分支会话,互不替代)。
+  demo 场景放了一本《八爪印记·残卷》(5 页)。规范 `protocol/cn|en/adjunct-types.md §14`
+  (含范例行)+ 引擎单测 `adjunct-book.test.ts`(7)+ e2e `book.spec.ts`(全流程通关)。
 - **多 Avatar 可选 + 运行时换装**:`Engine.setAvatar`/`EntityFactory.swapAvatar`
   (复用加载路径、释放旧模型引用、重算 scale-to-1.8/footOffset、重启动画状态机)+
   客户端 `AvatarPicker.tsx`(选择持久化 DraftStore meta)。新增两套带动作素材

@@ -1,6 +1,6 @@
 # Septopus Adjunct Type Registry
 
-> **Normative.** This document defines the raw data slot semantics of all 18
+> **Normative.** This document defines the raw data slot semantics of all 19
 > built-in adjunct types — the core reference behind the "cross-engine,
 > pure-data 3D world" promise: any engine implementing these codecs must
 > resolve the same block data into the same world. Architecture & lifecycle:
@@ -51,6 +51,7 @@
 | `0x00e1` (225) | link | clickable URL/QR panel | §12 |
 | `0x00e2` (226) | audio | spatial audio source | §13 |
 | `0x00e3` (227) | video | video screen | §13 |
+| `0x00e4` (228) | book | clickable paged-text panel (string[]) | §14 |
 
 ## 2. The standard 7 slots (a1 wall · a2 box · a5 water · a6 cone · a7 ball)
 
@@ -257,6 +258,44 @@ audio (`refDistance` defaults to 8 m; the falloff model is implementation
 choice but must attenuate with distance); e3 is a video texture on a panel
 (default `muted=1` — browser autoplay policy). Media must be fully released
 when the entity is destroyed.
+
+## 14. e4 book (paged text)
+
+```
+[ size, pos, rot, resource, repeat, animation, stop, pages, title? ]
+```
+
+The 4th member of the e-series media-panel family (e1 link · e2 audio · e3 video
+· **e4 book**): a panel + a resource + a click behaviour. Clicking it (primary
+interaction ray) → the host opens a **paged reader** (prev / next / page N/M /
+close). It is the inanimate sibling of the ba NPC's dialogue tree — same "台词"
+text, but a book is a **linear reader on an object** whereas dialogue is a
+**branching conversation on a character**; neither replaces the other.
+
+| Slot | Field | Default | Notes |
+|---|---|---|---|
+| 0–2 | size/pos/rot | — | standard slots (default upright tome `[0.7,0.2,0.9]`) |
+| 3 | `resource` | `0` | cover colour/material index; a textured cover tints white to show true |
+| 4 | `repeat` | `[1,1]` | texture tiling |
+| 5 | `animation` | `null` | Septopus animation |
+| 6 | `stop` | `null` | non-null ⇒ solid |
+| 7 | `pages` | `[]` | **the pages**: an inline `string[]` (dev plaintext) **or** a resource id / **IPFS CID** that resolves to a `string[]` (production; large text stays off-block, same as e2/e3 `source`). An empty book is inert (not an error) |
+| 8 | `title` | `''` | text shown in the reader chrome |
+
+Paging is a **pure view action** (the page index is client state, same discipline
+that keeps e1's `window.open` in the client); the engine only renders the tome +
+carries the text and emits the generic `interact.primary` on click. The page
+index is clamped to `[0, M-1]` (no wrap).
+
+**Example row** (a three-page book, `e4`, inline plaintext):
+
+```jsonc
+[[0.7,0.2,0.9], [11,8,1.2], [0,0,0], 0, [1,1], null, null,
+ ["Page one: click the book to turn pages.",
+  "Page two: text is carried as string[]; it may live on IPFS.",
+  "(Close the book.)"],
+ "An Untitled Book"]
+```
 
 ---
 

@@ -25,7 +25,7 @@ Three tiers — pick the right one:
 
 | Tier | Where | What it answers |
 |---|---|---|
-| **Protocol (normative, bilingual cn/en)** | [`protocol/`](protocol/README.md) | The cross-engine, pure-data 3D world contract: block raw, all 18 adjunct slot maps, trigger/action vocabulary, determinism pins & conformance |
+| **Protocol (normative, bilingual cn/en)** | [`protocol/`](protocol/README.md) | The cross-engine, pure-data 3D world contract: block raw, all 19 adjunct slot maps, trigger/action vocabulary, determinism pins & conformance |
 | **Reference implementation** | [`docs/`](docs/README.md) | How this TypeScript engine implements it (architecture, systems, guides) |
 | **Process (non-normative)** | [`docs/plan/`](docs/plan/) | Roadmap + implementation specs |
 

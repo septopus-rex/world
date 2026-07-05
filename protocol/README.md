@@ -47,7 +47,7 @@ made of and why it is designed this way.
 | [world](en/world.md) | world grid / lords / ecosystem; **§3.1 time & weather derivation, §5 coordinate & rotation contract (normative)** |
 | [block](en/block.md) | block asset semantics; **§3 raw 5-tuple (normative)** |
 | [adjunct](en/adjunct.md) | adjunct architecture, lifecycle, loading pipeline |
-| [**adjunct-types**](en/adjunct-types.md) | **per-slot specs for all 18 built-in types (the normative core)** |
+| [**adjunct-types**](en/adjunct-types.md) | **per-slot specs for all 19 built-in types (the normative core)** |
 | [trigger](en/trigger.md) | events + conditions + the action vocabulary (**all actuator actions, teleport anchors**) |
 | [**determinism**](en/determinism.md) | **base PRNG, derivation pins, conformance checklist** |
 | [item](en/item.md) | item instance = (template, seed) deterministic derivation (normative) |

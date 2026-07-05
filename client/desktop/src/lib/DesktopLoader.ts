@@ -143,6 +143,37 @@ export class DesktopLoader implements IDataSource {
      *  alive; the player can walk back into the block to resume it). */
     public cancelLeaveIntent(): void { if (this._leaveIntent) { this._leaveIntent = false; this._onLeaveIntent?.(false); } }
 
+    /** Open book (e4) — the client-side reader state. Paging a static string[] is
+     *  a pure view action (same discipline as e1 link's window.open staying in the
+     *  client), so the page index lives here, not in the engine. Clicking a book
+     *  adjunct routes through interact.primary → openBook; the BookReader view is a
+     *  pure mirror of this state. */
+    private _book: { title: string; pages: string[]; page: number } | null = null;
+    public get bookState(): { title: string; pages: string[]; page: number } | null { return this._book; }
+    private _onBook: ((b: { title: string; pages: string[]; page: number } | null) => void) | null = null;
+    /** Subscribe to book-reader state (consumer: BookReader). */
+    public onBook(cb: (b: { title: string; pages: string[]; page: number } | null) => void): void { this._onBook = cb; }
+    /** Open a book with its pages (ignores an empty book). */
+    public openBook(pages: string[], title = ''): void {
+        if (!Array.isArray(pages) || pages.length === 0) return;
+        this._book = { title, pages, page: 0 };
+        this._onBook?.(this._book);
+    }
+    /** Turn the page, clamped to [0, last] — no wrap, so the reader never falls off either end. */
+    public turnBookPage(delta: number): void {
+        if (!this._book) return;
+        const next = Math.max(0, Math.min(this._book.pages.length - 1, this._book.page + delta));
+        if (next === this._book.page) return;
+        this._book = { ...this._book, page: next };
+        this._onBook?.(this._book);
+    }
+    /** Close the reader. */
+    public closeBook(): void {
+        if (!this._book) return;
+        this._book = null;
+        this._onBook?.(null);
+    }
+
     /** One IGameApi injected into the engine, dispatching by game name to per-game
      *  backends (loopback mock, or networked FetchGameApi under `?mjserver`). The
      *  Game Setting `methods` whitelist is enforced by the engine before a call
@@ -381,14 +412,23 @@ export class DesktopLoader implements IDataSource {
             this._onGameState?.(null, null);
         });
 
-        // Link/QR adjunct (e1): clicking one fires interact.primary with the hit
-        // entity; open its URL. The engine carries the data + interaction, the
-        // client performs the DOM action (window.open stays out of the engine).
+        // e-series click handlers: clicking an adjunct fires interact.primary with
+        // the hit entity; the engine carries the data + interaction, the client
+        // performs the view action (DOM / overlay stays out of the engine).
+        //   e1 link → window.open(url);  e4 book → open the paged reader(pages).
         this.engine.on('interact.primary', (_payload: any, ev: any) => {
             const target = ev?.target;
             if (target === undefined || !this.engine) return;
             const adj = this.engine.getWorld()?.getComponent(target, 'AdjunctComponent') as any;
-            const url = adj?.stdData?.url;
+            const std = adj?.stdData;
+            if (!std) return;
+            // e4 book: an inline string[] of pages → open the in-scene reader.
+            if (Array.isArray(std.pages) && std.pages.length > 0) {
+                this.openBook(std.pages, typeof std.title === 'string' ? std.title : '');
+                return;
+            }
+            // e1 link: an external URL → open in a new tab.
+            const url = std.url;
             if (typeof url === 'string' && /^https?:\/\//.test(url)) {
                 window.open(url, '_blank', 'noopener');
             }

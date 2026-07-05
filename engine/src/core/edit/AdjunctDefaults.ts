@@ -35,6 +35,7 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: AdjunctType.Link, label: 'Link' },
     { typeId: AdjunctType.Audio, label: 'Audio' },
     { typeId: AdjunctType.Video, label: 'Video' },
+    { typeId: AdjunctType.Book, label: 'Book' },
     { typeId: AdjunctType.Spawner, label: 'Spawner' },
     { typeId: AdjunctType.Npc, label: 'NPC' },
 ];
@@ -76,6 +77,9 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             return [[0.4, 0.4, 0.4], [x, y, z + 0.4], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 8];
         case AdjunctType.Video: // video: [size, pos, rot, source, autoplay, loop, muted, volume]
             return [[3.2, 0.1, 1.8], [x, y, z + 1.2], [0, 0, 0], opts?.resource ?? '', 1, 1, 1, 1];
+        case AdjunctType.Book: // book: [size, pos, rot, resource, repeat, animate, stop, pages, title?]
+            return [[0.7, 0.2, 0.9], [x, y, z + 1], [0, 0, 0], 0, [1, 1], null, null,
+                ['第一页：点击书本可以翻页。', '第二页：文字以 string[] 承载，可存于 IPFS。', '（合上书本。）'], '无题之书'];
         case AdjunctType.Npc: // npc: [pos, visual, behavior, seed] — friendly wanderer demo
             return [[x, y, z], { shape: 'box', size: [0.6, 0.6, 1.7], color: 0xcc8844 }, {
                 initial: 'idle',

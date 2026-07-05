@@ -16,6 +16,7 @@ import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
 import { AdjunctMotif } from '../../plugins/adjunct/adjunct_motif';
 import { AdjunctAudio } from '../../plugins/adjunct/adjunct_audio';
 import { AdjunctVideo } from '../../plugins/adjunct/adjunct_video';
+import { AdjunctBook } from '../../plugins/adjunct/adjunct_book';
 import { AdjunctSpawner } from '../../plugins/adjunct/adjunct_spawner';
 import { AdjunctNpc } from '../../plugins/adjunct/adjunct_npc';
 import { AdjunctError } from '../errors';
@@ -32,7 +33,7 @@ import { AdjunctError } from '../errors';
  *   · b9 spawner(timed runtime generator) · ba npc(autonomous agent)
  *   · c1 track(tube rail; coaster) · c2 motif(generative content)
  *   · e1 link(clickable URL / QR panel) · e2 audio(spatial emitter)
- *   · e3 video(VideoTexture screen)
+ *   · e3 video(VideoTexture screen) · e4 book(paged-text reader)
  */
 export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<number, AdjunctDefinition>([
     [AdjunctType.Wall, BasicWallAdjunct as unknown as AdjunctDefinition],     // wall
@@ -51,6 +52,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Link, AdjunctLink as unknown as AdjunctDefinition],          // link / QR panel (clickable)
     [AdjunctType.Audio, AdjunctAudio as unknown as AdjunctDefinition],        // spatial audio emitter
     [AdjunctType.Video, AdjunctVideo as unknown as AdjunctDefinition],        // video screen (VideoTexture)
+    [AdjunctType.Book, AdjunctBook as unknown as AdjunctDefinition],          // book / paged-text reader (clickable)
     [AdjunctType.Spawner, AdjunctSpawner as unknown as AdjunctDefinition],    // timed runtime generator (F1)
     [AdjunctType.Npc, AdjunctNpc as unknown as AdjunctDefinition],            // autonomous agent (F2)
 ]);

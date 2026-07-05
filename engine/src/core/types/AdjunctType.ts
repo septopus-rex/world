@@ -32,6 +32,7 @@ export const AdjunctType = {
     Link: 0x00e1,     // clickable URL / QR panel
     Audio: 0x00e2,    // spatial audio emitter (source → PositionalAudio)
     Video: 0x00e3,    // video screen (source → VideoTexture on a plane)
+    Book: 0x00e4,     // paged text panel (pages string[] → in-scene reader)
 } as const;
 
 export type AdjunctTypeId = (typeof AdjunctType)[keyof typeof AdjunctType];

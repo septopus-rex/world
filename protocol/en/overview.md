@@ -33,8 +33,8 @@ Universe (6 faces × 4×4 = 96 worlds)
   adjunct coordinates are relative to the block origin (south-west corner), and
   moving a block moves everything on it. A block's content is a **5-tuple**
   `[elevation, status, adjuncts, animations, game-flag]`. See [block.md](block.md).
-- **Adjunct**: the content atom on a block — 18 built-in types (geometry / light
-  / model / water / item / NPC / trigger / spawner / media…), each a compact
+- **Adjunct**: the content atom on a block — 19 built-in types (geometry / light
+  / model / water / item / NPC / trigger / spawner / media / book…), each a compact
   `[typeId, data slots…]` raw row. Adjuncts are fully decoupled from the engine:
   loadable from local, IPFS, or chain. See [adjunct-types.md](adjunct-types.md).
 

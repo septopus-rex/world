@@ -3,7 +3,7 @@
 > [!WARNING]
 > **历史设计稿（2026-04 批次）注记（2026-07-03）**：
 > - 本文的 **§5「动态 Adjunct」重复出现两次**，且两版链上模型互相冲突（前版：双 CID = Schema CID + Impl CID + manifest；后版：单 `ipfs` CID 直指实现代码）。链已解耦封存（合约在 `chain/` 本地存档），该节整体属**未裁定的历史设计**，两版均未落地。
-> - 运行时现状：adjunct 按 type-id 注册于 `engine/src/core/services/AdjunctRegistry.ts`（**18 个内置类型**：a1 wall … b9 spawner、ba npc 等）；动态加载链路 `AdjunctSandbox`（Web Worker 沙箱 + 静态校验）+ `AdjunctLoader` 已迁 TS 但**暂未接入运行时**，随链相关功能启用。
+> - 运行时现状：adjunct 按 type-id 注册于 `engine/src/core/services/AdjunctRegistry.ts`（**19 个内置类型**：a1 wall … b9 spawner、ba npc 等）；动态加载链路 `AdjunctSandbox`（Web Worker 沙箱 + 静态校验）+ `AdjunctLoader` 已迁 TS 但**暂未接入运行时**，随链相关功能启用。
 > - 现状以 `engine/src` 代码与近月文档（CLAUDE.md、`docs/plan/specs/*`、`protocol/*`）为准。
 
 附属物 (Adjunct) 是能够附加安放在 Block 上的任何对象。如果 Block 是这片 3D 世界的地板，那么 Adjunct 就是摆放在地板上的家具、建筑、树木或是游戏规则（如隐形的触发器）。
