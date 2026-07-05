@@ -36,6 +36,7 @@ import { GAMES, gameById } from '../games/registry';
 import { GameApiRouter } from '../games/GameApiRouter';
 import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
+import { buildWorldLevel } from '../scenes/worldHubScene';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
@@ -104,13 +105,17 @@ export class DesktopLoader implements IDataSource {
     private isParkour = this.level === 'parkour';
     private isCoaster = this.level === 'coaster';
     private isXianjian = this.level === 'xianjian';
+    private isWorld = this.level === 'world';
 
     /** The active authored level (data document) + its block provider. Levels
-     *  are JSON in src/levels/ — the engine holds no level content. */
+     *  are JSON in src/levels/ — the engine holds no level content. The 'world'
+     *  level is composed programmatically (hub + demo + relocated xianjian behind
+     *  teleport portals; scenes/worldHubScene.ts). */
     private activeLevel: AuthoredLevel | null =
         this.isParkour ? (parkourLevelJson as unknown as AuthoredLevel)
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
+        : this.isWorld ? buildWorldLevel()
         : null;
     private levelProvider = this.activeLevel ? levelSceneProvider(this.activeLevel) : null;
 

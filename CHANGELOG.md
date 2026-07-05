@@ -16,6 +16,13 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
   (air 需去抖,cn/en)+ e2e 回归断言(剪辑必须推进不冻结)。
 
 ### 功能
+- **世界中枢 `?level=world`(传送门串联两个体验)**:出生在中枢块 `[2026,705]`,走进**西门**
+  传送到演示场景(`[2048,2048]`,保持原样)、走进**东门**传送到微缩仙剑「灵草记」(迁到
+  `[2030,705]`),各目的地带"返回中枢"门。证明 teleport 是**同世界内**机制——三处共用一个
+  数据源,门 = 纯 b8 配方(walk-in trigger 发 `player.teleport` 认锚点名,跨未加载块经
+  `dataSource.view` 解析)。xianjian 零绝对 adj-id 耦合故按块坐标平移即可复用;新世界经
+  `scenes/worldHubScene.ts` 程序化组合 hub+demo+xianjian,**不动**默认 `/` 与 `?level=xianjian`
+  (二者 e2e 仍绿)。e2e `world-hub.spec.ts`(出生→西门→返回→东门全程走通)。
 - **书本 adjunct(e4 book)**:3D 场景里可点开翻页读文字的面板——藏书/信件/告示/
   教程/图鉴。e 系媒体面板家族第 4 位(e1 链接 · e2 音频 · e3 视频 · **e4 书**):
   面板 + 资源 + 点击行为;slot 7 `pages`=内联 `string[]`(开发期明文)或解析为
