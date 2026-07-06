@@ -571,8 +571,12 @@ export class RenderEngine {
     }
 
     public resize(): void {
-        const width = this.container.clientWidth;
-        const height = this.container.clientHeight;
+        // Clamp to a sane max: a broken flex layout can report an absurd
+        // clientHeight (e.g. 2^25), which would allocate a monstrous canvas and
+        // collapse the aspect to ~0. Cap at the WebGL max render buffer.
+        const MAX = 8192;
+        const width = Math.min(this.container.clientWidth, MAX);
+        const height = Math.min(this.container.clientHeight, MAX);
         if (width <= 0 || height <= 0) return;
 
         this.mainCamera.aspect = width / height;

@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import StylePackEditor from './components/StylePackEditor'
+import StylePackEditor from './stylepack-editor/StylePackEditor'
 import ErrorBoundary from './components/ErrorBoundary'
 import UpdateNotifier from './components/UpdateNotifier'
 
