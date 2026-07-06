@@ -38,6 +38,8 @@ import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
 import { buildWorldLevel } from '../scenes/worldHubScene';
 import { buildRefineLevel } from '../scenes/refineScene';
+import { resolveStylePacks, allStylePackIds } from '../stylepacks';
+import type { StylePack } from '@engine/core/spp/Variants';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
@@ -310,6 +312,26 @@ export class DesktopLoader implements IDataSource {
         return gameById(id)?.setting ?? null;
     }
 
+    /**
+     * Resolve external SPP StylePacks by ref (id or content CID) — the IDataSource
+     * seam (spp-protocol-full.md §3.B). Packs are DATA in src/stylepacks/, not
+     * engine code; this stands in for an IPFS/CAS fetch. The engine calls it (or,
+     * local-first, `registerStylePacksAtBoot` pre-registers) so a b6 `theme`
+     * pointing at a pack resolves before expansion.
+     */
+    public async stylePack(refs: string[]): Promise<Record<string, StylePack>> {
+        return resolveStylePacks(refs);
+    }
+
+    /** Local-first: resolve every content StylePack through the seam and register
+     *  it into the engine, so listStyles()/setStyleOverride() and any block theme
+     *  reference resolve. (A server tier resolves lazily per block instead.) */
+    private async registerStylePacksAtBoot(): Promise<void> {
+        if (!this.engine) return;
+        const packs = await this.stylePack(allStylePackIds());
+        for (const pack of Object.values(packs)) this.engine.registerStylePack(pack);
+    }
+
     // ── Boot ──────────────────────────────────────────────────────────────────
 
     public async init(containerId: string, ui?: any) {
@@ -450,6 +472,13 @@ export class DesktopLoader implements IDataSource {
                 block: s.block, position: s.position, rotation: s.rotation,
             };
         }
+
+        // SPP StylePacks: resolve the content library through the IDataSource seam
+        // and register it BEFORE any block streams in, so a b6 `theme` (id or CID)
+        // resolves at expansion time. These are DATA (src/stylepacks/*.json), not
+        // engine code — the engine ships only basic/coaster. Local-first pre-registers
+        // all; a server tier would resolve per-block lazily via stylePack().
+        await this.registerStylePacksAtBoot();
 
         // Boot at the demo spawn as the FALLBACK; durable persistence (player
         // location, inventory, session) lives in the engine and is restored by

@@ -159,45 +159,8 @@ export const BASIC_THEME: SppTheme = {
 
 registerSppTheme('basic', BASIC_THEME);
 
-/** brick — thick terracotta walls. Same variant STRUCTURE as basic (so any
- *  authored cells restyle cleanly), differing by thickness + colour. */
-export const BRICK_THEME: SppTheme = {
-    thickness: 0.35,
-    color: 0x9c5a3c,
-    closed: BASIC_THEME.closed,
-    open: BASIC_THEME.open,
-};
-registerSppTheme('brick', BRICK_THEME);
-
-/** garden — thin green lattice. `solid` becomes three vertical slats (a hedge
- *  screen) instead of one slab, so the SAME cells expand to a visibly different
- *  GEOMETRY (piece count), not just a recolour. */
-export const GARDEN_THEME: SppTheme = {
-    thickness: 0.12,
-    color: 0x5f8a3a,
-    closed: [
-        {
-            name: 'lattice', pieces: [
-                { du: 0.05, dv: 0, su: 0.15, sv: 1 },   // left slat
-                { du: 0.425, dv: 0, su: 0.15, sv: 1 },  // middle slat
-                { du: 0.8, dv: 0, su: 0.15, sv: 1 },    // right slat
-            ]
-        },
-        {
-            name: 'doorway', pieces: [
-                { du: 0, dv: 0, su: 0.3, sv: 1 },
-                { du: 0.7, dv: 0, su: 0.3, sv: 1 },
-                { du: 0.3, dv: 0.75, su: 0.4, sv: 0.25 },
-            ]
-        },
-        {
-            name: 'window', pieces: [
-                { du: 0, dv: 0, su: 1, sv: 0.35 },       // low sill hedge
-            ]
-        },
-    ],
-    open: [
-        { name: 'empty', pieces: [] },
-    ],
-};
-registerSppTheme('garden', GARDEN_THEME);
+// NOTE: visual StylePacks (brick / garden / …) are CONTENT, not engine code —
+// they live as data (client/desktop/src/stylepacks/*.json) and are resolved
+// through IDataSource.stylePack() + Engine.registerStylePack at boot. The engine
+// ships only `basic` (default fallback) and `coaster` (structural, CoasterTheme).
+// Spec: spp-protocol-full.md §3.B (data separation).

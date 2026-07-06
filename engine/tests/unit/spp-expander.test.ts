@@ -90,8 +90,11 @@ describe('SPP expander (M1)', () => {
         expect(JSON.stringify(expandSpp(input))).toBe(JSON.stringify(expandSpp(input)));
     });
 
-    it('unknown theme or malformed cells expand to nothing (no throw)', () => {
-        expect(expandSpp([[0, 0, 0], [cell([0, 0, 0])], 'nope'])).toEqual([]);
+    it('unknown theme falls back to basic (graceful); malformed cells → [] (no throw)', () => {
+        // An unresolved theme (e.g. an external StylePack CID not yet registered)
+        // renders as `basic` rather than vanishing — the placeholder→swap path.
+        expect(expandSpp([[0, 0, 0], [cell([0, 0, 0])], 'nope'])).toHaveLength(6);
+        // Malformed cells still degrade to nothing.
         expect(expandSpp([[0, 0, 0], null as any, 'basic'])).toEqual([]);
     });
 });

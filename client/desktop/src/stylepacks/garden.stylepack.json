@@ -1,0 +1,23 @@
+{
+  "format": "septopus.spp.stylepack",
+  "version": 1,
+  "id": "garden",
+  "thickness": 0.12,
+  "color": 6261306,
+  "closed": [
+    { "name": "lattice", "pieces": [
+      { "du": 0.05, "dv": 0, "su": 0.15, "sv": 1 },
+      { "du": 0.425, "dv": 0, "su": 0.15, "sv": 1 },
+      { "du": 0.8, "dv": 0, "su": 0.15, "sv": 1 }
+    ] },
+    { "name": "doorway", "pieces": [
+      { "du": 0, "dv": 0, "su": 0.3, "sv": 1 },
+      { "du": 0.7, "dv": 0, "su": 0.3, "sv": 1 },
+      { "du": 0.3, "dv": 0.75, "su": 0.4, "sv": 0.25 }
+    ] },
+    { "name": "window", "pieces": [
+      { "du": 0, "dv": 0, "su": 1, "sv": 0.35 }
+    ] }
+  ],
+  "open": [{ "name": "empty", "pieces": [] }]
+}

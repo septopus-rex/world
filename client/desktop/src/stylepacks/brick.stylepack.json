@@ -1,0 +1,22 @@
+{
+  "format": "septopus.spp.stylepack",
+  "version": 1,
+  "id": "brick",
+  "thickness": 0.35,
+  "color": 10246716,
+  "closed": [
+    { "name": "solid", "pieces": [{ "du": 0, "dv": 0, "su": 1, "sv": 1 }] },
+    { "name": "doorway", "pieces": [
+      { "du": 0, "dv": 0, "su": 0.3, "sv": 1 },
+      { "du": 0.7, "dv": 0, "su": 0.3, "sv": 1 },
+      { "du": 0.3, "dv": 0.75, "su": 0.4, "sv": 0.25 }
+    ] },
+    { "name": "window", "pieces": [
+      { "du": 0, "dv": 0, "su": 1, "sv": 0.4 },
+      { "du": 0, "dv": 0.85, "su": 1, "sv": 0.15 },
+      { "du": 0, "dv": 0.4, "su": 0.25, "sv": 0.45 },
+      { "du": 0.75, "dv": 0.4, "su": 0.25, "sv": 0.45 }
+    ] }
+  ],
+  "open": [{ "name": "empty", "pieces": [] }]
+}

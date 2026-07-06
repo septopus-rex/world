@@ -299,7 +299,10 @@ function expandChunk(
  */
 export function expandSpp(raw: SppRaw, ctx: ExpandContext = {}): ExpandedRow[] {
     const [origin, cells, themeId] = raw;
-    const requested = getSppTheme(themeId ?? 'basic');
+    // Unresolved theme (e.g. an external StylePack CID not yet registered) falls
+    // back to `basic` so the structure still renders — the "placeholder → swap"
+    // path: re-expanding after the pack loads swaps in the real style.
+    const requested = getSppTheme(themeId ?? 'basic') ?? getSppTheme('basic');
     // World restyle: a style override swaps VISUAL themes wholesale, but leaves
     // STRUCTURAL themes (expandCell, e.g. coaster) alone — you can recolour a
     // building, not turn a coaster into brick walls.

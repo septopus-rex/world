@@ -1,75 +1,84 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { expandSpp, SppCell } from '../../src/core/spp/Expander';
 import {
-    getSppTheme, registerStylePack, listSppThemes, setStyleOverride, getStyleOverride,
+    getSppTheme, registerStylePack, listSppThemes, setStyleOverride, getStyleOverride, StylePack,
 } from '../../src/core/spp/Variants';
 
-// Workstream B — StylePacks: the SAME cell matrix restyles by swapping the
+// Workstream B + ② — StylePacks: the SAME cell matrix restyles by swapping the
 // theme reference (colour + geometry), plus a world-level override, plus
-// external (data-only) pack registration. Spec: spp-protocol-full.md §3.B.
+// external (data-only) pack registration. Visual packs are CONTENT resolved at
+// boot (not engine built-ins); these tests register them inline to exercise the
+// mechanism. Spec: spp-protocol-full.md §3.B.
+
+// Content packs (mirror client/desktop/src/stylepacks/*.json) registered inline.
+const BRICK: StylePack = {
+    format: 'septopus.spp.stylepack', version: 1, id: 'brick', thickness: 0.35, color: 0x9c5a3c,
+    closed: [{ name: 'solid', pieces: [{ du: 0, dv: 0, su: 1, sv: 1 }] }],
+    open: [{ name: 'empty', pieces: [] }],
+};
+const GARDEN: StylePack = {
+    format: 'septopus.spp.stylepack', version: 1, id: 'garden', thickness: 0.12, color: 0x5f8a3a,
+    closed: [{ name: 'lattice', pieces: [
+        { du: 0.05, dv: 0, su: 0.15, sv: 1 }, { du: 0.425, dv: 0, su: 0.15, sv: 1 }, { du: 0.8, dv: 0, su: 0.15, sv: 1 },
+    ] }],
+    open: [{ name: 'empty', pieces: [] }],
+};
+
+beforeAll(() => { registerStylePack(BRICK); registerStylePack(GARDEN); });
+afterEach(() => setStyleOverride(null)); // never leak the global override across tests
 
 const solidCell = (): SppCell => ({
     position: [0, 0, 0], level: 0,
     faces: [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]], // 6 solid faces
 });
 const walls = (rows: ReturnType<typeof expandSpp>) => rows.filter(r => r[0] === 0x00a1);
-/** a1 wall raw: [size, pos, rot, resource, repeat, anim, stop, color?]. */
 const wallColor = (row: any[]) => row[1][7];
-const wallThickness = (row: any[]) => Math.min(...row[1][0]); // slab thickness = smallest dim
+const wallThickness = (row: any[]) => Math.min(...row[1][0]);
 
-afterEach(() => setStyleOverride(null)); // never leak the global override across tests
-
-describe('SPP StylePacks (Workstream B)', () => {
-    it('ships built-in bundled packs (basic/brick/garden/coaster)', () => {
-        const ids = listSppThemes();
-        expect(ids).toEqual(expect.arrayContaining(['basic', 'brick', 'garden', 'coaster']));
+describe('SPP StylePacks (Workstream B + data separation ②)', () => {
+    it('the engine ships only basic + coaster built-in; visual packs are content', () => {
+        // basic (default) + coaster (structural) are built in; brick/garden are
+        // registered here as CONTENT, not shipped by the engine.
+        expect(getSppTheme('basic')).toBeDefined();
+        expect(getSppTheme('coaster')).toBeDefined();
+        // With brick/garden registered inline, listing includes them.
+        expect(listSppThemes()).toEqual(expect.arrayContaining(['basic', 'coaster', 'brick', 'garden']));
     });
 
     it('the SAME cells recolour by swapping the theme ref (asset-free)', () => {
         const cells = [solidCell()];
         const basic = walls(expandSpp([[0, 0, 0], cells, 'basic']));
         const brick = walls(expandSpp([[0, 0, 0], cells, 'brick']));
-
-        // Same geometry footprint (brick reuses basic's variants) …
         expect(basic).toHaveLength(6);
         expect(brick).toHaveLength(6);
-        // … but brick bakes an explicit wall colour into slot 7; basic has none.
         expect(wallColor(basic[0])).toBeUndefined();
         expect(wallColor(brick[0])).toBe(0x9c5a3c);
     });
 
     it('brick is thicker than basic — same cells, different slab depth', () => {
         const cells = [solidCell()];
-        const basic = walls(expandSpp([[0, 0, 0], cells, 'basic']));
-        const brick = walls(expandSpp([[0, 0, 0], cells, 'brick']));
-        expect(wallThickness(basic[0])).toBeCloseTo(0.2);
-        expect(wallThickness(brick[0])).toBeCloseTo(0.35);
+        expect(wallThickness(walls(expandSpp([[0, 0, 0], cells, 'basic']))[0])).toBeCloseTo(0.2);
+        expect(wallThickness(walls(expandSpp([[0, 0, 0], cells, 'brick']))[0])).toBeCloseTo(0.35);
     });
 
     it('garden changes GEOMETRY, not just colour — a lattice screen per face', () => {
         const cells = [solidCell()];
-        const basic = walls(expandSpp([[0, 0, 0], cells, 'basic'])); // 1 slab × 6 faces
-        const garden = walls(expandSpp([[0, 0, 0], cells, 'garden'])); // 3 slats × 6 faces
-        expect(basic).toHaveLength(6);
-        expect(garden).toHaveLength(18);
+        expect(walls(expandSpp([[0, 0, 0], cells, 'basic']))).toHaveLength(6);   // 1 slab × 6 faces
+        const garden = walls(expandSpp([[0, 0, 0], cells, 'garden']));
+        expect(garden).toHaveLength(18);                                          // 3 slats × 6 faces
         expect(wallColor(garden[0])).toBe(0x5f8a3a);
     });
 
     it('world style override restyles every VISUAL source wholesale', () => {
-        const cells = [solidCell()];
         setStyleOverride('brick');
         expect(getStyleOverride()).toBe('brick');
-        // A source authored as 'basic' now expands as brick.
-        const overridden = walls(expandSpp([[0, 0, 0], cells, 'basic']));
-        expect(wallColor(overridden[0])).toBe(0x9c5a3c);
+        expect(wallColor(walls(expandSpp([[0, 0, 0], [solidCell()], 'basic']))[0])).toBe(0x9c5a3c);
     });
 
     it('override leaves STRUCTURAL themes (coaster) alone', () => {
-        // A coaster cell (2 open faces) with a brick override still collapses to a
-        // c1 track piece, NOT brick walls.
         const trackCell: SppCell = {
             position: [0, 0, 0], level: 0,
-            faces: [[0, 0], [0, 0], [1, 0], [1, 0], [1, 0], [1, 0]], // top+bottom open
+            faces: [[0, 0], [0, 0], [1, 0], [1, 0], [1, 0], [1, 0]],
         };
         setStyleOverride('brick');
         const rows = expandSpp([[0, 0, 0], [trackCell], 'coaster']);
@@ -96,8 +105,10 @@ describe('SPP StylePacks (Workstream B)', () => {
         expect(registerStylePack(null as any)).toBeNull();
     });
 
-    it('unset override + unknown theme still degrade to nothing, no throw', () => {
+    it('an UNRESOLVED theme (unknown CID) falls back to basic, not empty', () => {
         setStyleOverride(null);
-        expect(expandSpp([[0, 0, 0], [solidCell()], 'does-not-exist'])).toEqual([]);
+        const rows = walls(expandSpp([[0, 0, 0], [solidCell()], 'bafyspp-not-registered']));
+        expect(rows, 'unknown theme renders as basic (6 solid faces), not nothing').toHaveLength(6);
+        expect(wallColor(rows[0]), 'basic has no baked colour').toBeUndefined();
     });
 });
