@@ -43,5 +43,9 @@ export function resolveStylePacks(refs: string[]): Record<string, StylePack> {
 /** Every content pack id (human ids) — pre-registered at boot in local-first. */
 export function allStylePackIds(): string[] { return PACKS.map(p => p.id); }
 
+/** The full pack objects (for the SPP粒子 editor to load + edit). Deep-cloned so
+ *  the editor never mutates the bundled originals. */
+export function allStylePacks(): StylePack[] { return PACKS.map(p => JSON.parse(JSON.stringify(p))); }
+
 /** The content id (CID) a block would point at for a given pack id. */
 export function stylePackCid(id: string): string | undefined { return ID_TO_CID.get(id); }

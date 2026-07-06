@@ -16,6 +16,19 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
   (air 需去抖,cn/en)+ e2e 回归断言(剪辑必须推进不冻结)。
 
 ### 功能
+- **SPP 粒子(option 库)组合化 + 稳定 key + 独立库编辑器(P1/P4/P2-P3)**:把 SPP 变体从"只出 a1 墙"
+  升级成**任意 adjunct 组合**,并给出一个**独立的库编辑器**。规格 `docs/plan/specs/spp-editors.md`。
+  - **P1 option=组合**:`FaceVariant.pieces`(a1-only)→ `parts: VariantPart[]`(任意 type,面局部 u/v/w
+    单位系)。"阻挡花瓶"=`a4 模型 + b4 stop`、"双柱通行"=`a4×2 无 stop`;legacy `pieces` 自动 lift 成
+    a1 parts(零迁移)。`partToBox` 泛化 `pieceToBox`(加内向深度)。
+  - **P4 变体身份=稳定 key**:面从"数组下标"改为可用**稳定 `key`** 引用(对齐 SPP-Core §3.2.4 的
+    "option=不透明引用",修掉下标漂移);`getVariant` 双读(string=key / number=legacy 下标),存量
+    index 源零改动。
+  - **P2/P3 SPP 粒子编辑器**(`?tool=stylepack`,**独立于 world 应用**):选库 → 选池(挡/通)→ 选变体 →
+    改变体 JSON(parts 组合)→ **活体 3D 预览** → 导出 / publish CID。预览用一个精简 Engine harness
+    (`StylePackPreviewLoader`,路径 b)复用整条渲染管线、不 boot 世界。
+  - 验证:engine 新增 `spp-parts`(5)+`spp-key`(5),**509 全绿**;e2e `stylepack-editor.spec.ts`
+    (把变体改成 a4+b4 花瓶 → 预览真重展开成 6×a4+6×b4)。待续:2D 面编辑、契约守卫、CID 冻结、Editor 1 沙盘泛化。
 - **SPP 完整协议落地 + b6 正名 `spp`(A–E 五工作流)**:把 SPP 从"只做了 Unfold"补齐到
   **完整协议**,兑现"在 world 里高速搭 + 一键换风格"。规格 `docs/plan/specs/spp-protocol-full.md`。
   - **A 正名**:b6 附属物 `particle` → **`spp`**(承载的是弦粒子 CHUNK,按协议名更准);typeId

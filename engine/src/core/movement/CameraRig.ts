@@ -79,6 +79,11 @@ export class CameraRig {
         return { azimuth: this._obsAzimuth, elevation: this._obsElevation, radius: this._obsRadius };
     }
 
+    /** Set the observe orbit explicitly (framing a target — e.g. tooling previews). */
+    public setObserveOrbit(azimuth: number, elevation: number, radius: number): void {
+        this._obsAzimuth = azimuth; this._obsElevation = elevation; this._obsRadius = radius;
+    }
+
     /** Register a landing's drop height; raises the impact-shake envelope. */
     public addImpactShake(drop: number): void {
         if (drop <= CameraRig.SHAKE_MIN_DROP) return;

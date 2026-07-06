@@ -11,7 +11,7 @@
  */
 import { FaceState } from '../types/ParticleCell';
 
-/** One face-local slab: offset+size in normalized face coords. */
+/** One face-local slab: offset+size in normalized face coords (a1-wall shorthand). */
 export interface VariantPiece {
     du: number;  // u offset (0..1)
     dv: number;  // v offset (0..1)
@@ -19,9 +19,34 @@ export interface VariantPiece {
     sv: number;  // v size   (0..1)
 }
 
+/**
+ * One part of a composed option (P1): ANY adjunct type placed in the face-local
+ * unit frame. u/v = in-plane offset (0..1); su/sv = in-plane size; w = inward
+ * depth offset (0..1, 0 = at the face plane); sw = inward depth size (0..1,
+ * default = the theme's wall thickness). `props` is the emitted adjunct raw's
+ * TAIL (slots 3+, type-specific: a1 [resource,repeat,anim,stop,color] ·
+ * a4 [modelRef,…] · b4 [stopMode,anim]). A "blocking vase" = an a4 model part +
+ * a b4 stop part; "two pillars" = two a4 parts and NO stop. Spec: spp-editors.md §3.2.
+ */
+export interface VariantPart {
+    type: number;              // AdjunctTypeId
+    u: number; v: number;      // face-plane offset (0..1)
+    su: number; sv: number;    // face-plane size   (0..1)
+    w?: number;                // inward depth offset (0..1)
+    sw?: number;               // inward depth size   (0..1); default = thickness
+    rot?: [number, number, number];
+    props?: any[];             // raw tail (slots 3+), type-specific
+}
+
 export interface FaceVariant {
+    /** Stable identity (P4). A source face references a variant by this key;
+     *  falls back to `name`, and legacy sources reference by array index. */
+    key?: string;
     name: string;
-    pieces: VariantPiece[];
+    /** Legacy a1-only slabs (auto-lifted to a1 `parts` at expand time). */
+    pieces?: VariantPiece[];
+    /** Composition: any adjunct types (visual + collision). Wins over `pieces`. */
+    parts?: VariantPart[];
 }
 
 export interface SppTheme {
@@ -51,7 +76,7 @@ export interface SppTheme {
      * the expander regardless. Returns [typeId, raw][].
      */
     expandCell?: (
-        cell: { position: [number, number, number]; level: number; faces?: Array<[number, number]> },
+        cell: { position: [number, number, number]; level: number; faces?: Array<[number, number | string]> },
         cellOrigin: [number, number, number],
         cellSizeMeters: number,
     ) => Array<[number, any[]]>;
@@ -126,9 +151,13 @@ export function getStyleOverride(): string | null {
     return _styleOverride;
 }
 
-export function getVariant(theme: SppTheme, state: FaceState, variantId: number): FaceVariant | undefined {
+/** Resolve a face's variant reference to the variant. P4 dual-read: a STRING
+ *  is a stable `key` (SPP-Core §3.2.4 — an opaque reference); a NUMBER is a
+ *  legacy positional index. Key falls back to `name` when `key` is unset. */
+export function getVariant(theme: SppTheme, state: FaceState, ref: number | string): FaceVariant | undefined {
     const pool = state === FaceState.Closed ? theme.closed : theme.open;
-    return pool[variantId];
+    if (typeof ref === 'string') return pool.find(v => (v.key ?? v.name) === ref);
+    return pool[ref];
 }
 
 /** Built-in starter theme: solid / doorway / window walls, open = passage. */

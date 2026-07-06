@@ -15,7 +15,7 @@
  */
 import { ParticleFace, FaceState, SubdivisionLevel } from '../types/ParticleCell';
 import { AdjunctType } from '../types/AdjunctType';
-import { getSppTheme, getVariant, getStyleOverride, VariantPiece } from './Variants';
+import { getSppTheme, getVariant, getStyleOverride, VariantPart, FaceVariant, SppTheme } from './Variants';
 import { makeRng } from '../motif/Rng';
 import './CoasterTheme'; // side-effect: registers the 'coaster' theme (cells → c1 track)
 import type { TriggerLogicNode } from '../types/Trigger';
@@ -24,16 +24,16 @@ import type { TriggerLogicNode } from '../types/Trigger';
 export interface SppCell {
     position: [number, number, number];        // grid coords, stride = cell size
     level: SubdivisionLevel;
-    /** [state, variant] per face, indexed by ParticleFace (Top..Right) — the
-     *  RESOLVED form. Missing/null entries default to [Closed, 0] (solid) at the
-     *  top level, or INHERIT the parent face inside a refinement. Present ⇒ the
-     *  cell is already collapsed and `faceOptions` (if any) is ignored. */
-    faces?: Array<[number, number] | null>;
+    /** [state, variantRef] per face, indexed by ParticleFace (Top..Right) — the
+     *  RESOLVED form. `variantRef` is a stable string KEY (P4, preferred) or a
+     *  legacy numeric index. Missing/null entries default to [Closed, 0] (solid)
+     *  at the top level, or INHERIT the parent face inside a refinement. */
+    faces?: Array<[number, number | string] | null>;
     /** SUPERPOSITION (protocol faceOptions): per face, a LIST of candidate
-     *  [state, variant] options. When `faces` is absent, the expander collapses
+     *  [state, variantRef] options. When `faces` is absent, the expander collapses
      *  each face deterministically (mulberry32 seeded by block+cell+face) down
      *  to one option. An empty/absent list for a face → [Closed, 0]. */
-    faceOptions?: Array<Array<[number, number]>>;
+    faceOptions?: Array<Array<[number, number | string]>>;
     /**
      * REFINEMENT (protocol §3.2.5): a nested finer grid that defines this cell's
      * INTERIOR. Child cells are at level+1 (half size), positioned in the parent's
@@ -96,7 +96,7 @@ function cellSize(level: SubdivisionLevel): number {
     return 4 * Math.pow(0.5, level);
 }
 
-function faceConfig(cell: SppCell, face: ParticleFace): [FaceState, number] {
+function faceConfig(cell: SppCell, face: ParticleFace): [FaceState, number | string] {
     const entry = cell.faces?.[face];
     if (!entry) return [FaceState.Closed, 0];
     return [entry[0] as FaceState, entry[1] ?? 0];
@@ -116,7 +116,7 @@ function collapseSeed(bx: number, by: number, cellIdx: number, faceIdx: number):
 
 /** Collapse a face's superposition (candidate list) to one resolved option.
  *  0 candidates → solid [Closed,0]; 1 → that one (no RNG); N → mulberry32 pick. */
-function collapseFace(options: Array<[number, number]> | undefined, seed: number): [number, number] {
+function collapseFace(options: Array<[number, number | string]> | undefined, seed: number): [number, number | string] {
     if (!Array.isArray(options) || options.length === 0) return [FaceState.Closed, 0];
     if (options.length === 1) return [options[0][0], options[0][1] ?? 0];
     const idx = Math.floor(makeRng(seed)() * options.length) % options.length;
@@ -124,7 +124,7 @@ function collapseFace(options: Array<[number, number]> | undefined, seed: number
     return [chosen[0], chosen[1] ?? 0];
 }
 
-const faceEntry = (e: [number, number] | null | undefined): [number, number] =>
+const faceEntry = (e: [number, number | string] | null | undefined): [number, number | string] =>
     e ? [e[0], e[1] ?? 0] : [FaceState.Closed, 0];
 
 /**
@@ -137,15 +137,15 @@ const faceEntry = (e: [number, number] | null | undefined): [number, number] =>
  */
 function resolveFaces(
     cell: SppCell, bx: number, by: number, cellIdx: number,
-    parent?: { faces: Array<[number, number] | null> | undefined; localPos: [number, number, number] },
-): Array<[number, number]> {
-    let base: Array<[number, number] | null | undefined> | undefined;
+    parent?: { faces: Array<[number, number | string] | null> | undefined; localPos: [number, number, number] },
+): Array<[number, number | string]> {
+    let base: Array<[number, number | string] | null | undefined> | undefined;
     if (Array.isArray(cell.faces)) base = cell.faces;
     else if (Array.isArray(cell.faceOptions)) {
         base = [];
         for (let f = 0; f < 6; f++) base[f] = collapseFace(cell.faceOptions[f], collapseSeed(bx, by, cellIdx, f));
     }
-    const out: Array<[number, number]> = [];
+    const out: Array<[number, number | string]> = [];
     for (let f = 0; f < 6; f++) {
         const own = base?.[f];
         if (own) { out[f] = [own[0], own[1] ?? 0]; continue; }
@@ -161,28 +161,42 @@ function resolveFaces(
 }
 
 /**
- * Map a face-local piece into an SPP-space slab (center + full size, meters,
- * relative to the CELL origin corner). u/v are the face's in-plane axes; the
- * slab thickness t is embedded inside the cell against the face plane.
+ * Map a face-local PART into an SPP-space box (center + full size, meters,
+ * relative to the CELL origin corner). u/v are the face's in-plane axes; w is
+ * inward depth from the face plane. A legacy piece = a part at w=0 with
+ * depth = the theme thickness (so `pieceToBox` is the w=0/sw=t special case).
  */
-function pieceToBox(face: ParticleFace, piece: VariantPiece, s: number, t: number): { size: [number, number, number]; center: [number, number, number] } {
-    const u0 = piece.du * s, su = piece.su * s;
-    const v0 = piece.dv * s, sv = piece.sv * s;
-    const uC = u0 + su / 2, vC = v0 + sv / 2;
+function partToBox(face: ParticleFace, part: VariantPart, s: number, thickness: number): { size: [number, number, number]; center: [number, number, number] } {
+    const uC = (part.u + part.su / 2) * s, sum = part.su * s;
+    const vC = (part.v + part.sv / 2) * s, svm = part.sv * s;
+    const swm = part.sw != null ? part.sw * s : thickness;         // inward depth size
+    const wC = (part.w ?? 0) * s + swm / 2;                        // inward depth center
     switch (face) {
-        case ParticleFace.Left:    // X- plane: u→Y, v→Z
-            return { size: [t, su, sv], center: [t / 2, uC, vC] };
-        case ParticleFace.Right:   // X+
-            return { size: [t, su, sv], center: [s - t / 2, uC, vC] };
-        case ParticleFace.Front:   // Y- plane: u→X, v→Z
-            return { size: [su, t, sv], center: [uC, t / 2, vC] };
+        case ParticleFace.Left:    // X- plane: u→Y, v→Z, w→+X
+            return { size: [swm, sum, svm], center: [wC, uC, vC] };
+        case ParticleFace.Right:   // X+ : w→−X
+            return { size: [swm, sum, svm], center: [s - wC, uC, vC] };
+        case ParticleFace.Front:   // Y- plane: u→X, v→Z, w→+Y
+            return { size: [sum, swm, svm], center: [uC, wC, vC] };
         case ParticleFace.Back:    // Y+
-            return { size: [su, t, sv], center: [uC, s - t / 2, vC] };
-        case ParticleFace.Bottom:  // Z- plane: u→X, v→Y
-            return { size: [su, sv, t], center: [uC, vC, t / 2] };
+            return { size: [sum, swm, svm], center: [uC, s - wC, vC] };
+        case ParticleFace.Bottom:  // Z- plane: u→X, v→Y, w→+Z
+            return { size: [sum, svm, swm], center: [uC, vC, wC] };
         case ParticleFace.Top:     // Z+
-            return { size: [su, sv, t], center: [uC, vC, s - t / 2] };
+            return { size: [sum, svm, swm], center: [uC, vC, s - wC] };
     }
+}
+
+/**
+ * A variant's parts — either its explicit `parts` (composition), or its legacy
+ * a1 `pieces` lifted to a1-wall parts (carrying the theme's texture/colour).
+ */
+function variantParts(variant: FaceVariant, theme: SppTheme): VariantPart[] {
+    if (variant.parts) return variant.parts;
+    const wallProps: any[] = [theme.texture ?? 0, [1, 1], 0, 1, ...(theme.color != null ? [theme.color] : [])];
+    return (variant.pieces ?? []).map(p => ({
+        type: AdjunctType.Wall, u: p.du, v: p.dv, su: p.su, sv: p.sv, props: wallProps,
+    }));
 }
 
 interface ChunkOpts {
@@ -198,7 +212,7 @@ const posKey = (level: number, gx: number, gy: number, gz: number) => `${level}:
 
 /** Emit one leaf cell's face geometry (walls or theme geometry) into `rows`. */
 function emitLeaf(
-    cell: SppCell & { faces: Array<[number, number]> }, cellOrigin: [number, number, number], s: number,
+    cell: SppCell & { faces: Array<[number, number | string]> }, cellOrigin: [number, number, number], s: number,
     occupied: Set<string>, refinedAt: Set<string>, opts: ChunkOpts, rows: ExpandedRow[],
 ): void {
     const theme = opts.theme;
@@ -220,14 +234,15 @@ function emitLeaf(
         const [state, variantId] = faceConfig(cell, face);
         const variant = getVariant(theme, state, variantId);
         if (!variant) continue;
-        for (const piece of variant.pieces) {
-            const { size, center } = pieceToBox(face, piece, s, theme.thickness);
-            // a1 wall raw: [size, pos, rot, resource, repeat, animation, stop, color?].
-            rows.push([AdjunctType.Wall, [
+        for (const part of variantParts(variant, theme)) {
+            const { size, center } = partToBox(face, part, s, theme.thickness);
+            // Emitted raw = [size, pos, rot, ...props]; props is the type-specific
+            // tail (a1 wall: [resource,repeat,anim,stop,color]; b4 stop: [stopMode,anim]; …).
+            rows.push([part.type, [
                 size,
                 [cellOrigin[0] + center[0], cellOrigin[1] + center[1], cellOrigin[2] + center[2]],
-                [0, 0, 0], theme.texture ?? 0, [1, 1], 0, 1,
-                ...(theme.color != null ? [theme.color] : []),
+                part.rot ?? [0, 0, 0],
+                ...(part.props ?? []),
             ]]);
         }
     }
@@ -241,7 +256,7 @@ function emitLeaf(
  */
 function expandChunk(
     cells: SppCell[], chunkOrigin: [number, number, number],
-    parentFaces: Array<[number, number]> | null, opts: ChunkOpts, rows: ExpandedRow[],
+    parentFaces: Array<[number, number | string]> | null, opts: ChunkOpts, rows: ExpandedRow[],
 ): void {
     // Same-level indices for this sibling set: occupancy + which will refine.
     const occupied = new Set<string>();
@@ -257,7 +272,7 @@ function expandChunk(
     for (const rawCell of cells) {
         const localPos = rawCell.position;
         const faces = resolveFaces(rawCell, opts.bx, opts.by, opts.seq++, parentFaces ? { faces: parentFaces, localPos } : undefined);
-        const cell = { ...rawCell, faces } as SppCell & { faces: Array<[number, number]> };
+        const cell = { ...rawCell, faces } as SppCell & { faces: Array<[number, number | string]> };
         const s = cellSize(cell.level);
         const [gx, gy, gz] = cell.position;
         const cellOrigin: [number, number, number] = [

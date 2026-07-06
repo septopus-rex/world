@@ -2,8 +2,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import StylePackEditor from './components/StylePackEditor'
 import ErrorBoundary from './components/ErrorBoundary'
 import UpdateNotifier from './components/UpdateNotifier'
+
+// ?tool=stylepack → the standalone SPP粒子 (option library) editor, independent
+// of the world app (its own lean Engine harness for preview). spp-editors.md §3.
+const tool = new URLSearchParams(window.location.search).get('tool')
 
 // Surface unhandled async rejections on screen (helps debug the 3D canvas on mobile).
 window.addEventListener('unhandledrejection', (e) => {
@@ -15,7 +20,7 @@ window.addEventListener('unhandledrejection', (e) => {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
+      {tool === 'stylepack' ? <StylePackEditor /> : <App />}
       <UpdateNotifier />
     </ErrorBoundary>
   </StrictMode>,

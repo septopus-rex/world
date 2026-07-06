@@ -76,6 +76,9 @@ export class CharacterController implements ISystem {
     public getViewMode(): 'first' | 'third' { return this.camera.getViewMode(); }
     public toggleViewMode(): 'first' | 'third' { return this.camera.toggleViewMode(); }
     public getCameraShake(): number { return this.camera.getCameraShake(); }
+    public setObserveOrbit(azimuth: number, elevation: number, radius: number): void {
+        this.camera.setObserveOrbit(azimuth, elevation, radius);
+    }
     public getObserveState(): { azimuth: number; elevation: number; radius: number } {
         return this.camera.getObserveState();
     }

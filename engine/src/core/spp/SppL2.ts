@@ -16,8 +16,11 @@ import { FaceState, SubdivisionLevel } from '../types/ParticleCell';
 import type { SppCell } from './Expander';
 import type { TriggerLogicNode } from '../types/Trigger';
 
-/** Face code ↔ [state, variant], matching faceCodes.ts (open/solid/doorway/window). */
-function faceToIndex(face: [number, number] | null | undefined): number {
+/** Face code ↔ [state, variant], matching faceCodes.ts (open/solid/doorway/window).
+ *  L2 is the collapsed INDEX form (4-bit nibble); a P4 string `key` can't fit a
+ *  nibble, so a keyed closed face degrades to solid (lossy but safe — L2 is the
+ *  legacy/index optimization, keyed packs stay in the plaintext source). */
+function faceToIndex(face: [number, number | string] | null | undefined): number {
     if (!face || face[0] === FaceState.Open) return 0; // open
     if (face[1] === 1) return 2;                        // doorway
     if (face[1] === 2) return 3;                        // window
