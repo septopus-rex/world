@@ -61,6 +61,8 @@ export class StylePackPreviewLoader implements IDataSource {
     private faceCentersEng: THREE.Vector3[] = [];
     private faceNormalsEng: THREE.Vector3[] = [];
     private faceCornersEng: THREE.Vector3[][] = [];
+    private panels: THREE.Mesh[] = [];   // 6 in-scene semi-transparent face panels
+    private highlighted = 0;
 
     // ── IDataSource ──────────────────────────────────────────────────────────
     async world(_i: number): Promise<any> { return JSON.parse(JSON.stringify(MockWorldNormal)); }
@@ -119,6 +121,23 @@ export class StylePackPreviewLoader implements IDataSource {
         });
         this.faceCornersEng = FACE_CORNER_OFF.map(corners => corners.map(off =>
             new THREE.Vector3(...Coords.septopusToEngine([O[0] + off[0] * S, O[1] + off[1] * S, O[2] + off[2] * S], PREVIEW_BLOCK))));
+        // Six semi-transparent face panels as REAL scene meshes (the engine renders
+        // this.scene) → they track the box exactly during orbit, zero overlay lag.
+        const scene = (this.engine.getWorld() as any)?.renderEngine?.sceneInstance;
+        if (scene) {
+            for (let i = 0; i < 6; i++) {
+                const m = new THREE.Mesh(
+                    new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE),
+                    new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, depthWrite: false }),
+                );
+                m.position.copy(this.faceCentersEng[i]).addScaledVector(this.faceNormalsEng[i], 0.04);
+                m.lookAt(this.faceCentersEng[i].clone().add(this.faceNormalsEng[i]));
+                m.renderOrder = 998;
+                scene.add(m);
+                this.panels.push(m);
+            }
+            this.setHighlightFace(0);
+        }
         this.fitView(); // correct the aspect (the div is sized now) + auto-frame the cell
         for (let i = 0; i < 8; i++) this.engine.step(1 / 60); // settle the orbit
         this.engine.start();
@@ -234,6 +253,25 @@ export class StylePackPreviewLoader implements IDataSource {
         return { pts, front };
     }
 
+    /** All six faces' corner polygons (screen px) — for click hit-testing. */
+    allFaceCorners(): Array<{ pts: Array<{ x: number; y: number }>; front: boolean } | null> {
+        return [0, 1, 2, 3, 4, 5].map(i => this.faceCorners(i));
+    }
+
+    /** Recolour the in-scene face panels: selected = bright cyan, others = faint. */
+    setHighlightFace(idx: number): void {
+        this.highlighted = idx;
+        this.panels.forEach((m, i) => {
+            const mat = m.material as THREE.MeshBasicMaterial;
+            if (i === idx) { mat.color.setHex(0x22d3ee); mat.opacity = 0.42; }
+            else { mat.color.setHex(0x93c5fd); mat.opacity = 0.14; }
+        });
+    }
+
     getEngine(): Engine | null { return this.engine; }
-    dispose(): void { this.ro?.disconnect(); this.engine?.stop(); }
+    dispose(): void {
+        this.ro?.disconnect();
+        this.panels.forEach(m => { m.geometry.dispose(); (m.material as THREE.Material).dispose(); });
+        this.engine?.stop();
+    }
 }

@@ -1,27 +1,28 @@
 import type { StylePack, FaceVariant, VariantPart } from '@engine/core/spp/Variants';
-import { FACE_NAMES, PART_KINDS, typeName, type Pool } from './constants';
+import { FACE_NAMES, PART_KINDS, typeName } from './constants';
 
 /**
- * FaceStateEditor — the single merged control column. Top: 粒子 meta (name/thickness)
- * + pack list. Then the SELECTED face's state editor: 通/挡 tabs → option variants →
- * add adjuncts/geometry → the active variant's parts (structured fields). Bottom:
- * export / publish. The face is picked in the collapse dial (or a 3D label).
+ * FaceStateEditor — the single merged control column, the DETAIL view of the face
+ * selected in the collapse dial. Top: 粒子 meta + pack list. Then the selected
+ * face's state (通/挡, synced with the dial — same source of truth) → the option
+ * variants of that state → add adjuncts/geometry → the active variant's parts.
+ * Bottom: export / publish.
  */
 export function FaceStateEditor({
-    pack, packs, selFace, tab, vi, pool, variant,
-    onEditPack, onSelectPack, onSetTab, onSetVi, onAddVariant, onAddPart, onRemovePart, onSetPartField, onExport, onPublish,
+    pack, packs, selFace, selState, pool, vi, variant,
+    onEditPack, onSelectPack, onSetFaceState, onSetVariant, onAddVariant, onAddPart, onRemovePart, onSetPartField, onExport, onPublish,
 }: {
     pack: StylePack;
     packs: StylePack[];
     selFace: number;
-    tab: Pool;
-    vi: number;
+    selState: number;                 // 0 = 通 open, 1 = 挡 close (of the selected face)
     pool: FaceVariant[];
+    vi: number;
     variant: FaceVariant | undefined;
     onEditPack: (fn: (p: StylePack) => void) => void;
     onSelectPack: (p: StylePack) => void;
-    onSetTab: (pl: Pool) => void;
-    onSetVi: (i: number) => void;
+    onSetFaceState: (state: number) => void;
+    onSetVariant: (i: number) => void;
     onAddVariant: () => void;
     onAddPart: (def: VariantPart) => void;
     onRemovePart: (pi: number) => void;
@@ -53,34 +54,32 @@ export function FaceStateEditor({
                 ))}
             </div>
 
-            {/* Selected face's state editor (face picked in the collapse dial / a 3D label). */}
+            {/* Detail of the face selected in the dial: its 通/挡 state (synced). */}
             <div className="p-2 border-b border-neutral-800">
-                <div className="text-[10px] text-neutral-500 mb-1">面 <span className="text-cyan-300 font-bold">{FACE_NAMES[selFace]}</span> 的状态（在坍缩盘或 3D 上点面切换）</div>
+                <div className="text-[10px] text-neutral-500 mb-1">正在编辑 · 面 <span className="text-cyan-300 font-bold">{FACE_NAMES[selFace]}</span>（在坍缩盘点面切换）</div>
                 <div className="flex gap-1">
-                    {(['open', 'closed'] as Pool[]).map((pl) => (
-                        <button key={pl} data-testid={`sp-tab-${pl}`} onClick={() => onSetTab(pl)}
-                            className={`flex-1 px-2 py-1 rounded text-[11px] font-bold ${tab === pl ? 'bg-amber-500/25 text-amber-100' : 'bg-neutral-800 text-neutral-400'}`}>
-                            {pl === 'open' ? '通 open' : '挡 close'}
-                        </button>
+                    {([[0, 'open', '通 open'], [1, 'closed', '挡 close']] as const).map(([s, key, lbl]) => (
+                        <button key={key} data-testid={`sp-tab-${key}`} onClick={() => onSetFaceState(s)}
+                            className={`flex-1 px-2 py-1 rounded text-[11px] font-bold ${selState === s ? 'bg-amber-500/25 text-amber-100' : 'bg-neutral-800 text-neutral-400'}`}>{lbl}</button>
                     ))}
                 </div>
             </div>
 
             <div className="p-2 border-b border-neutral-800">
                 <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-neutral-500">option 变体</span>
+                    <span className="text-[10px] text-neutral-500">{selState === 0 ? '通' : '挡'} 的 option 变体</span>
                     <button data-testid="sp-add-variant" onClick={onAddVariant} className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700">＋新</button>
                 </div>
                 <div className="flex flex-wrap gap-1">
                     {pool.map((v, i) => (
-                        <button key={i} data-testid={`sp-variant-${i}`} onClick={() => onSetVi(i)}
+                        <button key={i} data-testid={`sp-variant-${i}`} onClick={() => onSetVariant(i)}
                             className={`px-2 py-0.5 rounded text-[11px] ${vi === i ? 'bg-cyan-500/25 text-cyan-100' : 'bg-neutral-800/60 text-neutral-400'}`}>{v.key ?? v.name}</button>
                     ))}
                 </div>
             </div>
 
             <div className="p-2 border-b border-neutral-800">
-                <div className="text-[10px] text-neutral-500 mb-1">加 adjunct / 几何体</div>
+                <div className="text-[10px] text-neutral-500 mb-1">给「{variant?.key ?? variant?.name ?? '—'}」加 adjunct / 几何体</div>
                 <div className="flex flex-wrap gap-1">
                     {PART_KINDS.map((k, i) => (
                         <button key={i} data-testid={`sp-add-${typeName(k.def.type)}`} onClick={() => onAddPart(k.def)}
