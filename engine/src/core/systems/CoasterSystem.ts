@@ -73,7 +73,7 @@ export class CoasterSystem implements ISystem {
         for (const eid of world.getEntitiesWith(['AdjunctComponent'])) {
             const a = world.getComponent<AdjunctComponent>(eid, 'AdjunctComponent');
             const std: any = a?.stdData;
-            if (!std || std.typeId !== AdjunctType.Particle || std.theme !== 'coaster' || !Array.isArray(std.cells)) continue;
+            if (!std || std.typeId !== AdjunctType.Spp || std.theme !== 'coaster' || !Array.isArray(std.cells)) continue;
             const blockEid = a!.parentBlockEntityId;
             const block = blockEid != null ? world.getComponent<BlockComponent>(blockEid, 'BlockComponent') : null;
             if (!block) continue;

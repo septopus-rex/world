@@ -30,7 +30,7 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: AdjunctType.Stop, label: 'Stop' },
     { typeId: AdjunctType.Item, label: 'Item' },
     { typeId: AdjunctType.Trigger, label: 'Trigger' },
-    { typeId: AdjunctType.Particle, label: 'SPP Cell' },
+    { typeId: AdjunctType.Spp, label: 'SPP' },
     { typeId: AdjunctType.Motif, label: 'Motif' },
     { typeId: AdjunctType.Link, label: 'Link' },
     { typeId: AdjunctType.Audio, label: 'Audio' },
@@ -63,7 +63,7 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             return [[x, y, z + 0.4], 1, 0, 1, [0, 0, 0]];
         case AdjunctType.Trigger: // trigger: [size, offset, rot, shape, gameOnly, events]
             return [[2, 2, 2], [x, y, z + 1], [0, 0, 0], 1, 0, []];
-        case AdjunctType.Particle: // SPP particle: [origin, cells, theme] — one solid 4m cell
+        case AdjunctType.Spp: // SPP source: [origin, cells, theme] — one solid 4m cell
             // faces: [Top, Bottom, Front(S), Back(N), Left(W), Right(E)], [state, variant]
             //   state 1=closed 0=open · closed variant 0=solid 1=doorway 2=window
             return [[x, y, z], [{ position: [0, 0, 0], level: 0, faces: [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]] }], 'basic'];

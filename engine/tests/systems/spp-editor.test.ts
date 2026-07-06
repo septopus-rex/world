@@ -3,7 +3,7 @@ import { makeHeadlessEngineWith, stepN } from '../helpers/make-world';
 import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 import { BlockSystem } from '../../src/core/systems/BlockSystem';
 import { defaultRawFor } from '../../src/core/edit/AdjunctDefaults';
-import { codeFromFace, normalizeParticleFaces } from '../../src/core/spp/faceCodes';
+import { codeFromFace, normalizeSppFaces } from '../../src/core/spp/faceCodes';
 
 // G4-3: SPP cells are placeable from the editor palette. A placed b6 expands
 // into live derived pieces immediately (no reload), edits re-expand, and
@@ -52,7 +52,7 @@ describe('SPP palette placement + live expansion (G4-3)', () => {
 
         // Open the top face → re-expand → fewer pieces (open faces emit nothing).
         src.stdData.cells[0].faces[0] = [0, 0];
-        bs.reexpandParticle(world, srcEid);
+        bs.reexpandSource(world, srcEid);
         const after = countDerived(world, sid);
         expect(after.n).toBeLessThan(before.n);
 
@@ -75,7 +75,7 @@ describe('SPP palette placement + live expansion (G4-3)', () => {
             cells: [{ position: [0, 0, 0], level: 0, faces: [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]] }],
             faceFront: 'doorway', faceTop: 'open',
         };
-        normalizeParticleFaces(std);
+        normalizeSppFaces(std);
         expect(std.cells[0].faces[2]).toEqual([1, 1]); // Front → doorway
         expect(std.cells[0].faces[0]).toEqual([0, 0]); // Top → open
         expect(std.faceFront).toBeUndefined();         // temp keys stripped

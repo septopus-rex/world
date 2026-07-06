@@ -9,7 +9,7 @@ import { BasicSphereAdjunct } from '../../plugins/adjunct/basic_sphere';
 import { AdjunctModule } from '../../plugins/adjunct/basic_module';
 import { AdjunctStop } from '../../plugins/adjunct/basic_stop';
 import { AdjunctItem } from '../../plugins/adjunct/adjunct_item';
-import { AdjunctParticle } from '../../plugins/adjunct/adjunct_particle';
+import { AdjunctSpp } from '../../plugins/adjunct/adjunct_spp';
 import { BasicWaterAdjunct } from '../../plugins/adjunct/basic_water';
 import { AdjunctLink } from '../../plugins/adjunct/adjunct_link';
 import { AdjunctTrack } from '../../plugins/adjunct/adjunct_track';
@@ -29,7 +29,7 @@ import { AdjunctError } from '../errors';
  * Type-ids match the Septopus chain adjunct set:
  *   a1 wall · a2 box · a3 light · a4 module(3D model) · a5 water · a6 cone
  *   · a7 ball(sphere) · b4 stop(collider) · b5 item(pickable)
- *   · b6 particle(SPP, expands to standard adjuncts) · b8 trigger
+ *   · b6 spp(SPP source, expands to standard adjuncts) · b8 trigger
  *   · b9 spawner(timed runtime generator) · ba npc(autonomous agent)
  *   · c1 track(tube rail; coaster) · c2 motif(generative content)
  *   · e1 link(clickable URL / QR panel) · e2 audio(spatial emitter)
@@ -45,7 +45,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Ball, BasicSphereAdjunct as unknown as AdjunctDefinition],   // ball -> sphere
     [AdjunctType.Stop, AdjunctStop as unknown as AdjunctDefinition],          // stop (invisible collider)
     [AdjunctType.Item, AdjunctItem as unknown as AdjunctDefinition],          // item (pickable)
-    [AdjunctType.Particle, AdjunctParticle as unknown as AdjunctDefinition],  // string particle (SPP)
+    [AdjunctType.Spp, AdjunctSpp as unknown as AdjunctDefinition],  // SPP source (string-particle chunk)
     [AdjunctType.Trigger, AdjunctTrigger as unknown as AdjunctDefinition],    // trigger
     [AdjunctType.Track, AdjunctTrack as unknown as AdjunctDefinition],        // track (tube rail; coaster)
     [AdjunctType.Motif, AdjunctMotif as unknown as AdjunctDefinition],        // motif (generative content)

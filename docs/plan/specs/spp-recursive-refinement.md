@@ -168,8 +168,12 @@ motif/直出 adjunct 同安检链。
 
 ## 9. 路线(增量,每阶段可独立验收)
 
-- **R1 父子 + 面继承 + 细者所有权**(扁平多层列表)。纯函数,快照测(`engine/tests/unit`)。
-  验收:两层嵌套无双墙;父面 Open→子边界继承 Open;显式覆盖生效。
+- **R1 父子 + 面继承 + 细者所有权** ✅ **已实现(2026-07-06,`spp-protocol-full.md` Workstream D)**。
+  落点采协议 §3.2.5 的**显式嵌套** `refinement`(非本文原设想的扁平隐式 `⌊pos/2⌋`,嵌套更直接):
+  `Expander.ts` `expandChunk` 递归 + `resolveFaces` 面继承(边界继承父/内部默认 Open/子 null 逐面继承/
+  显式覆盖)+ `FACE_DIR` 细者拥有跨层平面(消双墙)+ `maxLevel`/`budget` LOD。测试
+  `spp-refinement.test.ts`(8)+ e2e `spp-refine.spec.ts`。验收达成:两层嵌套无双墙;父面 Open→子边界
+  继承 Open;显式覆盖生效。
 - **R2 LOD 门控 maxLevel + 实体预算**。接 `BlockLODSystem`;`log()` 截断。
   验收:远块只出 level-0、近块出到 level-2,重展开 CID 不变。
 - **R3 叶子 motif 填充**。c2 每叶子调用,seed 钉死。验收:同源逐字节同物。

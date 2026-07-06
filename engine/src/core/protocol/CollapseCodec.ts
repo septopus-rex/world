@@ -89,6 +89,54 @@ export class CollapseCodec {
     }
 
     /**
+     * Encode a list of cell configurations into a complete binary payload
+     * (header + cells). The counterpart to decodePayload — encoding 0 = raw
+     * (one 4-byte cell each), encoding 1 = RLE (runs of identical cells, ≤63).
+     * `header.cellCount` is overwritten with the true cell total. Round-trips
+     * byte-for-byte with decodePayload.
+     */
+    public static encodePayload(
+        header: CollapseHeader,
+        cells: Array<{ collapseIndices: [number, number, number, number, number, number] | number[]; triggerId: number }>,
+    ): Uint8Array {
+        const h = { ...header, cellCount: cells.length };
+        const idx = (c: { collapseIndices: number[] }) =>
+            [c.collapseIndices[0], c.collapseIndices[1], c.collapseIndices[2],
+             c.collapseIndices[3], c.collapseIndices[4], c.collapseIndices[5]] as [number, number, number, number, number, number];
+
+        if (h.encoding === 1) {
+            // RLE: coalesce consecutive identical (faces + trigger) cells, run ≤ 63.
+            const runs: Array<{ cell: typeof cells[number]; len: number }> = [];
+            const same = (a: typeof cells[number], b: typeof cells[number]) =>
+                a.triggerId === b.triggerId && a.collapseIndices.every((v, i) => v === b.collapseIndices[i]);
+            for (const c of cells) {
+                const last = runs[runs.length - 1];
+                if (last && last.len < 63 && same(last.cell, c)) last.len++;
+                else runs.push({ cell: c, len: 1 });
+            }
+            const buf = new Uint8Array(this.HEADER_SIZE + runs.length * (1 + this.CELL_SIZE));
+            this.encodeHeader(h, buf, 0);
+            let off = this.HEADER_SIZE;
+            for (const r of runs) {
+                buf[off] = r.len & 0x3F;
+                this.encodeCell(idx(r.cell), r.cell.triggerId, buf, off + 1);
+                off += 1 + this.CELL_SIZE;
+            }
+            return buf;
+        }
+
+        if (h.encoding !== 0) throw new ProtocolError(`Unsupported SPP Protocol encoding flag: ${h.encoding}`);
+        const buf = new Uint8Array(this.HEADER_SIZE + cells.length * this.CELL_SIZE);
+        this.encodeHeader(h, buf, 0);
+        let off = this.HEADER_SIZE;
+        for (const c of cells) {
+            this.encodeCell(idx(c), c.triggerId, buf, off);
+            off += this.CELL_SIZE;
+        }
+        return buf;
+    }
+
+    /**
      * Decode the complete binary payload into a list of cell configurations.
      */
     public static decodePayload(buf: Uint8Array): {

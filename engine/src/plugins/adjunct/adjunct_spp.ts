@@ -10,27 +10,34 @@ import { AdjunctType } from '../../core/types/AdjunctType';
 import { codeFromFace } from '../../core/spp/faceCodes.js';
 
 /**
- * String-particle adjunct (b6) — the SPP SOURCE row.
+ * SPP adjunct (b6) — the SPP SOURCE row (renamed from `particle`, 2026-07-06).
  *
- * Raw row (dev-period plaintext; L2 binary lands with M3):
+ * Carries a String-Particle CHUNK: a set of cells + a theme reference. The
+ * protocol's atomic unit is the "String Particle" (one cell); this adjunct is
+ * the block-local container for a chunk of them, so it is named after the
+ * protocol (`spp`) rather than a single cell.
+ *
+ * Raw row (dev-period plaintext; L2 binary lands with the CollapseCodec):
  *   [ origin, cells, theme ]
- *     origin [x,y,z] SPP meters relative to the block origin
+ *     origin [x,y,z] Septopus meters relative to the block origin
  *     cells  SppCell[] (see core/spp/Expander.ts)
- *     theme  variant-theme id (VariantRegistry)
+ *     theme  StyleRef — a built-in theme id, or a CID/URL of an external
+ *            StylePack (see core/spp/Variants.ts + StylePack loading)
  *
  * This adjunct renders NOTHING itself: BlockSystem expands it into standard
  * a1/b8 rows whose entities carry `derivedFrom` (skipped by BlockSerializer —
- * only this source row persists). Spec: docs/plan/specs/spp-integration.md.
+ * only this source row persists). Spec: docs/plan/specs/spp-integration.md +
+ * spp-protocol-full.md.
  */
-export const ParticleMeta: ComponentMeta = {
-    name: "particle",
-    short: "SP",
-    typeId: AdjunctType.Particle,
-    desc: "String-particle spatial definition (expands to standard adjuncts)",
+export const SppMeta: ComponentMeta = {
+    name: "spp",
+    short: "SPP",
+    typeId: AdjunctType.Spp,
+    desc: "SPP spatial definition (string-particle chunk; expands to standard adjuncts)",
     version: "1.0.0"
 };
 
-export const ParticleTransform: AdjunctTransform = {
+export const SppTransform: AdjunctTransform = {
     stdToRenderData(stds: STDObject[], _elevation: number): RenderObject[] {
         // Hidden marker only — the visible world comes from the EXPANDED rows.
         return stds.map((row, index) => ({
@@ -46,7 +53,7 @@ export const ParticleTransform: AdjunctTransform = {
     }
 };
 
-export const ParticleAttribute: AdjunctAttribute = {
+export const SppAttribute: AdjunctAttribute = {
     deserialize: (data: any[]): STDObject => ({
         x: 0.1, y: 0.1, z: 0.1,
         ox: data[0]?.[0] ?? 0, oy: data[0]?.[1] ?? 0, oz: data[0]?.[2] ?? 0,
@@ -61,17 +68,17 @@ export const ParticleAttribute: AdjunctAttribute = {
     ]
 };
 
-export const AdjunctParticle: AdjunctDefinition = {
+export const AdjunctSpp: AdjunctDefinition = {
     hooks: {
-        reg: () => ParticleMeta,
+        reg: () => SppMeta,
         init: () => ({ chain: "", value: null })
     },
-    transform: ParticleTransform,
-    attribute: ParticleAttribute,
+    transform: SppTransform,
+    attribute: SppAttribute,
     menu: {
         sidebar: (std: STDObject) => ({
-            particle: [
-                { type: "string", key: "theme", value: std.theme, label: "Theme", desc: "Variant theme id" },
+            spp: [
+                { type: "string", key: "theme", value: std.theme, label: "Theme", desc: "StylePack id / CID / URL" },
                 { type: "json", key: "cells", value: JSON.stringify(std.cells ?? []), label: "Cells", desc: "SppCell[] (multi-cell editing)" },
             ],
         }),
@@ -81,7 +88,7 @@ export const AdjunctParticle: AdjunctDefinition = {
         ],
         // Per-face state/variant editor for the first cell. Codes (open/solid/
         // doorway/window) fold back into cells[0].faces in the edit path
-        // (normalizeParticleFaces) and re-expand live.
+        // (normalizeSppFaces) and re-expand live.
         form: (std: STDObject) => {
             const faces = (std.cells?.[0]?.faces) ?? [];
             const options = [

@@ -7,7 +7,7 @@ import { EditTask } from './types/EditTask';
 import { AdjunctFactory } from './factories/AdjunctFactory';
 import { STDObject } from './types/Adjunct';
 import { setByPath } from './edit/setByPath';
-import { normalizeParticleFaces } from './spp/faceCodes';
+import { normalizeSppFaces } from './spp/faceCodes';
 
 /**
  * EditTaskExecutor
@@ -106,10 +106,10 @@ export class EditTaskExecutor {
         world.renderEngine.setRaycastable(result.handle, true);
         if (meshComp) meshComp.handle = result.handle;
 
-        // Source adjunct (b6 particle / c2 motif): re-expand derived pieces to
+        // Source adjunct (b6 spp / c2 motif): re-expand derived pieces to
         // match the restored data.
         const restoredType = (adjComp.stdData as any).typeId;
-        if (restoredType === AdjunctType.Particle || restoredType === AdjunctType.Motif) {
+        if (restoredType === AdjunctType.Spp || restoredType === AdjunctType.Motif) {
             (world.systems.findSystemByName('BlockSystem') as any)?.reexpandSource?.(world, entityId);
         }
 
@@ -176,8 +176,8 @@ export class EditTaskExecutor {
         // re-expand the derived pieces live (the source's own mesh is a hidden
         // marker).
         const setType = (std as any).typeId;
-        if (setType === AdjunctType.Particle) normalizeParticleFaces(std);
-        if (setType === AdjunctType.Particle || setType === AdjunctType.Motif) {
+        if (setType === AdjunctType.Spp) normalizeSppFaces(std);
+        if (setType === AdjunctType.Spp || setType === AdjunctType.Motif) {
             (world.systems.findSystemByName('BlockSystem') as any)?.reexpandSource?.(world, entityId);
         }
 
@@ -187,9 +187,9 @@ export class EditTaskExecutor {
 
     private executeDelete(world: World, entityId: EntityId): boolean {
         // SPP source: also drop its derived pieces (else deleting/undoing a placed
-        // particle leaves orphan walls).
+        // spp source leaves orphan walls).
         const adj = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
-        if (adj?.stdData?.typeId === AdjunctType.Particle) {
+        if (adj?.stdData?.typeId === AdjunctType.Spp) {
             (world.systems.findSystemByName('BlockSystem') as any)?.destroyDerived?.(world, adj.adjunctId);
         }
 

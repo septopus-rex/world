@@ -10,6 +10,8 @@ import { AdjunctLoader } from './core/services/AdjunctLoader';
 import { descriptorToDefinition } from './core/services/DynamicAdjunct';
 import { registerDynamicAdjunct, clearDynamicAdjuncts } from './core/services/AdjunctRegistry';
 import { Coords } from './core/utils/Coords';
+import { AdjunctType } from './core/types/AdjunctType';
+import { registerStylePack, listSppThemes, setStyleOverride, getStyleOverride, type StylePack } from './core/spp/Variants';
 import { GlobalConfig } from './core/GlobalConfig';
 import { EntityFactory } from './core/EntityFactory';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
@@ -409,6 +411,45 @@ export class Engine {
         const footOffset = typeof av.footOffset === 'number' ? av.footOffset : null;
         const facing = typeof av.facing === 'number' ? av.facing : null;
         return dbg ? { resource: av.resource, footOffset, facing, ...dbg } : { resource: av.resource, footOffset, facing, clips: [], state: null, activeClip: null, height: 0, minY: 0 };
+    }
+
+    // ── SPP style packs ────────────────────────────────────────────────────────
+
+    /** Register an external StylePack (data-only theme) so SPP sources can
+     *  reference it by id. The host resolves the JSON (bundled file / URL / IPFS
+     *  CID) and calls this BEFORE the referencing block streams in — SPP
+     *  expansion is synchronous. Returns the id, or null when the shape is
+     *  invalid. Spec: docs/plan/specs/spp-protocol-full.md §3.B. */
+    public registerStylePack(pack: StylePack): string | null {
+        return registerStylePack(pack);
+    }
+
+    /** Every registered SPP style id (built-in + external) — feeds a style picker. */
+    public listStyles(): string[] {
+        return listSppThemes();
+    }
+
+    public getStyleOverride(): string | null {
+        return getStyleOverride();
+    }
+
+    /** Set (or clear, with null) the world-level style override: restyles every
+     *  VISUAL SPP source wholesale (structural themes like coaster are immune)
+     *  and re-expands live so the swap is instant — the "秒换风格" knob. */
+    public setStyleOverride(id: string | null): void {
+        setStyleOverride(id);
+        this.reexpandAllSpp();
+    }
+
+    private reexpandAllSpp(): void {
+        const world = this.world;
+        if (!world) return;
+        const bs: any = world.systems.findSystemByName('BlockSystem');
+        if (!bs?.reexpandSource) return;
+        for (const eid of world.getEntitiesWith(['AdjunctComponent'])) {
+            const a = world.getComponent<any>(eid, 'AdjunctComponent');
+            if (a?.stdData?.typeId === AdjunctType.Spp) bs.reexpandSource(world, eid);
+        }
     }
 
     /** External realtime transport (ILiveSource) feeding world.events via

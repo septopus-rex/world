@@ -37,6 +37,7 @@ import { GameApiRouter } from '../games/GameApiRouter';
 import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
 import { buildWorldLevel } from '../scenes/worldHubScene';
+import { buildRefineLevel } from '../scenes/refineScene';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
@@ -106,6 +107,7 @@ export class DesktopLoader implements IDataSource {
     private isCoaster = this.level === 'coaster';
     private isXianjian = this.level === 'xianjian';
     private isWorld = this.level === 'world';
+    private isRefine = this.level === 'refine';
 
     /** The active authored level (data document) + its block provider. Levels
      *  are JSON in src/levels/ — the engine holds no level content. The 'world'
@@ -116,6 +118,7 @@ export class DesktopLoader implements IDataSource {
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
         : this.isWorld ? buildWorldLevel()
+        : this.isRefine ? buildRefineLevel()
         : null;
     private levelProvider = this.activeLevel ? levelSceneProvider(this.activeLevel) : null;
 
@@ -911,6 +914,19 @@ export class DesktopLoader implements IDataSource {
     /** The cell currently open for face-editing, or null in cell-picking mode. */
     public get sandboxSelectedCell(): number | null { return this._sandboxCell; }
 
+    // ── SPP style packs (Workstream B) ───────────────────────────────────────
+    /** Registered SPP style ids (built-in + external) for the style switcher. */
+    public listSppStyles(): string[] { return (this.engine as any)?.listStyles?.() ?? []; }
+    /** The active world-level style override (null = each source keeps its own). */
+    public get sppStyle(): string | null { return (this.engine as any)?.getStyleOverride?.() ?? null; }
+    /** Swap the world SPP style live — re-expands every SPP source instantly.
+     *  `null` clears the override. Re-asserts the sandbox cell dim afterwards so
+     *  the open-cell focus survives the mesh rebuild. */
+    public setSppStyle(id: string | null): void {
+        (this.engine as any)?.setStyleOverride?.(id);
+        if (this._sandboxCell != null) this.applyCellFocus();
+    }
+
     /** Enter the SPP sandbox: teleport onto the diorama block, hide the avatar,
      *  orbit (Observe) the grid centre, and listen for taps to sculpt cell faces. */
     public enterSandbox(): void {
@@ -1044,7 +1060,7 @@ export class DesktopLoader implements IDataSource {
         const c = src?.std.cells?.[cell];
         if (!src || !c?.faces) return false;
         c.faces[face] = nextFace(c.faces[face]);
-        w.systems.findSystemByName('BlockSystem')?.reexpandParticle?.(w, src.eid);
+        w.systems.findSystemByName('BlockSystem')?.reexpandSource?.(w, src.eid);
         this.applyCellFocus(); // re-assert dim; the focus rAF keeps it as meshes rebuild
         return true;
     }
@@ -1107,7 +1123,7 @@ export class DesktopLoader implements IDataSource {
         const tag = `${SANDBOX_BLOCK[0]}_${SANDBOX_BLOCK[1]}`;
         for (const eid of w.queryEntities('AdjunctComponent')) {
             const adj = w.getComponent(eid, 'AdjunctComponent');
-            if (adj?.stdData?.typeId === AdjunctType.Particle && String(adj.adjunctId ?? '').includes(tag)) {
+            if (adj?.stdData?.typeId === AdjunctType.Spp && String(adj.adjunctId ?? '').includes(tag)) {
                 return { eid, std: adj.stdData };
             }
         }

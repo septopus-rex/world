@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { expandParticle, SppCell } from '../../src/core/spp/Expander';
+import { expandSpp, SppCell } from '../../src/core/spp/Expander';
 import { ParticleFace, FaceState } from '../../src/core/types/ParticleCell';
 
 // L1 — the SPP expander as a pure function (M1): cells + theme → standard
@@ -15,12 +15,12 @@ function cell(pos: [number, number, number], overrides: Partial<Record<ParticleF
     return { position: pos, level, faces, ...(trigger ? { trigger } : {}) };
 }
 
-const walls = (rows: ReturnType<typeof expandParticle>) => rows.filter(r => r[0] === 0x00a1);
-const triggers = (rows: ReturnType<typeof expandParticle>) => rows.filter(r => r[0] === 0x00b8);
+const walls = (rows: ReturnType<typeof expandSpp>) => rows.filter(r => r[0] === 0x00a1);
+const triggers = (rows: ReturnType<typeof expandSpp>) => rows.filter(r => r[0] === 0x00b8);
 
 describe('SPP expander (M1)', () => {
     it('a fully-closed solid cell emits 6 walls, one per face', () => {
-        const rows = expandParticle([[0, 0, 0], [cell([0, 0, 0])], 'basic']);
+        const rows = expandSpp([[0, 0, 0], [cell([0, 0, 0])], 'basic']);
         expect(walls(rows)).toHaveLength(6);
         // Every wall is stop=1 (solid) and slab-thick on exactly one axis.
         for (const [, raw] of walls(rows)) {
@@ -30,7 +30,7 @@ describe('SPP expander (M1)', () => {
     });
 
     it('open faces emit nothing; doorway=3, window=4 pieces', () => {
-        const rows = expandParticle([[0, 0, 0], [
+        const rows = expandSpp([[0, 0, 0], [
             cell([0, 0, 0], {
                 [ParticleFace.Top]: [O, 0],
                 [ParticleFace.Bottom]: [O, 0],
@@ -44,7 +44,7 @@ describe('SPP expander (M1)', () => {
     });
 
     it('level scales cell size: level 1 solid face is a 2m slab', () => {
-        const rows = expandParticle([[0, 0, 0], [cell([0, 0, 0], {}, 1)], 'basic']);
+        const rows = expandSpp([[0, 0, 0], [cell([0, 0, 0], {}, 1)], 'basic']);
         const top = walls(rows).find(([, raw]) => raw[1][2] > 1)!; // top slab center near z=2-0.1
         expect(top[1][0]).toEqual([2, 2, 0.2]);
         expect(top[1][1][2]).toBeCloseTo(1.9, 5);
@@ -52,7 +52,7 @@ describe('SPP expander (M1)', () => {
 
     it('adjacency elimination: the shared plane is generated exactly once', () => {
         const pair: SppCell[] = [cell([0, 0, 0]), cell([1, 0, 0])];
-        const rows = expandParticle([[0, 0, 0], pair, 'basic']);
+        const rows = expandSpp([[0, 0, 0], pair, 'basic']);
         // 2 solid cells alone = 12 walls; sharing one X-plane removes ONE wall:
         // cell B's Left face is skipped, cell A's Right face owns the plane.
         expect(walls(rows)).toHaveLength(11);
@@ -63,7 +63,7 @@ describe('SPP expander (M1)', () => {
 
     it('cell trigger expands to a b8 row filling the cell interior', () => {
         const events = [{ type: 'in', actions: [{ type: 'flag', method: '', target: 'spp_in', params: [true] }] }];
-        const rows = expandParticle([[2, 3, 0], [cell([0, 0, 0], {}, 0, events)], 'basic']);
+        const rows = expandSpp([[2, 3, 0], [cell([0, 0, 0], {}, 0, events)], 'basic']);
         const trig = triggers(rows);
         expect(trig).toHaveLength(1);
         const [, raw] = trig[0];
@@ -73,8 +73,8 @@ describe('SPP expander (M1)', () => {
     });
 
     it('origin offsets every emitted position', () => {
-        const at0 = expandParticle([[0, 0, 0], [cell([0, 0, 0])], 'basic']);
-        const at7 = expandParticle([[7, 2, 1], [cell([0, 0, 0])], 'basic']);
+        const at0 = expandSpp([[0, 0, 0], [cell([0, 0, 0])], 'basic']);
+        const at7 = expandSpp([[7, 2, 1], [cell([0, 0, 0])], 'basic']);
         for (let i = 0; i < at0.length; i++) {
             expect(at7[i][1][1][0]).toBeCloseTo(at0[i][1][1][0] + 7, 9);
             expect(at7[i][1][1][1]).toBeCloseTo(at0[i][1][1][1] + 2, 9);
@@ -87,11 +87,11 @@ describe('SPP expander (M1)', () => {
             cell([0, 0, 0], { [ParticleFace.Back]: [C, 1] }),
             cell([1, 0, 0], { [ParticleFace.Top]: [O, 0] }),
         ], 'basic'];
-        expect(JSON.stringify(expandParticle(input))).toBe(JSON.stringify(expandParticle(input)));
+        expect(JSON.stringify(expandSpp(input))).toBe(JSON.stringify(expandSpp(input)));
     });
 
     it('unknown theme or malformed cells expand to nothing (no throw)', () => {
-        expect(expandParticle([[0, 0, 0], [cell([0, 0, 0])], 'nope'])).toEqual([]);
-        expect(expandParticle([[0, 0, 0], null as any, 'basic'])).toEqual([]);
+        expect(expandSpp([[0, 0, 0], [cell([0, 0, 0])], 'nope'])).toEqual([]);
+        expect(expandSpp([[0, 0, 0], null as any, 'basic'])).toEqual([]);
     });
 });

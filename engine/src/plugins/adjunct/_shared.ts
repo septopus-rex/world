@@ -18,6 +18,10 @@ export const standardAttribute: AdjunctAttribute = {
         material: {
             resource: data[3] ?? 0,
             repeat: data[4] ?? [1, 1],
+            // Optional explicit wall colour (slot 7 extension). Used by SPP
+            // StylePacks to recolour derived walls asset-free; legacy 7-element
+            // rows have no slot 7 → default colour as before.
+            ...(data[7] != null ? { color: data[7] } : {}),
         },
         animate: data[5] ?? null,
         stop: data[6] ?? null,
@@ -30,6 +34,8 @@ export const standardAttribute: AdjunctAttribute = {
         std.material?.repeat,
         std.animate,
         std.stop,
+        // Slot 7 colour, only when set (keeps legacy 7-element serialization).
+        ...(std.material?.color != null ? [std.material.color] : []),
     ],
 };
 

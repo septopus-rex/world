@@ -8,7 +8,7 @@ import { AdjunctType } from '@engine/core/types/AdjunctType';
  * block. You enter Observe mode (the engine's orbit camera) aimed at the grid
  * centre — it reads as a tabletop sandbox — and CLICK a cell's face to cycle it
  * (solid → doorway → window → open → solid). Each click mutates the shared b6
- * source and the engine re-expands it live (BlockSystem.reexpandParticle), so
+ * source and the engine re-expands it live (BlockSystem.reexpandSource), so
  * you watch the structure change in 3D as you edit. This fills the gap that the
  * normal editor only edits a SINGLE cell's faces via a form — here you author a
  * whole multi-cell structure by clicking, in place.
@@ -72,7 +72,7 @@ function initialCells(): any[] {
 export function buildSandboxScene(bx: number, by: number): any[] {
     const data = MockBlockData(bx, by);
     // The shared SPP source — one b6 row holds the whole grid.
-    data.raw[2].push([AdjunctType.Particle, [[GRID.origin, initialCells(), 'basic']]]);
+    data.raw[2].push([AdjunctType.Spp, [[GRID.origin, initialCells(), 'basic']]]);
     // A dark base slab so the white marble cells read as a tabletop diorama.
     const span = GRID.n * GRID.cell + 2;
     const c = GRID.origin[0] + (GRID.n * GRID.cell) / 2;

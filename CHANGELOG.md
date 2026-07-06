@@ -16,6 +16,23 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
   (air 需去抖,cn/en)+ e2e 回归断言(剪辑必须推进不冻结)。
 
 ### 功能
+- **SPP 完整协议落地 + b6 正名 `spp`(A–E 五工作流)**:把 SPP 从"只做了 Unfold"补齐到
+  **完整协议**,兑现"在 world 里高速搭 + 一键换风格"。规格 `docs/plan/specs/spp-protocol-full.md`。
+  - **A 正名**:b6 附属物 `particle` → **`spp`**(承载的是弦粒子 CHUNK,按协议名更准);typeId
+    `0x00b6` 字节稳定、`AdjunctType.Particle` 留 @deprecated 别名,历史数据/关卡零迁移。
+  - **B StylePack 外部化 + 风格可调/秒换**:硬编码 theme → 数据化 `StylePack`(可 CID/URL 寻址,
+    同 audio/video 的 `{raw,format}` seam);内置 `brick`/`garden` 包;`world.styleOverride` 一键给
+    整个世界换皮、活体重展开。**前端**:SPP 沙盘加 `风格` 切换器(basic/brick/garden)——**同一批
+    cell 秒换风格**(brick 变色、garden 变几何),3D 实证。
+  - **C superposition + collapse**:cell 可带 `faceOptions`(每面候选串),引擎 mulberry32 确定性
+    坍缩(seed=块+cell+面);authored `faces` 跳过坍缩(兼容)。兑现协议"AI 出叠加态、引擎坍缩"。
+  - **D 递归细化**:cell 可嵌 `refinement`(更细的子 chunk);子 cell **继承父面**作边界、内部默认
+    连通、细者拥有跨层平面(消双墙);LOD `maxLevel`/`budget` 门控展开深度(粗回退不静默)。
+    `?level=refine` 实证:同源粗 4m 盒 + 细 2m 房共存。
+  - **E L2 二进制**:补齐 `CollapseCodec.encodePayload`(raw+RLE)+ `SppL2` 桥(已坍缩 chunk ↔ L2,
+    同展开 round-trip),紧凑 CID 存储。
+  - 验证:engine 新增 32 单测(499 全绿)+ e2e `spp-style`/`spp-refine`,14 SPP 回归 e2e 仍绿;
+    Three.js 层界零 import。`ParticleCell`/`ParticleFace` 保留(协议正确名)。
 - **世界中枢 `?level=world`(传送门串联两个体验)**:出生在中枢块 `[2026,705]`,走进**西门**
   传送到演示场景(`[2048,2048]`,保持原样)、走进**东门**传送到微缩仙剑「灵草记」(迁到
   `[2030,705]`),各目的地带"返回中枢"门。证明 teleport 是**同世界内**机制——三处共用一个

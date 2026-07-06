@@ -30,6 +30,8 @@ function App() {
   const [sandbox, setSandbox] = useState(false);
   const [sandboxSaved, setSandboxSaved] = useState(false);
   const [sandboxCell, setSandboxCell] = useState<number | null>(null);
+  const [sppStyles, setSppStyles] = useState<string[]>([]);
+  const [sppStyle, setSppStyle] = useState<string | null>(null);
 
   // Minimap drag state
   const isDraggingMap = useRef(false);
@@ -111,6 +113,23 @@ function App() {
               >↩︎ 退出该格 (Esc)</button>
             </>
           )}
+          {/* 风格切换：换一套 StylePack → 同一批 cell 秒换风格（世界级 override）。
+              coaster 是结构主题，不作视觉换皮，故从切换器排除。 */}
+          <div data-testid="spp-style-switch" className="flex items-center gap-1 pl-3 border-l border-amber-400/20">
+            <span className="text-amber-200/60 text-[10px] font-semibold">风格</span>
+            {['basic', ...sppStyles.filter((s) => s !== 'basic' && s !== 'coaster')].map((s) => (
+              <button
+                key={s}
+                data-testid={`spp-style-${s}`}
+                onClick={() => { loader?.setSppStyle(s === 'basic' ? null : s); setSppStyle(s === 'basic' ? null : s); }}
+                className={`px-2 py-1 rounded-md text-[11px] font-bold border transition ${
+                  (sppStyle ?? 'basic') === s
+                    ? 'bg-cyan-400/30 border-cyan-300/60 text-cyan-50'
+                    : 'bg-amber-400/10 border-amber-300/30 text-amber-100/80 hover:bg-amber-400/20'
+                }`}
+              >{s}</button>
+            ))}
+          </div>
           <button
             data-testid="save-sandbox"
             onClick={async () => { const ok = await loader?.saveSandbox(); if (ok) { setSandboxSaved(true); setTimeout(() => setSandboxSaved(false), 1800); } }}
@@ -118,7 +137,7 @@ function App() {
           >{sandboxSaved ? '✓ 已写入' : '写入 Save'}</button>
           <button
             data-testid="exit-sandbox"
-            onClick={() => { loader?.exitSandbox(); setSandbox(false); }}
+            onClick={() => { loader?.setSppStyle(null); setSppStyle(null); loader?.exitSandbox(); setSandbox(false); }}
             className="px-3 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 border border-amber-300/40 text-amber-100 text-xs font-bold"
           >退出 Exit</button>
         </div>
@@ -290,7 +309,7 @@ function App() {
       <div className="absolute right-2 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 p-1.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
         {([
           { id: 'stamp-scene', icon: '🧪', title: '导入测试场景 · Stamp test scene onto current block', onClick: () => { const b = loader?.playerState?.block; if (b) loader?.stampTestScene(b[0], b[1]); } },
-          { id: 'enter-sandbox', icon: '🏖️', title: 'SPP 沙盘 · Sandbox diorama', onClick: () => { loader?.enterSandbox(); setSandbox(true); } },
+          { id: 'enter-sandbox', icon: '🏖️', title: 'SPP 沙盘 · Sandbox diorama', onClick: () => { loader?.enterSandbox(); setSandbox(true); setSppStyles(loader?.listSppStyles() ?? []); setSppStyle(loader?.sppStyle ?? null); } },
           { id: 'goto-maze', icon: '🏛️', title: '迷宫 · Athenian labyrinth', onClick: () => loader?.teleportSeptopus(MAZE_BLOCK, MAZE_ENTRY) },
           { id: 'goto-dynamic', icon: '🧩', title: '动态 Adjunct · Dynamic showcase', onClick: () => loader?.teleportSeptopus(DYN_BLOCK, DYN_VIEW) },
           { id: 'map2d-toggle', icon: '🗺️', title: '2D 地图 · World map', onClick: () => setShow2DMap(true) },

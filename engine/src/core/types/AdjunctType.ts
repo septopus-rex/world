@@ -23,7 +23,7 @@ export const AdjunctType = {
     Ball: 0x00a7,     // rendered as a sphere
     Stop: 0x00b4,     // invisible collider
     Item: 0x00b5,     // pickable
-    Particle: 0x00b6, // string-particle (SPP); expands to standard adjuncts
+    Spp: 0x00b6,      // SPP source (string-particle chunk); expands to standard adjuncts
     Trigger: 0x00b8,
     Spawner: 0x00b9,  // timed runtime generator (template + interval + maxAlive; F1)
     Npc: 0x00ba,      // autonomous agent (visual + behavior state machine; F2)
@@ -33,13 +33,23 @@ export const AdjunctType = {
     Audio: 0x00e2,    // spatial audio emitter (source → PositionalAudio)
     Video: 0x00e3,    // video screen (source → VideoTexture on a plane)
     Book: 0x00e4,     // paged text panel (pages string[] → in-scene reader)
+
+    /** @deprecated Renamed to `Spp` (2026-07-06). Same id 0x00b6; kept as an
+     *  alias for one release so existing `AdjunctType.Particle` references and
+     *  historical CID data keep resolving. New code MUST use `Spp`. */
+    Particle: 0x00b6,
 } as const;
 
 export type AdjunctTypeId = (typeof AdjunctType)[keyof typeof AdjunctType];
 
-/** Reverse map (id → name) for logging / debugging. */
+/** Reverse map (id → name) for logging / debugging. First name wins, so
+ *  deprecated aliases (declared after the canonical name) never clobber it —
+ *  0x00b6 resolves to `Spp`, not the legacy `Particle`. */
 export const AdjunctTypeName: Readonly<Record<number, string>> = Object.freeze(
-    Object.fromEntries(Object.entries(AdjunctType).map(([name, id]) => [id, name])),
+    Object.entries(AdjunctType).reduce((m, [name, id]) => {
+        if (!(id in m)) m[id] = name;
+        return m;
+    }, {} as Record<number, string>),
 );
 
 /** Human-readable name for a type-id, or `0x..` hex if it is not a built-in. */

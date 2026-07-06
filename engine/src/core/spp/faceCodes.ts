@@ -4,7 +4,7 @@
  * A face is [state, variant]: state 1=closed 0=open; closed variant 0=solid
  * 1=doorway 2=window. The edit form's <select> stringifies its values, so faces
  * are edited as flat string CODES (faceTop="doorway", ...) which the edit path
- * folds back into cells[0].faces via normalizeParticleFaces.
+ * folds back into cells[0].faces via normalizeSppFaces.
  */
 export type FaceCode = 'open' | 'solid' | 'doorway' | 'window';
 
@@ -29,7 +29,7 @@ export function codeFromFace(face: any): FaceCode {
  * (e.g. undo restoring a real cells array). Single-cell editing; multi-cell
  * worlds use the cells JSON sidebar.
  */
-export function normalizeParticleFaces(std: any): void {
+export function normalizeSppFaces(std: any): void {
     if (!Array.isArray(std?.cells) || !std.cells[0]) return;
     if (!Array.isArray(std.cells[0].faces) || std.cells[0].faces.length < 6) {
         std.cells[0].faces = [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]];

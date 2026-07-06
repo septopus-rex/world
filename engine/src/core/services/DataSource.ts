@@ -35,6 +35,17 @@ export interface IDataSource {
     video?(ids: number[]): Promise<any>;
 
     /**
+     * Resolve external SPP StylePacks by ref (id / URL / IPFS CID). Returns a
+     * record ref → StylePack JSON. Optional and first-class: a host that stores
+     * styles off-chain provides it so SPP sources can reference packs by CID;
+     * when absent, only the built-in bundled packs (basic/brick/garden/coaster)
+     * are available. The engine expands synchronously, so a host resolves +
+     * Engine.registerStylePack BEFORE the referencing block streams in.
+     * Spec: docs/plan/specs/spp-protocol-full.md §3.B.
+     */
+    stylePack?(refs: string[]): Promise<Record<string, import('../spp/Variants').StylePack>>;
+
+    /**
      * Resolve a Game Setting resource (game.md §2): the playable block's `game`
      * field carries this resource id. Returns the GameSetting, or null if the id
      * resolves to nothing (then the block is a bare playable zone with no game).

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { expandParticle } from '../../src/core/spp/Expander';
+import { expandSpp } from '../../src/core/spp/Expander';
 import { getBuiltinAdjunct } from '../../src/core/services/AdjunctRegistry';
 
 // C1: a b6 with the 'coaster' theme COLLAPSES into c1 tube track pieces (one per
@@ -21,13 +21,13 @@ describe('SPP coaster collapse (C1)', () => {
             { position: [0, 1, 0], level: 0, faces: straightNS },
             { position: [0, 2, 0], level: 0, faces: upBend },
         ];
-        const rows = expandParticle([[0, 0, 0], cells as any, 'coaster']);
+        const rows = expandSpp([[0, 0, 0], cells as any, 'coaster']);
         expect(rows).toHaveLength(3);
         expect(rows.every(([t]) => t === 0x00c1)).toBe(true);
     });
 
     it('a straight cell makes a collinear (straight) path; control points are face centers', () => {
-        const rows = expandParticle([[0, 0, 0], [{ position: [0, 0, 0], level: 0, faces: straightNS }] as any, 'coaster']);
+        const rows = expandSpp([[0, 0, 0], [{ position: [0, 0, 0], level: 0, faces: straightNS }] as any, 'coaster']);
         const [, raw] = rows[0];
         // raw = [cellOrigin, [f1, center, f2], radius]; s=4, h=2
         expect(raw[0]).toEqual([0, 0, 0]);            // cell origin
@@ -39,14 +39,14 @@ describe('SPP coaster collapse (C1)', () => {
     });
 
     it('an adjacent-face cell makes an L (arc) path', () => {
-        const rows = expandParticle([[0, 0, 0], [{ position: [0, 0, 0], level: 0, faces: upBend }] as any, 'coaster']);
+        const rows = expandSpp([[0, 0, 0], [{ position: [0, 0, 0], level: 0, faces: upBend }] as any, 'coaster']);
         const [, raw] = rows[0];
         // Top=[2,2,4], center=[2,2,2], Front=[2,0,2] → not collinear → Catmull-Rom arc
         expect(raw[1]).toEqual([[2, 2, 4], [2, 2, 2], [2, 0, 2]]);
     });
 
     it('cell position offsets the piece origin (continuity across cells)', () => {
-        const rows = expandParticle([[1, 2, 3], [{ position: [0, 1, 0], level: 0, faces: straightNS }] as any, 'coaster']);
+        const rows = expandSpp([[1, 2, 3], [{ position: [0, 1, 0], level: 0, faces: straightNS }] as any, 'coaster']);
         const [, raw] = rows[0];
         // cellOrigin = origin + position*4 = [1, 2+4, 3] = [1, 6, 3]
         expect(raw[0]).toEqual([1, 6, 3]);

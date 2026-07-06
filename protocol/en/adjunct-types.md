@@ -42,7 +42,7 @@
 | `0x00a7` (167) | ball | sphere (visual; for collision use b4 BALL) | §2 |
 | `0x00b4` (180) | stop | invisible collider, **three shapes**: box/cylinder/slope | §5 |
 | `0x00b5` (181) | item | pickable item (template + seed deterministic instance) | §6 |
-| `0x00b6` (182) | particle | SPP string-particle source, expands to standard adjuncts | §7 |
+| `0x00b6` (182) | spp | SPP string-particle source, expands to standard adjuncts | §7 |
 | `0x00b8` (184) | trigger | events + conditions + actions; slot 6 may declare a teleport anchor | [trigger.md](trigger.md) |
 | `0x00b9` (185) | spawner | timed spawner of derived entities | §8 |
 | `0x00ba` (186) | npc | autonomous agent (data state machine; can fight/talk) | §9 |
@@ -135,7 +135,7 @@ Instance attributes derive deterministically from `(templateId, seed)`
 atomic into the bag (inventory change and block-data reserialization complete
 in the same frame).
 
-## 7. b6 particle (string particle)
+## 7. b6 spp (string particle)
 
 ```
 [ origin, cells, theme ]

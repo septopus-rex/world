@@ -212,7 +212,7 @@ export function injectDemoAssets(data: any): void {
             },
         ], 'basic'],
     ];
-    data.raw[2].push([AdjunctType.Particle, particles]);
+    data.raw[2].push([AdjunctType.Spp, particles]);
     data.raw[2].push([AdjunctType.Cone, cones]);
     data.raw[2].push([AdjunctType.Ball, balls]);
     data.raw[2].push([AdjunctType.Box, markers]);

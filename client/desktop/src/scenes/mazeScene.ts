@@ -142,7 +142,7 @@ export function buildMazeScene(bx: number, by: number): any[] {
     const data = MockBlockData(bx, by);
 
     // ── The maze itself: ONE b6 row → engine expands to ~100 a1 walls + goal b8.
-    data.raw[2].push([AdjunctType.Particle, [[ORIGIN, mazeCells(), 'basic']]]);
+    data.raw[2].push([AdjunctType.Spp, [[ORIGIN, mazeCells(), 'basic']]]);
 
     // ── Athenian dressing (a2 boxes layered on the SPP skeleton).
     const maxXY = ORIGIN[0] + G * STRIDE; // 1 + 14 = 15 → maze spans local [1,15]

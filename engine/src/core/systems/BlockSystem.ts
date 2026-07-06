@@ -9,7 +9,7 @@ import { AdjunctBox } from '../../plugins/adjunct/basic_box';
 import { AdjunctFactory } from '../factories/AdjunctFactory';
 import { getBuiltinAdjunct, getAdjunct } from '../services/AdjunctRegistry';
 import { AdjunctType } from '../types/AdjunctType';
-import { expandParticle } from '../spp/Expander';
+import { expandSpp } from '../spp/Expander';
 import type { ExpandedRow } from '../spp/Expander';
 import { expandMotif } from '../motif/MotifExpander';
 import { RenderHandle } from '../types/Adjunct';
@@ -20,10 +20,10 @@ import { reportError, AdjunctError } from '../errors';
  * Source adjuncts that render NOTHING themselves and EXPAND into standard
  * derived rows — each its own entity with native collision / LOD. One dispatch
  * so block-load, palette-place and live re-expansion treat them identically.
- *   b6 particle → SPP walls/triggers   ·   c2 motif → seeded generative boxes
+ *   b6 spp → SPP walls/triggers   ·   c2 motif → seeded generative boxes
  */
-const SOURCE_EXPANDERS: Record<number, (raw: any[]) => ExpandedRow[]> = {
-    [AdjunctType.Particle]: expandParticle as (raw: any[]) => ExpandedRow[],
+const SOURCE_EXPANDERS: Record<number, (raw: any[], ctx?: { blockX?: number; blockY?: number }) => ExpandedRow[]> = {
+    [AdjunctType.Spp]: expandSpp as (raw: any[], ctx?: any) => ExpandedRow[],
     [AdjunctType.Motif]: expandMotif as (raw: any[]) => ExpandedRow[],
 };
 
@@ -152,7 +152,7 @@ export class BlockSystem implements ISystem {
                                 // persists only the source row.
                                 const expand = SOURCE_EXPANDERS[typeId];
                                 if (expand) {
-                                    expand(rawInst as any).forEach(([dType, dRow], k) => {
+                                    expand(rawInst as any, { blockX: block.x, blockY: block.y }).forEach(([dType, dRow], k) => {
                                         const dDef = getBuiltinAdjunct(dType);
                                         const dStd = dDef?.attribute?.deserialize(dRow);
                                         if (!dDef || !dStd) return;
@@ -264,7 +264,8 @@ export class BlockSystem implements ISystem {
     private expandSourceInto(world: World, blockEid: EntityId, typeId: number, sourceId: string, rawRow: any[]): void {
         const expand = SOURCE_EXPANDERS[typeId];
         if (!expand) return;
-        expand(rawRow as any).forEach(([dType, dRow], k) => {
+        const block = world.getComponent<BlockComponent>(blockEid, "BlockComponent");
+        expand(rawRow as any, { blockX: block?.x, blockY: block?.y }).forEach(([dType, dRow], k) => {
             const dDef = getBuiltinAdjunct(dType);
             const dStd = dDef?.attribute?.deserialize?.(dRow);
             if (!dDef || !dStd) return;

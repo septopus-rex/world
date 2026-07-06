@@ -36,7 +36,7 @@ export function faceCenter(face: ParticleFace, s: number): [number, number, numb
 }
 
 /** Which faces of a cell are open (the track passes through them). */
-export function openFaces(faces: Array<[number, number]>): ParticleFace[] {
+export function openFaces(faces: Array<[number, number]> | undefined): ParticleFace[] {
     return FACES.filter(f => (faces?.[f]?.[0] ?? FaceState.Closed) === FaceState.Open);
 }
 
