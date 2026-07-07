@@ -28,6 +28,7 @@ import { AuthoredLevel, levelSceneProvider } from '@engine/core/services/Authore
 import parkourLevelJson from '../levels/parkour.level.json';
 import coasterLevelJson from '../levels/coaster.level.json';
 import xianjianLevelJson from '../levels/xianjian.level.json';
+import galleryLevelJson from '../levels/gallery.level.json';
 import { Coords } from '@engine/core/utils/Coords';
 import { validateGenerationDoc, compileGenerationDoc } from '@engine/core/protocol/GenerationDoc';
 import type { GameSetting } from '@engine/core/types/GameSetting';
@@ -110,6 +111,7 @@ export class DesktopLoader implements IDataSource {
     private isXianjian = this.level === 'xianjian';
     private isWorld = this.level === 'world';
     private isRefine = this.level === 'refine';
+    private isGallery = this.level === 'gallery';
 
     /** The active authored level (data document) + its block provider. Levels
      *  are JSON in src/levels/ — the engine holds no level content. The 'world'
@@ -121,6 +123,7 @@ export class DesktopLoader implements IDataSource {
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
         : this.isWorld ? buildWorldLevel()
         : this.isRefine ? buildRefineLevel()
+        : this.isGallery ? (galleryLevelJson as unknown as AuthoredLevel)
         : null;
     private levelProvider = this.activeLevel ? levelSceneProvider(this.activeLevel) : null;
 
