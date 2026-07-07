@@ -162,8 +162,8 @@ export class RenderEngine {
         if (config.stats) {
             this.stats = new Stats();
             this.stats.dom.style.position = 'absolute';
-            this.stats.dom.style.top = '0px';
-            this.stats.dom.style.left = '0px';
+            this.stats.dom.style.top = '10px';
+            this.stats.dom.style.left = '10px';
             this.container.appendChild(this.stats.dom);
         }
     }

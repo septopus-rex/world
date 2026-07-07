@@ -47,7 +47,8 @@ test('SPP粒子 editor: cell preview, add a composition to a face state, drive t
     // Collapse dial: flip one face to 通(open) → that face collapses to the empty
     // open option → one fewer set of face geometry in the preview.
     const a4Before = await derived(page, A4);
-    await page.getByTestId('sp-dial-state-1').click(); // face 1 → open
+    await page.getByTestId('sp-face-1').click();          // select face 1 (bottom band)
+    await page.getByTestId('sp-dial-state-open').click(); // → 通(open) (top band)
     expect(await pump(page, async () => (await derived(page, A4)) < a4Before), 'flipping a face to open drops its composition').toBe(true);
     await page.screenshot({ path: 'test-results/sp2-2-dialed.png' });
 });
