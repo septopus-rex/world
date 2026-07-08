@@ -1,0 +1,25 @@
+{
+  "name": "motif-panel",
+  "note": "B2 motif:panel 模板(无 rng)→ 单个 a2 盒。验 motif→a2 发射 + origin 偏移 + stop=1。steps=0。",
+  "input": {
+    "kind": "motif",
+    "coord": [
+      2000,
+      1000
+    ],
+    "raw": [
+      [
+        10,
+        10,
+        1
+      ],
+      "panel",
+      0,
+      null
+    ]
+  },
+  "steps": 0,
+  "expect": {
+    "stateHash": "sha256:6c84815a36ba9ca3643fb8842fa802f4d3337a60177902f5efe58c89a61204e2"
+  }
+}

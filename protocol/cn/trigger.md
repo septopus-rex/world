@@ -118,7 +118,7 @@ interface TriggerAction {
 
 | `type` | `target` | `method` | `params` | 效果 |
 |---|---|---|---|---|
-| `adjunct` | adjunctId，格式 `adj_{bx}_{by}_{type十进制}_{idx}`（如 `adj_2048_2048_161_0` = 该地块第 0 面墙） | `moveZ` | `[米]` | 目标沿 Septopus 高度轴平移（同步更新 Transform 与 stdData，碰撞随动）。 |
+| `adjunct` | adjunctId。**绝对** `adj_{bx}_{by}_{type十进制}_{idx}`(如 `adj_2048_2048_161_0`);或**块相对** `adj_~_~_{type十进制}_{idx}`——`~_~` = "本块"(触发实体所在块),加载时按发起块解析成绝对 id。**内容可移植性(2026-07-08)**:同一份授权内容用块相对目标,放到任意块都指向该块自己的对象,无需烤死坐标——`include(ref,offset)` 组合原语的地基。 | `moveZ` | `[米]` | 目标沿 Septopus 高度轴平移(同步更新 Transform 与 stdData,碰撞随动)。 |
 | | | `rotateY` | `[弧度]` | 目标绕竖直轴旋转。 |
 | `flag` | flag 键名 | （空） | `[值]`，缺省 `true` | 写入 `world.globalFlags[target]`，供其他触发器的条件读取。 |
 | `bag` | itemId（`tpl_{模板}` / `itm_{模板}_{seed}`） | `give` / `take` | `[数量]` | 给予/扣除玩家背包物品。**仅 Game 模式生效**（其余模式警告跳过）。 |

@@ -17,8 +17,10 @@
   yaw 在 **index 1**。这是刻意的不对称(位置按 Septopus 系、旋转按引擎系),规范细节
   见 [world.md](world.md) §坐标与旋转契约。
 - **可省尾槽**:行尾的可选槽位可整体省略,缺省值见各表;实现不得因尾槽缺失报错。
-- **solid(可碰撞)**:`a2` 恒为 solid;标准 7 槽类型的 slot 6 `stop` 非空即 solid;
-  `b4` 恒为 solid。其余类型不参与行走碰撞。
+- **solid(可碰撞)**:`a2` 恒为 solid;标准 7 槽类型的 slot 6 `stop` **为真(truthy)即 solid**
+  ——即非 `null`/非 `0`/非 `false`/非空串;`stop=0` **不** solid(与 `null` 等价)。`b4` 恒为
+  solid。其余类型不参与行走碰撞。〔钉点(2026-07-08):早先措辞"非空即 solid"对 `0` 有歧义,
+  参考引擎差分逮到;此处统一为 truthy,两端实现须一致。〕
 - **派生实体(derived)**:由 b6/b9/c2/actuator-spawn 在运行时展开/生成的实体
   标记 `derivedFrom`,**永不写回持久化数据**(序列化只保留源行),随块销毁。
 

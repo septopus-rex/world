@@ -1,0 +1,18 @@
+[package]
+name = "septopus-conformance"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# 差分裁判入口:读 golden vector → canonical 状态哈希 → 与 expect 对拍。
+# SHA-256(而非 blake3):TS 侧可用 node 内置 crypto 镜像,零 npm 依赖。
+[dependencies]
+septopus-protocol = { path = "../septopus-protocol" }
+septopus-expand = { path = "../septopus-expand" }
+septopus-sim = { path = "../septopus-sim" }
+serde_json = "1"
+sha2 = "0.10"
+
+[[bin]]
+name = "septopus-conformance"
+path = "src/main.rs"

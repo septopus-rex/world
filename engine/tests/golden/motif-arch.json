@@ -1,0 +1,25 @@
+{
+  "name": "motif-arch",
+  "note": "B2 motif:arch 模板(rng 驱动)→ 3 个 a2 盒。验 mulberry32 消耗顺序 span→height→pw→pillar(pick)→top→lintel(pick) 跨引擎逐位一致。steps=0。",
+  "input": {
+    "kind": "motif",
+    "coord": [
+      2000,
+      1000
+    ],
+    "raw": [
+      [
+        10,
+        10,
+        0
+      ],
+      "arch",
+      7777,
+      null
+    ]
+  },
+  "steps": 0,
+  "expect": {
+    "stateHash": "sha256:b662ee4ca8206d363d4f2e9b80c2cbcaf54f1968517cbd1912135a60218ebe39"
+  }
+}

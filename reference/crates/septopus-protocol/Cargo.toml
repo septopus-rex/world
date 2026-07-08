@@ -1,0 +1,10 @@
+[package]
+name = "septopus-protocol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# Clean-room 解码层:唯一允许照 protocol/ 规范手写的 crate。其余 crate 只依赖它,
+# 不得偷看 TS 引擎源。仅依赖 serde_json 解异构 raw 数组。
+[dependencies]
+serde_json = "1"

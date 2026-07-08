@@ -1,0 +1,79 @@
+{
+  "name": "spp-refinement",
+  "note": "B1 SPP 递归细化:一个全 solid 顶层 cell 细化成沿 X 的 2 个 level-1 子;子无 faces → 边界继承父 solid、内部默认 Open;父不出几何(finer-owns)。验递归 + 父面继承。",
+  "input": {
+    "kind": "spp",
+    "coord": [
+      2000,
+      1000
+    ],
+    "raw": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "level": 0,
+          "faces": [
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          "refinement": {
+            "cells": [
+              {
+                "position": [
+                  0,
+                  0,
+                  0
+                ],
+                "level": 1
+              },
+              {
+                "position": [
+                  1,
+                  0,
+                  0
+                ],
+                "level": 1
+              }
+            ]
+          }
+        }
+      ],
+      "basic"
+    ]
+  },
+  "steps": 0,
+  "expect": {
+    "stateHash": "sha256:e9cbf1bd056c4239c4f5ee744f287ff6085bbf95084bffec2bcdb268a3ce00ad"
+  }
+}

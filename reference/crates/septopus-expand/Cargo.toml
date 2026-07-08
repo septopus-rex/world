@@ -1,0 +1,10 @@
+[package]
+name = "septopus-expand"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# 源→派生展开(SPP b6 / motif c2)+ 确定性 PRNG(mulberry32)。B1/B2 落地。
+[dependencies]
+septopus-protocol = { path = "../septopus-protocol" }
+serde_json = "1"

@@ -33,14 +33,6 @@ export const XIANJIAN_VILLAGE: [number, number] = [2030, 705]; // path=+1, summi
 const teleport = (anchor: string, block: [number, number]) =>
     ({ type: 'player', method: 'teleport', target: anchor, params: [block] });
 
-/** Find (or create) the group for a typeId in a block raw's adjuncts and append rows. */
-function pushGroup(raw: any[], typeId: number, rows: any[]): void {
-    const groups: any[] = Array.isArray(raw[2]) ? raw[2] : (raw[2] = []);
-    const g = groups.find((grp: any) => grp[0] === typeId);
-    if (g) g[1].push(...rows);
-    else groups.push([typeId, rows]);
-}
-
 /**
  * A portal: a glowing floor pad + a non-solid arch (never blocks the walk) + a
  * walk-in trigger that teleports + a floating book sign. `cx,cy` = pad centre
@@ -64,11 +56,15 @@ function portal(cx: number, cy: number, color: number, anchor: string, dest: [nu
     };
 }
 
-/** Fold a portal's pad/arch/book into a block raw (used for return portals). */
-function foldPortal(raw: any[], p: ReturnType<typeof portal>): void {
-    pushGroup(raw, BOX, p.boxes);
-    pushGroup(raw, T, [p.trigger]);
-    pushGroup(raw, BOOK, [p.book]);
+/** A portal's pad/arch/book + an arrival anchor, as adjunct GROUPS to overlay into
+ *  a composed block (the include `overlay` shape). Replaces the old foldPortal
+ *  mutation — pure data now. */
+function portalOverlay(anchor: any[], p: ReturnType<typeof portal>): Array<[number, any[]]> {
+    return [
+        [BOX, [...p.boxes]],
+        [T, [anchor, p.trigger]],
+        [BOOK, [p.book]],
+    ];
 }
 
 /** A b8 anchor row (slot 6) — a legal teleport destination, no events. */
@@ -97,43 +93,43 @@ function hubBlockRaw(): any[] {
 
 const RETURN_PAGES = ['返回 · 传送中枢', '穿过这道门,回到传送中枢,再选去处。', '（走进即可返回。）'];
 
-/** Demo showcase block, kept at [2048,2048], with an arrival anchor + a return portal. */
-function demoBlockRaw(): any[] {
-    const raw = buildDemoScene(DEMO_DEST[0], DEMO_DEST[1]);
-    pushGroup(raw, T, [anchorRow(8, 7, 'showcase')]);         // land here (clear, just S of spawn)
-    // Return portal due E of the arrival (same N=7) so walking straight east lands it.
-    foldPortal(raw, portal(13, 7, 1, 'hub', HUB_BLOCK, '返回 · 中枢', RETURN_PAGES));
-    return raw;
-}
-
-/** Xianjian's 3 blocks relocated near the hub; the village start gets an
- *  arrival anchor + a return portal. Deep-cloned so `?level=xianjian` stays pristine. */
-function xianjianBlocks(): Array<{ x: number; y: number; raw: any[] }> {
-    const src: Array<{ x: number; y: number; raw: any[] }> = (xianjianLevelJson as any).blocks;
-    const dx = XIANJIAN_VILLAGE[0] - src[0].x, dy = XIANJIAN_VILLAGE[1] - src[0].y;
-    return src.map((b, i) => {
-        const raw = JSON.parse(JSON.stringify(b.raw)); // pure-data clone, never mutate the import
-        if (i === 0) {
-            pushGroup(raw, T, [anchorRow(8, 2, 'xianjian')]);  // arrive at the village entrance
-            // Return portal in the SE corner — off the northbound quest path so a
-            // walk-in never fires while the player heads up the mountain.
-            foldPortal(raw, portal(13, 2, 1, 'hub', HUB_BLOCK, '返回 · 中枢', RETURN_PAGES));
-        }
-        return { x: b.x + dx, y: b.y + dy, raw };
-    });
-}
-
-/** Build the unified `?level=world` AuthoredLevel programmatically. */
+/** Build the unified `?level=world` AuthoredLevel — now via the pure-DATA
+ *  `include` composition primitive (full-data-migration.md P1), replacing the old
+ *  hand-cloned/shifted/injected TS (demoBlockRaw / xianjianBlocks / foldPortal).
+ *  Own block = the hub; demo + relocated xianjian come in as `include`s, each
+ *  overlaid with an arrival anchor + a return portal. The offset only shifts block
+ *  KEYS — relocation is safe because xianjian carries zero absolute adj-id coupling
+ *  (block-local / block-relative refs, the sibling P1 change). */
 export function buildWorldLevel(): AuthoredLevel {
+    // Demo wrapped as a one-block sub-level; content still from demoScene (migrating
+    // that CONTENT to data is P2). Stays at its own coords → offset [0,0].
+    const demoLevel: AuthoredLevel = {
+        format: 'septopus.world.level', version: 1, name: 'demo-embed',
+        start: { block: DEMO_DEST, position: [8, 8, 3], rotation: [0, 0, 0] },
+        blocks: [{ x: DEMO_DEST[0], y: DEMO_DEST[1], raw: buildDemoScene(DEMO_DEST[0], DEMO_DEST[1]) as any }],
+    };
+    const xianjian = xianjianLevelJson as unknown as AuthoredLevel;
+    const src0 = xianjian.blocks[0];
+    const xjOffset: [number, number] = [XIANJIAN_VILLAGE[0] - src0.x, XIANJIAN_VILLAGE[1] - src0.y];
+
+    const demoReturn = portal(13, 7, 1, 'hub', HUB_BLOCK, '返回 · 中枢', RETURN_PAGES);
+    const xjReturn = portal(13, 2, 1, 'hub', HUB_BLOCK, '返回 · 中枢', RETURN_PAGES);
+
     return {
         format: 'septopus.world.level',
         version: 1,
         name: 'world',
         start: { block: HUB_BLOCK, position: [8, 8, 3], rotation: [0, 0, 0] },
-        blocks: [
-            { x: HUB_BLOCK[0], y: HUB_BLOCK[1], raw: hubBlockRaw() },
-            { x: DEMO_DEST[0], y: DEMO_DEST[1], raw: demoBlockRaw() },
-            ...xianjianBlocks(),
+        blocks: [{ x: HUB_BLOCK[0], y: HUB_BLOCK[1], raw: hubBlockRaw() }],
+        include: [
+            {
+                level: demoLevel, offset: [0, 0],
+                overlay: { [`${DEMO_DEST[0]}_${DEMO_DEST[1]}`]: portalOverlay(anchorRow(8, 7, 'showcase'), demoReturn) },
+            },
+            {
+                level: xianjian, offset: xjOffset,
+                overlay: { [`${XIANJIAN_VILLAGE[0]}_${XIANJIAN_VILLAGE[1]}`]: portalOverlay(anchorRow(8, 2, 'xianjian'), xjReturn) },
+            },
         ],
     };
 }

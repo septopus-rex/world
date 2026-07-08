@@ -1,0 +1,22 @@
+{
+  "name": "empty-block",
+  "note": "B0 空块 [0,1,[],[],0] — 无实体,只有块头哈希。",
+  "input": {
+    "kind": "block",
+    "coord": [
+      0,
+      0
+    ],
+    "raw": [
+      0,
+      1,
+      [],
+      [],
+      0
+    ]
+  },
+  "steps": 0,
+  "expect": {
+    "stateHash": "sha256:2c34ce1df23b838c5abf2a7f6437cca3d3067ed509ff25f11df6b11b582b51eb"
+  }
+}

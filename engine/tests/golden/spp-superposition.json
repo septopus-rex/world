@@ -1,0 +1,79 @@
+{
+  "name": "spp-superposition",
+  "note": "B1 SPP 叠加态:faceOptions 上 Top/Front 各 2 候选 → 引擎按 collapseSeed(块+cell+面)+mulberry32 确定性坍缩。验 FNV-1a 种子 + PRNG 取选 跨引擎逐位一致。",
+  "input": {
+    "kind": "spp",
+    "coord": [
+      2000,
+      1000
+    ],
+    "raw": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "level": 0,
+          "faceOptions": [
+            [
+              [
+                1,
+                0
+              ],
+              [
+                1,
+                1
+              ]
+            ],
+            [
+              [
+                0,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                2
+              ],
+              [
+                1,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                0
+              ]
+            ],
+            [
+              [
+                1,
+                0
+              ]
+            ]
+          ]
+        }
+      ],
+      "basic"
+    ]
+  },
+  "steps": 0,
+  "expect": {
+    "stateHash": "sha256:55ac3176a511947f5c5ef73a8c1cccb8f40192556ead499bebf67f160fd3ce96"
+  }
+}

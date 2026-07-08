@@ -1,0 +1,15 @@
+# Septopus 参考引擎 — Rust workspace（无头一致性内核 / 差分裁判）。
+# 见 docs/plan/specs/bevy-reference-engine.md。第 1 层纯 Rust,不依赖 bevy。
+[workspace]
+resolver = "2"
+members = [
+    "crates/septopus-protocol",
+    "crates/septopus-expand",
+    "crates/septopus-sim",
+    "crates/septopus-conformance",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"

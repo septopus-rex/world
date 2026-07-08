@@ -68,7 +68,7 @@ export class LocalActuator implements IActuator {
     public execute(action: TriggerAction, ctx: ActuatorContext): void {
         switch (action.type) {
             case 'adjunct':
-                this.execAdjunct(action, ctx.world);
+                this.execAdjunct(action, ctx);
                 break;
             case 'flag':
                 // set_flag: target = key, params[0] = value (default true)
@@ -198,7 +198,7 @@ export class LocalActuator implements IActuator {
             if (ctx.sourceEntity != null) damageNpc(ctx.world, ctx.sourceEntity, amount);
             return;
         }
-        const eid = this.resolveAdjunct(ctx.world, action.target);
+        const eid = this.resolveAdjunct(ctx.world, this.rewriteRelativeTarget(action.target, ctx));
         if (eid !== null) damageNpc(ctx.world, eid, amount);
     }
 
@@ -492,11 +492,32 @@ export class LocalActuator implements IActuator {
 
     // ── adjunct (live world mutation) ─────────────────────────────────────────
 
-    private execAdjunct(action: TriggerAction, world: World): void {
-        const entityId = this.resolveAdjunct(world, action.target);
+    private execAdjunct(action: TriggerAction, ctx: ActuatorContext): void {
+        const world = ctx.world;
+        const entityId = this.resolveAdjunct(world, this.rewriteRelativeTarget(action.target, ctx));
         if (entityId === null) return;
         const adjunct = world.getComponent<AdjunctComponent>(entityId, "AdjunctComponent");
         if (adjunct) this.applyAdjunctModification(world, entityId, adjunct, action.method, action.params ?? []);
+    }
+
+    /**
+     * Block-relative adjunct target → absolute, resolved against the FIRING
+     * entity's OWN block. A target `adj_~_~_{typeId}_{idx}` means "the adjunct at
+     * THIS block" — so the SAME authored content works wherever it is placed
+     * (relocatable / includable across blocks). Absolute ids (`adj_{x}_{y}_…`)
+     * and numeric targets pass through unchanged; with no firing block the token
+     * is left as-is (resolve misses → null, safe). See full-data-migration.md P1
+     * / bevy-reference-engine.md (the (c) reference-portability geobase).
+     */
+    private rewriteRelativeTarget(target: string | number, ctx: ActuatorContext): string | number {
+        const PREFIX = 'adj_~_~_';
+        if (typeof target !== 'string' || !target.startsWith(PREFIX)) return target;
+        const src = ctx.sourceEntity != null
+            ? ctx.world.getComponent<AdjunctComponent>(ctx.sourceEntity, "AdjunctComponent") : null;
+        const blk = src?.parentBlockEntityId != null
+            ? ctx.world.getComponent<BlockComponent>(src.parentBlockEntityId, "BlockComponent") : null;
+        if (!blk) return target;
+        return `adj_${blk.x}_${blk.y}_${target.slice(PREFIX.length)}`;
     }
 
     /** Map lookup with one rebuild-and-retry on miss or stale entry. */

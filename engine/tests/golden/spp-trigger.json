@@ -1,0 +1,74 @@
+{
+  "name": "spp-trigger",
+  "note": "B3: SPP 派生触发器纳入哈希。一个 cell 带 trigger(in→flag),expandSpp 产出 b8 行,两引擎的事件签名 ev=in:flag. 逐位一致。steps=0。",
+  "input": {
+    "kind": "spp",
+    "coord": [
+      2000,
+      1000
+    ],
+    "raw": [
+      [
+        0,
+        0,
+        0
+      ],
+      [
+        {
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "level": 0,
+          "faces": [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              0
+            ],
+            [
+              1,
+              1
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0
+            ],
+            [
+              1,
+              0
+            ]
+          ],
+          "trigger": [
+            {
+              "type": "in",
+              "actions": [
+                {
+                  "type": "flag",
+                  "method": "",
+                  "target": "in_hut",
+                  "params": [
+                    true
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "basic"
+    ]
+  },
+  "steps": 0,
+  "expect": {
+    "stateHash": "sha256:a9f5e933b0b86ea1222c9d6474cbe6571343f6441b6b2dccd6afa3fafec9f9a4"
+  }
+}

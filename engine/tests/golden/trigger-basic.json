@@ -1,0 +1,104 @@
+{
+  "name": "trigger-basic",
+  "note": "B3 b8 触发器纳入哈希:a1 墙 + b8 触发器(in/out → adjunct.moveZ,含块相对 target)。验事件签名 ev=in:adjunct.moveZ;out:adjunct.moveZ。steps=0。",
+  "input": {
+    "kind": "block",
+    "coord": [
+      2000,
+      1000
+    ],
+    "raw": [
+      0,
+      1,
+      [
+        [
+          161,
+          [
+            [
+              [
+                4,
+                0.4,
+                3
+              ],
+              [
+                8,
+                11,
+                1.5
+              ],
+              [
+                0,
+                0,
+                0
+              ],
+              0,
+              [
+                1,
+                1
+              ],
+              0,
+              1
+            ]
+          ]
+        ],
+        [
+          184,
+          [
+            [
+              [
+                3,
+                3,
+                6
+              ],
+              [
+                8,
+                7,
+                3
+              ],
+              [
+                0,
+                0,
+                0
+              ],
+              1,
+              0,
+              [
+                {
+                  "type": "in",
+                  "actions": [
+                    {
+                      "type": "adjunct",
+                      "target": "adj_~_~_161_0",
+                      "method": "moveZ",
+                      "params": [
+                        3.2
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "out",
+                  "actions": [
+                    {
+                      "type": "adjunct",
+                      "target": "adj_~_~_161_0",
+                      "method": "moveZ",
+                      "params": [
+                        -3.2
+                      ]
+                    }
+                  ]
+                }
+              ]
+            ]
+          ]
+        ]
+      ],
+      [],
+      0
+    ]
+  },
+  "steps": 0,
+  "expect": {
+    "stateHash": "sha256:509bdd7bbd2ef22c5dada65e6196c820497fa30a0c46d7eb866f5e1096f9ad9f"
+  }
+}

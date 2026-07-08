@@ -1,0 +1,10 @@
+[package]
+name = "septopus-sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# 碰撞形状推导 + 触发/actuator/flag/npc 语义(到可比状态)。B3+ 落地。
+[dependencies]
+septopus-protocol = { path = "../septopus-protocol" }
+serde_json = "1"
