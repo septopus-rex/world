@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { DesktopLoader } from '../lib/DesktopLoader';
+import type { DesktopLoader } from '@core/lib/DesktopLoader';
 
 /**
  * AuthorChat — the natural-language authoring panel (spec ai-authoring.md §4E).

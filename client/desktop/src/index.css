@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Shared client core lives OUTSIDE this app root (client/core) — tell Tailwind
+   v4 to scan it for classes too (the shells import its components). */
+@source "../../core/src";
 
 html,
 body {

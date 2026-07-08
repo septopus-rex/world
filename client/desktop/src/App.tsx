@@ -1,27 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import { Coords } from '@engine/core/utils/Coords';
-import { useIsMobile } from './lib/useIsMobile';
-import { useEngine } from './lib/useEngine';
-import { Joystick } from './components/Joystick';
+import { useEngine } from '@core/lib/useEngine';
 import { Compass } from './components/HUD';
-import { InventoryPanel } from './components/InventoryPanel';
-import { HealthBar } from './components/HealthBar';
-import { Toaster } from './components/Toaster';
-import { ParkourHUD } from './components/ParkourHUD';
-import { MahjongHUD } from './components/MahjongHUD';
-import { PoolHUD } from './components/PoolHUD';
-import { ShootingHUD } from './components/ShootingHUD';
-import { LeaveGameDialog } from './components/LeaveGameDialog';
-import { WorldMap2D } from './components/WorldMap2D';
+import { InventoryPanel } from '@core/components/InventoryPanel';
+import { HealthBar } from '@core/components/HealthBar';
+import { Toaster } from '@core/components/Toaster';
+import { ParkourHUD } from '@core/components/ParkourHUD';
+import { MahjongHUD } from '@core/components/MahjongHUD';
+import { PoolHUD } from '@core/components/PoolHUD';
+import { ShootingHUD } from '@core/components/ShootingHUD';
+import { LeaveGameDialog } from '@core/components/LeaveGameDialog';
+import { WorldMap2D } from '@core/components/WorldMap2D';
 import { AuthorChat } from './components/AuthorChat';
-import { DialogueUI } from './components/DialogueUI';
-import { BookReader } from './components/BookReader';
-import { AvatarPicker } from './components/AvatarPicker';
-import { MAZE_BLOCK, MAZE_ENTRY } from './scenes/mazeScene';
-import { DYN_BLOCK, DYN_VIEW } from './scenes/dynamicAdjunctScene';
+import { DialogueUI } from '@core/components/DialogueUI';
+import { BookReader } from '@core/components/BookReader';
+import { AvatarPicker } from '@core/components/AvatarPicker';
+import { ActionRail } from './components/desktop/ActionRail';
 
 function App() {
-  const isMobile = useIsMobile();
   const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
@@ -208,25 +204,9 @@ function App() {
         </div>
       )}
 
-      {isMobile && (
-        <>
-          <div className="absolute bottom-8 left-8 z-20 pointer-events-none">
-            <Joystick
-              size={130}
-              onMove={(data) => loader?.setPlayerMoveIntent(data.x, data.y)}
-              onStop={() => loader?.setPlayerMoveIntent(0, 0)}
-            />
-          </div>
-          <div className="absolute bottom-8 right-8 z-20 pointer-events-auto">
-            <button
-              className="w-16 h-16 rounded-full bg-white/10 hover:bg-white/20 border-2 border-white/30 backdrop-blur-md flex items-center justify-center active:scale-95 transition-all shadow-xl"
-              onTouchStart={(e) => { e.preventDefault(); loader?.triggerPlayerJump(); }}
-            >
-              <span className="font-extrabold text-white text-xs tracking-widest opacity-90">JUMP</span>
-            </button>
-          </div>
-        </>
-      )}
+      {/* Touch affordances (joystick/jump) live in the MOBILE shell now
+          (src/mobile/MobileApp.tsx, routed by main.tsx) — the desktop shell is
+          keyboard/mouse only (specs/mobile-client.md M0). */}
 
       {showMinimap && (
         <div
@@ -302,73 +282,17 @@ function App() {
         </div>
       )}
 
-      {/* Icon action rail — ONE vertical, icon-only column (tooltip = meaning).
-          Data-driven so adding/reordering an action is a single array entry, and
-          icon squares stay finger-sized for mobile. Order: scene/dev actions →
-          view toggle → modes → reset. data-testid values are kept verbatim (e2e). */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 p-1.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
-        {([
-          { id: 'stamp-scene', icon: '🧪', title: '导入测试场景 · Stamp test scene onto current block', onClick: () => { const b = loader?.playerState?.block; if (b) loader?.stampTestScene(b[0], b[1]); } },
-          { id: 'enter-sandbox', icon: '🏖️', title: 'SPP 沙盘 · Sandbox diorama', onClick: () => { loader?.enterSandbox(); setSandbox(true); setSppStyles(loader?.listSppStyles() ?? []); setSppStyle(loader?.sppStyle ?? null); } },
-          { id: 'goto-maze', icon: '🏛️', title: '迷宫 · Athenian labyrinth', onClick: () => loader?.teleportSeptopus(MAZE_BLOCK, MAZE_ENTRY) },
-          { id: 'goto-dynamic', icon: '🧩', title: '动态 Adjunct · Dynamic showcase', onClick: () => loader?.teleportSeptopus(DYN_BLOCK, DYN_VIEW) },
-          { id: 'map2d-toggle', icon: '🗺️', title: '2D 地图 · World map', onClick: () => setShow2DMap(true) },
-        ] as const).map((a) => (
-          <button
-            key={a.id}
-            data-testid={a.id}
-            title={a.title}
-            onClick={a.onClick}
-            className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-white/5 hover:bg-white/15 border border-white/10 transition-all active:scale-95"
-          >
-            {a.icon}
-          </button>
-        ))}
-
-        {/* first/third-person view toggle (stateful icon) */}
-        <button
-          title={view === 'third' ? '第三人称 → 切第一人称' : '第一人称 → 切第三人称'}
-          onClick={() => setView(view === 'third' ? 'first' : 'third')}
-          className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-all active:scale-95"
-        >
-          {view === 'third' ? '🎥' : '👁️'}
-        </button>
-
-        <div className="w-6 h-px bg-white/15 my-0.5" />
-
-        {/* Modes. GAME is intentionally NOT here — it is entered only from inside a
-            playable block via the zone prompt (the interpreter-agnostic contract). */}
-        {([
-          { key: 'normal', icon: '🚶', label: 'NORMAL', on: 'bg-cyan-500/25 border-cyan-400/60' },
-          { key: 'ghost', icon: '👻', label: 'GHOST', on: 'bg-purple-500/25 border-purple-400/60' },
-          { key: 'observe', icon: '🛰️', label: 'OBSERVE', on: 'bg-sky-500/25 border-sky-400/60' },
-          { key: 'edit', icon: '✏️', label: 'EDIT', on: 'bg-yellow-500/25 border-yellow-400/60' },
-        ] as const).map((m) => (
-          <button
-            key={m.key}
-            data-testid={`mode-${m.key}`}
-            title={`模式 · ${m.label}`}
-            onClick={() => setMode(m.key)}
-            className={`w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none border transition-all active:scale-95 ${
-              mode === m.key ? m.on : 'bg-white/5 border-white/10 hover:bg-white/15'
-            }`}
-          >
-            {m.icon}
-          </button>
-        ))}
-
-        <div className="w-6 h-px bg-white/15 my-0.5" />
-
-        {/* Reset (destructive) — kept apart at the bottom. */}
-        <button
-          data-testid="reset-state"
-          title="Reset State · 重置本地存档（方块/位置/背包 → 种子）"
-          onClick={() => { if (confirm("Reset ALL local edits (blocks, position, inventory) to the pristine seed?")) loader?.resetWorld(); }}
-          className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-all active:scale-95"
-        >
-          ♻️
-        </button>
-      </div>
+      {/* Icon action rail → components/desktop/ActionRail (M2 extraction;
+          data-testid values verbatim — the e2e suite is untouched). */}
+      <ActionRail
+        loader={loader}
+        view={view}
+        setView={setView}
+        mode={mode}
+        setMode={setMode}
+        onOpenMap={() => setShow2DMap(true)}
+        onEnterSandbox={() => { loader?.enterSandbox(); setSandbox(true); setSppStyles(loader?.listSppStyles() ?? []); setSppStyle(loader?.sppStyle ?? null); }}
+      />
     </div>
   );
 }

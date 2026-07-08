@@ -53,6 +53,9 @@ export default defineConfig({
       // Pure 3D engine source (TypeScript). The client depends ONLY on the
       // engine — no chain, no wallet, no @solana/*.
       '@engine': resolve(__dirname, '../../engine/src'),
+      // Shared client core (loader/useEngine/components/content data) — the
+      // desktop and mobile shells both consume it by source alias (specs/mobile-client.md).
+      '@core': resolve(__dirname, '../core/src'),
     },
   },
   plugins: [

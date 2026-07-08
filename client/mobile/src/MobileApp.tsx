@@ -1,0 +1,129 @@
+import { useEffect, useState } from 'react';
+import { useEngine } from '@core/lib/useEngine';
+import { Joystick } from '@core/components/Joystick';
+import { InventoryPanel } from '@core/components/InventoryPanel';
+import { HealthBar } from '@core/components/HealthBar';
+import { Toaster } from '@core/components/Toaster';
+import { DialogueUI } from '@core/components/DialogueUI';
+import { BookReader } from '@core/components/BookReader';
+import { LeaveGameDialog } from '@core/components/LeaveGameDialog';
+import { WorldMap2D } from '@core/components/WorldMap2D';
+import { AvatarPicker } from '@core/components/AvatarPicker';
+import { ParkourHUD } from '@core/components/ParkourHUD';
+import { ShootingHUD } from '@core/components/ShootingHUD';
+import { MahjongHUD } from '@core/components/MahjongHUD';
+import { PoolHUD } from '@core/components/PoolHUD';
+
+/**
+ * MobileApp — the MOBILE shell (specs/mobile-client.md M1+M3). Same shared core
+ * as the desktop shell (useEngine → DesktopLoader → the pure-data world); only
+ * the chrome and input affordances differ:
+ *
+ *   · left virtual joystick → loader.setPlayerMoveIntent (camera-relative, the
+ *     same channel the e2e drives)
+ *   · drag on the canvas    → engine-native touch look (InputProvider → CameraRig)
+ *   · tap                   → browser-synthesized click → the raycast interact path
+ *   · JUMP button           → loader.triggerPlayerJump()
+ *   · bottom sheet          → bag / map / avatar (one panel at a time)
+ *
+ * Interaction surface (dialogue / book / HP / toasts / game HUDs / leave dialog)
+ * is the SAME shared component set the desktop uses — shells only compose.
+ */
+export default function MobileApp() {
+    const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState } = useEngine('three_demo');
+    const [sheet, setSheet] = useState<'bag' | 'map' | 'avatar' | null>(null);
+
+    // Fade out the boot splash once the world is ready (same as the desktop shell).
+    useEffect(() => {
+        if (!ready) return;
+        const el = document.getElementById('init-loader');
+        if (el) {
+            el.classList.add('fade-out');
+            setTimeout(() => el.remove(), 700);
+        }
+    }, [ready]);
+
+    return (
+        <div data-testid="mobile-app" className="relative w-screen h-screen overflow-hidden bg-black text-white select-none">
+            {/* The engine canvas host — drag = look (engine-native touch), tap = interact. */}
+            <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
+
+            {/* ── top bar: mode badge + version ── */}
+            <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
+                <div data-testid="m-mode" className="px-2.5 py-1 rounded-lg bg-black/50 border border-white/15 backdrop-blur text-[10px] font-black tracking-widest uppercase text-cyan-200">
+                    {mode}
+                </div>
+                <div className="px-2 py-1 rounded-lg bg-black/40 text-[9px] font-mono text-cyan-400/50">
+                    SEPTOPUS · v{__APP_VERSION__}
+                </div>
+            </div>
+
+            {/* ── shared interaction surface (identical components to desktop) ── */}
+            {ready && <HealthBar loader={loader} />}
+            {ready && <DialogueUI loader={loader} />}
+            {ready && <BookReader loader={loader} />}
+            {ready && <Toaster loader={loader} />}
+            <ParkourHUD loader={loader} ready={ready} />
+            <ShootingHUD loader={loader} ready={ready} />
+            {ready && loader && activeGame === 'mahjong' && gameState && <MahjongHUD state={gameState} loader={loader} />}
+            {ready && loader && activeGame === 'pool' && gameState && <PoolHUD state={gameState} loader={loader} />}
+            <LeaveGameDialog loader={loader} open={ready && leaveIntent} />
+
+            {/* ── zone-gated game entry / exit (same contract as desktop) ── */}
+            {ready && gameZoneActive && mode !== 'game' && (
+                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+                    <button data-testid="enter-game" onClick={() => setMode('game')}
+                        className="px-5 py-2.5 rounded-2xl text-sm font-black tracking-widest uppercase text-green-200 bg-green-500/25 border border-green-400/60 active:scale-95 shadow-2xl">
+                        ▶ 进入游戏
+                    </button>
+                </div>
+            )}
+            {ready && mode === 'game' && !activeGame && (
+                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+                    <button data-testid="exit-game" onClick={() => setMode('normal')}
+                        className="px-4 py-2 rounded-2xl text-xs font-black tracking-widest uppercase text-red-200 bg-red-500/20 border border-red-400/50 active:scale-95 shadow-2xl">
+                        ■ 退出游戏
+                    </button>
+                </div>
+            )}
+
+            {/* ── movement: virtual joystick (left thumb) + jump (right thumb) ── */}
+            <div data-testid="m-joystick" className="absolute bottom-9 left-6 z-20 pointer-events-none">
+                <Joystick size={130}
+                    onMove={(d) => loader?.setPlayerMoveIntent(d.x, d.y)}
+                    onStop={() => loader?.setPlayerMoveIntent(0, 0)} />
+            </div>
+            <div className="absolute bottom-24 right-6 z-20 pointer-events-auto">
+                <button data-testid="m-jump"
+                    onTouchStart={(e) => { e.preventDefault(); loader?.triggerPlayerJump(); }}
+                    onMouseDown={() => loader?.triggerPlayerJump()}
+                    className="w-16 h-16 rounded-full bg-white/10 border-2 border-white/30 backdrop-blur-md flex items-center justify-center active:scale-95 shadow-xl">
+                    <span className="font-extrabold text-white text-xs tracking-widest opacity-90">JUMP</span>
+                </button>
+            </div>
+
+            {/* ── bottom sheet: bag / map / avatar (one at a time, M3) ── */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex gap-2">
+                {([['bag', '🎒'], ['map', '🗺️'], ['avatar', '👤']] as const).map(([id, icon]) => (
+                    <button key={id} data-testid={`m-sheet-${id}`}
+                        onClick={() => setSheet((cur) => (cur === id ? null : id))}
+                        className={`w-11 h-11 rounded-xl border backdrop-blur-md flex items-center justify-center text-lg active:scale-95 shadow-lg ${sheet === id ? 'bg-cyan-500/30 border-cyan-400/60' : 'bg-black/40 border-white/15'}`}>
+                        {icon}
+                    </button>
+                ))}
+            </div>
+            {/* Bag sheet: a visible container even when empty (the shared
+                InventoryPanel renders null on an empty bag); items reuse it. */}
+            {ready && sheet === 'bag' && (
+                <div data-testid="m-bag-sheet" className="absolute bottom-16 left-3 z-30 pointer-events-none">
+                    <div className="px-2.5 py-1 rounded-lg bg-black/50 border border-cyan-500/30 text-[10px] font-black tracking-widest uppercase text-cyan-300/80">
+                        🎒 背包 · Bag
+                    </div>
+                    <InventoryPanel loader={loader} />
+                </div>
+            )}
+            <WorldMap2D loader={loader} open={sheet === 'map'} onClose={() => setSheet(null)} />
+            {sheet === 'avatar' && <AvatarPicker loader={loader} ready={ready} />}
+        </div>
+    );
+}

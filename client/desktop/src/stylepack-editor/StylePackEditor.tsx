@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { StylePack, VariantPart } from '@engine/core/spp/Variants';
-import { allStylePacks } from '../stylepacks';
+import { allStylePacks } from '@core/stylepacks';
 import type { Faces } from './StylePackPreviewLoader';
 import { usePreviewLoader } from './usePreviewLoader';
 import { PreviewPane } from './PreviewPane';

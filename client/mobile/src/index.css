@@ -1,0 +1,12 @@
+@import "tailwindcss";
+/* Shared client core lives OUTSIDE this app root — scan it for classes. */
+@source "../../core/src";
+
+html, body {
+  margin: 0;
+  overscroll-behavior: none;
+  touch-action: none;           /* the shell owns all gestures (joystick / look) */
+  -webkit-user-select: none;
+  user-select: none;
+  background: #000;
+}

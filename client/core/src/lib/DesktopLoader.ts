@@ -725,6 +725,19 @@ export class DesktopLoader implements IDataSource {
      *  the draft until aiBuild). Cancel restores the block's original content. */
     private aiPending: { block: [number, number]; raw: any[] } | null = null;
 
+
+    /** Does the ACTIVE level document author this coordinate (own blocks or any
+     *  include, offset-aware)? The post-P7 replacement for the retired scene
+     *  registry — AI build targets must not clobber authored content. */
+    private authoredCoord(bx: number, by: number, lvl: AuthoredLevel = this.activeLevel): boolean {
+        if (lvl.blocks.some((b) => b.x === bx && b.y === by)) return true;
+        for (const inc of lvl.include ?? []) {
+            const [dx, dy] = inc.offset ?? [0, 0];
+            if (inc.level && this.authoredCoord(bx - dx, by - dy, inc.level)) return true;
+        }
+        return false;
+    }
+
     /** Pick the AI build target: the nearest block (ring 0..3 around the
      *  player) with no authored scene, no draft and no pending preview. */
     public aiTargetBlock(): [number, number] | null {
@@ -737,7 +750,7 @@ export class DesktopLoader implements IDataSource {
             for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
                 if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
                 const bx = block[0] + dx, by = block[1] + dy;
-                if (this.sceneRegistry.has(`${bx}_${by}`)) continue;         // authored scene
+                if (this.authoredCoord(bx, by)) continue;                    // authored level coord
                 if (w.draftStore.load(0, bx, by)) continue;                   // player edits
                 if (this.aiPending && this.aiPending.block[0] === bx && this.aiPending.block[1] === by) continue;
                 return [bx, by];
