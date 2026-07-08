@@ -151,8 +151,15 @@
 - **验收 ✅**:`e2e/ipfs-gateway.spec.ts`——种子名→CID→浏览器内经 router 跨进程取回→引擎侧
   重哈希通过→字节解析回 garden;伪 CID 全层未命中即抛(无静默垃圾);浏览器 put/get 回环同 CID。
   网关进 desktop playwright webServer(e2e 环境确定)+ deploy/dev.sh 第 4 行服务。
+- ✅ **真 IPFS provider(2026-07-08 同日)**:引擎 `Cid.ts` 升级为**真 CIDv1**
+  (`b`+base32(0x01·raw 0x55·sha2-256 0x12 0x20·digest),前缀 `bafk…`)——与
+  `multiformats` 参考实现**逐位对拍 5/5 MATCH**;实证:引擎算的 "hello world" CID
+  直接从 **ipfs.io 取回成功**(同字节)。`HttpCasProvider` 加只读模式,
+  `VITE_IPFS_GATEWAYS=https://ipfs.io,…` 即挂真公网网关为最低优先级层(不探测、
+  miss/超时即落空,不进 CI);`isCid` 兼容 legacy `bafy…`(旧草稿)。
+  "换 base URL 就是真 IPFS" 从口号变成字面事实。
 - **待续**:名字索引接 ContentResolver(关卡/块按名走网络,需 loader 异步化构造)、
-  资源管线优先网关取资产、真 IPFS provider。
+  资源管线优先网关取资产、公网 pin 工作流(把种子内容 pin 到真网络)。
 
 ### P5 · canonical 序列化 + 上链形态（缺口 E）
 - 每个 adjunct 类型给 canonical 编解码（扩展 L2 模式）+ 版本号;定义 block on-chain 记录形态与 `AuthoredLevel` 的关系。

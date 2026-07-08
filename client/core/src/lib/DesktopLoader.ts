@@ -514,6 +514,17 @@ export class DesktopLoader implements IDataSource {
                 this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(gw));
                 console.log(`[Loader] IPFS gateway online → router tier-2: ${gw}`);
             }
+            // REAL public gateways (read-only, lowest priority): comma list, e.g.
+            //   VITE_IPFS_GATEWAYS=https://ipfs.io,https://dweb.link
+            // Our CIDs are real CIDv1(raw) — pinned content resolves verbatim and
+            // passes the router's re-hash integrity check. No probe: public
+            // gateways are slow/rate-limited; a miss/timeout is just a fallthrough.
+            const real = String((import.meta as any).env?.VITE_IPFS_GATEWAYS || '')
+                .split(',').map((s) => s.trim()).filter(Boolean);
+            for (const base of real) {
+                this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(base, false));
+                console.log(`[Loader] real IPFS gateway tier: ${base} (read-only)`);
+            }
         } catch { /* never block boot on the network tier */ }
 
         // Dynamic adjuncts: run the sandboxed declarative code and register it by

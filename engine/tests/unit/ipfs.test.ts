@@ -11,7 +11,7 @@ describe('CID', () => {
         const a = await cidForBytes(bytes('hello world'));
         const b = await cidForBytes(bytes('hello world'));
         expect(a).toBe(b);
-        expect(a).toMatch(/^bafy[a-z2-7]+$/);
+        expect(a).toMatch(/^bafk[a-z2-7]+$/); // real CIDv1(raw, sha2-256)
     });
 
     it('is content-sensitive — different content → different cid', async () => {

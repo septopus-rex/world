@@ -81,7 +81,7 @@ describe('LocalDataSource · publish to CAS (第三期)', () => {
 
         expect(lds.cidOf(2048, 2049)).toBeUndefined(); // not published yet
         const cid = await lds.publish(2048, 2049);
-        expect(cid).toMatch(/^bafy/);
+        expect(cid).toMatch(/^bafk/); // real CIDv1(raw) prefix
         expect(lds.cidOf(2048, 2049)).toBe(cid);
         // reading that CID back yields the published (canonical) raw
         expect(await cas.get(cid!)).toEqual([0, 1, [[162, [[2048, 2049]]]], [], 0]);

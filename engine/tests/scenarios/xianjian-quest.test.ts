@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
 import { AdjunctType } from '../../src/core/types/AdjunctType';
 import { registerDemoItemTemplates } from '../../src/core/mocks/ItemTemplates';
-import level from '../../../client/desktop/src/levels/xianjian.level.json';
+import level from '../../../client/core/src/levels/xianjian.level.json';
 
 registerDemoItemTemplates(); // the client registers these at boot; headless must too
 

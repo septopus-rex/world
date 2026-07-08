@@ -63,7 +63,7 @@ cd engine && yarn build                            # tsc
 - **ECS**：`World` 持有 registry + 系统；状态即数据（便于 headless 测试）。
 - **数据流**：`IDataSource`（纯数据文档/草稿，可换链/IPFS）→ Raw → STD（`CollapseCodec`）→ RenderData → Three.js。**默认世界也是数据（P7，2026-07-08）**：`default.level.json`（9 块 ref + `fallback` 回退地面模板）+ `default.world.json`（世界配置文档）+ `ContentResolver`（名字/CID→内容，本地=import JSON、联网=CAS/IPFS 同形状）；scene 注册表与 MockBlockData 客户端路径已退役，「内容从哪来」只有一个答案：关卡文档。
 - **坐标系**：Septopus（X东 Y北 Z上）↔ Engine/Three（X右 Y上 Z前，北 = −Z）；转换见 `core/utils/Coords.ts`。**术语纪律（2026-07-04）**：**SPP 专指弦粒子协议**（String Particle Protocol，独立仓 ff13dfly/spp-protocol）；数据坐标一律称 **Septopus 轴序**，动画称 **Septopus 动画**——不得再写 "SPP 坐标/SPP 动画"（曾混用，协议文档已统一，代码标识符 `septopusToEngine` 等同日对齐）。
-- **链可选**：通过 `IChainPublisher` 注入发布；纯模式零 `@solana` 依赖。**内容网络层(2026-07-08)**:`services/ipfs` dev 网关(file-CAS,7789,CID=引擎 `Cid.ts` 同源,启动种入 core 内容+资产);客户端 `HttpCasProvider` 静默探测后挂 `world.ipfs` 最低优先级——进程内 MemoryCas 仍是一级缓存/离线兜底,未命中落网络,router 逐次重哈希校验;换真 IPFS=换 base URL(e2e `ipfs-gateway.spec.ts`)。伴生服务:`services/ai-gateway`(AI 造物,7788)。`deploy/dev.sh` 仪表盘统一起停四服务(desktop 7777/mobile 7778/ai-gw/ipfs,`lan` 真机联调)。
+- **链可选**：通过 `IChainPublisher` 注入发布；纯模式零 `@solana` 依赖。**内容网络层(2026-07-08)**:`services/ipfs` dev 网关(file-CAS,7789,CID=引擎 `Cid.ts` 同源——**已升级真 CIDv1(raw+sha2-256,`bafk…`),与 multiformats 逐位一致、ipfs.io 实测可解析**;启动种入 core 内容+资产);客户端 `HttpCasProvider` 静默探测后挂 `world.ipfs` 最低优先级——进程内 MemoryCas 仍是一级缓存/离线兜底,未命中落网络,router 逐次重哈希校验;真公网网关经 `VITE_IPFS_GATEWAYS` 挂只读层(e2e `ipfs-gateway.spec.ts`)。伴生服务:`services/ai-gateway`(AI 造物,7788)。`deploy/dev.sh` 仪表盘统一起停四服务(desktop 7777/mobile 7778/ai-gw/ipfs,`lan` 真机联调)。
 
 ## 关键入口
 

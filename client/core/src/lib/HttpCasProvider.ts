@@ -12,8 +12,14 @@ import type { IpfsProvider } from '@engine/core/services/ipfs/IpfsProvider';
  */
 export class HttpCasProvider implements IpfsProvider {
     public readonly name: string;
-    constructor(private readonly base: string) {
+    /** `writable=false` = a REAL public IPFS gateway (ipfs.io / dweb.link / a
+     *  pinning service's gateway): read-only, standard `/ipfs/<cid>` path. Our
+     *  CIDs are real CIDv1(raw, sha2-256) — engine Cid.ts, verified against the
+     *  multiformats reference — so content pinned there resolves verbatim and
+     *  the router's re-hash integrity check holds across ANY gateway. */
+    constructor(private readonly base: string, writable = true) {
         this.name = `http-cas(${base})`;
+        if (!writable) (this as any).put = undefined; // read-only tier: router skips it for writes
     }
 
     /** Quiet reachability probe (short timeout) — callers add the provider only
