@@ -1,6 +1,7 @@
 import type { AuthoredLevel } from '@engine/core/services/AuthoredLevel';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
 import demoBlockJson from '../blocks/demo.block.json';
+import hubBlockJson from '../blocks/hub.block.json';
 import xianjianLevelJson from '../levels/xianjian.level.json';
 
 /**
@@ -71,25 +72,10 @@ function portalOverlay(anchor: any[], p: ReturnType<typeof portal>): Array<[numb
 const anchorRow = (cx: number, cy: number, name: string) =>
     [[2, 2, 2], [cx, cy, 1], [0, 0, 0], 1, 0, [], { name }];
 
-/** The hub block: clean ground + two outbound portals + a return anchor. */
-function hubBlockRaw(): any[] {
-    const ground = [[16, 16, 0.4], [8, 8, -0.2], [0, 0, 0], 0, [1, 1], 0, 1]; // walkable plane, top z=0
-    const west = portal(5, 8, 2, 'showcase', DEMO_DEST, '前往 · 演示场景', [
-        '西门 · 演示场景',
-        '穿过这道门,前往演示场景——会动的门、触发器、可拾取物品、书本、弦粒子小屋都在那边。',
-        '（走进传送门即可前往。）',
-    ]);
-    const east = portal(11, 8, 3, 'xianjian', XIANJIAN_VILLAGE, '前往 · 灵草记', [
-        '东门 · 灵草记《仙剑》',
-        '穿过这道门,进入微缩仙剑「灵草记」:村庄接任务 → 上山 → 战妖狼 → 采药 → 回村交任务。',
-        '（走进传送门即可前往。）',
-    ]);
-    return [0, 1, [
-        [BOX, [ground, ...west.boxes, ...east.boxes]],
-        [T, [west.trigger, east.trigger, anchorRow(8, 8, 'hub')]],
-        [BOOK, [west.book, east.book]],
-    ], [], 0];
-}
+// The hub block (ground + two outbound portals + a return anchor) is FROZEN
+// DATA at src/blocks/hub.block.json — content must not be re-authored in TS
+// here (see scenes/README.md). portal()/anchorRow() above remain ONLY for the
+// two return-portal OVERLAYS injected into the included sub-levels.
 
 const RETURN_PAGES = ['返回 · 传送中枢', '穿过这道门,回到传送中枢,再选去处。', '（走进即可返回。）'];
 
@@ -120,7 +106,7 @@ export function buildWorldLevel(): AuthoredLevel {
         version: 1,
         name: 'world',
         start: { block: HUB_BLOCK, position: [8, 8, 3], rotation: [0, 0, 0] },
-        blocks: [{ x: HUB_BLOCK[0], y: HUB_BLOCK[1], raw: hubBlockRaw() }],
+        blocks: [{ x: HUB_BLOCK[0], y: HUB_BLOCK[1], raw: JSON.parse(JSON.stringify(hubBlockJson)) as any }],
         include: [
             {
                 level: demoLevel, offset: [0, 0],

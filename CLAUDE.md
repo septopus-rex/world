@@ -119,6 +119,7 @@ cd engine && yarn build                            # tsc
 - 包管理器分包：**engine 用 yarn，client/desktop 用 npm**。
 - 引擎运行时依赖：除 Three.js 外，新增 `@dimforge/rapier3d-compat`（Tumble 刚体物理，headless WASM）——属 `core/` 可用的纯数学库，**不**破"Three.js 只在 render"边界；客户端经 `@engine` 源码别名间接解析，无需在 client 单独安装。
 - 仿真循环：`World` 构造不自动启动；生产端调 `Engine.start()`（rAF），测试用 `Engine.step(dt)` 确定性步进。
+- **内容=数据纪律（2026-07-08，P2 定形，规矩见 `client/desktop/src/scenes/README.md`）**：**世界内容禁止写成 TS**——关卡=`src/levels/*.level.json`、单块=`src/blocks/*.block.json`、风格包=`src/stylepacks/*.stylepack.json`；原生游戏配置在块数据的 b8 game trigger（`enterGame params[0].game={kind,…}`→`game.declare`→System 自臂，loader 无 setupX 镜像）；同块引用用块相对 id `adj_~_~_…`；种子写死的生成器跑一次**冻结成 JSON** 后删除（demo/maze/hub/各游戏家具先例）。`scenes/` 只剩常量清单/组合胶水/工具与代码即行为。动机：块数据须可上链、可被第二引擎（`reference/` Rust 差分裁判）干净房间复现（`docs/plan/specs/full-data-migration.md` + `bevy-reference-engine.md`）。
 - **提交策略：仅在用户明确要求时提交 git，不主动提交。**
 
 ## 层级边界（严格执行）

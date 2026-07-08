@@ -116,6 +116,12 @@
   - ✅ **`game.declare` 数据驱动链**:b8 game trigger 的 `enterGame params[0].game = {kind,…}` 即富声明;BlockSystem 块初始化时发 `game.declare` 事件,匹配的游戏 System 拉 reader 自臂(`configure` from data)。**shooting / pool / tumble 三个已接**,loader 的 `setupShooting3D/setupPool3D/setupTumble3D` 镜像全删(headless `game-declare.test.ts` + shooting3d/pool3d/tumble3d e2e 全绿)。mahjong3d 暂缓:牌面=客户端生成图片异步 ingest CAS(host 资源关注点),待资源清单数据化后回收。
   - ✅ **demoScene 内容 → `src/levels/demo-block.json`**:先把触发器目标全改**块相对**(`adj_~_~_…`,trigger e2e 5/5 绿)→ 冻结 → 出生块 registry / `stampTestScene` / worldHub demo-embed 三处消费者共用一份 JSON(克隆服务);`demoScene.ts` 311→62 行只剩资产清单+常量(boot/inventory/book/world-hub/engine-features/persistence e2e 全绿)。
   - ✅ **maze → `src/blocks/maze.block.json`**:carveMaze 的种子是写死的 → 按「一次性生成→冻结」准则冻结(49 个 b6 胞元源行 + 大理石装饰;引擎加载时照常展开、只存源);`mazeScene.ts` 只剩常量(maze e2e 4/4 绿)。**P3 注**:maze 不做 motif 模板——motif 现只发 a2 且派生行不再二次展开(嵌套源展开是新原语,YAGNI);要参数化迷宫时再议。
+  - ✅ **剩余家具全部冻结 + 防复发规矩(2026-07-08)**:shooting/pool/tumble/mahjong/mahjong3d/hub
+    六块家具冻结为 `src/blocks/*.block.json`(game 标志原样保留:pool=43、mahjong=42 外部 app id);
+    五个 scene 文件收缩为纯常量,worldHub 的 `hubBlockRaw()` 退役(hub 块=数据,`portal()` 只服务
+    include overlay 的返回门);registry 全部改为 JSON 克隆服务。**规矩落两处**:
+    `client/desktop/src/scenes/README.md`(诱惑点,内容放哪/本文件夹只允许常量清单·组合胶水·工具)
+    + 根 CLAUDE.md 开发注意事项(内容=数据纪律)。`scenes/` 从此零世界内容。
   - ✅ **数据目录约定(2026-07-08)**:一种数据一个文件夹 + 后缀标类型(沿 stylepacks 先例)——
     `src/levels/*.level.json`(关卡文档:出生点+多块+include)· `src/blocks/*.block.json`
     (单块 raw:可复位、被 registry/stamp/include 复用的内容,现有 demo/maze)·

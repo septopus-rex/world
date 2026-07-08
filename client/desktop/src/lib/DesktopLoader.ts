@@ -42,14 +42,19 @@ import demoBlockJson from '../blocks/demo.block.json';
 import { buildWorldLevel } from '../scenes/worldHubScene';
 import { resolveStylePacks, allStylePackIds } from '../stylepacks';
 import type { StylePack } from '@engine/core/spp/Variants';
-import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
-import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
-import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
+import { MAHJONG_BLOCK } from '../scenes/mahjongScene';
+import { POOL_BLOCK } from '../scenes/poolScene';
+import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z } from '../scenes/mahjong3dScene';
 import { generateMahjongFaceCids } from '../scenes/mahjongFaces';
-import { SHOOTING_BLOCK, buildShootingScene } from '../scenes/shootingScene';
-import { TUMBLE_BLOCK, TUMBLE_ORIGIN, buildTumbleScene } from '../scenes/tumbleScene';
+import { SHOOTING_BLOCK } from '../scenes/shootingScene';
+import { TUMBLE_BLOCK } from '../scenes/tumbleScene';
 import { MAZE_BLOCK } from '../scenes/mazeScene';
 import mazeBlockJson from '../blocks/maze.block.json';
+import shootingBlockJson from '../blocks/shooting.block.json';
+import poolBlockJson from '../blocks/pool.block.json';
+import tumbleBlockJson from '../blocks/tumble.block.json';
+import mahjongBlockJson from '../blocks/mahjong.block.json';
+import mahjong3dBlockJson from '../blocks/mahjong3d.block.json';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
@@ -654,11 +659,11 @@ export class DesktopLoader implements IDataSource {
      */
     private static buildSceneRegistry(): Map<string, (x: number, y: number) => any[]> {
         const entries: ReadonlyArray<[readonly [number, number], (x: number, y: number) => any[], string]> = [
-            [MAHJONG_BLOCK, buildMahjongScene, 'mahjong'],
-            [NATIVE_MAHJONG_BLOCK, buildMahjong3DScene, 'mahjong3d'],
-            [SHOOTING_BLOCK, buildShootingScene, 'shooting'],
-            [TUMBLE_BLOCK, buildTumbleScene, 'tumble'],
-            [POOL_BLOCK, buildPoolScene, 'pool'],
+            [MAHJONG_BLOCK, () => JSON.parse(JSON.stringify(mahjongBlockJson)), 'mahjong'],
+            [NATIVE_MAHJONG_BLOCK, () => JSON.parse(JSON.stringify(mahjong3dBlockJson)), 'mahjong3d'],
+            [SHOOTING_BLOCK, () => JSON.parse(JSON.stringify(shootingBlockJson)), 'shooting'],
+            [TUMBLE_BLOCK, () => JSON.parse(JSON.stringify(tumbleBlockJson)), 'tumble'],
+            [POOL_BLOCK, () => JSON.parse(JSON.stringify(poolBlockJson)), 'pool'],
             [MAZE_BLOCK, () => JSON.parse(JSON.stringify(mazeBlockJson)), 'maze'], // frozen data (blocks/maze.block.json)
             [SANDBOX_BLOCK, buildSandboxScene, 'sandbox'],
             [DYN_BLOCK, buildDynamicAdjunctScene, 'dynamic-adjunct'],
