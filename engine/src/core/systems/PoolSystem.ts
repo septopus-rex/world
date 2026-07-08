@@ -40,6 +40,7 @@ export interface PoolConfig {
 
 export class PoolSystem implements ISystem {
     private config: PoolConfig | null = null;   // armed declaration (block + params)
+    private declareReader: import('../events/EventReader').EventReader<'game.declare'> | null = null;
     private ballEids: EntityId[] = [];
     private tableEid: EntityId | null = null;    // live session (null = no session)
 
@@ -145,6 +146,20 @@ export class PoolSystem implements ISystem {
     // ── per-frame ──────────────────────────────────────────────────────────────
 
     public update(world: World, dt: number): void {
+        // Data-driven arming: the block's b8 game trigger declares this game
+        // (enterGame params[0].game = {kind:'pool', …}) — BlockSystem emits
+        // game.declare at block init; configure() from the DATA, no host call.
+        if (!this.declareReader && (world as any).events?.reader) {
+            this.declareReader = world.events.reader('game.declare');
+        }
+        if (this.declareReader) {
+            for (const ev of this.declareReader.read()) {
+                const p = ev.payload;
+                if (p.kind !== 'pool') continue;
+                const { kind: _k, ...decl } = p.decl ?? {};
+                this.configure(world, { ...decl, block: p.block } as PoolConfig);
+            }
+        }
         this.syncSession(world); // start/stop the session on Game-mode / zone transitions
         const table = this.findTable(world);
         if (!table) return;

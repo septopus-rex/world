@@ -111,6 +111,11 @@
 - `refineScene` → 冻结成 `refine.level.json`（本就是一行 b6 + 引擎 Expander,近白送）。
 - `demoScene` 静态半 → `demo.level.json`;保留 `DEMO_ASSETS`→ 迁成 **manifest 数据文件**（A3）,`stampTestScene` 重接成"加载数据"。
 - **原生游戏布局入块数据 + System/loader 从块数据读初始布局 + 删 `DesktopLoader` 镜像几何**（A2）。先挑最简单的 shooting 做实证,跑通"布局进数据 → System 读数据 → 删镜像"这条链,再推广。
+- **进展(2026-07-08)**:
+  - ✅ **refine 冻结**:`refineScene.ts` 删除 → `src/levels/refine.level.json`(spp-refine e2e 绿)。
+  - ✅ **`game.declare` 数据驱动链**:b8 game trigger 的 `enterGame params[0].game = {kind,…}` 即富声明;BlockSystem 块初始化时发 `game.declare` 事件,匹配的游戏 System 拉 reader 自臂(`configure` from data)。**shooting / pool / tumble 三个已接**,loader 的 `setupShooting3D/setupPool3D/setupTumble3D` 镜像全删(headless `game-declare.test.ts` + shooting3d/pool3d/tumble3d e2e 全绿)。mahjong3d 暂缓:牌面=客户端生成图片异步 ingest CAS(host 资源关注点),待资源清单数据化后回收。
+  - ✅ **demoScene 内容 → `src/levels/demo-block.json`**:先把触发器目标全改**块相对**(`adj_~_~_…`,trigger e2e 5/5 绿)→ 冻结 → 出生块 registry / `stampTestScene` / worldHub demo-embed 三处消费者共用一份 JSON(克隆服务);`demoScene.ts` 311→62 行只剩资产清单+常量(boot/inventory/book/world-hub/engine-features/persistence e2e 全绿)。
+  - ✅ **maze → `src/levels/maze-block.json`**:carveMaze 的种子是写死的 → 按「一次性生成→冻结」准则冻结(49 个 b6 胞元源行 + 大理石装饰;引擎加载时照常展开、只存源);`mazeScene.ts` 只剩常量(maze e2e 4/4 绿)。**P3 注**:maze 不做 motif 模板——motif 现只发 a2 且派生行不再二次展开(嵌套源展开是新原语,YAGNI);要参数化迷宫时再议。
 - **验收**:对应 `?level=` 在**空 DesktopLoader 内容代码**下仍复现;golden vectors 通过。
 
 ### P3 · 生成规范化（缺口 B1）
@@ -139,6 +144,7 @@
 ### P7 · 默认世界 → level 文档 + 退役 scenes 注册表
 - 无 `?level` 的默认世界写成 `default.level.json`(或复用 world),注册表的游戏块折进 `include(ref,offset,overlay)`(需 P1)。
 - `scenes/` 只留:**生成器原语**(升为引擎/协议侧)与**开发工具**(sandbox/stamp,重接数据);退役所有"静态内容 TS"。
+- **设计前提(2026-07-08 记)**:默认世界对**任意坐标**回退 `MockBlockData`(程序化地面/灯),level 文档枚举不了无限块——需要给 AuthoredLevel 加**回退块模板**词汇(如 `fallback: <block raw 模板>`),或规范化"空块=标准地面"。此外 `include` 目前带**已解析对象**,worldHub 的 TS 只剩"import JSON + 组装 include 条目"的胶水——变成纯 `world.level.json` 需要 **ref-by-name/CID + host 解析器**词汇(否则冻结=内容反规范化复制)。两者都是 P7 的先行词汇设计,单独会话做。
 - **验收**:默认出生 + 15~37 个 e2e 全绿;`scenes/` 不再含静态授权内容。
 
 ### P8 · 第二引擎（差分裁判）——应尽早并行,不是最后才做

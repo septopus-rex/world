@@ -30,6 +30,12 @@ export interface EventMap {
     'stop.leave': { adjunctId?: string };
     'stop.beside': { axis: 0 | 2; adjunctId?: string };
     // ── game (zone gating: derived from block.game; see GameZoneSystem) ──
+    /** A block's data DECLARED a native game: rich declaration on the b8 game
+     *  trigger (enterGame params[0].game = {kind, …config}). Emitted by
+     *  BlockSystem at adjunct init; the matching game System pulls a reader and
+     *  arms itself — the data-driven replacement for host setupX() mirror calls
+     *  (full-data-migration.md P2). */
+    'game.declare': { block: [number, number]; kind: string; decl: Record<string, any> };
     'game.zone_enter': { block: [number, number]; key: string; game: number };
     'game.zone_exit': { block: [number, number]; key: string };
     /** Player left the active game's block under a 'confirm' exitPolicy: the round

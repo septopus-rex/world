@@ -43,7 +43,20 @@ export function buildShootingScene(bx: number, by: number): any[] {
     // silently ends. Volume sits just north of the spawn-in spot so you enter by
     // stepping toward the targets (gameOnly=0 so it fires in Normal). row format =
     // [size, centre, rot, shape(1=box), gameOnly, [{type, oneTime?, actions}]].
-    const enterRange = { type: 'player', method: 'enterGame', params: [{ exitPolicy: 'ephemeral' }] };
+    // The RICH game declaration lives in the trigger DATA (params[0].game):
+    // BlockSystem emits game.declare at block init and ShootingRangeSystem arms
+    // itself from it — no host setupShooting() mirror call (P2 data-driven chain).
+    const enterRange = {
+        type: 'player', method: 'enterGame', params: [{
+            exitPolicy: 'ephemeral',
+            game: {
+                kind: 'shooting', origin: SHOOTING_ORIGIN,
+                dist: SHOOTING_TARGET_DIST, z: SHOOTING_TARGET_Z,
+                targetCount: 5, targetR: 0.3, spacing: 1.3,
+                duration: 60, litTime: 1.2,
+            },
+        }],
+    };
     data.raw[2].push([AdjunctType.Trigger, [
         [[5, 3, 3], [C[0], C[1] + 1.5, 1.5], [0, 0, 0], 1, 0, [{ type: 'in', oneTime: false, actions: [enterRange] }]],
     ]]);

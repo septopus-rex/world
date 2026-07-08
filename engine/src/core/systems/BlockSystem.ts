@@ -146,6 +146,25 @@ export class BlockSystem implements ISystem {
                                     id: sourceId
                                 });
 
+                                // Native-game declaration IN DATA: a b8 game trigger's
+                                // enterGame may carry a rich `game` config (params[0].game
+                                // = {kind, …}). Emit game.declare so the matching game
+                                // System arms itself from block data — replaces the host's
+                                // imperative setupX() mirror (full-data-migration.md P2).
+                                if (typeId === AdjunctType.Trigger && Array.isArray(std.events)) {
+                                    for (const node of std.events) {
+                                        for (const act of (node?.actions ?? [])) {
+                                            const g = act?.type === 'player' && act?.method === 'enterGame'
+                                                ? act?.params?.[0]?.game : null;
+                                            if (g && typeof g.kind === 'string') {
+                                                world.events?.emit?.('game.declare', {
+                                                    block: [block.x, block.y], kind: g.kind, decl: g,
+                                                });
+                                            }
+                                        }
+                                    }
+                                }
+
                                 // Source adjuncts (b6 particle / c2 motif) expand into
                                 // STANDARD rows — every piece its own entity (collision /
                                 // LOD native). Pieces carry derivedFrom so BlockSerializer

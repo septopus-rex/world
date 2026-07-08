@@ -30,7 +30,14 @@ export function buildTumbleScene(bx: number, by: number): any[] {
     // walk back and a fresh tower is built. Volume is centred on the tower so you
     // enter by approaching it (gameOnly=0 → fires in Normal). row format =
     // [size, centre, rot, shape(1=box), gameOnly, [{type, oneTime?, actions}]].
-    const enterTumble = { type: 'player', method: 'enterGame', params: [{ exitPolicy: 'ephemeral' }] };
+    // Rich declaration in the trigger DATA (params[0].game): TumbleSystem arms
+    // itself via game.declare — no host setupTumble() mirror (P2 data-driven chain).
+    const enterTumble = {
+        type: 'player', method: 'enterGame', params: [{
+            exitPolicy: 'ephemeral',
+            game: { kind: 'tumble', origin: TUMBLE_ORIGIN },
+        }],
+    };
     data.raw[2].push([AdjunctType.Trigger, [
         [[5, 5, 3], [TUMBLE_ORIGIN[0], TUMBLE_ORIGIN[1], 1.5], [0, 0, 0], 1, 0, [{ type: 'in', oneTime: false, actions: [enterTumble] }]],
     ]]);

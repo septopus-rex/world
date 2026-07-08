@@ -35,6 +35,7 @@ export class ShootingRangeSystem implements ISystem {
     private targetEids: EntityId[] = [];
     private interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
     private missReader: import('../events/EventReader').EventReader<'interact.miss'> | null = null;
+    private declareReader: import('../events/EventReader').EventReader<'game.declare'> | null = null;
 
     // ── arm / lifecycle ──────────────────────────────────────────────────────
 
@@ -182,6 +183,20 @@ export class ShootingRangeSystem implements ISystem {
     // ── per-frame ──────────────────────────────────────────────────────────────
 
     public update(world: World, dt: number): void {
+        // Data-driven arming: a block's b8 game trigger may declare this range
+        // (enterGame params[0].game = {kind:'shooting', …}) — BlockSystem emits
+        // game.declare at block init; configure() from the DATA, no host call.
+        if (!this.declareReader && (world as any).events?.reader) {
+            this.declareReader = world.events.reader('game.declare');
+        }
+        if (this.declareReader) {
+            for (const ev of this.declareReader.read()) {
+                const p = ev.payload;
+                if (p.kind !== 'shooting') continue;
+                const { kind: _k, ...decl } = p.decl ?? {};
+                this.configure(world, { ...decl, block: p.block } as ShootingConfig);
+            }
+        }
         this.syncSession(world); // start/stop the session on Game-mode / zone transitions
         const range = this.findRange(world);
         if (!range || range.phase !== 'running') return;

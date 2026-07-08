@@ -1,6 +1,6 @@
 import type { AuthoredLevel } from '@engine/core/services/AuthoredLevel';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
-import { buildDemoScene } from './demoScene';
+import demoBlockJson from '../levels/demo-block.json';
 import xianjianLevelJson from '../levels/xianjian.level.json';
 
 /**
@@ -106,7 +106,7 @@ export function buildWorldLevel(): AuthoredLevel {
     const demoLevel: AuthoredLevel = {
         format: 'septopus.world.level', version: 1, name: 'demo-embed',
         start: { block: DEMO_DEST, position: [8, 8, 3], rotation: [0, 0, 0] },
-        blocks: [{ x: DEMO_DEST[0], y: DEMO_DEST[1], raw: buildDemoScene(DEMO_DEST[0], DEMO_DEST[1]) as any }],
+        blocks: [{ x: DEMO_DEST[0], y: DEMO_DEST[1], raw: JSON.parse(JSON.stringify(demoBlockJson)) as any }],
     };
     const xianjian = xianjianLevelJson as unknown as AuthoredLevel;
     const src0 = xianjian.blocks[0];

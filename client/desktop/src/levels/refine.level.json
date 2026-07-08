@@ -1,0 +1,35 @@
+{
+  "format": "septopus.world.level",
+  "version": 1,
+  "name": "refine",
+  "start": { "block": [2050, 2050], "position": [8, 1.5, 1.7], "rotation": [0, 0, 0] },
+  "blocks": [
+    {
+      "x": 2050,
+      "y": 2050,
+      "raw": [0, 1, [
+        [162, [
+          [[16, 16, 0.4], [8, 8, -0.2], [0, 0, 0], 10, [1, 1], 0, 1]
+        ]],
+        [182, [
+          [[3, 3, 0], [
+            { "position": [0, 0, 0], "level": 0,
+              "faces": [[1, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]] },
+            { "position": [2, 0, 0], "level": 0,
+              "faces": [[1, 0], [1, 0], [0, 0], [1, 0], [1, 0], [1, 0]],
+              "refinement": { "cells": [
+                { "position": [0, 0, 0], "level": 1 },
+                { "position": [0, 0, 1], "level": 1 },
+                { "position": [0, 1, 0], "level": 1 },
+                { "position": [0, 1, 1], "level": 1 },
+                { "position": [1, 0, 0], "level": 1 },
+                { "position": [1, 0, 1], "level": 1 },
+                { "position": [1, 1, 0], "level": 1 },
+                { "position": [1, 1, 1], "level": 1 }
+              ] } }
+          ], "basic"]
+        ]]
+      ], []]
+    }
+  ]
+}

@@ -73,6 +73,7 @@ export interface TumbleConfig {
 
 export class TumbleSystem implements ISystem {
     private config: TumbleConfig | null = null;     // armed declaration
+    private declareReader: import('../events/EventReader').EventReader<'game.declare'> | null = null;
     private rapier: any = null;                      // scoped RAPIER.World (null = no session)
     private towerEid: EntityId | null = null;        // live session marker
     private bodies = new Map<EntityId, any>();       // block entity → rapier RigidBody
@@ -208,6 +209,20 @@ export class TumbleSystem implements ISystem {
     // ── per-frame ───────────────────────────────────────────────────────────────
 
     public update(world: World, dt: number): void {
+        // Data-driven arming: the block's b8 game trigger declares this game
+        // (enterGame params[0].game = {kind:'tumble', …}) — BlockSystem emits
+        // game.declare at block init; configure() from the DATA, no host call.
+        if (!this.declareReader && (world as any).events?.reader) {
+            this.declareReader = world.events.reader('game.declare');
+        }
+        if (this.declareReader) {
+            for (const ev of this.declareReader.read()) {
+                const p = ev.payload;
+                if (p.kind !== 'tumble') continue;
+                const { kind: _k, ...decl } = p.decl ?? {};
+                this.configure(world, { ...decl, block: p.block } as TumbleConfig);
+            }
+        }
         // No lazy init here: configure() kicks off the WASM load when a tower is
         // armed, and syncSession waits on _rapierReady — so a world that never sets
         // up Tumble never loads rapier at all.

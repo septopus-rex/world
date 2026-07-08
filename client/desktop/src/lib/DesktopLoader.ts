@@ -29,6 +29,7 @@ import parkourLevelJson from '../levels/parkour.level.json';
 import coasterLevelJson from '../levels/coaster.level.json';
 import xianjianLevelJson from '../levels/xianjian.level.json';
 import galleryLevelJson from '../levels/gallery.level.json';
+import refineLevelJson from '../levels/refine.level.json';
 import { Coords } from '@engine/core/utils/Coords';
 import { validateGenerationDoc, compileGenerationDoc } from '@engine/core/protocol/GenerationDoc';
 import type { GameSetting } from '@engine/core/types/GameSetting';
@@ -36,18 +37,19 @@ import type { IGameApi } from '@engine/core/services/IGameApi';
 import { GAMES, gameById } from '../games/registry';
 import { GameApiRouter } from '../games/GameApiRouter';
 import { FetchGameApi } from '../games/FetchGameApi';
-import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS, buildDemoScene } from '../scenes/demoScene';
+import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS } from '../scenes/demoScene';
+import demoBlockJson from '../levels/demo-block.json';
 import { buildWorldLevel } from '../scenes/worldHubScene';
-import { buildRefineLevel } from '../scenes/refineScene';
 import { resolveStylePacks, allStylePackIds } from '../stylepacks';
 import type { StylePack } from '@engine/core/spp/Variants';
 import { MAHJONG_BLOCK, buildMahjongScene } from '../scenes/mahjongScene';
 import { POOL_BLOCK, buildPoolScene } from '../scenes/poolScene';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z, buildMahjong3DScene } from '../scenes/mahjong3dScene';
 import { generateMahjongFaceCids } from '../scenes/mahjongFaces';
-import { SHOOTING_BLOCK, SHOOTING_ORIGIN, SHOOTING_TARGET_DIST, SHOOTING_TARGET_Z, buildShootingScene } from '../scenes/shootingScene';
+import { SHOOTING_BLOCK, buildShootingScene } from '../scenes/shootingScene';
 import { TUMBLE_BLOCK, TUMBLE_ORIGIN, buildTumbleScene } from '../scenes/tumbleScene';
-import { MAZE_BLOCK, buildMazeScene } from '../scenes/mazeScene';
+import { MAZE_BLOCK } from '../scenes/mazeScene';
+import mazeBlockJson from '../levels/maze-block.json';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
@@ -88,18 +90,12 @@ export class DesktopLoader implements IDataSource {
     private _live: WebSocketLiveSource | null = null;
 
     /** True once the 3D pool table's balls are spawned (B-to-shoot enabled). */
-    private _poolReady = false;
     /** True once the native 3D mahjong table is dealt (N-to-discard enabled). */
     private _mahjongReady = false;
-    /** True once the native 3D shooting range is set up (drives the shooting HUD). */
-    private _shootingReady = false;
-    public get shootingReady(): boolean { return this._shootingReady; }
     /** Read-only shooting-range snapshot (score/shots/hits/phase) for the HUD. */
     public shootingState(): any { return this.engine?.shootingState() ?? null; }
 
     /** True once the native 3D tumble tower is armed (drives any tumble HUD). */
-    private _tumbleReady = false;
-    public get tumbleReady(): boolean { return this._tumbleReady; }
     /** Read-only tumble-tower snapshot (standing/pulled/maxY/toppled/settled). */
     public tumbleState(): any { return this.engine?.tumbleState() ?? null; }
 
@@ -122,7 +118,7 @@ export class DesktopLoader implements IDataSource {
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
         : this.isWorld ? buildWorldLevel()
-        : this.isRefine ? buildRefineLevel()
+        : this.isRefine ? (refineLevelJson as unknown as AuthoredLevel)
         : this.isGallery ? (galleryLevelJson as unknown as AuthoredLevel)
         : null;
     private levelProvider = this.activeLevel ? levelSceneProvider(this.activeLevel) : null;
@@ -379,30 +375,20 @@ export class DesktopLoader implements IDataSource {
             this.applyLiveMotifUpdate(payload?.data);
         }, { key: 'motif' });
 
-        // 3D pool: when the pool table block materializes, build the physical balls
-        // (PoolSystem owns the physics). Press B to break/shoot toward where the
-        // camera faces. The 2D Game-Setting HUD stays an orthogonal way to play.
-        this.engine.on('block.loaded', () => this.setupPool3D(), { key: `blk:${POOL_BLOCK[0]}_${POOL_BLOCK[1]}`, once: true });
+        // Native 3D pool / shooting / tumble: DATA-DRIVEN — each block's b8 game
+        // trigger carries the rich declaration (enterGame params[0].game = {kind,…});
+        // BlockSystem emits game.declare and the matching System arms itself. The
+        // old setupPool3D/setupShooting3D/setupTumble3D mirrors are gone
+        // (full-data-migration.md P2). Press B to shoot pool toward the camera.
 
         // Native 3D mahjong: when its table block materializes, deal the tiles
-        // (MahjongSystem owns the game). The human discards by clicking one of
-        // their face-up tiles in-world (RaycastInteractionSystem → the System);
-        // N discards the first tile as a no-aim convenience.
+        // (MahjongSystem owns the game). Still a host call: the tile FACES are
+        // client-generated images ingested to the CAS (async CIDs) — a host
+        // resource concern, deferred from the data-driven pass (P2-④ note).
         this.engine.on('block.loaded', () => { void this.setupMahjong3D(); }, { key: `blk:${NATIVE_MAHJONG_BLOCK[0]}_${NATIVE_MAHJONG_BLOCK[1]}`, once: true });
-
-        // Native 3D shooting range: when its block materializes, spawn the targets
-        // (ShootingRangeSystem owns the score/timer). Shooting is the engine's own
-        // raycast pick — click a target to hit it (interact.primary → the System).
-        this.engine.on('block.loaded', () => this.setupShooting3D(), { key: `blk:${SHOOTING_BLOCK[0]}_${SHOOTING_BLOCK[1]}`, once: true });
-
-        // Native 3D tumble tower (Jenga): when its block materializes, arm the
-        // TumbleSystem (it builds the rigid-body tower on Game entry and tears it
-        // down on leaving). Clicking a piece pulls it (interact.primary → System);
-        // the rest of the tower reacts under real physics (rapier).
-        this.engine.on('block.loaded', () => this.setupTumble3D(), { key: `blk:${TUMBLE_BLOCK[0]}_${TUMBLE_BLOCK[1]}`, once: true });
         if (typeof window !== 'undefined') {
             window.addEventListener('keydown', (e) => {
-                if (e.code === 'KeyB' && this._poolReady) this.poolShootFromCamera();
+                if (e.code === 'KeyB') this.poolShootFromCamera(); // no-ops without a live pool session
                 if (e.code === 'KeyN' && this._mahjongReady) this.mahjongDiscardFirst();
             });
         }
@@ -673,10 +659,13 @@ export class DesktopLoader implements IDataSource {
             [SHOOTING_BLOCK, buildShootingScene, 'shooting'],
             [TUMBLE_BLOCK, buildTumbleScene, 'tumble'],
             [POOL_BLOCK, buildPoolScene, 'pool'],
-            [MAZE_BLOCK, buildMazeScene, 'maze'],
+            [MAZE_BLOCK, () => JSON.parse(JSON.stringify(mazeBlockJson)), 'maze'], // frozen data (maze-block.json)
             [SANDBOX_BLOCK, buildSandboxScene, 'sandbox'],
             [DYN_BLOCK, buildDynamicAdjunctScene, 'dynamic-adjunct'],
-            [DEMO_BLOCK, buildDemoScene, 'demo'],
+            // Demo showcase is FROZEN DATA (demo-block.json; block-relative trigger
+            // targets make it position-independent). Clone per serve so nothing
+            // downstream mutates the module import (full-data-migration.md P2-③).
+            [DEMO_BLOCK, () => JSON.parse(JSON.stringify(demoBlockJson)), 'demo'],
         ];
         const map = new Map<string, (x: number, y: number) => any[]>();
         const owner = new Map<string, string>();
@@ -716,7 +705,9 @@ export class DesktopLoader implements IDataSource {
      */
     public stampTestScene(bx: number, by: number): void {
         if (!this.engine || !this.localData) return;
-        const raw = buildDemoScene(bx, by);
+        // The frozen demo block works at ANY coordinate: its trigger targets are
+        // block-relative (adj_~_~_…), nothing in the raw bakes a position.
+        const raw = JSON.parse(JSON.stringify(demoBlockJson));
         this.engine.getWorld()!.draftStore.save(0, bx, by, raw);   // persist
         // Re-materialise FROM the draft: BlockSystem reads the raw at inject time,
         // so swap the live block by remove + re-inject the now-merged content.
@@ -1309,36 +1300,7 @@ export class DesktopLoader implements IDataSource {
      * the IPFS layer. This is the engine-side endpoint of the live pipeline:
      *   (sim) WebSocket → ILiveSource → LiveSystem → world.events → here.
      */
-    /** Build the 3D pool table balls on the pool block (geometry matches poolScene). */
-    private setupPool3D(): void {
-        this.engine?.setupPool({
-            block: POOL_BLOCK, origin: [8, 8],
-            bedW: 7, bedD: 4, bedSurfaceZ: 0.95,
-            ballR: 0.12, pocketR: 0.22, friction: 0.55,
-        });
-        this._poolReady = true;
-    }
 
-    /** Build the native 3D shooting range targets (geometry matches shootingScene).
-     *  The ShootingRangeSystem spawns the spheres + owns the score; a click hits
-     *  a target through the engine's raycast path (interact.primary). */
-    private setupShooting3D(): void {
-        this.engine?.setupShooting({
-            block: SHOOTING_BLOCK, origin: SHOOTING_ORIGIN,
-            dist: SHOOTING_TARGET_DIST, z: SHOOTING_TARGET_Z,
-            targetCount: 5, targetR: 0.3, spacing: 1.3,
-            duration: 60, litTime: 1.2,
-        });
-        this._shootingReady = true;
-    }
-
-    /** Arm the native 3D tumble tower (TumbleSystem owns the rigid-body physics;
-     *  pieces are a2 box adjuncts it spawns on Game entry and drives via rapier).
-     *  Clicking a piece pulls it through the engine's raycast path. */
-    private setupTumble3D(): void {
-        this.engine?.setupTumble({ block: TUMBLE_BLOCK, origin: TUMBLE_ORIGIN });
-        this._tumbleReady = true;
-    }
 
     /** kind → face-image CID, generated + ingested once (memoized). */
     private _mahjongFaceCids: Promise<string[] | undefined> | null = null;

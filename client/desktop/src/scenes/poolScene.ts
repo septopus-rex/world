@@ -38,7 +38,18 @@ export function buildPoolScene(bx: number, by: number): any[] {
     // docs/systems/game-mode-entry.md §1). exitPolicy 'ephemeral' — walk off and the
     // rack resets. Volume covers the table; gameOnly=0 so it fires in Normal. row =
     // [size, centre, rot, shape(1=box), gameOnly, [{type, oneTime?, actions}]].
-    const enterTable = { type: 'player', method: 'enterGame', params: [{ exitPolicy: 'ephemeral' }] };
+    // Rich declaration in the trigger DATA (params[0].game): PoolSystem arms
+    // itself via game.declare — no host setupPool() mirror (P2 data-driven chain).
+    const enterTable = {
+        type: 'player', method: 'enterGame', params: [{
+            exitPolicy: 'ephemeral',
+            game: {
+                kind: 'pool', origin: [C[0], C[1]],
+                bedW: 7, bedD: 4, bedSurfaceZ: 0.95,
+                ballR: 0.12, pocketR: 0.22, friction: 0.55,
+            },
+        }],
+    };
     data.raw[2].push([AdjunctType.Trigger, [
         [[5, 5, 3], [C[0], C[1], 1.5], [0, 0, 0], 1, 0, [{ type: 'in', oneTime: false, actions: [enterTable] }]],
     ]]);
