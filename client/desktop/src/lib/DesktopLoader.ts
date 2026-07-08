@@ -38,7 +38,7 @@ import { GAMES, gameById } from '../games/registry';
 import { GameApiRouter } from '../games/GameApiRouter';
 import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS } from '../scenes/demoScene';
-import demoBlockJson from '../levels/demo-block.json';
+import demoBlockJson from '../blocks/demo.block.json';
 import { buildWorldLevel } from '../scenes/worldHubScene';
 import { resolveStylePacks, allStylePackIds } from '../stylepacks';
 import type { StylePack } from '@engine/core/spp/Variants';
@@ -49,7 +49,7 @@ import { generateMahjongFaceCids } from '../scenes/mahjongFaces';
 import { SHOOTING_BLOCK, buildShootingScene } from '../scenes/shootingScene';
 import { TUMBLE_BLOCK, TUMBLE_ORIGIN, buildTumbleScene } from '../scenes/tumbleScene';
 import { MAZE_BLOCK } from '../scenes/mazeScene';
-import mazeBlockJson from '../levels/maze-block.json';
+import mazeBlockJson from '../blocks/maze.block.json';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
 import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
@@ -659,10 +659,10 @@ export class DesktopLoader implements IDataSource {
             [SHOOTING_BLOCK, buildShootingScene, 'shooting'],
             [TUMBLE_BLOCK, buildTumbleScene, 'tumble'],
             [POOL_BLOCK, buildPoolScene, 'pool'],
-            [MAZE_BLOCK, () => JSON.parse(JSON.stringify(mazeBlockJson)), 'maze'], // frozen data (maze-block.json)
+            [MAZE_BLOCK, () => JSON.parse(JSON.stringify(mazeBlockJson)), 'maze'], // frozen data (blocks/maze.block.json)
             [SANDBOX_BLOCK, buildSandboxScene, 'sandbox'],
             [DYN_BLOCK, buildDynamicAdjunctScene, 'dynamic-adjunct'],
-            // Demo showcase is FROZEN DATA (demo-block.json; block-relative trigger
+            // Demo showcase is FROZEN DATA (blocks/demo.block.json; block-relative trigger
             // targets make it position-independent). Clone per serve so nothing
             // downstream mutates the module import (full-data-migration.md P2-③).
             [DEMO_BLOCK, () => JSON.parse(JSON.stringify(demoBlockJson)), 'demo'],

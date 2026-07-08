@@ -2,7 +2,7 @@
 /**
  * demoScene — the demo ASSET MANIFEST + ids. The showcase CONTENT (model
  * instances, textured boxes, the trigger court, items, the SPP hut, A/V, book)
- * is FROZEN DATA at src/levels/demo-block.json — block-relative trigger targets
+ * is FROZEN DATA at src/blocks/demo.block.json — block-relative trigger targets
  * make it position-independent, so the spawn block, the stamp dev-tool and the
  * world-hub embed all serve clones of that one file (full-data-migration.md
  * P2-③; the old injectDemoAssets/buildDemoScene TS builders are retired).

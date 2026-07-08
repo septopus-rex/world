@@ -1,6 +1,6 @@
 /**
  * mazeScene — constants only. The Athenian labyrinth CONTENT is FROZEN DATA at
- * src/levels/maze-block.json: one b6 SPP row (49 level-1 cells, carved once by a
+ * src/blocks/maze.block.json: one b6 SPP row (49 level-1 cells, carved once by a
  * FIXED-seed backtracker — "one-shot generation → freeze to JSON",
  * full-data-migration.md P2/P3) + the a2 marble dressing. The engine still
  * expands the b6 source at load (only the source row persists); the old

@@ -1,6 +1,6 @@
 import type { AuthoredLevel } from '@engine/core/services/AuthoredLevel';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
-import demoBlockJson from '../levels/demo-block.json';
+import demoBlockJson from '../blocks/demo.block.json';
 import xianjianLevelJson from '../levels/xianjian.level.json';
 
 /**

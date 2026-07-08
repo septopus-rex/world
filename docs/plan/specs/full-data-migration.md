@@ -115,7 +115,12 @@
   - ✅ **refine 冻结**:`refineScene.ts` 删除 → `src/levels/refine.level.json`(spp-refine e2e 绿)。
   - ✅ **`game.declare` 数据驱动链**:b8 game trigger 的 `enterGame params[0].game = {kind,…}` 即富声明;BlockSystem 块初始化时发 `game.declare` 事件,匹配的游戏 System 拉 reader 自臂(`configure` from data)。**shooting / pool / tumble 三个已接**,loader 的 `setupShooting3D/setupPool3D/setupTumble3D` 镜像全删(headless `game-declare.test.ts` + shooting3d/pool3d/tumble3d e2e 全绿)。mahjong3d 暂缓:牌面=客户端生成图片异步 ingest CAS(host 资源关注点),待资源清单数据化后回收。
   - ✅ **demoScene 内容 → `src/levels/demo-block.json`**:先把触发器目标全改**块相对**(`adj_~_~_…`,trigger e2e 5/5 绿)→ 冻结 → 出生块 registry / `stampTestScene` / worldHub demo-embed 三处消费者共用一份 JSON(克隆服务);`demoScene.ts` 311→62 行只剩资产清单+常量(boot/inventory/book/world-hub/engine-features/persistence e2e 全绿)。
-  - ✅ **maze → `src/levels/maze-block.json`**:carveMaze 的种子是写死的 → 按「一次性生成→冻结」准则冻结(49 个 b6 胞元源行 + 大理石装饰;引擎加载时照常展开、只存源);`mazeScene.ts` 只剩常量(maze e2e 4/4 绿)。**P3 注**:maze 不做 motif 模板——motif 现只发 a2 且派生行不再二次展开(嵌套源展开是新原语,YAGNI);要参数化迷宫时再议。
+  - ✅ **maze → `src/blocks/maze.block.json`**:carveMaze 的种子是写死的 → 按「一次性生成→冻结」准则冻结(49 个 b6 胞元源行 + 大理石装饰;引擎加载时照常展开、只存源);`mazeScene.ts` 只剩常量(maze e2e 4/4 绿)。**P3 注**:maze 不做 motif 模板——motif 现只发 a2 且派生行不再二次展开(嵌套源展开是新原语,YAGNI);要参数化迷宫时再议。
+  - ✅ **数据目录约定(2026-07-08)**:一种数据一个文件夹 + 后缀标类型(沿 stylepacks 先例)——
+    `src/levels/*.level.json`(关卡文档:出生点+多块+include)· `src/blocks/*.block.json`
+    (单块 raw:可复位、被 registry/stamp/include 复用的内容,现有 demo/maze)·
+    `src/stylepacks/*.stylepack.json`(风格包)。拆分粒度规则:**有复用才拆块文件**——
+    gallery 走廊是一个可走关卡,保持一份 level 文档,不拆 13 个块文件。
 - **验收**:对应 `?level=` 在**空 DesktopLoader 内容代码**下仍复现;golden vectors 通过。
 
 ### P3 · 生成规范化（缺口 B1）
