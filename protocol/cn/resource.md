@@ -1,5 +1,12 @@
 # Septopus 资源协议 (Resource Protocol)
 
+> **修订(2026-07-08)**:与 [envelope 封套与内容寻址](envelope.md) 对齐——**分工**:
+> envelope 管「内容长什么样」(文档形状/CID/版本纪律),本文管「内容怎么被目录化、
+> 谁拥有、怎么获取」(整数 id→CID 注册表、所有权、获取流程)。CID 一律为
+> envelope §1 的真 CIDv1(`bafk…`;v0 `Qm…` 只读兼容)。链上注册表是**可选的
+> 发布/所有权层**(链已解耦,见根 CLAUDE);local-first 阶段其等价物 = 资产清单 +
+> 网关名字索引(envelope §5——注册表即"链上的、带所有权的名字索引")。
+
 **资源 (Resource)** 是 Septopus 引擎中所有外部数据的统一抽象。贴图、3D 模型、游戏配置、文本内容、音效、合约 IDL 等，均通过同一个资源体系进行寻址和获取。
 
 ## 1. 存储架构 (Storage Architecture)
@@ -67,49 +74,35 @@ Solana (链上)                            IPFS (内容层)
 | `cid` | `string` | IPFS 内容标识符 |
 | `owner` | `string` | 资源上传者的钱包地址 |
 | `size` | `number` | 内容大小（字节） |
-| `checksum` | `string` | 内容校验和，用于验证 IPFS 下载完整性 |
+| `checksum` | `string` | 内容校验和。**注(2026-07-08)**:CIDv1 下冗余——CID 本身即 sha256,读取方按 envelope §1 重哈希校验;字段仅为 v0 `Qm…` 遗留兼容保留 |
 
-## 4. IPFS 内容格式 (IPFS Content Format)
+## 4. IPFS 内容格式(2026-07-08 修订)
 
-IPFS 上存储的资源内容为统一的包裹格式：
+> **旧的 `{index, type, format, raw}` 统一包裹格式已废弃**。它把二进制媒体 base64
+> 进 JSON 再寻址,导致 CID 算在包裹上而非媒体字节上——同一张贴图与外界 IPFS 内容
+> **永不同 CID**(丢失互操作性),且 base64 使体积膨胀 ~33%。实现不得再产出;
+> 读取方**可以**识读存量旧包裹。
+
+现行规范(与 [envelope.md](envelope.md) §2/§3 一致):
+
+- **二进制媒体**(texture/module/audio/avatar/wasm…):**原字节直接入 CAS**——
+  CID 就是媒体字节的 CID,与任何 IPFS 参与者互操作;`type`/`format` 等元数据
+  **不包裹进内容**,而是挂在注册表条目(§3)/名字索引上。
+- **Septopus 原生 JSON 文档**(game 配置、text 多语言表、关卡/块/风格包/模块):
+  按 envelope §2 统一封套 `{format:"septopus.<kind>", version, meta, payload}`。
+
+**text 示例**(封套形):
 
 ```json
 {
-    "index": 999,
-    "type": "game",
-    "format": "json",
-    "raw": { "game": "running", "blocks": [[2026, 619, 2, 4]], "methods": [] }
+  "format": "septopus.text",
+  "version": 1,
+  "meta": { "name": "greetings" },
+  "entries": { "zh-CN": ["你好", "欢迎"], "en-US": ["Hello", "Welcome"] }
 }
 ```
 
-| 字段 | 类型 | 描述 |
-|---|---|---|
-| `index` | `number` | 资源 ID（与链上注册表一致） |
-| `type` | `string` | 资源类型 |
-| `format` | `string` | 数据格式：`"png"`, `"jpg"`, `"glb"`, `"json"` 等 |
-| `raw` | `any` | 资源实际数据或二进制内容 |
-
-### 各类型 `raw` 示例
-
-**texture:**
-```json
-{ "index": 2, "type": "texture", "format": "jpg", "raw": "<base64 或 binary>", "repeat": [1, 1] }
-```
-
-**module:**
-```json
-{ "index": 27, "type": "module", "format": "glb", "raw": "<binary>" }
-```
-
-**game:** 完整结构见 [game.md](./game.md)
-
-**text:**
-```json
-{
-    "index": 18, "type": "text", "format": "json",
-    "raw": { "zh-CN": ["你好", "欢迎"], "en-US": ["Hello", "Welcome"] }
-}
-```
+**texture/module 示例**:无包裹——PNG/GLB 文件字节本身,`bafk(bytes)` 即其 CID。
 
 ## 5. 获取流程 (Fetch Flow)
 
@@ -121,8 +114,8 @@ IPFS 上存储的资源内容为统一的包裹格式：
     │      ├→ 有：直接使用，跳到步骤 5
     │      └→ 无：继续
     ├→ 3. 从 IPFS 网关获取内容: gateway/ipfs/Qm...
-    ├→ 4. 校验 checksum，确认内容未被篡改
-    └→ 5. 解析 { type, format, raw }，交给对应的加载器
+    ├→ 4. 重哈希比对 CID(envelope §1 完整性;v0 遗留才用 checksum)
+    └→ 5. 二进制→按注册表 type 交加载器;JSON→验封套拆 payload(envelope §2)
 ```
 
 资源加载特性：
@@ -139,7 +132,7 @@ IPFS 上存储的资源内容为统一的包裹格式：
 |---|---|---|
 | 附属物材质 | `adjunct raw[3]` = resource ID | `raw[3] = 2` → 纹理 #2 |
 | 附属物模型 | `adjunct raw[3]` = resource ID | `raw[3] = 27` → 模型 #27 |
-| Block 游戏配置 | `block raw[3]` = resource ID | `raw[3] = 999` → 游戏配置 #999 |
+| Block 可玩标记/外部 app id | `block raw[4]`(见 [block.md](block.md) §3) | `raw[4] = 42` → 外部游戏 #42 |
 | 触发器 UI 文本 | 动作参数中的 resource ID | `system.ui.dialog(18)` → 文本 #18 |
 
 ## 7. 更新机制 (Update Mechanism)

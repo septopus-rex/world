@@ -161,6 +161,31 @@
 - **待续**:名字索引接 ContentResolver(关卡/块按名走网络,需 loader 异步化构造)、
   资源管线优先网关取资产、公网 pin 工作流(把种子内容 pin 到真网络)。
 
+### P4.6 · 统一文档封套(缺口 E2 的解法,2026-07-08 定形,未实施)
+> **已升规范**:[`protocol/cn|en/envelope.md`](../../../protocol/cn/envelope.md)(封套/CID/版本三分,规范级)+ `adjunct-types.md §15`(动态 typeId 区段)。本节保留为过程记录,以规范为准。
+所有 Septopus 原生 JSON 文档统一自描述封套——内容寻址存储没有扩展名,**从 CID 取回的
+字节必须能自报家门**(现状:level 文档能,裸 5 槽块数组不能,全靠带外的名字前缀):
+
+```jsonc
+{ "format": "septopus.<kind>",   // world.level | block | world.config | spp.stylepack | adjunct.module
+  "version": 1,                   // 文档 schema 版(驱动迁移器)
+  "meta": { "name?": "…", "semver?": "…" },
+  <payload> }
+```
+
+- **两层纪律**:封套=**存储/交换层**(CAS/网关/导出);payload=**规范层**——块的 payload
+  仍是 5 槽裸数组(block.md §3 / golden 哈希 / Rust 内核 / 链上紧凑形态,**一字节不动**)。
+  **解封只在一个缝**(ContentResolver/loader:验 format/version → 拆 payload 交引擎),
+  推广 `{x,y,raw}` legacy 包装"单缝解包"的既有先例;引擎/协议/L2/内核全程无感。
+- **版本三分**:`version`=schema 版(整数,迁移器用)· **CID=内容版本**(不可变身份)·
+  `semver`=人类展示,**永不参与解析**(按 semver 解析=重新引入可变命名,毁内容寻址)。
+- **现状盘点**:level ✅ 已有 format/version;stylepack ⚠️ 可选;world.config ❌ 裸对象;
+  block 文档 ❌ 裸数组;adjunct.module ✅ 新定形(adjunct-from-ipfs.md §3.1,本节的动机来源)。
+- **资产例外**:二进制外来格式(glb/png/wav)不封套——名字前缀(`asset:…`)+ mime 归类即可。
+- **实施点**(可与 adjunct V0 / P5 合并):补齐 world.config/block/stylepack 封套;
+  `blocks/*.block.json` → `{format:'septopus.block', version:1, raw:[…]}`;ContentResolver
+  统一「验封套→解 payload」;services/ipfs 种子从封套读 kind(名字前缀降级为冗余校验)。
+
 ### P5 · canonical 序列化 + 上链形态（缺口 E）
 - 每个 adjunct 类型给 canonical 编解码（扩展 L2 模式）+ 版本号;定义 block on-chain 记录形态与 `AuthoredLevel` 的关系。
 - CID 稳定性测试:同数据 → 同 CID;跨引擎解码一致。

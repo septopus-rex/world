@@ -23,7 +23,10 @@
 - **Trailing optional slots** may be omitted entirely; defaults are given per
   table. Implementations must not fail on missing trailing slots.
 - **Solid (walk collision)**: `a2` is always solid; standard-7-slot types are
-  solid iff slot 6 `stop` is non-null; `b4` is always solid. Other types never
+  solid iff slot 6 `stop` is **truthy** — i.e. not `null`/`0`/`false`/empty
+  string; `stop=0` is **not** solid (equivalent to `null`). 〔Pinned 2026-07-08:
+  the earlier "non-null" wording was ambiguous for `0`; caught by the reference
+  engine differential.〕 `b4` is always solid. Other types never
   join walk collision.
 - **Derived entities**: entities expanded/spawned at runtime by b6/b9/c2 or the
   actuator `spawn` action are tagged `derivedFrom`, are **never** written back
@@ -67,7 +70,7 @@
 | 3 | `resource` | number, default `0` | colour/material index (world resource catalog) |
 | 4 | `repeat` | `[u, v]`, default `[1,1]` | texture tiling |
 | 5 | `animation` | animation object / `null` | Septopus animation timeline, see [animation.md](animation.md) |
-| 6 | `stop` | any / `null` | non-null ⇒ solid (a2 ignores this slot and is always solid) |
+| 6 | `stop` | any/`null` | **truthy ⇒ solid** (`0`/`null`/`false`/empty string = not solid; a2 ignores this slot, always solid) |
 | 7 | `texture` | resource id / CID (a2 only, optional) | explicit texture, resolved through the resource pipeline (may be an IPFS CID) |
 
 ### 2.1 a6 cone size semantics (special case)
@@ -297,7 +300,22 @@ index is clamped to `[0, M-1]` (no wrap).
  "An Untitled Book"]
 ```
 
+## 15. Dynamic type segment (normative, 2026-07-08)
+
+- **The built-in segment `0x0000–0xefff` is reserved for this protocol**:
+  built-in semantics are defined here and implemented natively by each engine —
+  they can **not** be declared or overridden by data (dynamic modules); allowing
+  that would allow redefining "wall" or squatting future built-in slots.
+- **The dynamic segment `0xf000–0xffff`**: custom types registered via a
+  `septopus.adjunct.module` document (envelope & loading: [envelope.md](envelope.md))
+  **must** fall in this segment; out-of-segment registration must be rejected.
+  Two modules claiming the same typeId within one world = a load error (fail fast).
+- The cross-engine truth of a dynamic type is the module's **descriptor** (the
+  pre-evaluated declarative product); `code` is an optional generator path
+  (engines with a sandbox may run it and must verify the result matches the
+  descriptor).
+
 ---
 
-*Protocol v0.1 (engine v0.1.0). Changes must land in both cn/en and be recorded
-in the root CHANGELOG.*
+*Protocol v0.1 (engine v0.1.0; §15 added 2026-07-08). Changes must land in both
+cn/en and be recorded in the root CHANGELOG.*

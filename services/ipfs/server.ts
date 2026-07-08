@@ -82,6 +82,34 @@ async function seed(): Promise<void> {
             names[`asset:${f}`] = cid;
         }
     }
+    // ── boot-chain dev stand-in (protocol/cn|en/boot-chain.md §5) ────────────
+    // A minimal PROOF loader (envelope: septopus.loader) + the anchor micro-format
+    // record, so /boot walks the ENTIRE normative chain against this gateway:
+    // anchor → ROOT_CID → envelope validation → loader executes → pulls world config.
+    const worldCid = names['world:default'];
+    const loaderDoc = {
+        envelope: 1,
+        format: 'septopus.loader',
+        version: 1,
+        meta: { name: 'dev-proof-loader', semver: '0.1.0' },
+        world: worldCid,
+        code: [
+            "const el = document.getElementById('world') || document.body;",
+            "fetch(boot.gateway + '/ipfs/' + boot.world).then(r => r.json()).then(cfg => {",
+            "  el.innerHTML = '<h2 style=\"color:#6f6\">SEPTOPUS BOOT CHAIN OK</h2>'",
+            "    + '<div>anchor: ' + boot.anchor.name + ' v' + boot.anchor.version + '</div>'",
+            "    + '<div>root:   ' + boot.rootCid + '</div>'",
+            "    + '<div>world:  ' + boot.world + '</div>'",
+            "    + '<div>config: block=' + (cfg.block ? cfg.block.max : '?') + ' avatar=' + (cfg.player && cfg.player.avatar ? cfg.player.avatar.resource : '?') + '</div>';",
+            "});",
+        ].join('\n'),
+    };
+    const loaderCid = await store(new Uint8Array(Buffer.from(JSON.stringify(loaderDoc))), 'application/json');
+    names['loader:dev'] = loaderCid;
+    const anchorRecord = { p: 'septopus', name: 'world', version: '0.1.0', cid: loaderCid };
+    const anchorCid = await store(new Uint8Array(Buffer.from(JSON.stringify(anchorRecord))), 'application/json');
+    names['anchor:world'] = anchorCid;
+
     fs.writeFileSync(NAMES_FILE, JSON.stringify(names, null, 2));
 }
 
@@ -114,6 +142,13 @@ const server = http.createServer(async (req, res) => {
         if (req.method === 'OPTIONS') return send(res, 204, {});
         if (req.method === 'GET' && url.pathname === '/v0/health') {
             return send(res, 200, { ok: true, provider: 'file-cas', blobs: fs.readdirSync(BLOBS).length, names: Object.keys(names).length });
+        }
+        if (req.method === 'GET' && url.pathname === '/boot') {
+            // The dev boot shim (boot-chain.md §4/§5) — served by the gateway so the
+            // whole rehearsal is one origin. The shim re-implements CID integrity
+            // itself (it IS the trust root; zero dependencies).
+            const html = fs.readFileSync(path.join(__dirname, 'shim.html'));
+            return sendBlob(res, html, 'text/html; charset=utf-8');
         }
         if (req.method === 'GET' && url.pathname === '/v0/names') return send(res, 200, names);
         if (req.method === 'GET' && url.pathname.startsWith('/v0/name/')) {

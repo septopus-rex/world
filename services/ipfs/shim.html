@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Septopus · Boot Shim (dev)</title>
+<style>
+  body { background:#000; color:#9ee; font:13px/1.7 ui-monospace,monospace; padding:24px; }
+  .ok { color:#6f6 } .err { color:#f66 } h1 { font-size:14px; letter-spacing:.3em; color:#0cf }
+</style>
+</head>
+<body>
+<h1>SEPTOPUS BOOT SHIM · dev</h1>
+<pre id="log"></pre>
+<div id="world"></div>
+<script>
+/**
+ * Boot shim — the off-chain trust root (protocol/cn|en/boot-chain.md §4), DEV
+ * stand-in (§5): the anchor comes from the gateway name index instead of
+ * Bitcoin (signature/height checks degrade to skipped); EVERY other normative
+ * step is identical — fetch → CID re-hash integrity → envelope validation →
+ * execute the loader with page authority. Deliberately tiny and dependency-free
+ * (this file IS the BIOS; audit it whole).
+ */
+(async () => {
+  const log = (m, cls) => { const el = document.getElementById('log'); el.innerHTML += (cls ? '<span class="' + cls + '">' + m + '</span>' : m) + '\n'; };
+  const halt = (m) => { log('HALT: ' + m, 'err'); throw new Error(m); };
+
+  // ── pinned trust root (dev): gateway list + supported ceilings ────────────
+  const GATEWAYS = [location.origin];                     // dev: the serving gateway itself
+  const SUPPORTED = { envelope: 1, format: 'septopus.loader', version: 1 };
+
+  // ── CIDv1(raw, sha2-256) — envelope §1, reimplemented here so the shim
+  //    verifies integrity with zero dependencies ─────────────────────────────
+  const B32 = 'abcdefghijklmnopqrstuvwxyz234567';
+  const base32 = (b) => { let bits = 0, v = 0, out = ''; for (let i = 0; i < b.length; i++) { v = (v << 8) | b[i]; bits += 8; while (bits >= 5) { out += B32[(v >>> (bits - 5)) & 31]; bits -= 5; } } if (bits > 0) out += B32[(v << (5 - bits)) & 31]; return out; };
+  const cidOf = async (bytes) => { const d = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)); const c = new Uint8Array(4 + d.length); c[0] = 1; c[1] = 0x55; c[2] = 0x12; c[3] = 0x20; c.set(d, 4); return 'b' + base32(c); };
+
+  const fetchCid = async (cid) => {
+    for (const gw of GATEWAYS) {
+      try {
+        const res = await fetch(gw + '/ipfs/' + cid);
+        if (!res.ok) continue;
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        if (await cidOf(bytes) !== cid) { log('integrity mismatch @ ' + gw + ', trying next…', 'err'); continue; }
+        return bytes;
+      } catch { /* next gateway */ }
+    }
+    halt('no gateway served valid bytes for ' + cid);
+  };
+
+  // 1-2. anchor (dev: name index; ?anchor=<url> override) → ROOT_CID
+  const qs = new URLSearchParams(location.search);
+  const anchorUrl = qs.get('anchor') || (location.origin + '/v0/name/' + encodeURIComponent('anchor:' + (qs.get('name') || 'world')));
+  log('1. anchor source: ' + anchorUrl);
+  const anchorCid = (await (await fetch(anchorUrl)).json()).cid;
+  const anchor = JSON.parse(new TextDecoder().decode(await fetchCid(anchorCid)));
+  if (anchor.p !== 'septopus') halt('anchor: p !== septopus');
+  log('2. anchor OK: name=' + anchor.name + ' version=' + anchor.version + ' → ROOT ' + anchor.cid.slice(0, 24) + '…', 'ok');
+
+  // 3. fetch ROOT_CID with integrity
+  const rootBytes = await fetchCid(anchor.cid);
+  log('3. ROOT fetched + CID re-hash verified', 'ok');
+
+  // 4. validate the envelope shell (envelope → format → version)
+  const root = JSON.parse(new TextDecoder().decode(rootBytes));
+  if (root.envelope !== SUPPORTED.envelope) halt('unsupported envelope structure: ' + root.envelope);
+  if (root.format !== SUPPORTED.format) halt('ROOT is not a septopus.loader: ' + root.format);
+  if (root.version > SUPPORTED.version) halt('loader schema too new: ' + root.version);
+  log('4. envelope OK: ' + root.format + ' v' + root.version + ' (' + (root.meta && root.meta.semver) + ')', 'ok');
+
+  // 5. execute the loader with page authority, passing boot parameters
+  log('5. executing loader…');
+  new Function('boot', root.code)({ anchor, rootCid: anchor.cid, world: root.world, gateway: location.origin });
+})();
+</script>
+</body>
+</html>

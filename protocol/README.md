@@ -44,6 +44,8 @@ made of and why it is designed this way.
 | Document | Contents |
 |---|---|
 | [**overview**](en/overview.md) | **the whole picture: world←block←adjunct, time/weather derivation, why it's data-driven** |
+| [**boot-chain**](en/boot-chain.md) | **Bitcoin anchor → ROOT loader → world: anchor micro-format / key authority / boot-shim contract (normative, 2026-07-08)** |
+| [**envelope**](en/envelope.md) | **Uniform document envelope · CID (real CIDv1) · three-tier versioning (normative, 2026-07-08)** |
 | [world](en/world.md) | world grid / lords / ecosystem; **§3.1 time & weather derivation, §5 coordinate & rotation contract (normative)** |
 | [block](en/block.md) | block asset semantics; **§3 raw 5-tuple (normative)** |
 | [adjunct](en/adjunct.md) | adjunct architecture, lifecycle, loading pipeline |
