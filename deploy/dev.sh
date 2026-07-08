@@ -12,6 +12,9 @@
 #   bash deploy/dev.sh mobile|ai-gw   # single service, foreground
 #   bash deploy/dev.sh lan            # dashboard bound to 0.0.0.0 (真机联调,
 #                                     # 手机访问 http://<内网IP>:7778)
+#   bash deploy/dev.sh --chain        # 链上启动模式:只起 IPFS 网关 → 构建链包并
+#                                     # 发版(publish-chain)→ 打开 /boot?name=septopus
+#                                     # ——整个 3D 世界从锚经 CID 链启动,无应用服务器
 #   PROVIDER=qwen DASHSCOPE_API_KEY=… bash deploy/dev.sh   # AI 造物换真 LLM
 #
 # The old chain dev environment (solana-test-validator + anchor + IPFS) is
@@ -33,12 +36,13 @@ command -v node &>/dev/null || error "node 未安装"
 command -v npm  &>/dev/null || error "npm 未安装"
 
 # ── args ──────────────────────────────────────────────────────────────────────
-ONLY=""; HOST="127.0.0.1"
+ONLY=""; HOST="127.0.0.1"; CHAIN=""
 for arg in "$@"; do
     case "$arg" in
         desktop|mobile|ai-gw|aigw|ipfs) ONLY="${arg/aigw/ai-gw}" ;;
         lan) HOST="0.0.0.0" ;;
-        *) warn "未知参数 '$arg'(可用:desktop | mobile | ai-gw | lan)" ;;
+        --chain|chain) CHAIN=1 ;;   # 链上启动模式(boot-chain.md dev 彩排)
+        *) warn "未知参数 '$arg'(可用:desktop | mobile | ai-gw | ipfs | lan | --chain)" ;;
     esac
 done
 
@@ -67,9 +71,11 @@ npm_deps() { # $1 = app dir (repo-relative), $2 = marker binary (install complet
         ( cd "$dir" && npm install )
     fi
 }
-npm_deps client/desktop vite
-npm_deps client/mobile vite
-npm_deps services/ai-gateway tsx
+if [ -z "$CHAIN" ]; then
+    npm_deps client/desktop vite
+    npm_deps services/ai-gateway tsx
+fi
+npm_deps client/mobile vite      # chain 模式也要:链包由 mobile 壳构建
 npm_deps services/ipfs tsx
 
 # ── deps: engine (yarn; both clients compile its SOURCE via the @engine alias) ─
@@ -94,6 +100,11 @@ free_port() { # $1 = port
         sleep 1
     fi
 }
+
+# ── chain mode: the world boots FROM the content gateway alone ────────────────
+if [ -n "$CHAIN" ]; then
+    FE_SERVICES=( "IPFS   |services/ipfs|7789|npm start" )
+fi
 
 # ── single-service mode (the old foreground behavior) ─────────────────────────
 if [ -n "$ONLY" ]; then
@@ -133,6 +144,17 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM EXIT
 
+# chain 模式:等网关健康 → 构建链包 + 组装 loader/锚(publish-chain)→ 自动开浏览器
+if [ -n "$CHAIN" ]; then
+    info "等待 IPFS 网关就绪..."
+    for _ in $(seq 1 30); do curl -sf http://127.0.0.1:7789/v0/health >/dev/null 2>&1 && break; sleep 1; done
+    curl -sf http://127.0.0.1:7789/v0/health >/dev/null 2>&1 || error "IPFS 网关未起来(deploy/logs/ipfs.log)"
+    bash "$ROOT/deploy/publish-chain.sh" || error "链上发版失败"
+    CHAIN_URL="http://127.0.0.1:7789/boot?name=septopus"
+    [ "$(uname)" = "Darwin" ] && open "$CHAIN_URL" 2>/dev/null || true
+    sleep 1
+fi
+
 LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "")
 START_TOTAL=$(date +%s)
 clear; tput civis 2>/dev/null || true
@@ -159,6 +181,14 @@ while true; do
 
     printf -- "\n${BOLD}入口速查(URL)${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
+    if [ -n "$CHAIN" ]; then
+    printf -- "  ${BOLD}链上启动${NC}       ${GREEN}$CHAIN_URL${NC}\n"
+    printf -- "                 锚(anchor:septopus)→ ROOT loader → 封套验证 → 3D 世界;无应用服务器\n"
+    printf -- "  协议 stub      ${GREEN}http://127.0.0.1:7789/boot${NC}(anchor:world,微型 loader 彩排)\n"
+    printf -- "  人工核实       services/ipfs/data/{app,content}/(符号链接镜像,blobs/ 为真身)\n"
+    printf -- "  重新发版       ${CYAN}bash deploy/publish-chain.sh${NC}(改代码/数据后)\n"
+    printf -- "  日志           deploy/logs/ipfs.log\n"
+    else
     printf -- "  桌面世界       ${GREEN}http://127.0.0.1:7777/${NC}\n"
     printf -- "  移动世界       ${GREEN}http://127.0.0.1:7778/${NC}"
     [ "$HOST" = "0.0.0.0" ] && [ -n "$LAN_IP" ] && printf -- "   ${CYAN}真机 → http://$LAN_IP:7778/${NC}"
@@ -168,7 +198,9 @@ while true; do
     printf -- "  AI 造物网关    ${GREEN}http://127.0.0.1:7788${NC}   provider: ${PROVIDER:-mock}（导出 PROVIDER=qwen + DASHSCOPE_API_KEY 换真 LLM）\n"
     printf -- "  IPFS 网关      ${GREEN}http://127.0.0.1:7789${NC}   /v0/health · /v0/names · /ipfs/<cid>(CID 与引擎同源)\n"
     printf -- "  进程内层       CAS 一级缓存(MemoryCas,离线兜底) · live 推送(FakeWebSocket)\n"
+    printf -- "  链上启动       ${CYAN}bash deploy/dev.sh --chain${NC}(锚→loader→世界,无应用服务器)\n"
     printf -- "  日志           deploy/logs/{desktop,mobile,aigw,ipfs}.log\n"
+    fi
 
     printf -- "\n${YELLOW}Ctrl+C 停止全部。${NC}\n"
     sleep 2

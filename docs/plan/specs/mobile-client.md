@@ -4,6 +4,9 @@
 > 真 TouchEvent 拖拽转视角(引擎原生通道)/JUMP/底部抽屉,`e2e/mobile.spec.ts` 触屏视口全绿)
 > · M2 桌面 ActionRail 抽件 ✅(testid 原样,App.tsx 376→300 行,内嵌 isMobile 分支移除)
 > · M3 底部抽屉(bag/map/avatar)✅ + pixelRatio 引擎已钳 1.5。
+> **追加(2026-07-08 晚)**:mobile 壳成为**首个链上启动目标**——`npm run build:chain`
+> 打成单文件 IIFE 链包,作为 `septopus.loader` 经 boot-chain 从锚启动
+> (e2e `boot-chain-world.spec.ts`;规范 `protocol/cn|en/boot-chain.md`)。
 > 发现记录:引擎 InputProvider **本就内置触屏视角**(touchDeltaX/Y→CameraRig TOUCH_SENSITIVITY),
 > 移动壳零引擎改动——「引擎用在不同 client 上」的第一次实证通过。动机:①「引擎用在不同 client 上」的**客户端层差分测试**
 > (与 Rust 内核验数据完备同构——第二个壳当场逮住"其实是桌面假设"的泄漏);

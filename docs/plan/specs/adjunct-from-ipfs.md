@@ -1,6 +1,6 @@
 # Adjunct 从 IPFS 加载执行 — 评估
 
-> 状态:评估文档(2026-07-08,零代码改动)。回答「如何把 adjunct 也改成从 IPFS
+> 状态:评估文档(2026-07-08;分发通道已由 boot-chain 落地,见 §3.1 对齐注)。回答「如何把 adjunct 也改成从 IPFS
 > 加载来执行」。结论先行:**管道四分之三是现成的,缺的是"数据里怎么声明代码"这一块
 > 词汇 + 把 loader 的取数通道并到 IpfsRouter**;真正要认真对待的是安全边界与
 > 决定性钉点,以及"代码不可跨引擎"的架构定位。
@@ -77,9 +77,14 @@ descriptor(`{meta:{typeId,…}, layout, render:[{mesh,color,size,offset}…]}`),
 CID 数组**:
 
 ```jsonc
-// default.world.json(或 level 文档;世界级=预载友好)
+// septopus.world.config(或 level 文档;世界级=预载友好)
 { "adjunctModules": ["bafk…", "bafk…"] }
 ```
+
+> **与 boot-chain 对齐(2026-07-08 定案)**:动态加载一律沿 boot-chain 方式——
+> `adjunctModules` 挂在**锚定的 world.config** 上(ROOT loader 已按 CID 拉取该文档,
+> `protocol/cn|en/boot-chain.md` §3),模块文档同经 IpfsRouter 按 CID 取 + 重哈希校验。
+> 即:adjunct 代码的分发通道与 app/内容完全同构,零新基建。
 
 - **自组织的边界**:能自到「文件自带身份 → 清单=纯 CID 数组 → 加载器自建注册表 →
   冲突自检(同 typeId 两模块=快败)」;**不能自到没有根**——内容寻址存储没有目录,

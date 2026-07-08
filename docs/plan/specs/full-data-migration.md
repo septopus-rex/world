@@ -158,8 +158,12 @@
   `VITE_IPFS_GATEWAYS=https://ipfs.io,…` 即挂真公网网关为最低优先级层(不探测、
   miss/超时即落空,不进 CI);`isCid` 兼容 legacy `bafy…`(旧草稿)。
   "换 base URL 就是真 IPFS" 从口号变成字面事实。
+- ✅ **链上启动全链已实证(2026-07-08,boot-chain)**:资产经网关 `/assets`(名字索引→CAS)
+  + `asset()` 运行时基址注入(A3 的链通道);世界配置按锚定 CID 拉取(`world()` 优先链注入);
+  mobile 壳单文件链包 + `publish-chain.sh` 发版;e2e `boot-chain-world.spec` 链上启动真世界。
+  **定案:动态加载(app/内容/adjunct 代码)一律沿 boot-chain「锚→envelope→CID 递归」方式。**
 - **待续**:名字索引接 ContentResolver(关卡/块按名走网络,需 loader 异步化构造)、
-  资源管线优先网关取资产、公网 pin 工作流(把种子内容 pin 到真网络)。
+  dev/PWA 路径的资产清单 CID 化收尾(A3 非链半)、公网 pin 工作流(把种子内容 pin 到真网络)。
 
 ### P4.6 · 统一文档封套(缺口 E2 的解法,2026-07-08 定形,未实施)
 > **已升规范**:[`protocol/cn|en/envelope.md`](../../../protocol/cn/envelope.md)(封套/CID/版本三分,规范级)+ `adjunct-types.md §15`(动态 typeId 区段)。本节保留为过程记录,以规范为准。
