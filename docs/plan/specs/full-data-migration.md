@@ -140,6 +140,20 @@
 - 所有未写槽位的默认值在协议里钉死（C3）。
 - **验收**:grep 客户端无"往块里塞数据/私有默认/私有几何";冻结产物无 mock 附带物。
 
+### P4.5 · 内容网络层已落地(2026-07-08,services/ipfs)
+- **dev IPFS 网关**:file-CAS over HTTP,**CID 直接 import 引擎 `Cid.ts` 计算(零漂移)**;
+  启动时把共享内容树(core 的 levels/blocks/worlds/stylepacks + public 资产)种入 CAS 并建
+  name→cid 索引;路由 `/v0/health` `/v0/names` `/v0/name/<n>` `/ipfs/<cid>` `/v0/add`(CORS)。
+- **客户端分层**:`HttpCasProvider`(client/core)启动时静默探测网关,在线则
+  `world.ipfs.addProvider()` 挂为**最低优先级**——进程内 MemoryCas 仍是一级缓存/离线兜底
+  (local-first 承诺不破),未命中才走网络;router 对每次 get **重哈希完整性校验**。
+  换真 IPFS 网关 = 换 base URL,其余不动。
+- **验收 ✅**:`e2e/ipfs-gateway.spec.ts`——种子名→CID→浏览器内经 router 跨进程取回→引擎侧
+  重哈希通过→字节解析回 garden;伪 CID 全层未命中即抛(无静默垃圾);浏览器 put/get 回环同 CID。
+  网关进 desktop playwright webServer(e2e 环境确定)+ deploy/dev.sh 第 4 行服务。
+- **待续**:名字索引接 ContentResolver(关卡/块按名走网络,需 loader 异步化构造)、
+  资源管线优先网关取资产、真 IPFS provider。
+
 ### P5 · canonical 序列化 + 上链形态（缺口 E）
 - 每个 adjunct 类型给 canonical 编解码（扩展 L2 模式）+ 版本号;定义 block on-chain 记录形态与 `AuthoredLevel` 的关系。
 - CID 稳定性测试:同数据 → 同 CID;跨引擎解码一致。

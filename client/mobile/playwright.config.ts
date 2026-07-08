@@ -25,7 +25,7 @@ export default defineConfig({
       command: 'npm run dev',
       url: 'http://127.0.0.1:7778',
       reuseExistingServer: true,
-      timeout: 60_000,
+      timeout: 120_000,
     },
   ],
 });

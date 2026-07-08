@@ -38,6 +38,14 @@ export default defineConfig({
   ],
   webServer: [
     {
+      // Dev IPFS gateway (services/ipfs): the content network tier. Booted for
+      // every run so the router's tier-2 path is deterministic in e2e.
+      command: 'npm start --prefix ../../services/ipfs',
+      url: 'http://127.0.0.1:7789/v0/health',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+    {
       command: 'npm run dev',
       url: 'http://127.0.0.1:7777',
       reuseExistingServer: true,

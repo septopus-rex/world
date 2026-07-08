@@ -28,6 +28,9 @@ export default defineConfig({
   publicDir: resolve(__dirname, '../desktop/public'),
   plugins: [react(), tailwindcss()],
   server: {
+    host: '127.0.0.1',   // IPv4 explicit (vite8 'localhost' may bind ::1 only —
+    port: 7778,          // playwright probes 127.0.0.1); `--host 0.0.0.0` (lan) overrides
+    strictPort: true,
     fs: { allow: [resolve(__dirname, '../..')] }, // engine + core live outside the app root
   },
 })

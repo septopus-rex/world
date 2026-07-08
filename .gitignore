@@ -48,3 +48,5 @@ client/*/dev-dist/
 client/*/playwright-report/
 client/*/e2e/__screenshots__/
 **/.last-run.json
+deploy/logs/
+

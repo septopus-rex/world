@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/ipfs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus dev IPFS gateway — a file-backed CAS over HTTP, CID-identical to the engine's in-process CAS (imports engine Cid.ts). Seeds the shared content tree (client/core levels/blocks/worlds/stylepacks + public assets) at boot; the client's IpfsRouter falls through to it on a local miss. The realistic network tier of the local-first stack: swap the base URL for a real IPFS gateway and nothing else changes.",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

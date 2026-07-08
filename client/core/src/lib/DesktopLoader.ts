@@ -65,6 +65,7 @@ import { WebSocketLiveSource } from './live/WebSocketLiveSource';
 import { FakeWebSocket } from './live/FakeWebSocket';
 
 import { DEFAULT_PLAYER_STATE } from '../Constants';
+import { HttpCasProvider } from './HttpCasProvider';
 
 /** A block's 2D-map summary (render-layer only; see DesktopLoader.fetchMapCell). */
 export interface MapCell {
@@ -501,6 +502,19 @@ export class DesktopLoader implements IDataSource {
         // location, inventory, session) lives in the engine and is restored by
         // hydrateDrafts below, overriding this when a saved location exists.
         await this.engine.bootWorld(0, this.playerState);
+
+        // NETWORK content tier (services/ipfs, specs/full-data-migration.md 联网层):
+        // quiet-probe the dev IPFS gateway and, when up, register it into the
+        // world's IpfsRouter at LOWEST priority — the in-process CAS stays the
+        // local node/cache (offline-first), only misses fall through to HTTP.
+        // Absent gateway = zero cost, zero behavior change (e2e-deterministic).
+        try {
+            const gw = (import.meta as any).env?.VITE_IPFS_GATEWAY || 'http://127.0.0.1:7789';
+            if (await HttpCasProvider.probe(gw)) {
+                this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(gw));
+                console.log(`[Loader] IPFS gateway online → router tier-2: ${gw}`);
+            }
+        } catch { /* never block boot on the network tier */ }
 
         // Dynamic adjuncts: run the sandboxed declarative code and register it by
         // type-id BEFORE any block streams in, so a block authoring that id can
