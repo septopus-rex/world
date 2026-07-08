@@ -21,6 +21,11 @@ export default defineConfig({
     alias: {
       '@engine': resolve(__dirname, '../../engine/src'),
       '@core': resolve(__dirname, '../core/src'),
+      // Out-of-root shared source (core/engine) must resolve bare deps from THIS
+      // app's node_modules at build time (rolldown resolves relative to importer).
+      'react': resolve(__dirname, 'node_modules/react'),
+      'react-dom': resolve(__dirname, 'node_modules/react-dom'),
+      'three': resolve(__dirname, 'node_modules/three'),
     },
   },
   // Demo fixtures (models/textures/audio) are SHARED content — serve the same

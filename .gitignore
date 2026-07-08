@@ -50,3 +50,4 @@ client/*/e2e/__screenshots__/
 **/.last-run.json
 deploy/logs/
 
+client/*/dist-chain/

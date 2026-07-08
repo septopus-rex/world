@@ -279,6 +279,15 @@ export class DesktopLoader implements IDataSource {
         // the soldier (33): a full motion set (Idle/Run/Walk) so movement animates
         // out of the box, unlike the single-clip legacy avatar (30, still
         // selectable as 旅者). A saved pick overrides this after hydrate.
+        // Chain boot (boot-chain.md §3): the ROOT loader prelude starts fetching
+        // the world config by the anchor-pinned CID and leaves the promise on
+        // globalThis — when present, THAT is the world (config genuinely comes
+        // from the chain root, not the bundle).
+        const injected = (globalThis as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__;
+        if (injected) {
+            const cfg = await injected;
+            if (cfg) return JSON.parse(JSON.stringify(cfg));
+        }
         // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
         // resource/facing are baked into the doc; a saved pick overrides after
         // hydrate. Swap the backing file (or a CID fetch) to change worlds.

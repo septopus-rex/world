@@ -110,7 +110,95 @@ async function seed(): Promise<void> {
     const anchorCid = await store(new Uint8Array(Buffer.from(JSON.stringify(anchorRecord))), 'application/json');
     names['anchor:world'] = anchorCid;
 
+    // ── the REAL chain loader (boot-chain.md §3): the mobile shell packed as a
+    // single IIFE (client/mobile: npm run build:chain → dist-chain). code =
+    // prelude (inject CSS + #root, set the asset base, start the world-config
+    // fetch from the anchor-pinned CID) + the app bundle, plain concatenation.
+    // Published under `anchor:septopus` — `anchor:world` stays the tiny protocol
+    // stub so its e2e is independent of whether the bundle is built.
+    const distJs = path.join(ROOT, 'client/mobile/dist-chain/app.js');
+    const distCss = path.join(ROOT, 'client/mobile/dist-chain/style.css');
+    if (fs.existsSync(distJs)) {
+        const appJs = fs.readFileSync(distJs, 'utf8');
+        const cssText = fs.existsSync(distCss) ? fs.readFileSync(distCss, 'utf8') : '';
+        const prelude = [
+            '(function(){',
+            `  var css = ${JSON.stringify(cssText)};`,
+            "  var s = document.createElement('style'); s.textContent = css; document.head.appendChild(s);",
+            "  if (!document.getElementById('root')) { var r = document.createElement('div'); r.id = 'root'; document.body.appendChild(r); }",
+            "  window.__SEPTOPUS_ASSET_BASE__ = boot.gateway;",
+            "  window.__SEPTOPUS_WORLD_CONFIG_PROMISE__ = fetch(boot.gateway + '/ipfs/' + boot.world).then(function(r){ return r.json(); }).catch(function(){ return null; });",
+            '})();',
+        ].join('\n');
+        const chainLoader = {
+            envelope: 1,
+            format: 'septopus.loader',
+            version: 1,
+            meta: { name: 'septopus-mobile', semver: '0.1.0' },
+            world: worldCid,
+            code: prelude + '\n;\n' + appJs,
+        };
+        const chainLoaderCid = await store(new Uint8Array(Buffer.from(JSON.stringify(chainLoader))), 'application/json');
+        names['loader:chain'] = chainLoaderCid;
+        const chainAnchor = { p: 'septopus', name: 'septopus', version: '0.1.0', cid: chainLoaderCid };
+        names['anchor:septopus'] = await store(new Uint8Array(Buffer.from(JSON.stringify(chainAnchor))), 'application/json');
+        console.log('[ipfs] chain loader seeded (dist-chain) →', chainLoaderCid.slice(0, 24) + '…');
+    } else {
+        console.log('[ipfs] no client/mobile/dist-chain — chain loader not seeded (run: bash deploy/publish-chain.sh)');
+    }
+
     fs.writeFileSync(NAMES_FILE, JSON.stringify(names, null, 2));
+    writeHumanMirror();
+}
+
+/**
+ * Human-readable mirror of the CAS (便于人工核实): blobs/ stays the single
+ * canonical store (opaque CID filenames); this lays SYMLINKS into a browsable
+ * tree — app artifacts vs content data, foldered by kind. Zero duplication:
+ * every entry links back into blobs/<cid>.
+ *
+ *   data/
+ *   ├── blobs/<cid>                  canonical CAS (source of truth)
+ *   ├── names.json                   name → cid index
+ *   ├── app/                         chain app artifacts
+ *   │   ├── anchor.<name>.json       锚记录(微格式)
+ *   │   ├── loader.<name>.json       septopus.loader 文档
+ *   │   └── app.js / style.css       构建产物副本(dist-chain,便于 diff)
+ *   └── content/                     world data, by kind
+ *       ├── levels|blocks|worlds|stylepacks/<n>.<kind>.json
+ *       └── assets/<file>
+ */
+function writeHumanMirror(): void {
+    const APP = path.join(DATA, 'app');
+    const CONTENT = path.join(DATA, 'content');
+    fs.rmSync(APP, { recursive: true, force: true });
+    fs.rmSync(CONTENT, { recursive: true, force: true });
+    const link = (dir: string, file: string, cid: string) => {
+        fs.mkdirSync(dir, { recursive: true });
+        const from = path.join(dir, file);
+        const rel = path.relative(dir, path.join(BLOBS, cid));
+        try { fs.symlinkSync(rel, from); } catch { /* exists / unsupported fs — mirror is best-effort */ }
+    };
+    const KIND_DIRS: Record<string, [string, string]> = {
+        level: [path.join(CONTENT, 'levels'), '.level.json'],
+        block: [path.join(CONTENT, 'blocks'), '.block.json'],
+        world: [path.join(CONTENT, 'worlds'), '.world.json'],
+        stylepack: [path.join(CONTENT, 'stylepacks'), '.stylepack.json'],
+    };
+    for (const [name, cid] of Object.entries(names)) {
+        const i = name.indexOf(':');
+        const kind = name.slice(0, i), n = name.slice(i + 1);
+        if (kind === 'asset') link(path.join(CONTENT, 'assets'), n, cid);
+        else if (kind === 'anchor') link(APP, `anchor.${n}.json`, cid);
+        else if (kind === 'loader') link(APP, `loader.${n}.json`, cid);
+        else if (KIND_DIRS[kind]) link(KIND_DIRS[kind][0], n + KIND_DIRS[kind][1], cid);
+    }
+    // Raw build artifacts (when built) — plain copies for eyeballing/diffing the
+    // exact bytes that were packed into loader.chain.json's `code`.
+    const distJs = path.join(ROOT, 'client/mobile/dist-chain/app.js');
+    const distCss = path.join(ROOT, 'client/mobile/dist-chain/style.css');
+    if (fs.existsSync(distJs)) { fs.mkdirSync(APP, { recursive: true }); fs.copyFileSync(distJs, path.join(APP, 'app.js')); }
+    if (fs.existsSync(distCss)) { fs.copyFileSync(distCss, path.join(APP, 'style.css')); }
 }
 
 const CORS = {
@@ -156,11 +244,26 @@ const server = http.createServer(async (req, res) => {
             const cid = names[name];
             return cid ? send(res, 200, { name, cid }) : send(res, 404, { error: `unknown name '${name}'` });
         }
+        if (req.method === 'GET' && url.pathname.startsWith('/assets/')) {
+            // Asset path shape the world uses (A3): name index `asset:<file>` → CAS
+            // blob. Content IS content-addressed underneath; this route is the
+            // mutable human-path front (same discipline as /v0/name).
+            const file = decodeURIComponent(url.pathname.slice('/assets/'.length));
+            const cid = names['asset:' + path.basename(file)];
+            if (!cid) return send(res, 404, { error: 'unknown asset', file });
+            const p2 = path.join(BLOBS, cid);
+            if (!fs.existsSync(p2)) return send(res, 404, { error: 'blob missing', cid });
+            return sendBlob(res, fs.readFileSync(p2), types[cid] ?? 'application/octet-stream');
+        }
         if (req.method === 'GET' && url.pathname.startsWith('/ipfs/')) {
             const cid = url.pathname.slice('/ipfs/'.length);
             const p = path.join(BLOBS, path.basename(cid)); // basename() bars traversal
             if (!fs.existsSync(p)) return send(res, 404, { error: 'not found', cid });
             return sendBlob(res, fs.readFileSync(p), types[cid] ?? 'application/octet-stream');
+        }
+        if (req.method === 'POST' && url.pathname === '/v0/reseed') {
+            await seed();
+            return send(res, 200, { ok: true, names: Object.keys(names).length });
         }
         if (req.method === 'POST' && url.pathname === '/v0/add') {
             const chunks: Buffer[] = [];

@@ -35,7 +35,14 @@ export interface DemoAsset {
 /** Deploy-base-aware asset path: vite injects BASE_URL ('/' locally, '/world/'
  *  on GitHub Pages — deploy/RELEASE.md §6). Bare absolute '/assets/…' would 404
  *  the whole demo catalog under a sub-path deploy. */
-const asset = (p: string) => import.meta.env.BASE_URL.replace(/\/$/, '') + p;
+const asset = (p: string) => {
+    // Chain boot (boot-chain.md §3): the ROOT loader injects the content
+    // gateway origin — assets then resolve via the gateway's /assets/<file>
+    // route (name index → CAS blobs). Dev/PWA keeps the vite BASE_URL path.
+    const chainBase = (globalThis as any).__SEPTOPUS_ASSET_BASE__;
+    const base = typeof chainBase === 'string' ? chainBase : import.meta.env.BASE_URL;
+    return base.replace(/\/$/, '') + p;
+};
 
 export const DEMO_ASSETS: DemoAsset[] = [
     // World block-ground baselines (WorldConfigs block.texture): 1 = forest (Normal),
