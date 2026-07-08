@@ -1,0 +1,89 @@
+{
+  "world": {
+    "desc": "The Origin. A peaceful, standard Earth-like world.",
+    "nickname": "Genesis",
+    "mode": [
+      "normal",
+      "game"
+    ],
+    "accuracy": 1000,
+    "index": 0,
+    "containerId": "render-canvas"
+  },
+  "assetBaseUrl": "/assets",
+  "block": {
+    "elevation": 0,
+    "max": 64,
+    "color": 2263842,
+    "texture": 1
+  },
+  "player": {
+    "start": {
+      "block": [
+        2048,
+        2048
+      ],
+      "position": [
+        8,
+        0,
+        8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ]
+    },
+    "body": {
+      "shoulder": 0.5,
+      "chest": 0.22,
+      "body": [
+        0.3,
+        0.4,
+        0.2,
+        0.8
+      ],
+      "head": [
+        0.25,
+        0.05
+      ],
+      "hand": [
+        0.2,
+        0.2,
+        0.1
+      ],
+      "leg": [
+        0.5,
+        0.5,
+        0.1
+      ]
+    },
+    "capacity": {
+      "rotate": 0.05,
+      "speed": 10,
+      "walkSpeed": 5,
+      "jumpForce": 8,
+      "gravityMultiplier": 1,
+      "ghostFlySpeed": 6,
+      "voidRecover": 20
+    },
+    "bag": {
+      "max": 100
+    },
+    "avatar": {
+      "max": 2097152,
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "resource": 33,
+      "facing": 0
+    },
+    "extend": 2
+  },
+  "blacklist": [],
+  "debug": {
+    "stats": true
+  }
+}

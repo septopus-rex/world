@@ -56,7 +56,7 @@ cd engine && yarn build                            # tsc
 - **Block**：世界的基本单元，4096×4096 网格，每个 Block 16×16 米。
 - **Adjunct**：附属物，附着在 Block 上的 3D 对象（墙/水/灯光/触发器等）。
 - **ECS**：`World` 持有 registry + 系统；状态即数据（便于 headless 测试）。
-- **数据流**：`IDataSource`（本地 mock/草稿，可换链）→ Raw → STD（`CollapseCodec`）→ RenderData → Three.js。
+- **数据流**：`IDataSource`（纯数据文档/草稿，可换链/IPFS）→ Raw → STD（`CollapseCodec`）→ RenderData → Three.js。**默认世界也是数据（P7，2026-07-08）**：`default.level.json`（9 块 ref + `fallback` 回退地面模板）+ `default.world.json`（世界配置文档）+ `ContentResolver`（名字/CID→内容，本地=import JSON、联网=CAS/IPFS 同形状）；scene 注册表与 MockBlockData 客户端路径已退役，「内容从哪来」只有一个答案：关卡文档。
 - **坐标系**：Septopus（X东 Y北 Z上）↔ Engine/Three（X右 Y上 Z前，北 = −Z）；转换见 `core/utils/Coords.ts`。**术语纪律（2026-07-04）**：**SPP 专指弦粒子协议**（String Particle Protocol，独立仓 ff13dfly/spp-protocol）；数据坐标一律称 **Septopus 轴序**，动画称 **Septopus 动画**——不得再写 "SPP 坐标/SPP 动画"（曾混用，协议文档已统一，代码标识符 `septopusToEngine` 等同日对齐）。
 - **链可选**：通过 `IChainPublisher` 注入发布；纯模式零 `@solana` 依赖。
 
@@ -64,7 +64,7 @@ cd engine && yarn build                            # tsc
 
 - `engine/src/Engine.ts` — 引擎外观；`bootWorld()`、`start()`（rAF 循环）、`step(dt)`（确定性逐帧）、`injectBlock()`、`setEditMode()`。渲染器可经 `services.renderer` 注入（测试用 NullRenderEngine）。
 - `engine/src/core/World.ts` — ECS 世界、系统编排、主循环。
-- `client/desktop/src/lib/DesktopLoader.ts` — 客户端数据装载器（实现 `IDataSource`，目前喂本地 mock）。
+- `client/desktop/src/lib/DesktopLoader.ts` — 客户端数据装载器（实现 `IDataSource`，喂纯数据文档：`levels/`/`blocks/`/`worlds/` + ContentResolver）。
 - `client/desktop/src/App.tsx` — React 前端入口。
 
 ## 编辑 / Adjunct

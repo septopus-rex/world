@@ -52,6 +52,47 @@ describe('AuthoredLevel include composition (full-data-migration P1)', () => {
 
     it('does not mutate the included source doc (overlay clones)', () => {
         p.block(115, 105);
-        expect(sub.blocks[0].raw[2]).toEqual([[A2, [box(9)]]]); // no anchor leaked in
+        expect(sub.blocks[0].raw![2]).toEqual([[A2, [box(9)]]]); // no anchor leaked in
+    });
+});
+
+describe('AuthoredLevel fallback + ref resolution (P7)', () => {
+    const registry: Record<string, any> = {
+        'blk:ground': blk([[A2, [box(7)]]]),
+        'lvl:sub': sub,
+    };
+    const resolver = (ref: string) => registry[ref] ?? null;
+
+    const doc = lvl('with-fallback', {
+        blocks: [
+            { x: 1, y: 1, raw: blk([[A2, [box(2)]]]) },
+            { x: 2, y: 2, ref: 'blk:ground' } as any,       // block by REF
+        ],
+        include: [{ ref: 'lvl:sub', offset: [10, 10] } as any], // include by REF
+        fallback: { ref: 'blk:ground' } as any,                  // fallback by REF
+    });
+    const p = levelSceneProvider(doc, resolver);
+
+    it('resolves block refs through the host resolver', () => {
+        expect(p.block(2, 2)[2]).toEqual([[A2, [box(7)]]]);
+    });
+
+    it('resolves include refs (sub-level at offset)', () => {
+        expect(p.block(15, 15)[2]).toEqual([[A2, [box(9)]]]); // sub [5,5] + [10,10]
+    });
+
+    it('serves the declared fallback for unauthored coords, as fresh clones', () => {
+        const a = p.block(500, 500);
+        const b = p.block(501, 500);
+        expect(a[2]).toEqual([[A2, [box(7)]]]);
+        expect(b).toEqual(a);
+        expect(b).not.toBe(a);              // clone per coordinate — no aliasing
+        (a[2] as any).push(['junk']);
+        expect(p.block(500, 500)[2]).toEqual([[A2, [box(7)]]]); // template unpolluted
+    });
+
+    it('throws on a dangling ref', () => {
+        const bad = lvl('bad', { blocks: [{ x: 0, y: 0, ref: 'blk:nope' } as any] });
+        expect(() => levelSceneProvider(bad, resolver)).toThrow(/unresolved content ref/);
     });
 });

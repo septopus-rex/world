@@ -54,31 +54,10 @@ export function cellIndex(gx: number, gy: number): number {
     return gx * GRID.n + gy;
 }
 
-function initialCells(): any[] {
-    const cells: any[] = [];
-    for (let gx = 0; gx < GRID.n; gx++) {
-        for (let gy = 0; gy < GRID.n; gy++) {
-            // Roofless rooms with floors: Top open, Bottom + 4 sides solid. The
-            // grid reads as a 3×3 of pens you sculpt by clicking the walls.
-            cells.push({
-                position: [gx, gy, 0], level: GRID.level,
-                faces: [[0, 0], [1, 0], [1, 0], [1, 0], [1, 0], [1, 0]],
-            });
-        }
-    }
-    return cells;
-}
 
-export function buildSandboxScene(bx: number, by: number): any[] {
-    const data = MockBlockData(bx, by);
-    // The shared SPP source — one b6 row holds the whole grid.
-    data.raw[2].push([AdjunctType.Spp, [[GRID.origin, initialCells(), 'basic']]]);
-    // A dark base slab so the white marble cells read as a tabletop diorama.
-    const span = GRID.n * GRID.cell + 2;
-    const c = GRID.origin[0] + (GRID.n * GRID.cell) / 2;
-    data.raw[2].push([AdjunctType.Box, [[[span, span, 0.4], [c, c, -0.2], [0, 0, 0], 1, [1, 1], 0, 0]]]);
-    return data.raw;
-}
+// The diorama BLOCK content is FROZEN DATA at src/blocks/sandbox.block.json
+// (default.level.json ref 'sandbox') — do not re-author content in TS here
+// (see scenes/README.md). This file keeps the sandbox TOOL logic only.
 
 // ── pure ray ↔ AABB face picker (SPP-local space) ────────────────────────────
 

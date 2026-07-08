@@ -48,19 +48,6 @@ const hooks = {
 };
 `;
 
-/** Authored block raw seeding three dynamic monoliths in a row. */
-export function buildDynamicAdjunctScene(bx: number, by: number): any[] {
-    const data = MockBlockData(bx, by);
-
-    // Standard layout: [size[E,N,Alt], pos[ox,oy,oz], rot, resource, repeat, animate, stop].
-    // size 1.2×1.2×3.0; oz = height/2 so the 3 m box sits ON the ground; stop=1
-    // makes it a solid the player can't walk through.
-    const rows: any[] = [
-        [[1.2, 1.2, 3.0], [5, 8, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
-        [[1.2, 1.2, 3.0], [8, 8, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
-        [[1.2, 1.2, 3.0], [11, 8, 1.5], [0, 0, 0], 0, [1, 1], 0, 1],
-    ];
-
-    (data.raw[2] as any[]).push([DYN_TYPE_ID, rows]);
-    return data.raw;
-}
+// The demo BLOCK content is FROZEN DATA at src/blocks/dynamic.block.json
+// (default.level.json ref 'dynamic') — the sandboxed CODE above stays here
+// (code-as-behavior is the one legitimate code channel; scenes/README.md).

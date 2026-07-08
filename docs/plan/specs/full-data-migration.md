@@ -152,11 +152,26 @@
 - (c) **明确标注**:此类为"引擎观感,不保证跨引擎逐帧一致",仅保证入局/结算的语义(§6/I7)。
 - **验收**:协议对物理复现层级有明确承诺,并有对应 conformance 项(或明确豁免)。先跑一个 rapier(WASM)↔ rapier(native)同初态对拍,确认 (a) 是否成立,再定档。
 
-### P7 · 默认世界 → level 文档 + 退役 scenes 注册表
-- 无 `?level` 的默认世界写成 `default.level.json`(或复用 world),注册表的游戏块折进 `include(ref,offset,overlay)`(需 P1)。
-- `scenes/` 只留:**生成器原语**(升为引擎/协议侧)与**开发工具**(sandbox/stamp,重接数据);退役所有"静态内容 TS"。
-- **设计前提(2026-07-08 记)**:默认世界对**任意坐标**回退 `MockBlockData`(程序化地面/灯),level 文档枚举不了无限块——需要给 AuthoredLevel 加**回退块模板**词汇(如 `fallback: <block raw 模板>`),或规范化"空块=标准地面"。此外 `include` 目前带**已解析对象**,worldHub 的 TS 只剩"import JSON + 组装 include 条目"的胶水——变成纯 `world.level.json` 需要 **ref-by-name/CID + host 解析器**词汇(否则冻结=内容反规范化复制)。两者都是 P7 的先行词汇设计,单独会话做。
-- **验收**:默认出生 + 15~37 个 e2e 全绿;`scenes/` 不再含静态授权内容。
+### P7 · 默认世界 → level 文档 + 退役 scenes 注册表 ✅(2026-07-08)
+- ✅ **词汇 A `fallback`**:`AuthoredLevel.fallback?: BlockRaw | {ref}` — 未授权坐标服务声明的
+  回退块模板(逐坐标深克隆,防串块别名);"无限标准地面"从 MockBlockData 隐藏合成变成数据声明。
+- ✅ **词汇 B `ref` + `ContentResolver`**:块条目 `{x,y,ref}`、include `{ref,offset,overlay}`、
+  fallback `{ref}` 皆可按名/CID 引用;`levelSceneProvider(level, resolve?)` **构造时急切解析**
+  (`resolveAuthoredLevel`:解析→深克隆→验证,悬空 ref 抛错快败)。本地 host = import JSON 的
+  名字表;联网 host 换 CAS/IPFS 路由,**关卡数据一字不改**。
+- ✅ **`default.level.json`**:默认世界 = 9 个块 ref(demo/maze/五游戏/sandbox/dynamic)+
+  `fallback` ref + 出生点;**`default.world.json`**(`src/worlds/`):世界配置文档化
+  (avatar=33/facing=0 直接烤入,`world()` 纯服务克隆,MockWorldNormal 客户端路径退役)。
+- ✅ **sceneBlock 收敛 + 注册表退役**:三岔路(levelProvider/registry/MockBlockData)→ 一条
+  `levelProvider.block(x,y)`;`buildSceneRegistry`/`sceneRegistry` 删除;sandbox/dyn 的
+  builder 也冻结退役(`blocks/sandbox|dynamic|fallback.block.json`),两文件只剩工具逻辑与
+  沙箱代码常量(代码即行为通道)。
+- ✅ **语义保持**:默认世界「**恢复位置优先于 start**」经 `isDefaultWorld`/`authoredStart` 门
+  保住(authored 关卡仍每次强制落点)——persistence e2e 验证。
+- **验收**:引擎 526 单测全绿(+4 fallback/ref 词汇测);12-spec 宽幅 e2e 批
+  (boot/streaming/persistence/trigger/inventory/maze/shooting3d/sandbox/dynamic/map2d/avatar/edit)。
+- 🔲 **余项**:worldHubScene 的 include 组装胶水(等 world.level.json 直接写 ref 后消失,依赖
+  把 hub/xianjian 也注册进 ContentResolver——机械小步);mahjong3d 牌面 host 调用(资源清单数据化)。
 
 ### P8 · 第二引擎（差分裁判）——应尽早并行,不是最后才做
 > **实现细节独立成文**:[`bevy-reference-engine.md`](./bevy-reference-engine.md)（无头一致性内核的架构、状态哈希口径、golden 格式、crate 结构、里程碑 B0–B6）。本节只给它在迁移里的位置。

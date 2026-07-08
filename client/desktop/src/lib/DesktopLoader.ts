@@ -17,19 +17,19 @@
 import { Engine } from '@engine/Engine';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { TransformComponent } from '@engine/core/components/PlayerComponents';
-import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
-import { MockBlockData } from '@engine/core/mocks/BlockMocks';
 import { registerDemoItemTemplates } from '@engine/core/mocks/ItemTemplates';
 import { IDataSource } from '@engine/core/services/DataSource';
 import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataSource';
 // Authored levels are pure DATA (AuthoredLevel JSON) — content lives here with
 // the client, the engine only supplies the vocabulary (levelSceneProvider).
-import { AuthoredLevel, levelSceneProvider } from '@engine/core/services/AuthoredLevel';
+import { AuthoredLevel, levelSceneProvider, type ContentResolver } from '@engine/core/services/AuthoredLevel';
 import parkourLevelJson from '../levels/parkour.level.json';
 import coasterLevelJson from '../levels/coaster.level.json';
 import xianjianLevelJson from '../levels/xianjian.level.json';
 import galleryLevelJson from '../levels/gallery.level.json';
 import refineLevelJson from '../levels/refine.level.json';
+import defaultLevelJson from '../levels/default.level.json';
+import defaultWorldJson from '../worlds/default.world.json';
 import { Coords } from '@engine/core/utils/Coords';
 import { validateGenerationDoc, compileGenerationDoc } from '@engine/core/protocol/GenerationDoc';
 import type { GameSetting } from '@engine/core/types/GameSetting';
@@ -55,8 +55,11 @@ import poolBlockJson from '../blocks/pool.block.json';
 import tumbleBlockJson from '../blocks/tumble.block.json';
 import mahjongBlockJson from '../blocks/mahjong.block.json';
 import mahjong3dBlockJson from '../blocks/mahjong3d.block.json';
-import { SANDBOX_BLOCK, SANDBOX_CENTER, buildSandboxScene, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
-import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE, buildDynamicAdjunctScene } from '../scenes/dynamicAdjunctScene';
+import sandboxBlockJson from '../blocks/sandbox.block.json';
+import dynamicBlockJson from '../blocks/dynamic.block.json';
+import fallbackBlockJson from '../blocks/fallback.block.json';
+import { SANDBOX_BLOCK, SANDBOX_CENTER, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
+import { DYN_BLOCK, DYNAMIC_ADJUNCT_CODE } from '../scenes/dynamicAdjunctScene';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
 import { WebSocketLiveSource } from './live/WebSocketLiveSource';
 import { FakeWebSocket } from './live/FakeWebSocket';
@@ -114,19 +117,43 @@ export class DesktopLoader implements IDataSource {
     private isRefine = this.level === 'refine';
     private isGallery = this.level === 'gallery';
 
+    /** No `?level` → the DEFAULT world, itself just another level document
+     *  (P7: default.level.json = 9 block refs + a fallback ground template).
+     *  It keeps demo-court semantics the authored levels don't have: the saved
+     *  player location WINS over `start` (see `authoredStart`). */
+    private isDefaultWorld = this.level == null;
+
+    /**
+     * ContentResolver (P7): name → content for every `ref` in a level document.
+     * Local-first = imported JSON under src/blocks|levels; a networked host
+     * swaps this for the CAS/IPFS router WITHOUT touching any level data.
+     */
+    private static readonly CONTENT: Record<string, any> = {
+        demo: demoBlockJson, maze: mazeBlockJson, shooting: shootingBlockJson,
+        pool: poolBlockJson, tumble: tumbleBlockJson, mahjong: mahjongBlockJson,
+        mahjong3d: mahjong3dBlockJson, sandbox: sandboxBlockJson,
+        dynamic: dynamicBlockJson, fallback: fallbackBlockJson,
+    };
+    private resolveContent: ContentResolver = (ref) => DesktopLoader.CONTENT[ref] ?? null;
+
     /** The active authored level (data document) + its block provider. Levels
      *  are JSON in src/levels/ — the engine holds no level content. The 'world'
-     *  level is composed programmatically (hub + demo + relocated xianjian behind
-     *  teleport portals; scenes/worldHubScene.ts). */
-    private activeLevel: AuthoredLevel | null =
+     *  level is composed from data (hub/demo blocks + xianjian include;
+     *  scenes/worldHubScene.ts glue pending the ref-resolver landing there). */
+    private activeLevel: AuthoredLevel =
         this.isParkour ? (parkourLevelJson as unknown as AuthoredLevel)
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
         : this.isWorld ? buildWorldLevel()
         : this.isRefine ? (refineLevelJson as unknown as AuthoredLevel)
         : this.isGallery ? (galleryLevelJson as unknown as AuthoredLevel)
-        : null;
-    private levelProvider = this.activeLevel ? levelSceneProvider(this.activeLevel) : null;
+        : (defaultLevelJson as unknown as AuthoredLevel);
+    private levelProvider = levelSceneProvider(this.activeLevel, this.resolveContent);
+
+    /** The start an AUTHORED level forces on every load; the default world
+     *  instead lets the restored (persisted) location win — its `start` is only
+     *  the first-run spawn. */
+    private get authoredStart() { return this.isDefaultWorld ? null : this.activeLevel.start; }
 
     /** True while the player stands in a playable (game-enabled) block — the
      *  precondition the UI gates Game-mode entry on (set by game.zone_enter/exit). */
@@ -251,14 +278,10 @@ export class DesktopLoader implements IDataSource {
         // the soldier (33): a full motion set (Idle/Run/Walk) so movement animates
         // out of the box, unlike the single-clip legacy avatar (30, still
         // selectable as 旅者). A saved pick overrides this after hydrate.
-        const cfg = JSON.parse(JSON.stringify(MockWorldNormal));
-        if (cfg.player?.avatar) {
-            cfg.player.avatar.resource = DEFAULT_AVATAR_ID;
-            // Boot facing must match the default avatar (soldier faces −Z → 0),
-            // else the very first body renders reversed before any pick.
-            cfg.player.avatar.facing = 0;
-        }
-        return cfg;
+        // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
+        // resource/facing are baked into the doc; a saved pick overrides after
+        // hydrate. Swap the backing file (or a CID fetch) to change worlds.
+        return JSON.parse(JSON.stringify(defaultWorldJson));
     }
 
     public async view(x: number, y: number, ext: number, _worldIndex: number): Promise<any> {
@@ -459,8 +482,8 @@ export class DesktopLoader implements IDataSource {
         });
 
         // An authored level starts at its own spawn (not the demo/saved spawn).
-        if (this.activeLevel) {
-            const s = this.activeLevel.start;
+        if (this.authoredStart) {
+            const s = this.authoredStart;
             this.playerState = {
                 ...this.playerState,
                 block: s.block, position: s.position, rotation: s.rotation,
@@ -534,7 +557,7 @@ export class DesktopLoader implements IDataSource {
         // The engine now holds the authoritative player location (restored, or
         // the fallback spawn). Mirror it locally and preload the neighborhood
         // around the block the player will actually appear in.
-        const authored = this.activeLevel?.start ?? null;
+        const authored = this.authoredStart;
         const restored = this.engine.getPlayerSeptopusLocation();
         if (restored && !authored) {
             this.playerState = {
@@ -652,54 +675,15 @@ export class DesktopLoader implements IDataSource {
     }
 
     /**
-     * Authored-scene registry: coord "x_y" → builder, assembled ONCE at class
-     * init. A duplicate coordinate THROWS at boot instead of silently shadowing
-     * a scene — the maze vanished for a month under the native-mahjong table
-     * when both sat at [2047,2048] and the earlier if/else dispatch won.
-     */
-    private static buildSceneRegistry(): Map<string, (x: number, y: number) => any[]> {
-        const entries: ReadonlyArray<[readonly [number, number], (x: number, y: number) => any[], string]> = [
-            [MAHJONG_BLOCK, () => JSON.parse(JSON.stringify(mahjongBlockJson)), 'mahjong'],
-            [NATIVE_MAHJONG_BLOCK, () => JSON.parse(JSON.stringify(mahjong3dBlockJson)), 'mahjong3d'],
-            [SHOOTING_BLOCK, () => JSON.parse(JSON.stringify(shootingBlockJson)), 'shooting'],
-            [TUMBLE_BLOCK, () => JSON.parse(JSON.stringify(tumbleBlockJson)), 'tumble'],
-            [POOL_BLOCK, () => JSON.parse(JSON.stringify(poolBlockJson)), 'pool'],
-            [MAZE_BLOCK, () => JSON.parse(JSON.stringify(mazeBlockJson)), 'maze'], // frozen data (blocks/maze.block.json)
-            [SANDBOX_BLOCK, buildSandboxScene, 'sandbox'],
-            [DYN_BLOCK, buildDynamicAdjunctScene, 'dynamic-adjunct'],
-            // Demo showcase is FROZEN DATA (blocks/demo.block.json; block-relative trigger
-            // targets make it position-independent). Clone per serve so nothing
-            // downstream mutates the module import (full-data-migration.md P2-③).
-            [DEMO_BLOCK, () => JSON.parse(JSON.stringify(demoBlockJson)), 'demo'],
-        ];
-        const map = new Map<string, (x: number, y: number) => any[]>();
-        const owner = new Map<string, string>();
-        for (const [[x, y], builder, name] of entries) {
-            const key = `${x}_${y}`;
-            if (map.has(key)) {
-                throw new Error(
-                    `[Loader] scene coordinate collision at [${x},${y}]: '${name}' would silently shadow '${owner.get(key)}' — every authored scene needs its own block`,
-                );
-            }
-            map.set(key, builder);
-            owner.set(key, name);
-        }
-        return map;
-    }
-    private readonly sceneRegistry = DesktopLoader.buildSceneRegistry();
-
-    /**
-     * SceneProvider seed: the base (authored/procedural) raw for a block, BEFORE
-     * local drafts (LocalDataSource overlays those) — level document, else the
-     * collision-checked scene registry, else the procedural mock.
+     * SceneProvider seed: the base authored raw for a block, BEFORE local drafts
+     * (LocalDataSource overlays those). ONE path (P7): the active level document
+     * — the DEFAULT world is itself default.level.json (9 block refs + the
+     * declared `fallback` ground for every other coordinate). The old scene
+     * registry + MockBlockData procedural fallback are retired; "where content
+     * comes from" has a single answer: the level document + ContentResolver.
      */
     private sceneBlock(x: number, y: number): any[] {
-        // Authored level (parkour/coaster): the level document's block for
-        // authored coords, empty block elsewhere — pure data, no generators.
-        if (this.levelProvider) return this.levelProvider.block(x, y);
-        const authored = this.sceneRegistry.get(`${x}_${y}`);
-        if (authored) return authored(x, y);
-        return MockBlockData(x, y).raw;
+        return this.levelProvider.block(x, y) as any[];
     }
 
     /**
