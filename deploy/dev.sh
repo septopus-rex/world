@@ -71,7 +71,7 @@ npm_deps() { # $1 = app dir (repo-relative), $2 = marker binary (install complet
     elif [ -f "$dir/package-lock.json" ] && [ "$dir/package-lock.json" -nt "$dir/node_modules/.package-lock.json" ]; then reason="依赖已过期（package-lock.json 比上次安装新）"
     fi
     if [ -n "$reason" ]; then
-        info "$1 安装/更新依赖（$reason）：npm install..."
+        info "$1 安装/更新依赖（${reason}）：npm install..."
         ( cd "$dir" && npm install )
     fi
 }
@@ -94,10 +94,10 @@ elif [ -f "$ENGINE/yarn.lock" ] && [ "$ENGINE/yarn.lock" -nt "$ENGINE/node_modul
 fi
 if [ -n "$engine_reason" ]; then
     if command -v yarn &>/dev/null; then
-        info "安装/更新 engine 依赖（$engine_reason）：yarn install..."
+        info "安装/更新 engine 依赖（${engine_reason}）：yarn install..."
         ( cd "$ENGINE" && yarn install )
     else
-        warn "engine 依赖需要更新（$engine_reason），但未找到 yarn —— 请手动执行：cd engine && yarn install"
+        warn "engine 依赖需要更新（${engine_reason}），但未找到 yarn —— 请手动执行：cd engine && yarn install"
     fi
 fi
 
@@ -183,33 +183,52 @@ while true; do
         else
             ST="${RED}[OFF]${NC}"; UP="-"
         fi
-        LAST=$([ -f "$log" ] && tail -n 1 "$log" | tr -cd '[:print:]' | cut -c1-46 || echo "-")
+        # ASCII-only, byte-safe: multibyte chars (→ ➜ —) in service logs can be
+        # split by cut and render as mojibake — strip them before truncating.
+        LAST=$([ -f "$log" ] && tail -n 1 "$log" | LC_ALL=C tr -cd '\11\40-\176' | cut -c1-46 || echo "-")
         printf -- "%-10s %-6s %-8b %-8s %s\n" "$name" "$port" "$ST" "$UP" "$LAST"
     done
 
-    printf -- "\n${BOLD}入口速查(URL)${NC}\n"
-    printf -- "--------------------------------------------------------------------------------\n"
     if [ -n "$CHAIN" ]; then
-    printf -- "  ${BOLD}链上启动${NC}       ${GREEN}$CHAIN_URL${NC}\n"
+    printf -- "\n${BOLD}UI 入口(浏览器打开)${NC}\n"
+    printf -- "--------------------------------------------------------------------------------\n"
+    printf -- "  链上启动       ${GREEN}$CHAIN_URL${NC}\n"
     printf -- "                 锚(anchor:septopus)→ ROOT loader → 封套验证 → 3D 世界;无应用服务器\n"
     printf -- "  协议 stub      ${GREEN}http://127.0.0.1:7789/boot${NC}(anchor:world,微型 loader 彩排)\n"
+    printf -- "\n${BOLD}API 服务${NC}\n"
+    printf -- "--------------------------------------------------------------------------------\n"
+    printf -- "  IPFS 网关      ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file>\n"
+    printf -- "\n${BOLD}说明${NC}\n"
+    printf -- "--------------------------------------------------------------------------------\n"
     printf -- "  人工核实       services/ipfs/data/{app,content}/(符号链接镜像,blobs/ 为真身)\n"
     printf -- "  重新发版       ${CYAN}bash deploy/publish-chain.sh${NC}(改代码/数据后)\n"
     printf -- "  日志           deploy/logs/ipfs.log\n"
     else
+    printf -- "\n${BOLD}UI 入口(浏览器打开)${NC}\n"
+    printf -- "--------------------------------------------------------------------------------\n"
     printf -- "  桌面世界       ${GREEN}http://127.0.0.1:7777/${NC}\n"
     printf -- "  移动世界       ${GREEN}http://127.0.0.1:7778/${NC}"
     [ "$HOST" = "0.0.0.0" ] && [ -n "$LAN_IP" ] && printf -- "   ${CYAN}真机 → http://$LAN_IP:7778/${NC}"
     printf -- "\n"
-    printf -- "  关卡           ${CYAN}?level=${NC}gallery | world | xianjian | coaster | parkour | refine\n"
+    printf -- "  功能展厅       ${GREEN}http://127.0.0.1:7777/?level=gallery${NC}(①–⑳;尽头传送广场直达仙剑/过山车/跑酷)\n"
     printf -- "  SPP粒子编辑器  ${GREEN}http://127.0.0.1:7777/?tool=stylepack${NC}\n"
-    printf -- "  留言板服务     ${GREEN}http://127.0.0.1:7786${NC}   e5 board 频道留言(离线=只读)
-  游戏服务器     ${GREEN}麻将 :7787 · 桌球 :7785 · 德州 :7784${NC}   一游戏一服务(会话在服务端;离线回退 loopback)
-  AI 造物网关    ${GREEN}http://127.0.0.1:7788${NC}   provider: ${PROVIDER:-mock}（导出 PROVIDER=qwen + DASHSCOPE_API_KEY 换真 LLM）\n"
-    printf -- "  IPFS 网关      ${GREEN}http://127.0.0.1:7789${NC}   /v0/health · /v0/names · /ipfs/<cid>(CID 与引擎同源)\n"
+    printf -- "  链上启动页     ${GREEN}http://127.0.0.1:7789/boot?name=septopus${NC}(先发版,见下)\n"
+    printf -- "\n${BOLD}API 服务${NC}\n"
+    printf -- "--------------------------------------------------------------------------------\n"
+    printf -- "  德州扑克       ${GREEN}:7784${NC}  POST /api/holdem/{start,state,act,end} · ws /live\n"
+    printf -- "  桌球           ${GREEN}:7785${NC}  POST /api/pool/{start,state,shoot,end} · ws /live\n"
+    printf -- "  留言板         ${GREEN}:7786${NC}  GET /v0/list?channel= · POST /v0/post\n"
+    printf -- "  麻将           ${GREEN}:7787${NC}  POST /api/mahjong/{start,state,discard,win,end} · ws /live\n"
+    printf -- "  AI 造物        ${GREEN}:7788${NC}  POST /v0/generate · POST /v0/revise\n"
+    printf -- "  IPFS 网关      ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file> · POST /v0/add\n"
+    printf -- "\n${BOLD}说明${NC}\n"
+    printf -- "--------------------------------------------------------------------------------\n"
+    printf -- "  游戏服务       一游戏一服务(会话在服务端);服务不在线时页面内 loopback 自动兜底\n"
+    printf -- "  AI provider    ${PROVIDER:-mock}(导出 PROVIDER=qwen + DASHSCOPE_API_KEY 换真 LLM)\n"
     printf -- "  进程内层       CAS 一级缓存(MemoryCas,离线兜底) · live 推送(FakeWebSocket)\n"
-    printf -- "  链上启动       ${CYAN}bash deploy/dev.sh --chain${NC}(锚→loader→世界,无应用服务器)\n"
-    printf -- "  日志           deploy/logs/{desktop,mobile,aigw,ipfs}.log\n"
+    printf -- "  链上启动模式   ${CYAN}bash deploy/dev.sh --chain${NC}(只起网关;锚→loader→世界)\n"
+    printf -- "  发版彩排       ${CYAN}bash deploy/publish-chain.sh${NC}(构建链包+组装 loader/锚)\n"
+    printf -- "  日志           deploy/logs/{desktop,mobile,holdem,pool,board,mahjong,aigw,ipfs}.log\n"
     fi
 
     printf -- "\n${YELLOW}Ctrl+C 停止全部。${NC}\n"

@@ -37,9 +37,8 @@ engine/tests/
 │   #   headless-boot · draft-store(fake-indexeddb 持久化 round-trip)· block-eviction · frame-split
 │   #   live-pipeline · module-load · texture-load · media-adjuncts · stop-collider · avatar-and-view
 │   #   environment-clock · Pattern B 游戏全流程:pool · mahjong · shooting
-├── scenarios/    # L4- 场景回放:输入序列 → 期望状态(3 个文件)
+├── scenarios/    # 纯数据关卡的 headless 孪生(与浏览器同一份 level JSON)
 │   #   coaster-ride · parkour-level(真实测试:加载 fixtures/levels/*.level.json 逐帧 step 跑完全程)
-│   #   scenarios.test.ts(*.scenario.ts 自动发现 runner)仍是 todo,_runner.ts 未接通
 ├── fixtures/     # region.json · region-module.json · levels/{coaster,parkour}.level.json · spp/mock_spp_chunk.bin
 └── helpers/      # fake-world(L2 最小内存 world)· make-world(L3 真 World 工厂)· null-render-engine · fake-resources
 ```
@@ -51,7 +50,7 @@ engine/tests/
 | 位置 | 类型 | 说明 |
 |---|---|---|
 | `systems/physics.test.ts` | `describe.todo` ×2 | PhysicsSystem 重力积分、TriggerSystem enter/exit 的直连单测;实际覆盖已由 `trigger-pipeline`/`headless-boot` 等间接给到,占位待填或删 |
-| `scenarios/scenarios.test.ts` | `describe.todo` ×1 | `*.scenario.ts` 自动发现 runner 未接通(其注释里"blocked on renderer DI + fixed-dt"的前置早已完成,todo 本身待处理);`coaster-ride`/`parkour-level` 是不走 runner 的真实场景测试 |
+| ~~`scenarios/scenarios.test.ts`~~ | 已删(2026-07-09) | replay-harness 架子(runner/*.scenario.ts)从未接线且被现行模式取代——scenarios/ 现全部是**真实场景测试**(churn-stress/coaster/parkour/xianjian/gallery,与浏览器同一份关卡 JSON 的 headless 孪生) |
 
 ---
 

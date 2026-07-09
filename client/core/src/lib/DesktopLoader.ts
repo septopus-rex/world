@@ -138,6 +138,9 @@ export class DesktopLoader implements IDataSource {
         pool: poolBlockJson, tumble: tumbleBlockJson, mahjong: mahjongBlockJson,
         mahjong3d: mahjong3dBlockJson, sandbox: sandboxBlockJson, holdem: holdemBlockJson,
         dynamic: dynamicBlockJson, fallback: fallbackBlockJson,
+        // Level documents are ref-able too (include composition, P4.5's local
+        // half): the gallery's portal plaza includes these by name.
+        xianjian: xianjianLevelJson, coaster: coasterLevelJson, parkour: parkourLevelJson,
     };
     private resolveContent: ContentResolver = (ref) => DesktopLoader.CONTENT[ref] ?? null;
 
