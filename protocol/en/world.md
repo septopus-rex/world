@@ -143,6 +143,7 @@ data omits it:
 |---|---|---|
 | gravity | **−19.62 m/s²** (a deliberate 2× standard-gravity feel value, pinned as such) | `player.capacity.gravityMultiplier` (scale) |
 | player health | 100/100 | `player.capacity.maxHp` |
+| interaction reach | **3.5 m** (player→hit point, not camera; Edit mode exempt) | `player.capacity.reach` |
 | simulation tick | 0.1 s (10 Hz grid/state sync) | — |
 | block streaming radius | 2 (a 5×5 neighbourhood) | — |
 | LOD near bound | 40 m | `world.performance.lodNear` |

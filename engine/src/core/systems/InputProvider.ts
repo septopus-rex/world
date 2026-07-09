@@ -20,6 +20,14 @@ export class InputProvider {
     private lastTouchY: number = 0;
     public touchDeltaX: number = 0;
     public touchDeltaY: number = 0;
+    // Tap detection: a look touch that moves less than TAP_SLOP is a TAP (interact),
+    // not a look-drag. Browser-synthesized click/mousedown never fire here because
+    // the touch handlers preventDefault, so a tap is turned into a primary-button
+    // "just pressed" + an NDC at the tap point (the raycast interact path).
+    private static readonly TAP_SLOP = 10; // px
+    private _touchStartX = 0;
+    private _touchStartY = 0;
+    private _touchMoved = 0;
 
     // Last mouse pos for delta calculation
     private lastMouseX: number = 0;
@@ -114,6 +122,9 @@ export class InputProvider {
             this.activeLookTouchId = touch.identifier;
             this.lastTouchX = touch.clientX;
             this.lastTouchY = touch.clientY;
+            this._touchStartX = touch.clientX;
+            this._touchStartY = touch.clientY;
+            this._touchMoved = 0;
         }
     };
 
@@ -128,12 +139,22 @@ export class InputProvider {
         this.touchDeltaY += touch.clientY - this.lastTouchY;
         this.lastTouchX = touch.clientX;
         this.lastTouchY = touch.clientY;
+        this._touchMoved += Math.hypot(touch.clientX - this._touchStartX, touch.clientY - this._touchStartY);
     };
 
     private onTouchEnd = (e: TouchEvent) => {
         if (e.cancelable) e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === this.activeLookTouchId) {
+            const t = e.changedTouches[i];
+            if (t.identifier === this.activeLookTouchId) {
+                // A tap (barely moved) = interact: aim the ray at the tap point and
+                // fire the primary button, since synthesized clicks are suppressed.
+                if (this._touchMoved < InputProvider.TAP_SLOP) {
+                    const rect = this.domElement.getBoundingClientRect();
+                    this.mouseNDC[0] = ((t.clientX - rect.left) / rect.width) * 2 - 1;
+                    this.mouseNDC[1] = -((t.clientY - rect.top) / rect.height) * 2 + 1;
+                    this.justPressedButtons.add(0);
+                }
                 this.touchLookActive = false;
                 this.activeLookTouchId = null;
                 break;

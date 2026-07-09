@@ -111,12 +111,29 @@ export class RaycastInteractionSystem implements ISystem {
                 }
 
                 if (isPrimary) {
-                    console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);
-                    world.events.emit('interact.primary', {
-                        metadata: hitTargetComp.metadata,
-                        distance: hit.distance,
-                        point: [hit.point[0], hit.point[1], hit.point[2]],
-                    }, { target: hitEntityId, targetKey, actor: playerId });
+                    // Reach gate: gameplay interactions (book/npc/item/attack) only
+                    // fire within arm's reach — you shouldn't open a book from across
+                    // the map. Edit mode is exempt (place/select at any range).
+                    // Measured PLAYER→hit, not camera→hit: the third-person camera
+                    // sits metres behind the avatar, so hit.distance overstates reach.
+                    // reach = player.capacity.reach (data), default 3.5 m (player.md).
+                    const reach = Number((world.config.player as any)?.capacity?.reach) || 3.5;
+                    const pt = world.getComponent<any>(playerId, "TransformComponent");
+                    const playerDist = pt ? Math.hypot(
+                        hit.point[0] - pt.position[0],
+                        hit.point[1] - pt.position[1],
+                        hit.point[2] - pt.position[2],
+                    ) : hit.distance;
+                    if (!isEdit && playerDist > reach) {
+                        world.events.emit('interact.miss', {}, { actor: playerId });  // hit something, but out of reach
+                    } else {
+                        console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);
+                        world.events.emit('interact.primary', {
+                            metadata: hitTargetComp.metadata,
+                            distance: hit.distance,
+                            point: [hit.point[0], hit.point[1], hit.point[2]],
+                        }, { target: hitEntityId, targetKey, actor: playerId });
+                    }
                 }
             }
         } else if (isPrimary) {

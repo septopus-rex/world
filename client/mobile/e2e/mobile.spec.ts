@@ -77,11 +77,8 @@ test('移动壳:出生渲染 → 摇杆走路 → 触屏拖拽转视角 → JUMP
     expect(air[1] - g[1], 'jump lifted the player (engine Y)').toBeGreaterThan(0.1);
     await stepEngine(page, 90); // land again
 
-    // ── bottom sheet: bag + map reuse the SHARED panels ───────────────────────
-    await page.getByTestId('m-sheet-bag').tap();
-    await expect(page.getByTestId('m-bag-sheet')).toBeVisible(); // shared InventoryPanel mounts inside (renders rows once items exist)
-    await page.getByTestId('m-sheet-bag').tap();
-    await page.getByTestId('m-sheet-map').tap();
+    // ── map opens via the top-right MiniCompass (bottom-sheet buttons removed) ──
+    await page.getByTestId('mini-compass').tap();
     await expect(page.getByTestId('map2d')).toBeVisible();
     await page.getByTestId('map2d-close').tap();
     await page.screenshot({ path: 'test-results/mobile-1-final.png' });

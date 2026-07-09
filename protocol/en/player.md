@@ -91,7 +91,7 @@ Movement capacities live in `RigidBodyComponent`: `maxSpeedWalk` / `maxSpeedRun`
 `jumpForce` / `gravity` / `friction` / `isGrounded`.
 
 > **Wired (updated 2026-07-09, base-data audit P9)**: `player.capacity`
-> (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**)
+> (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**/**reach**)
 > and `player.physique` are **both read by the engine** — data first, defaults
 > below as fallback. **physique = the body BASELINE** (replaces the removed
 > legacy VBW `body` shape, which nothing ever consumed): `height` 1.8 (avatars

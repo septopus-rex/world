@@ -28,7 +28,7 @@ import { BlockInspector } from '@core/components/BlockInspector';
  *   · drag on the canvas    → engine-native touch look (InputProvider → CameraRig)
  *   · tap                   → browser-synthesized click → the raycast interact path
  *   · JUMP button           → loader.triggerPlayerJump()
- *   · bottom sheet          → bag / map / avatar (one panel at a time)
+ *   · panels (bag/map/avatar) → shared components; map via MiniCompass (UI rework pending)
  *
  * Interaction surface (dialogue / book / HP / toasts / game HUDs / leave dialog)
  * is the SAME shared component set the desktop uses — shells only compose.
@@ -104,16 +104,9 @@ export default function MobileApp() {
                 </button>
             </div>
 
-            {/* ── bottom sheet: bag / map / avatar (one at a time, M3) ── */}
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 pointer-events-auto flex gap-2">
-                {([['bag', '🎒'], ['map', '🗺️'], ['avatar', '👤']] as const).map(([id, icon]) => (
-                    <button key={id} data-testid={`m-sheet-${id}`}
-                        onClick={() => setSheet((cur) => (cur === id ? null : id))}
-                        className={`w-11 h-11 rounded-xl border backdrop-blur-md flex items-center justify-center text-lg active:scale-95 shadow-lg ${sheet === id ? 'bg-cyan-500/30 border-cyan-400/60' : 'bg-black/40 border-white/15'}`}>
-                        {icon}
-                    </button>
-                ))}
-            </div>
+            {/* Bottom-sheet trigger buttons removed (UI rework pending). Panels
+                below stay wired: the map opens via the top-right MiniCompass;
+                bag / avatar await a new trigger. */}
             {/* Bag sheet: a visible container even when empty (the shared
                 InventoryPanel renders null on an empty bag); items reuse it. */}
             {ready && sheet === 'bag' && (

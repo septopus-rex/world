@@ -84,7 +84,7 @@ localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随
 `gravity` / `friction` / `isGrounded`。
 
 > **已接线(2026-07-09 更新,基础数据审计 P9)**:`player.capacity`
-> (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**)
+> (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**/**reach**)
 > 与 `player.physique` **均由引擎读取**,数据优先、下表缺省兜底。
 > **physique = 体格基准**(取代已删除的旧 VBW `body` 段,后者从未被消费):
 > `height` 1.8(化身按此**缩放修正**——任何 avatar 换装后统一到基准身高)·

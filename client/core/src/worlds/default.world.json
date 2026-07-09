@@ -42,7 +42,8 @@
       "gravityMultiplier": 1,
       "ghostFlySpeed": 6,
       "voidRecover": 20,
-      "maxHp": 100
+      "maxHp": 100,
+      "reach": 3.5
     },
     "bag": {
       "max": 100

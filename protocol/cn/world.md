@@ -126,6 +126,7 @@ grade    = parseInt(hash[12..13], 16) mod 4  →  0..3（强度梯度）
 |---|---|---|
 | 重力 | **−19.62 m/s²**(刻意 2× 标准重力的手感值,协议如此钉定) | `player.capacity.gravityMultiplier`(乘数) |
 | 玩家血量 | 100/100 | `player.capacity.maxHp` |
+| 交互够得着距离 | **3.5 m**(玩家→命中点,非相机;编辑模式不限) | `player.capacity.reach` |
 | 仿真 tick | 0.1 s(10 Hz 网格/状态同步) | — |
 | 块流式半径 | 2(5×5 邻域) | — |
 | LOD 近界 | 40 m | `world.performance.lodNear` |
