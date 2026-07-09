@@ -1241,7 +1241,51 @@ export class RenderEngine {
         obj.traverse((child) => {
             RenderEngine.disposeMediaResources(child);   // stop <video>/PositionalAudio first
             RenderEngine.disposeMeshResources(child);
+            if ((child as any).isSprite) {               // floating label (attachLabel)
+                const m = (child as THREE.Sprite).material as THREE.SpriteMaterial;
+                m?.map?.dispose(); m?.dispose();
+            }
         });
+    }
+
+    /**
+     * Attach a floating billboard LABEL above a mesh — a camera-facing sprite with
+     * canvas-rendered text. Used to make interactive panel adjuncts (e4 book /
+     * e5 board / e1 link) identifiable in-world ("which one is the book?"): the
+     * label shows the adjunct's title. depthTest off so it reads over geometry;
+     * disposed with the mesh in removeHandle. Headless has no DOM/canvas → guard.
+     */
+    public attachLabel(handle: RenderHandle, text: string, heightOffset = 1.0): void {
+        const mesh = handle as THREE.Object3D;
+        if (!mesh || !text || typeof document === 'undefined') return;
+        const FONT = 46, PAD_X = 30, PAD_Y = 20;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.font = `bold ${FONT}px sans-serif`;
+        const tw = Math.ceil(ctx.measureText(text).width);
+        const w = tw + PAD_X * 2, h = FONT + PAD_Y * 2;
+        canvas.width = w; canvas.height = h;
+        // measuring reset the context state — restyle before drawing
+        ctx.font = `bold ${FONT}px sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        const r = 20;
+        ctx.beginPath();
+        ctx.moveTo(r, 0); ctx.arcTo(w, 0, w, h, r); ctx.arcTo(w, h, 0, h, r);
+        ctx.arcTo(0, h, 0, 0, r); ctx.arcTo(0, 0, w, 0, r); ctx.closePath();
+        ctx.fillStyle = 'rgba(14,20,28,0.85)'; ctx.fill();
+        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(120,200,255,0.35)'; ctx.stroke();
+        ctx.fillStyle = '#cfe9ff'; ctx.fillText(text, w / 2, h / 2 + 2);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+        const worldH = 0.34;                      // readable height in metres
+        sprite.scale.set(worldH * (w / h), worldH, 1);
+        sprite.position.set(0, heightOffset, 0);
+        sprite.renderOrder = 999;
+        sprite.raycast = () => { /* labels never intercept interaction rays */ };
+        mesh.add(sprite);
     }
 
     /**

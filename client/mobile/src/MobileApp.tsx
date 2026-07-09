@@ -16,6 +16,7 @@ import { MahjongHUD } from '@core/components/MahjongHUD';
 import { PoolHUD } from '@core/components/PoolHUD';
 import { StatusPanel } from '@core/components/StatusPanel';
 import { MiniCompass } from '@core/components/MiniCompass';
+import { BlockInspector } from '@core/components/BlockInspector';
 
 /**
  * MobileApp — the MOBILE shell (specs/mobile-client.md M1+M3). Same shared core
@@ -35,6 +36,7 @@ import { MiniCompass } from '@core/components/MiniCompass';
 export default function MobileApp() {
     const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState } = useEngine('three_demo');
     const [sheet, setSheet] = useState<'bag' | 'map' | 'avatar' | null>(null);
+    const [inspecting, setInspecting] = useState(false);
 
     // Fade out the boot splash once the world is ready (same as the desktop shell).
     useEffect(() => {
@@ -53,8 +55,9 @@ export default function MobileApp() {
 
             {/* ── top-left: collapsible status (mode + version, collapsed by default);
                    top-right: mini compass + block coord / world id ── */}
-            {ready && <StatusPanel loader={loader} version={__APP_VERSION__} />}
+            {ready && <StatusPanel loader={loader} version={__APP_VERSION__} onInspect={() => setInspecting(true)} />}
             {ready && <MiniCompass loader={loader} onOpenMap={() => setSheet('map')} />}
+            {ready && <BlockInspector loader={loader} open={inspecting} onClose={() => setInspecting(false)} />}
 
             {/* ── shared interaction surface (identical components to desktop) ── */}
             {ready && <HealthBar loader={loader} />}

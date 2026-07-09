@@ -20,6 +20,7 @@ import { TransformComponent } from '@engine/core/components/PlayerComponents';
 import { registerItemTemplate, type ItemTemplate } from '@engine/core/services/ItemRegistry';
 import demoItemsJson from '../items/demo.items.json';
 import { IDataSource } from '@engine/core/services/DataSource';
+import { IdbDraftBackend, hasIndexedDB } from '@engine/core/services/IdbDraftBackend';
 import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataSource';
 // Authored levels are pure DATA (AuthoredLevel JSON) — content lives here with
 // the client, the engine only supplies the vocabulary (levelSceneProvider).
@@ -174,6 +175,21 @@ export class DesktopLoader implements IDataSource {
         if (this.isDefaultWorld && this.activeLevel?.start && cfg?.player) {
             cfg.player.start = JSON.parse(JSON.stringify(this.activeLevel.start));
         }
+        return cfg;
+    }
+
+    /** Apply the PERSISTED avatar pick to the config BEFORE the player is created,
+     *  so the boot avatar is already the chosen one — no default→saved flash
+     *  (e.g. soldier→robot). Reads the same IndexedDB the DraftStore uses (worldId
+     *  0, key 'avatar'); the post-hydrate setAvatar then reconciles as a no-op. */
+    private async withSavedAvatar(cfg: any): Promise<any> {
+        if (!hasIndexedDB() || !cfg?.player?.avatar) return cfg;
+        try {
+            const saved = Number(await new IdbDraftBackend().loadMeta?.(0, 'avatar'));
+            if (!Number.isFinite(saved)) return cfg;
+            const entry = this.avatarCatalog().find((a) => a.id === saved);
+            if (entry) { cfg.player.avatar.resource = saved; cfg.player.avatar.facing = entry.facing; }
+        } catch { /* no saved pick / IDB unavailable — keep the config default */ }
         return cfg;
     }
 
@@ -375,13 +391,13 @@ export class DesktopLoader implements IDataSource {
         const injected = (globalThis as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__;
         if (injected) {
             const cfg = await injected;
-            if (cfg) { this._worldDoc = cfg; return this.withSoftStart(JSON.parse(JSON.stringify(cfg))); }
+            if (cfg) { this._worldDoc = cfg; return this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(cfg)))); }
         }
         // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
         // resource/facing are baked into the doc; a saved pick overrides after
         // hydrate. Swap the backing file (or a CID fetch) to change worlds.
         this._worldDoc = defaultWorldJson;
-        return this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson)));
+        return this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson))));
     }
 
     public async view(x: number, y: number, ext: number, _worldIndex: number): Promise<any> {
@@ -1031,6 +1047,39 @@ export class DesktopLoader implements IDataSource {
 
     /** Leave the active table: exit Game mode → engine calls the whitelisted `end`. */
     public leaveGame(): void { this.setMode('normal'); }
+
+    // ── block inspector (StatusPanel → BlockInspector) ──────────────────────
+    /** True while orbiting the current block (Observe mode). */
+    public isObserving(): boolean { return (this.engine?.getWorld() as any)?.mode === 'observe'; }
+
+    /** Toggle an orbit-camera inspection of the CURRENT block (Observe mode):
+     *  hide the avatar, frame a 3/4 orbit; toggle again to return to Normal.
+     *  Returns the new observing state. */
+    public toggleBlockObserve(): boolean {
+        const w = this.engine?.getWorld() as any;
+        if (!w) return false;
+        const pid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const av = pid != null ? w.getComponent(pid, 'AvatarComponent') : null;
+        if (w.mode === 'observe') {
+            this.setMode('normal');
+            if (av) av.visible = true;
+            return false;
+        }
+        if (av) av.visible = false;
+        this.setMode('observe');
+        const cc = w.systems.findSystemByName?.('CharacterController') as any;
+        if (cc) { cc._obsAzimuth = 0.6; cc._obsElevation = 0.5; cc._obsRadius = 14; }
+        return true;
+    }
+
+    /** Raw data (5-slot BlockRaw + draft flag) of the block the player stands in
+     *  — the effective seed+draft merge from the data-source seam. */
+    public async currentBlockRaw(): Promise<{ block: [number, number]; raw: any; isDraft: boolean } | null> {
+        const [bx, by] = this.playerState.block;
+        const blocks = await this.view(bx, by, 0, 0);
+        const b = Array.isArray(blocks) ? blocks.find((k: any) => k.x === bx && k.y === by) : null;
+        return b ? { block: [bx, by], raw: b.raw, isDraft: !!b.isDraft } : null;
+    }
 
     // Back-compat thin aliases used by the mahjong HUD/e2e.
     public mahjongDiscard(tile: number): Promise<void> { return this.gameAction('discard', [tile]); }
