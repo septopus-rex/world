@@ -54,7 +54,7 @@ test('外部游戏走真进程:探测→HTTP start 握手→会话在服务端',
     const before = await (await request.get(`${GAME}/v0/stats`)).json();
 
     page.on('console', (m) => { if (/\[games\]/.test(m.text())) console.log('  ↳', m.text()); });
-    await page.goto('/');
+    await page.goto('/?level=demo');
     await waitForWorldReady(page);
     await page.evaluate(() => (window as any).loader.engine.stop());
     await stepEngine(page, 90);
@@ -92,7 +92,7 @@ test('多游戏隔离:德州拨德州的服务器,麻将的账本不动', async 
     const mjBefore = await (await request.get(`${GAME}/v0/stats`)).json();
     const hdBefore = await (await request.get(`${HOLDEM}/v0/stats`)).json();
 
-    await page.goto('/');
+    await page.goto('/?level=demo');
     await waitForWorldReady(page);
     await page.evaluate(() => (window as any).loader.engine.stop());
     await stepEngine(page, 90);

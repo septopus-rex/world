@@ -102,7 +102,10 @@ export class CameraRig {
         if (canRotate) {
             const dx = ip.mouseDeltaX + ip.touchDeltaX;
             const dy = ip.mouseDeltaY + ip.touchDeltaY;
-            const sens = ip.touchDeltaX !== 0 ? CONTROL_CONSTANTS.TOUCH_SENSITIVITY : CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
+            // touch look uses TOUCH sensitivity for BOTH axes (the old
+            // touchDeltaX!==0 test made pure-vertical swipes use mouse sens).
+            const isTouch = ip.touchLookActive || ip.touchDeltaX !== 0 || ip.touchDeltaY !== 0;
+            const sens = isTouch ? CONTROL_CONSTANTS.TOUCH_SENSITIVITY : CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
             camRot[1] -= dx * sens;
             camRot[0] -= dy * sens;
             if (input.lookLeft) camRot[1] += CONTROL_CONSTANTS.TURN_SPEED * dt;

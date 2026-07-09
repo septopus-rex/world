@@ -14,7 +14,7 @@ export const PHYSICS_CONSTANTS = {
 
 export const CONTROL_CONSTANTS = {
     MOUSE_SENSITIVITY: 0.005,
-    TOUCH_SENSITIVITY: 0.005,
+    TOUCH_SENSITIVITY: 0.010, // ~2× mouse: thumb swipes cover far fewer px than a mouse (bucket C, non-normative)
     TURN_SPEED: 2.0,
     DEADZONE: 0.1,
     AUTO_LEVEL_SPEED: 4.0,

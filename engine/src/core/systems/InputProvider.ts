@@ -103,15 +103,17 @@ export class InputProvider {
 
     private onTouchStart = (e: TouchEvent) => {
         if (e.cancelable) e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            const touch = e.changedTouches[i];
-            if (touch.clientX > window.innerWidth / 2) {
-                this.touchLookActive = true;
-                this.activeLookTouchId = touch.identifier;
-                this.lastTouchX = touch.clientX;
-                this.lastTouchY = touch.clientY;
-                break;
-            }
+        // Any canvas touch drives the look: UI overlays (joystick/JUMP/drawer)
+        // sit ABOVE the canvas and capture their own touches, so what reaches
+        // here is a bare-world touch. (The old right-half-only guard made
+        // left-half swipes dead — reported as "左右滑不灵敏".)
+        if (this.touchLookActive) return; // one look-finger at a time
+        const touch = e.changedTouches[0];
+        if (touch) {
+            this.touchLookActive = true;
+            this.activeLookTouchId = touch.identifier;
+            this.lastTouchX = touch.clientX;
+            this.lastTouchY = touch.clientY;
         }
     };
 

@@ -56,7 +56,7 @@ test('full game-setting mode end to end: connect to the specified server and pla
     });
 
     // Boot the client in server mode (?mjserver → FetchGameApi dials baseurl).
-    await page.goto('/?mjserver=1');
+    await page.goto('/?level=demo&mjserver=1');
     await waitForWorldReady(page);
     await page.evaluate(() => (window as any).loader.engine.stop());
     await stepEngine(page, 90);

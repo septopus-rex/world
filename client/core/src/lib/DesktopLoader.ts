@@ -121,12 +121,18 @@ export class DesktopLoader implements IDataSource {
     private isWorld = this.level === 'world';
     private isRefine = this.level === 'refine';
     private isGallery = this.level === 'gallery';
+    /** The OLD comprehensive demo court (game tables/editor props) — now an
+     *  explicit destination; the bare entry starts in the exhibit corridor. */
+    private isDemo = this.level === 'demo';
 
     /** No `?level` → the DEFAULT world, itself just another level document
      *  (P7: default.level.json = 9 block refs + a fallback ground template).
      *  It keeps demo-court semantics the authored levels don't have: the saved
      *  player location WINS over `start` (see `authoredStart`). */
-    private isDefaultWorld = this.level == null;
+    /** "Default-world family" (bare entry + ?level=demo): the persisted
+     *  location WINS over the level start (soft start); authored levels
+     *  instead force their start every load. */
+    private isDefaultWorld = this.level == null || this.level === 'demo';
 
     /**
      * ContentResolver (P7): name → content for every `ref` in a level document.
@@ -154,9 +160,22 @@ export class DesktopLoader implements IDataSource {
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
         : this.isWorld ? buildWorldLevel()
         : this.isRefine ? (refineLevelJson as unknown as AuthoredLevel)
-        : this.isGallery ? (galleryLevelJson as unknown as AuthoredLevel)
-        : (defaultLevelJson as unknown as AuthoredLevel);
+        : this.isDemo ? (defaultLevelJson as unknown as AuthoredLevel)
+        // Bare entry (no ?level) = the exhibit corridor: ①–⑳ one capability per
+        // block, portal plaza at the north end — the curated front door.
+        : (galleryLevelJson as unknown as AuthoredLevel);
     private levelProvider = levelSceneProvider(this.activeLevel, this.resolveContent);
+
+    /** Default-world family: the first-run spawn is the ACTIVE level's start
+     *  (corridor for the bare entry, demo court for ?level=demo) — the config
+     *  doc's own player.start is only the last-resort fallback. Persisted
+     *  location still wins (hydrate overrides after boot). */
+    private withSoftStart(cfg: any): any {
+        if (this.isDefaultWorld && this.activeLevel?.start && cfg?.player) {
+            cfg.player.start = JSON.parse(JSON.stringify(this.activeLevel.start));
+        }
+        return cfg;
+    }
 
     /** The start an AUTHORED level forces on every load; the default world
      *  instead lets the restored (persisted) location win — its `start` is only
@@ -321,7 +340,16 @@ export class DesktopLoader implements IDataSource {
      *  the local draft overlay. Built once draftStore is hydrated (see init). */
     private localData: LocalDataSource | null = null;
 
-    public playerState: SeptopusPlayerState = { ...DEFAULT_PLAYER_STATE };
+    // Seeded from the ACTIVE level's start (soft start — the bare entry spawns
+    // in the exhibit corridor, ?level=demo in the demo court); the persisted
+    // location overrides at hydrate for the default-world family, and authored
+    // levels re-force their start in init().
+    public playerState: SeptopusPlayerState = {
+        ...DEFAULT_PLAYER_STATE,
+        block: [...this.activeLevel.start.block] as [number, number],
+        position: [...this.activeLevel.start.position] as [number, number, number],
+        rotation: [...this.activeLevel.start.rotation] as [number, number, number],
+    };
 
     // ── IDataSource ───────────────────────────────────────────────────────────
 
@@ -338,13 +366,13 @@ export class DesktopLoader implements IDataSource {
         const injected = (globalThis as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__;
         if (injected) {
             const cfg = await injected;
-            if (cfg) { this._worldDoc = cfg; return JSON.parse(JSON.stringify(cfg)); }
+            if (cfg) { this._worldDoc = cfg; return this.withSoftStart(JSON.parse(JSON.stringify(cfg))); }
         }
         // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
         // resource/facing are baked into the doc; a saved pick overrides after
         // hydrate. Swap the backing file (or a CID fetch) to change worlds.
         this._worldDoc = defaultWorldJson;
-        return JSON.parse(JSON.stringify(defaultWorldJson));
+        return this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson)));
     }
 
     public async view(x: number, y: number, ext: number, _worldIndex: number): Promise<any> {

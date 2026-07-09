@@ -206,11 +206,11 @@ while true; do
     else
     printf -- "\n${BOLD}UI 入口(浏览器打开)${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
-    printf -- "  桌面世界       ${GREEN}http://127.0.0.1:7777/${NC}\n"
+    printf -- "  桌面世界       ${GREEN}http://127.0.0.1:7777/${NC}(默认=功能展厅走廊 ①–⑳,尽头传送广场)\n"
     printf -- "  移动世界       ${GREEN}http://127.0.0.1:7778/${NC}"
     [ "$HOST" = "0.0.0.0" ] && [ -n "$LAN_IP" ] && printf -- "   ${CYAN}真机 → http://$LAN_IP:7778/${NC}"
     printf -- "\n"
-    printf -- "  功能展厅       ${GREEN}http://127.0.0.1:7777/?level=gallery${NC}(①–⑳;尽头传送广场直达仙剑/过山车/跑酷)\n"
+    printf -- "  综合演示区     ${GREEN}http://127.0.0.1:7777/?level=demo${NC}(游戏桌/编辑器素材,旧默认场景)\n"
     printf -- "  SPP粒子编辑器  ${GREEN}http://127.0.0.1:7777/?tool=stylepack${NC}\n"
     printf -- "  链上启动页     ${GREEN}http://127.0.0.1:7789/boot?name=septopus${NC}(先发版,见下)\n"
     printf -- "\n${BOLD}API 服务${NC}\n"

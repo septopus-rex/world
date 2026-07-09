@@ -9,7 +9,7 @@ import { Page, expect } from '@playwright/test';
  * This is exactly what the step(dt) refactor enables.
  */
 export async function bootDeterministic(page: Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/?level=demo'); // the comprehensive demo court (bare entry = exhibit corridor)
   await waitForWorldReady(page);
   await page.evaluate(() => (window as any).loader.engine.stop());
   await stepEngine(page, 90); // settle physics (land on ground) + render initial frames
