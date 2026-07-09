@@ -86,7 +86,7 @@
   },
   "blacklist": [],
   "debug": {
-    "stats": true
+    "stats": false
   },
   "time": {
     "epoch": 0,

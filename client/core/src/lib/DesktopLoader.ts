@@ -282,6 +282,15 @@ export class DesktopLoader implements IDataSource {
     /** The world document actually served by world() (chain-injected or bundled)
      *  — sync readers like avatarCatalog() consult it. */
     private _worldDoc: any = null;
+    /** World identity for HUD readouts: id + display nickname (from the served
+     *  world doc, base-data D7). */
+    public worldInfo(): { id: number; nickname: string } {
+        const doc = this._worldDoc ?? {};
+        return {
+            id: Number(doc?.world?.index ?? this.playerState.world ?? 0),
+            nickname: String(doc?.world?.nickname ?? 'Genesis'),
+        };
+    }
     /** THE client-side connection manager — every companion-service call routes
      *  through here (net/ServiceHub: probe/timeout/reconnect/status in one place). */
     public readonly net: ServiceHub = (() => {
@@ -694,21 +703,43 @@ export class DesktopLoader implements IDataSource {
         // around the block the player will actually appear in.
         const authored = this.authoredStart;
         const restored = this.engine.getPlayerSeptopusLocation();
-        if (restored && !authored) {
+        // A persisted location is only usable if the ACTIVE level has GROUND
+        // there — the level authors that coord OR carries a `fallback` ground
+        // template (ground everywhere). Without this, a location saved in one
+        // level (e.g. the demo court at [2048,20xx]) restored into another (the
+        // exhibit corridor, no fallback) drops the player into the void →
+        // "nothing renders". base-data: levels share worldId-0 persistence.
+        const hasFallback = !!(this.activeLevel as any).fallback;
+        const locHasGround = (b: [number, number]) => hasFallback || this.authoredCoord(b[0], b[1]);
+        const forceStartAt = (loc: { block: [number, number]; position: [number, number, number]; rotation?: [number, number, number] }) => {
+            const w = this.engine!.getWorld() as any;
+            const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
+            const t = pid !== undefined ? w.getComponent(pid, 'TransformComponent') : null;
+            if (t) {
+                const e = Coords.septopusToEngine(loc.position, loc.block);
+                t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;
+            }
+        };
+        if (restored && !authored && locHasGround(restored.block)) {
             this.playerState = {
                 ...this.playerState,
                 block: restored.block, position: restored.position, rotation: restored.rotation,
             };
+        } else if (!authored) {
+            // Default-world family but the persisted spot has no ground in THIS
+            // level (cross-level stale location) — fall back to the level start
+            // (playerState was seeded there by the soft-start) and move the engine
+            // transform off hydrate's stale restore so we don't spawn in the void.
+            const s = this.activeLevel.start;
+            forceStartAt(s);
+            this.playerState = {
+                ...this.playerState,
+                block: [...s.block] as [number, number], position: [...s.position] as [number, number, number], rotation: [...s.rotation] as [number, number, number],
+            };
         } else if (authored) {
             // Authored levels restart at their start on every load — force it,
             // ignoring any saved position hydrateDrafts may have restored.
-            const w = this.engine.getWorld() as any;
-            const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
-            const t = pid !== undefined ? w.getComponent(pid, 'TransformComponent') : null;
-            if (t) {
-                const e = Coords.septopusToEngine(authored.position, authored.block);
-                t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;
-            }
+            forceStartAt(authored);
         }
 
         const initialBKey = `${this.playerState.block[0]}_${this.playerState.block[1]}`;

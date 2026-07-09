@@ -31,7 +31,7 @@ test('移动壳:出生渲染 → 摇杆走路 → 触屏拖拽转视角 → JUMP
     // ── mobile chrome present, desktop chrome absent ──────────────────────────
     await expect(page.getByTestId('m-joystick')).toBeVisible();
     await expect(page.getByTestId('m-jump')).toBeVisible();
-    await expect(page.getByTestId('m-mode')).toHaveText(/normal/i);
+    await expect(page.getByTestId('status-toggle')).toHaveAttribute('aria-label', /normal/i);
     await expect(page.locator('[data-testid="mode-edit"]')).toHaveCount(0); // desktop toolbar not mounted
     await page.screenshot({ path: 'test-results/mobile-0-boot.png' });
 

@@ -14,6 +14,8 @@ import { ParkourHUD } from '@core/components/ParkourHUD';
 import { ShootingHUD } from '@core/components/ShootingHUD';
 import { MahjongHUD } from '@core/components/MahjongHUD';
 import { PoolHUD } from '@core/components/PoolHUD';
+import { StatusPanel } from '@core/components/StatusPanel';
+import { MiniCompass } from '@core/components/MiniCompass';
 
 /**
  * MobileApp — the MOBILE shell (specs/mobile-client.md M1+M3). Same shared core
@@ -49,15 +51,10 @@ export default function MobileApp() {
             {/* The engine canvas host — drag = look (engine-native touch), tap = interact. */}
             <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
 
-            {/* ── top bar: mode badge + version ── */}
-            <div className="absolute top-3 left-3 right-3 z-20 flex items-center justify-between pointer-events-none">
-                <div data-testid="m-mode" className="px-2.5 py-1 rounded-lg bg-black/50 border border-white/15 backdrop-blur text-[10px] font-black tracking-widest uppercase text-cyan-200">
-                    {mode}
-                </div>
-                <div className="px-2 py-1 rounded-lg bg-black/40 text-[9px] font-mono text-cyan-400/50">
-                    SEPTOPUS · v{__APP_VERSION__}
-                </div>
-            </div>
+            {/* ── top-left: collapsible status (mode + version, collapsed by default);
+                   top-right: mini compass + block coord / world id ── */}
+            {ready && <StatusPanel loader={loader} version={__APP_VERSION__} />}
+            {ready && <MiniCompass loader={loader} onOpenMap={() => setSheet('map')} />}
 
             {/* ── shared interaction surface (identical components to desktop) ── */}
             {ready && <HealthBar loader={loader} />}

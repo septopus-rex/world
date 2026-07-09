@@ -46,6 +46,11 @@ export class CharacterController implements ISystem {
     private _safe: [number, number, number] | null = null;
     /** Grounded-flag flicker tolerance (standing still alternates the flag). */
     private _airFrames = 0;
+    /** Jump buffer (seconds remaining): a jump press is held briefly so a tap on
+     *  a flicker frame (grounded alternates every other frame on flat ground) or
+     *  just before landing isn't eaten — standard platformer feel. */
+    private _jumpBufferedSec = 0;
+    private static readonly JUMP_BUFFER = 0.15;
     /** Edge detector for the embed-rescue warning (report once per episode). */
     private _wasEmbedded = false;
 
@@ -134,13 +139,20 @@ export class CharacterController implements ISystem {
 
         this.computeDesiredVelocity(world, input, body);
 
-        // jump impulse
-        if (input.jump && body.isGrounded) {
-            body.velocity[1] = body.jumpForce;
-            body.isGrounded = false;
-            this.collider.clearSupport();
-        }
+        // jump impulse — buffered: a press arms a short window so a tap landing on
+        // a grounded-flicker frame (or a few frames before landing) still fires.
+        if (input.jump) this._jumpBufferedSec = CharacterController.JUMP_BUFFER;
         input.jump = false;
+        if (this._jumpBufferedSec > 0) {
+            if (body.isGrounded) {
+                body.velocity[1] = body.jumpForce;
+                body.isGrounded = false;
+                this.collider.clearSupport();
+                this._jumpBufferedSec = 0;
+            } else {
+                this._jumpBufferedSec = Math.max(0, this._jumpBufferedSec - dt);
+            }
+        }
 
         // Gravity — but ONLY when there is ground somewhere beneath the player.
         // If the column under the player has no solid (an unloaded/streaming block,

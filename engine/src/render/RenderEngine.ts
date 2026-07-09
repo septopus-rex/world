@@ -154,6 +154,25 @@ export class RenderEngine {
             }), { tag: '[RenderEngine]', severity: 'warn' });
         });
 
+        // Audio-autoplay policy: browsers forbid an AudioContext before a user
+        // gesture and log a warning on any pre-gesture create/resume. So we
+        // DON'T touch audio until the first gesture — then resume the context and
+        // flush any autoplay sounds requested during boot (e2 ambient audio).
+        if (typeof window !== 'undefined') {
+            const unlock = () => {
+                this._audioUnlocked = true;
+                try { (this.audioListener?.context as AudioContext)?.resume?.(); } catch { /* noop */ }
+                const pending = this._pendingAudio; this._pendingAudio = [];
+                for (const a of pending) this.playSpatialSound(a.url, a.position, a.volume);
+                const emitters = this._pendingEmitters; this._pendingEmitters = [];
+                for (const e of emitters) {
+                    if (!((e.handle as THREE.Object3D)?.userData?.__removed)) this.attachAudioEmitter(e.handle, e.url, e.opts);
+                }
+                for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.removeEventListener(ev, unlock);
+            };
+            for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, unlock, { passive: true });
+        }
+
         // 5. Default Lighting (dim ambient so adjunct lights are visible)
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
         this.scene.add(hemi);
@@ -895,6 +914,10 @@ export class RenderEngine {
      *  unbounded audioBuffers growth. */
     private static readonly MAX_AUDIO_BUFFERS = 64;
     private audioBuffers = new Map<string, Promise<AudioBuffer>>();
+    /** Audio stays untouched until the first user gesture (autoplay policy). */
+    private _audioUnlocked = false;
+    private _pendingAudio: Array<{ url: string; position: [number, number, number] | null; volume: number }> = [];
+    private _pendingEmitters: Array<{ handle: RenderHandle; url: string; opts: any }> = [];
 
     /**
      * Play a one-shot sound. With a position → THREE.PositionalAudio in the
@@ -904,6 +927,16 @@ export class RenderEngine {
      * AudioContext is resumed best-effort).
      */
     public playSpatialSound(url: string, position: [number, number, number] | null, volume: number = 1): void {
+        if (!this._audioUnlocked) {
+            // Pre-gesture: remember autoplay requests (deduped, capped) to flush
+            // on unlock — never create the AudioContext here (would warn + suspend).
+            if (typeof (globalThis as any).AudioContext === 'undefined'
+                && typeof (globalThis as any).webkitAudioContext === 'undefined') return; // headless
+            this._pendingAudio = this._pendingAudio.filter((a) => a.url !== url);
+            this._pendingAudio.push({ url, position, volume });
+            if (this._pendingAudio.length > 16) this._pendingAudio.shift();
+            return;
+        }
         if (!this.audioListener) {
             this.audioListener = new THREE.AudioListener();
             this.mainCamera.add(this.audioListener);
@@ -960,6 +993,14 @@ export class RenderEngine {
         const mesh = handle as THREE.Object3D;
         if (typeof (globalThis as any).AudioContext === 'undefined'
             && typeof (globalThis as any).webkitAudioContext === 'undefined') return; // headless
+        if (!this._audioUnlocked) {
+            // Pre-gesture: remember the emitter (deduped by handle) to attach on
+            // unlock — never create the AudioContext here (autoplay-policy warn).
+            this._pendingEmitters = this._pendingEmitters.filter((e) => e.handle !== handle);
+            this._pendingEmitters.push({ handle, url, opts });
+            if (this._pendingEmitters.length > 32) this._pendingEmitters.shift();
+            return;
+        }
         if (!this.audioListener) { this.audioListener = new THREE.AudioListener(); this.mainCamera.add(this.audioListener); }
         const listener = this.audioListener;
         try { (listener.context as AudioContext)?.resume?.(); } catch { /* pre-gesture: stays suspended */ }

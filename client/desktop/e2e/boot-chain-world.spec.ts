@@ -28,7 +28,7 @@ test('ROOT loader 启动完整 3D 世界:锚→loader→引擎→出生→行走
     }, undefined, { timeout: 90_000 });
     await expect(page.locator('#three_demo canvas').first()).toBeVisible(); // main canvas (+Stats mini-canvases)
     await expect(page.getByTestId('m-joystick')).toBeVisible();
-    await expect(page.getByTestId('m-mode')).toHaveText(/normal/i);
+    await expect(page.getByTestId('status-toggle')).toHaveAttribute('aria-label', /normal/i);
 
     // World config genuinely came from the chain root (loader prelude fetch).
     const viaChain = await page.evaluate(() => !!(window as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__);
