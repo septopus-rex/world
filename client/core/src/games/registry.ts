@@ -4,6 +4,8 @@ import { MAHJONG_GAME_ID, MAHJONG_SETTING } from './mahjong/setting';
 import { MahjongGameApi } from './mahjong/MahjongGameApi';
 import { POOL_GAME_ID, POOL_SETTING } from './pool/setting';
 import { PoolGameApi } from './pool/PoolGameApi';
+import { HOLDEM_GAME_ID, HOLDEM_SETTING } from './holdem/setting';
+import { HoldemGameApi } from './holdem/HoldemGameApi';
 
 /**
  * Game registry — the single list of in-world games. Each entry ties a Game
@@ -22,11 +24,15 @@ export interface GameDef {
     setting: GameSetting;
     /** Build the in-page loopback transport (offline / no server). */
     makeLoopback(): IGameApi;
+    /** Dev port of this game's OWN physical server (services/<name> — one game
+     *  per server, the production operator model). */
+    devPort: number;
 }
 
 export const GAMES: GameDef[] = [
-    { name: 'mahjong', id: MAHJONG_GAME_ID, setting: MAHJONG_SETTING, makeLoopback: () => new MahjongGameApi() },
-    { name: 'pool', id: POOL_GAME_ID, setting: POOL_SETTING, makeLoopback: () => new PoolGameApi() },
+    { name: 'mahjong', id: MAHJONG_GAME_ID, setting: MAHJONG_SETTING, makeLoopback: () => new MahjongGameApi(), devPort: 7787 },
+    { name: 'pool', id: POOL_GAME_ID, setting: POOL_SETTING, makeLoopback: () => new PoolGameApi(), devPort: 7785 },
+    { name: 'holdem', id: HOLDEM_GAME_ID, setting: HOLDEM_SETTING, makeLoopback: () => new HoldemGameApi(), devPort: 7784 },
 ];
 
 export const gameById = (id: number): GameDef | undefined => GAMES.find(g => g.id === id);

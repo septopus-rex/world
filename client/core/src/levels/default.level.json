@@ -2,17 +2,75 @@
   "format": "septopus.world.level",
   "version": 1,
   "name": "default",
-  "start": { "block": [2048, 2048], "position": [8, 8, 1], "rotation": [0, 0, 0] },
+  "start": {
+    "block": [
+      2048,
+      2048
+    ],
+    "position": [
+      8,
+      8,
+      1
+    ],
+    "rotation": [
+      0,
+      0,
+      0
+    ]
+  },
   "blocks": [
-    { "x": 2048, "y": 2048, "ref": "demo" },
-    { "x": 2049, "y": 2048, "ref": "mahjong" },
-    { "x": 2047, "y": 2048, "ref": "mahjong3d" },
-    { "x": 2046, "y": 2048, "ref": "maze" },
-    { "x": 2048, "y": 2047, "ref": "shooting" },
-    { "x": 2048, "y": 2049, "ref": "pool" },
-    { "x": 2049, "y": 2049, "ref": "tumble" },
-    { "x": 2047, "y": 2049, "ref": "sandbox" },
-    { "x": 2049, "y": 2047, "ref": "dynamic" }
+    {
+      "x": 2048,
+      "y": 2048,
+      "ref": "demo"
+    },
+    {
+      "x": 2049,
+      "y": 2048,
+      "ref": "mahjong"
+    },
+    {
+      "x": 2047,
+      "y": 2048,
+      "ref": "mahjong3d"
+    },
+    {
+      "x": 2046,
+      "y": 2048,
+      "ref": "maze"
+    },
+    {
+      "x": 2048,
+      "y": 2047,
+      "ref": "shooting"
+    },
+    {
+      "x": 2048,
+      "y": 2049,
+      "ref": "pool"
+    },
+    {
+      "x": 2049,
+      "y": 2049,
+      "ref": "tumble"
+    },
+    {
+      "x": 2047,
+      "y": 2049,
+      "ref": "sandbox"
+    },
+    {
+      "x": 2049,
+      "y": 2047,
+      "ref": "dynamic"
+    },
+    {
+      "x": 2047,
+      "y": 2047,
+      "ref": "holdem"
+    }
   ],
-  "fallback": { "ref": "fallback" }
+  "fallback": {
+    "ref": "fallback"
+  }
 }

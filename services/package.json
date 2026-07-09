@@ -1,0 +1,8 @@
+{
+  "name": "@septopus/services-lib",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared deps for services/lib/* helpers (resolved from here by Node's importer-relative walk-up). Each service keeps its own package for its runner (tsx).",
+  "dependencies": { "ws": "^8.18.0" }
+}

@@ -14,7 +14,7 @@ import { waitForWorldReady, stepEngine } from './helpers';
 // in-test MahjongGame fake it replaced was a client-split casualty anyway).
 
 const MAHJONG_BLOCK: [number, number] = [2049, 2048];
-const GAME_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../services/game');
+const GAME_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../services/mahjong');
 const GAME = 'http://127.0.0.1:7787';
 
 let srv: ChildProcess;

@@ -8,6 +8,7 @@ import { Toaster } from '@core/components/Toaster';
 import { ParkourHUD } from '@core/components/ParkourHUD';
 import { MahjongHUD } from '@core/components/MahjongHUD';
 import { PoolHUD } from '@core/components/PoolHUD';
+import { HoldemHUD } from '@core/components/HoldemHUD';
 import { ShootingHUD } from '@core/components/ShootingHUD';
 import { LeaveGameDialog } from '@core/components/LeaveGameDialog';
 import { WorldMap2D } from '@core/components/WorldMap2D';
@@ -189,6 +190,7 @@ function App() {
           generic exit button is hidden while any game HUD is up. */}
       {ready && loader && activeGame === 'mahjong' && gameState && <MahjongHUD state={gameState} loader={loader} />}
       {ready && loader && activeGame === 'pool' && gameState && <PoolHUD state={gameState} loader={loader} />}
+      {ready && loader && activeGame === 'holdem' && gameState && <HoldemHUD state={gameState} loader={loader} />}
 
       {/* 'confirm'-policy games: stepping off the block keeps the round alive and
           asks whether to leave (vs the silent 'ephemeral' auto-exit). */}

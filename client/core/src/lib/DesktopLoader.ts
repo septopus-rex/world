@@ -58,6 +58,7 @@ import tumbleBlockJson from '../blocks/tumble.block.json';
 import mahjongBlockJson from '../blocks/mahjong.block.json';
 import mahjong3dBlockJson from '../blocks/mahjong3d.block.json';
 import sandboxBlockJson from '../blocks/sandbox.block.json';
+import holdemBlockJson from '../blocks/holdem.block.json';
 import dynamicBlockJson from '../blocks/dynamic.block.json';
 import fallbackBlockJson from '../blocks/fallback.block.json';
 import { SANDBOX_BLOCK, SANDBOX_CENTER, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../scenes/sandboxScene';
@@ -134,7 +135,7 @@ export class DesktopLoader implements IDataSource {
     private static readonly CONTENT: Record<string, any> = {
         demo: demoBlockJson, maze: mazeBlockJson, shooting: shootingBlockJson,
         pool: poolBlockJson, tumble: tumbleBlockJson, mahjong: mahjongBlockJson,
-        mahjong3d: mahjong3dBlockJson, sandbox: sandboxBlockJson,
+        mahjong3d: mahjong3dBlockJson, sandbox: sandboxBlockJson, holdem: holdemBlockJson,
         dynamic: dynamicBlockJson, fallback: fallbackBlockJson,
     };
     private resolveContent: ContentResolver = (ref) => DesktopLoader.CONTENT[ref] ?? null;
@@ -261,7 +262,6 @@ export class DesktopLoader implements IDataSource {
         const env = (import.meta as any).env ?? {};
         const hub = new ServiceHub();
         hub.register('board', env.VITE_BOARD_SERVER || 'http://127.0.0.1:7786');
-        hub.register('game', env.VITE_GAME_SERVER || 'http://127.0.0.1:7787');
         hub.register('ipfs', env.VITE_IPFS_GATEWAY || 'http://127.0.0.1:7789');
         hub.register('ai', env.VITE_AI_GATEWAY || 'http://127.0.0.1:7788');
         return hub;
@@ -430,9 +430,14 @@ export class DesktopLoader implements IDataSource {
         // forces each game's data-declared baseurl (the route-intercept e2e path).
         const useServer = typeof location !== 'undefined'
             && new URLSearchParams(location.search).has('mjserver');
-        const gameCh = this.net.http('game');
+        const env = (import.meta as any).env ?? {};
         const backends: Record<string, IGameApi> = {};
         for (const g of GAMES) {
+            // Each game gets ITS OWN physical server (services/<name>, devPort) —
+            // registered on the hub as `game:<name>`; env override per game
+            // (VITE_GAME_SERVER_MAHJONG=…) mirrors production per-operator bases.
+            const base = env[`VITE_GAME_SERVER_${g.name.toUpperCase()}`] || `http://127.0.0.1:${g.devPort}`;
+            const gameCh = this.net.register(`game:${g.name}`, base);
             backends[g.name] = useServer
                 ? new FetchGameApi(this.net.adhoc(g.setting.baseurl ?? `/api/${g.name}`)) // data-declared server
                 : new ProbedGameApi(gameCh,

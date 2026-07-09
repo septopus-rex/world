@@ -4,7 +4,7 @@ import { AdjunctType } from '../../src/core/types/AdjunctType';
 import level from '../../../client/core/src/levels/gallery.level.json';
 
 // The gallery's NEW tail blocks (1013–1017: b4 three-shape stops · b9 spawner ·
-// c2 motif arch · c1 track · e5 board) verified headless with the SAME client JSON the
+// c2 motif arch · c1 track · e5 board · ⑲ holdem game block) verified headless with the SAME client JSON the
 // browser loads — the e2e walks the south corridor; this covers the exhibits'
 // SEMANTICS (collision shapes exist, spawner actually spawns and caps, motif
 // derives its boxes, track entity builds) without a 16-block walk.
@@ -28,7 +28,7 @@ async function bootTail() {
     return { engine, world };
 }
 
-describe('画廊新展块(⑭–⑱):语义 headless 验证', () => {
+describe('画廊新展块(⑭–⑲):语义 headless 验证', () => {
     it('⑭ b4 三形状碰撞体齐备,⑰ c1 轨道建实体,⑱ e5 留言板,每块一本书', async () => {
         const { world } = await bootTail();
         const stops = adjunctsOf(world, AdjunctType.Stop);
@@ -37,7 +37,7 @@ describe('画廊新展块(⑭–⑱):语义 headless 验证', () => {
         expect(new Set(shapes).size, 'three DISTINCT shapes').toBe(3);
 
         expect(adjunctsOf(world, AdjunctType.Track).length, 'the S-curve tube').toBe(1);
-        expect(adjunctsOf(world, AdjunctType.Book).length, 'one numbered book per new block').toBe(5);
+        expect(adjunctsOf(world, AdjunctType.Book).length, 'one numbered book per new block').toBe(6);
         const boards = adjunctsOf(world, AdjunctType.Board);
         expect(boards.length, '⑱ the e5 message board').toBe(1);
         expect(boards[0].stdData?.channel, 'channel declared in data').toBe('gallery');

@@ -51,7 +51,20 @@ export class ReconnectingSocket implements WebSocketLike {
             this.onopen?.(); // live source re-subscribes here
         };
         this.ws.onmessage = (ev) => this.onmessage?.({ data: ev.data });
-        this.ws.onerror = (ev) => this.onerror?.(ev);
+        this.ws.onerror = (ev) => {
+            this.onerror?.(ev);
+            // Some runtimes (Node/undici) fire `error` WITHOUT a following
+            // `close` on a refused dial (browsers fire both) — treat any
+            // pre-open error as a drop so the reconnect still happens.
+            // Idempotent: scheduleReconnect no-ops if `close` also arrives.
+            if (this.readyState !== 1) {
+                this.discard(this.ws);
+                this.ws = null;
+                this.stopHeartbeat();
+                this.readyState = 3;
+                if (!this.closed) this.scheduleReconnect();
+            }
+        };
         this.ws.onclose = () => {
             this.stopHeartbeat();
             this.readyState = 3; // CLOSED
@@ -62,6 +75,16 @@ export class ReconnectingSocket implements WebSocketLike {
             this.onclose?.();
             if (!this.closed) this.scheduleReconnect();
         };
+    }
+
+    /** Detach a dead/half-open socket completely: noop handlers (so late
+     *  events from the doomed dial can't re-enter our logic or surface as
+     *  unhandled) + best-effort close. */
+    private discard(ws: WebSocket | null): void {
+        if (!ws) return;
+        const noop = () => { /* zombie events die here */ };
+        ws.onopen = noop; ws.onmessage = noop; ws.onerror = noop; ws.onclose = noop;
+        try { ws.close(); } catch { /* half-open */ }
     }
 
     private scheduleReconnect(): void {

@@ -1,0 +1,9 @@
+{
+  "name": "@septopus/holdem-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus dev Texas Hold'em server — the holdem game as its own physical service (FetchGameApi wire contract + ws/live push, sessions held server-side).",
+  "scripts": { "start": "tsx server.ts" },
+  "devDependencies": { "tsx": "^4.19.0" }
+}

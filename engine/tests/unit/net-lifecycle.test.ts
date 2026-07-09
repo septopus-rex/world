@@ -203,6 +203,16 @@ describe('ReconnectingSocket — disconnect extremes', () => {
         s.close();
     });
 
+    it('a refused dial firing error WITHOUT close (Node/undici behavior) still reconnects', () => {
+        const s = new ReconnectingSocket('ws://refused');
+        MockWS.instances[0].onerror?.(new Error('ECONNREFUSED')); // no close follows
+        vi.advanceTimersByTime(1000);
+        expect(MockWS.instances, 'a second dial happened despite the missing close').toHaveLength(2);
+        MockWS.instances[1].serverOpen();
+        expect(s.readyState).toBe(1);
+        s.close();
+    });
+
     it('send while disconnected is dropped silently (live frames are ephemeral)', () => {
         const s = new ReconnectingSocket('ws://live');
         expect(() => s.send('early')).not.toThrow();   // still CONNECTING

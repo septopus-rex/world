@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/pool-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus dev pool server \u2014 the pool game as its own physical service (FetchGameApi wire contract, sessions held server-side). One game per server = the production operator model.",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
