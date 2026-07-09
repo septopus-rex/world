@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { RenderHandle } from '../core/types/Adjunct';
 import { reportError, EngineError } from '../core/errors';
+import { SpatialAudio } from './SpatialAudio';
+import { AvatarAnimator } from './AvatarAnimator';
+import { MinimapPass } from './MinimapPass';
+import { MediaScreens } from './MediaScreens';
+import { isolateMaterial } from './MaterialUtils';
 import { MeshFactory } from './MeshFactory';
 
 export interface RenderEngineConfig {
@@ -22,7 +27,8 @@ export enum CameraType {
 export class RenderEngine {
     private scene: THREE.Scene;
     private mainCamera: THREE.PerspectiveCamera;
-    private minimapCamera: THREE.OrthographicCamera;
+    private readonly minimap = new MinimapPass();
+    private readonly media = new MediaScreens();
     private renderer: THREE.WebGLRenderer;
     /** The shadow-casting sun (first directional light) + its authored direction. */
     private sunLight: THREE.DirectionalLight | null = null;
@@ -46,7 +52,6 @@ export class RenderEngine {
     private worldRoot!: THREE.Group;
     private renderOrigin = new THREE.Vector3(0, 0, 0);
     private _cameraAbs = new THREE.Vector3();   // last ABSOLUTE main-camera position
-    private _minimapAbs = new THREE.Vector3();  // last ABSOLUTE minimap-camera position
     private static readonly REBASE_THRESHOLD = 1024;
 
     // Reusable scratch objects to avoid per-call allocations
@@ -65,13 +70,8 @@ export class RenderEngine {
      *  (drawing into a dead context throws). Simulation keeps stepping. */
     private _contextLost = false;
 
-    // Skeletal animation: one mixer per animated handle.
-    private _mixers = new Map<THREE.Object3D, {
-        mixer: THREE.AnimationMixer;
-        /** state name → action (idle/walk/run/air + every clip by raw name). */
-        actions: Map<string, THREE.AnimationAction>;
-        current: string | null;
-    }>();
+    // Skeletal animation — delegated to render/AvatarAnimator.
+    private readonly animator = new AvatarAnimator();
 
     constructor(config: RenderEngineConfig) {
         const domElement = document.getElementById(config.containerId);
@@ -96,17 +96,6 @@ export class RenderEngine {
         this.mainCamera.rotation.order = 'YXZ'; // Prevent tilting and gimbal lock
         this.mainCamera.position.set(0, 10, 20);
 
-        // 3. Initialize Minimap Camera (Orthographic)
-        const frustumSize = 120;
-        this.minimapCamera = new THREE.OrthographicCamera(
-            frustumSize / -2, frustumSize / 2,
-            frustumSize / 2, frustumSize / -2,
-            0.1, 2000
-        );
-        this.minimapCamera.position.set(0, 500, 0);
-        this.minimapCamera.up.set(0, 0, -1);
-        this.minimapCamera.lookAt(0, 0, 0);
-        this.minimapCamera.layers.enableAll();
 
         // Enable Layer 1 for Selection in Main Camera
         this.mainCamera.layers.enable(1);
@@ -154,24 +143,10 @@ export class RenderEngine {
             }), { tag: '[RenderEngine]', severity: 'warn' });
         });
 
-        // Audio-autoplay policy: browsers forbid an AudioContext before a user
-        // gesture and log a warning on any pre-gesture create/resume. So we
-        // DON'T touch audio until the first gesture — then resume the context and
-        // flush any autoplay sounds requested during boot (e2 ambient audio).
-        if (typeof window !== 'undefined') {
-            const unlock = () => {
-                this._audioUnlocked = true;
-                try { (this.audioListener?.context as AudioContext)?.resume?.(); } catch { /* noop */ }
-                const pending = this._pendingAudio; this._pendingAudio = [];
-                for (const a of pending) this.playSpatialSound(a.url, a.position, a.volume);
-                const emitters = this._pendingEmitters; this._pendingEmitters = [];
-                for (const e of emitters) {
-                    if (!((e.handle as THREE.Object3D)?.userData?.__removed)) this.attachAudioEmitter(e.handle, e.url, e.opts);
-                }
-                for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.removeEventListener(ev, unlock);
-            };
-            for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, unlock, { passive: true });
-        }
+        // Spatial audio subsystem (render/SpatialAudio) — the listener rides the
+        // camera, positional sounds add to worldRoot. Autoplay-policy gate + LRU
+        // buffer cache live inside it; this facade just forwards.
+        this.audio = new SpatialAudio(this.mainCamera, this.worldRoot);
 
         // 5. Default Lighting (dim ambient so adjunct lights are visible)
         const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
@@ -193,7 +168,7 @@ export class RenderEngine {
     }
 
     public get mainCameraInstance(): THREE.PerspectiveCamera { return this.mainCamera; }
-    public get minimapCameraInstance(): THREE.OrthographicCamera { return this.minimapCamera; }
+    public get minimapCameraInstance(): THREE.OrthographicCamera { return this.minimap.cameraInstance; }
     public get sceneInstance(): THREE.Scene { return this.scene; }
     public get domElement(): HTMLCanvasElement { return this.renderer.domElement; }
 
@@ -228,28 +203,13 @@ export class RenderEngine {
     /**
      * Minimap Abstraction
      */
-    public setMinimapZoom(zoom: number): void {
-        this.minimapCamera.zoom = zoom;
-        this.minimapCamera.updateProjectionMatrix();
-    }
+    public setMinimapZoom(zoom: number): void { this.minimap.setZoom(zoom); }
 
-    public setMinimapPosition(x: number, y: number, z: number): void {
-        this._minimapAbs.set(x, y, z);
-        this.minimapCamera.position.set(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
-    }
+    public setMinimapPosition(x: number, y: number, z: number): void { this.minimap.setPosition(x, y, z, this.renderOrigin); }
 
-    public setMinimapLookAt(x: number, y: number, z: number): void {
-        this.minimapCamera.lookAt(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
-    }
+    public setMinimapLookAt(x: number, y: number, z: number): void { this.minimap.setLookAt(x, y, z, this.renderOrigin); }
 
-    public getMinimapPosition(): [number, number, number] {
-        // Return ABSOLUTE world coords (undo the origin offset).
-        return [
-            this.minimapCamera.position.x + this.renderOrigin.x,
-            this.minimapCamera.position.y + this.renderOrigin.y,
-            this.minimapCamera.position.z + this.renderOrigin.z,
-        ];
-    }
+    public getMinimapPosition(): [number, number, number] { return this.minimap.getPosition(this.renderOrigin); }
 
     /**
      * General Object Abstraction
@@ -337,7 +297,7 @@ export class RenderEngine {
         if (color === undefined && opacity === undefined) return;
         (handle as THREE.Object3D).traverse((child) => {
             if (!(child instanceof THREE.Mesh) || !child.material) return;
-            const mat = RenderEngine.isolateMaterial(child as THREE.Mesh);
+            const mat = isolateMaterial(child as THREE.Mesh);
             if (color !== undefined) mat.color.setHex(color);
             if (opacity !== undefined) {
                 mat.opacity = opacity;
@@ -356,7 +316,7 @@ export class RenderEngine {
     public setObjectOpacityIsolated(handle: RenderHandle, opacity: number): void {
         (handle as THREE.Object3D).traverse((child) => {
             if (!(child instanceof THREE.Mesh) || !child.material) return;
-            const mat = RenderEngine.isolateMaterial(child as THREE.Mesh);
+            const mat = isolateMaterial(child as THREE.Mesh);
             mat.opacity = opacity;
             mat.transparent = opacity < 1.0;
         });
@@ -370,23 +330,6 @@ export class RenderEngine {
      * cached material's shared=true and skip disposal), so it's freed with the
      * mesh (disposeMeshResources) instead of leaking.
      */
-    private static isolateMaterial(child: THREE.Mesh): THREE.MeshStandardMaterial {
-        const cur = child.material as THREE.Material & { __isolated?: boolean };
-        if (!cur.__isolated) {
-            const cloned = cur.clone() as THREE.Material & { __isolated?: boolean };
-            cloned.__isolated = true;
-            // Material.clone deep-copies userData — strip the cache identity so the
-            // clone is a plain owned material (disposed with the mesh), not a
-            // doppelgänger of the cached shared entry.
-            cloned.userData = { ...cloned.userData, shared: false, cacheKey: undefined, cacheKind: undefined };
-            child.material = cloned;
-            // The mesh no longer uses the cached shared material — release its ref
-            // so the cache entry can be freed once the last true user is gone.
-            if ((cur as any).userData?.shared) MeshFactory.release(cur);
-        }
-        return child.material as THREE.MeshStandardMaterial;
-    }
-
     /** Animated texture scroll: set the material map's UV offset (type 'texture').
      *  Enables RepeatWrapping so the offset wraps instead of clamping. */
     public setTextureOffset(handle: RenderHandle, u: number, v: number): void {
@@ -535,7 +478,7 @@ export class RenderEngine {
         this.worldRoot.position.set(-this.renderOrigin.x, -this.renderOrigin.y, -this.renderOrigin.z);
         this.worldRoot.updateMatrixWorld(true);
         this.mainCamera.position.set(this._cameraAbs.x - this.renderOrigin.x, this._cameraAbs.y - this.renderOrigin.y, this._cameraAbs.z - this.renderOrigin.z);
-        this.minimapCamera.position.set(this._minimapAbs.x - this.renderOrigin.x, this._minimapAbs.y - this.renderOrigin.y, this._minimapAbs.z - this.renderOrigin.z);
+        this.minimap.rebase(this.renderOrigin);
     }
 
     /**
@@ -556,31 +499,8 @@ export class RenderEngine {
             this.renderer.setScissorTest(false);
             this.renderer.render(this.scene, this.mainCamera);
 
-            // PiP Minimap pass
-            this.renderer.clearDepth();
-            const mapSize = Math.min(600, this.container.clientWidth * 0.9, this.container.clientHeight * 0.9);
-            const mapX = (this.container.clientWidth - mapSize) / 2;
-            const mapY = (this.container.clientHeight - mapSize) / 2;
-
-            this.renderer.setViewport(mapX, mapY, mapSize, mapSize);
-            this.renderer.setScissor(mapX, mapY, mapSize, mapSize);
-            this.renderer.setScissorTest(true);
-
-            // Disable the sky distance fog for the top-down pass. scene.fog is global
-            // to every camera; the minimap's orthographic camera sits ~500 m up, far
-            // beyond the fog's few-block far plane, so the fog would paint the ENTIRE
-            // minimap solid sky colour (the map looked blank). Fog is a first-person
-            // roaming-horizon effect only — restore it right after.
-            const savedFog = this.scene.fog;
-            this.scene.fog = null;
-
-            this.renderer.setClearColor(0x111111, 0.9);
-            this.renderer.clearColor();
-            this.renderer.render(this.scene, this.minimapCamera);
-
-            // Restore
-            this.scene.fog = savedFog;
-            this.renderer.setClearColor(0xf0f0f0, 0);
+            // PiP Minimap pass (render/MinimapPass)
+            this.minimap.render(this.renderer, this.scene, this.container);
         }
         this.stats?.end();
     }
@@ -756,7 +676,7 @@ export class RenderEngine {
     public castRayFromMinimap(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
         this.raycaster.layers.set(1); // Minimap should also respect layers if we allow picking there
         this._tmpVec2.set(ndcX, ndcY);
-        this.raycaster.setFromCamera(this._tmpVec2, this.minimapCamera);
+        this.raycaster.setFromCamera(this._tmpVec2, this.minimap.cameraInstance);
 
         const intersects = this.raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
@@ -903,131 +823,25 @@ export class RenderEngine {
     public unlockControls(): void {
     }
 
-    // ── Audio (3D spatial) ───────────────────────────────────────────────────
+    // ── Audio (3D spatial) — delegated to render/SpatialAudio ─────────────────
+    private audio!: SpatialAudio;
 
-    private audioListener: THREE.AudioListener | null = null;
-    private audioLoader: THREE.AudioLoader | null = null;
-    /** Decoded buffers, load-once by URL (shared across every play). LRU-ordered
-     *  (Map insertion order) and capped: a currently-playing source keeps its own
-     *  buffer reference, so evicting from the cache never cuts a sound short — the
-     *  decoded PCM is just GC'd once nothing is playing it. Bounds the old
-     *  unbounded audioBuffers growth. */
-    private static readonly MAX_AUDIO_BUFFERS = 64;
-    private audioBuffers = new Map<string, Promise<AudioBuffer>>();
-    /** Audio stays untouched until the first user gesture (autoplay policy). */
-    private _audioUnlocked = false;
-    private _pendingAudio: Array<{ url: string; position: [number, number, number] | null; volume: number }> = [];
-    private _pendingEmitters: Array<{ handle: RenderHandle; url: string; opts: any }> = [];
-
-    /**
-     * Play a one-shot sound. With a position → THREE.PositionalAudio in the
-     * scene (distance attenuation); without → flat 2D playback. The listener
-     * rides the main camera and is created lazily (first play normally follows
-     * a user gesture, which also satisfies the autoplay policy — a suspended
-     * AudioContext is resumed best-effort).
-     */
+    /** Play a one-shot sound (positional if given a point, else flat 2D). */
     public playSpatialSound(url: string, position: [number, number, number] | null, volume: number = 1): void {
-        if (!this._audioUnlocked) {
-            // Pre-gesture: remember autoplay requests (deduped, capped) to flush
-            // on unlock — never create the AudioContext here (would warn + suspend).
-            if (typeof (globalThis as any).AudioContext === 'undefined'
-                && typeof (globalThis as any).webkitAudioContext === 'undefined') return; // headless
-            this._pendingAudio = this._pendingAudio.filter((a) => a.url !== url);
-            this._pendingAudio.push({ url, position, volume });
-            if (this._pendingAudio.length > 16) this._pendingAudio.shift();
-            return;
-        }
-        if (!this.audioListener) {
-            this.audioListener = new THREE.AudioListener();
-            this.mainCamera.add(this.audioListener);
-        }
-        const listener = this.audioListener;
-        try { (listener.context as AudioContext)?.resume?.(); } catch { /* pre-gesture: stays suspended */ }
-
-        if (!this.audioLoader) this.audioLoader = new THREE.AudioLoader();
-        let buffer = this.audioBuffers.get(url);
-        if (buffer) {
-            this.audioBuffers.delete(url); this.audioBuffers.set(url, buffer);   // LRU touch
-        } else {
-            buffer = this.audioLoader.loadAsync(url);
-            this.audioBuffers.set(url, buffer);
-            while (this.audioBuffers.size > RenderEngine.MAX_AUDIO_BUFFERS) {
-                const victim = this.audioBuffers.keys().next().value;             // LRU head
-                if (victim === undefined) break;
-                this.audioBuffers.delete(victim);
-            }
-        }
-        buffer.then((buf) => {
-            if (position) {
-                const sound = new THREE.PositionalAudio(listener);
-                sound.setBuffer(buf);
-                sound.setRefDistance(8);
-                sound.setVolume(volume);
-                sound.position.set(position[0], position[1], position[2]);
-                this.worldRoot.add(sound); // absolute local pos; worldRoot offset puts it in render space (relative to the listener on the camera)
-                sound.onEnded = () => { sound.isPlaying = false; this.worldRoot.remove(sound); };
-                sound.play();
-            } else {
-                const sound = new THREE.Audio(listener);
-                sound.setBuffer(buf);
-                sound.setVolume(volume);
-                sound.play();
-            }
-        }).catch((e) => reportError(e, { tag: '[RenderEngine]', severity: 'warn', code: 'RESOURCE_LOAD', id: url }));
+        this.audio.play(url, position, volume);
     }
 
     // ── A/V media adjuncts (e2 audio emitter / e3 video screen) ────────────────
     // The <video>/PositionalAudio live ON the mesh handle (userData.__media) so
     // removeHandle stops + frees them on block eviction. See specs/av-media-adjuncts.md.
 
-    /**
-     * Attach a looping spatial sound to a mesh (audio emitter, e2). Unlike the
-     * one-shot playSpatialSound, the PositionalAudio rides the mesh (moves with it,
-     * stops on eviction). Reuses the decoded-buffer LRU cache. Headless → no-op.
-     */
+    /** Attach a looping spatial sound to a mesh (audio emitter, e2). */
     public attachAudioEmitter(
         handle: RenderHandle,
         url: string,
         opts: { autoplay?: boolean; loop?: boolean; volume?: number; refDistance?: number } = {},
     ): void {
-        const mesh = handle as THREE.Object3D;
-        if (typeof (globalThis as any).AudioContext === 'undefined'
-            && typeof (globalThis as any).webkitAudioContext === 'undefined') return; // headless
-        if (!this._audioUnlocked) {
-            // Pre-gesture: remember the emitter (deduped by handle) to attach on
-            // unlock — never create the AudioContext here (autoplay-policy warn).
-            this._pendingEmitters = this._pendingEmitters.filter((e) => e.handle !== handle);
-            this._pendingEmitters.push({ handle, url, opts });
-            if (this._pendingEmitters.length > 32) this._pendingEmitters.shift();
-            return;
-        }
-        if (!this.audioListener) { this.audioListener = new THREE.AudioListener(); this.mainCamera.add(this.audioListener); }
-        const listener = this.audioListener;
-        try { (listener.context as AudioContext)?.resume?.(); } catch { /* pre-gesture: stays suspended */ }
-        if (!this.audioLoader) this.audioLoader = new THREE.AudioLoader();
-
-        let buffer = this.audioBuffers.get(url);
-        if (buffer) { this.audioBuffers.delete(url); this.audioBuffers.set(url, buffer); }
-        else {
-            buffer = this.audioLoader.loadAsync(url);
-            this.audioBuffers.set(url, buffer);
-            while (this.audioBuffers.size > RenderEngine.MAX_AUDIO_BUFFERS) {
-                const victim = this.audioBuffers.keys().next().value; if (victim === undefined) break;
-                this.audioBuffers.delete(victim);
-            }
-        }
-
-        const sound = new THREE.PositionalAudio(listener);
-        (mesh.userData ??= {}).__media = { audio: sound };
-        buffer.then((buf) => {
-            if (mesh.userData?.__removed) return; // evicted mid-load
-            sound.setBuffer(buf);
-            sound.setLoop(opts.loop !== false);
-            sound.setRefDistance(opts.refDistance ?? 8);
-            sound.setVolume(opts.volume ?? 1);
-            mesh.add(sound);
-            if (opts.autoplay !== false) sound.play();
-        }).catch((e) => reportError(e, { tag: '[RenderEngine]', severity: 'warn', code: 'RESOURCE_LOAD', id: url }));
+        this.audio.attachEmitter(handle, url, opts);
     }
 
     /**
@@ -1042,29 +856,7 @@ export class RenderEngine {
         url: string,
         opts: { autoplay?: boolean; loop?: boolean; muted?: boolean; volume?: number } = {},
     ): void {
-        if (typeof document === 'undefined') return; // headless
-        const mesh = handle as THREE.Object3D;
-        const video = document.createElement('video');
-        video.src = url;
-        video.crossOrigin = 'anonymous';
-        video.loop = opts.loop !== false;
-        video.muted = opts.muted !== false;
-        (video as any).playsInline = true;
-        video.volume = opts.volume ?? 1;
-
-        const texture = new THREE.VideoTexture(video);
-        (texture as any).colorSpace = THREE.SRGBColorSpace;
-        if (mesh instanceof THREE.Mesh) {
-            const mat = RenderEngine.isolateMaterial(mesh);
-            mat.map = texture;
-            mat.color.setHex(0xffffff); // white base so the video shows true (not tinted)
-            mat.side = THREE.DoubleSide; // visible from both sides of the panel
-            mat.needsUpdate = true;
-        }
-        (mesh.userData ??= {}).__media = { video, texture };
-        if (opts.autoplay !== false) {
-            video.play().catch(() => { /* autoplay may need a gesture — click-to-play is P1 */ });
-        }
+        this.media.attachVideo(handle, url, opts);
     }
 
     /** Stop + free any A/V media attached to a mesh (called from removeHandle). */
@@ -1077,145 +869,12 @@ export class RenderEngine {
         child.userData.__media = undefined;
     }
 
-    // ── Skeletal animation ────────────────────────────────────────────────────
-
-    /** LEGACY heuristics for NON-COMPLIANT assets only — the normative clip
-     *  naming contract (protocol avatar-animation.md §3) is case-insensitive
-     *  NAME EQUALITY to the state name. Assets predating the contract degrade
-     *  to this substring match so they keep animating. */
-    private static readonly ANIM_STATE_PATTERNS: Record<string, RegExp> = {
-        idle: /idle|stand|breath/i,
-        walk: /walk/i,
-        run: /run|sprint|jog/i,
-        air: /jump|fall|air/i,
-    };
-
-    /**
-     * Register a handle's clips with a mixer and start its default state.
-     * State → clip mapping per protocol avatar-animation.md §3 (v1 contract):
-     *   1. NORMATIVE: clip name equals the state name, case-insensitive
-     *      (`Walk` == `walk`).
-     *   2. LEGACY degrade: substring heuristics (ANIM_STATE_PATTERNS) fill
-     *      states the normative pass left unmapped.
-     * Clips are also indexed by raw name; states with no matching clip fall
-     * back at play time through the §2 chain (run→walk→idle · air→jump→idle ·
-     * land→idle → first clip), so a one-clip model still animates.
-     */
-    public startAnimation(handle: RenderHandle, clips: THREE.AnimationClip[]): void {
-        if (!clips.length) return;
-        const obj = handle as THREE.Object3D;
-        const mixer = new THREE.AnimationMixer(obj);
-        const actions = new Map<string, THREE.AnimationAction>();
-
-        for (const clip of clips) {
-            const action = mixer.clipAction(clip);
-            actions.set(clip.name, action);
-            // Normative (§3): case-insensitive name equality takes precedence.
-            const lower = clip.name.toLowerCase();
-            if (!actions.has(lower)) actions.set(lower, action);
-        }
-        // Legacy degrade: fill still-unmapped states via substring heuristics.
-        for (const clip of clips) {
-            for (const [state, pattern] of Object.entries(RenderEngine.ANIM_STATE_PATTERNS)) {
-                if (!actions.has(state) && pattern.test(clip.name)) actions.set(state, mixer.clipAction(clip));
-            }
-        }
-        if (!actions.has('idle')) actions.set('idle', mixer.clipAction(clips[0]));
-
-        const rig = { mixer, actions, current: null as string | null };
-        this._mixers.set(obj, rig);
-        this.playRigState(rig, 'idle', 0);
-    }
-
-    /**
-     * Crossfade the handle's animation to a movement state (idle/walk/run/air
-     * or a raw clip name). No-op when the state is already playing or the
-     * handle has no rig (placeholder box / model without clips).
-     */
-    public setAnimationState(handle: RenderHandle, state: string, fadeSec: number = 0.25): void {
-        const rig = this._mixers.get(handle as THREE.Object3D);
-        if (!rig || rig.current === state) return;
-        this.playRigState(rig, state, fadeSec);
-    }
-
-    private playRigState(rig: { mixer: THREE.AnimationMixer; actions: Map<string, THREE.AnimationAction>; current: string | null }, state: string, fadeSec: number): void {
-        // NORMATIVE fallback chains — protocol avatar-animation.md §2: any state
-        // must eventually resolve to `idle` (a compliant motion set carries at
-        // least `idle`; a non-compliant one has clips[0] registered as idle).
-        const FALLBACK: Record<string, string[]> = {
-            run: ['run', 'walk', 'idle'],
-            walk: ['walk', 'idle'],
-            air: ['air', 'jump', 'idle'],
-            jump: ['jump', 'air', 'idle'],
-            land: ['land', 'idle'],
-            idle: ['idle'],
-        };
-        let next: THREE.AnimationAction | undefined;
-        for (const name of FALLBACK[state] ?? [state, 'idle']) {
-            next = rig.actions.get(name);
-            if (next) break;
-        }
-        if (!next) return;
-
-        const prev = rig.current ? rig.actions.get(rig.current) : undefined;
-        // The fallback chain can resolve two states to the SAME action (one-clip
-        // model: walk→idle→clips[0]); record the state but don't restart it.
-        rig.current = state;
-        if (prev === next && next.isRunning()) return;
-
-        if (prev && prev.isRunning() && fadeSec > 0) prev.fadeOut(fadeSec);
-        else prev?.stop();
-        next.reset();
-        if (fadeSec > 0 && prev) next.fadeIn(fadeSec);
-        next.play();
-    }
-
-    /** Advance the mixer for this handle by dt seconds (called from CharacterController). */
-    public updateAnimation(handle: RenderHandle, dt: number): void {
-        this._mixers.get(handle as THREE.Object3D)?.mixer.update(dt);
-    }
-
-    /** Stop and remove the mixer for this handle (called on avatar swap or disposal). */
-    public stopAnimation(handle: RenderHandle): void {
-        const rig = this._mixers.get(handle as THREE.Object3D);
-        if (rig) { rig.mixer.stopAllAction(); this._mixers.delete(handle as THREE.Object3D); }
-    }
-
-    /**
-     * Debug/verification snapshot of an animated handle: registered clip names,
-     * the current STATE, the actual clip the state resolved to (fallback chains
-     * make these differ — that's the point of asking), and the world-space
-     * bounding size (avatar body-height checks). Render-layer because Box3 and
-     * the mixer registry live here.
-     */
-    public getAnimationDebug(handle: RenderHandle): {
-        clips: string[]; state: string | null; activeClip: string | null;
-        activeTime: number; activeRunning: boolean;
-        height: number; minY: number;
-    } | null {
-        const obj = handle as THREE.Object3D;
-        const rig = this._mixers.get(obj);
-        const box = new THREE.Box3().setFromObject(obj);
-        let activeClip: string | null = null;
-        let activeTime = 0, activeRunning = false;
-        if (rig?.current) {
-            const action = rig.actions.get(rig.current);
-            activeClip = action?.getClip()?.name ?? null;
-            activeTime = action?.time ?? 0;                 // advances iff the clip is playing
-            activeRunning = action?.isRunning() ?? false;
-        }
-        const clipNames = new Set<string>();
-        rig?.actions.forEach((a) => clipNames.add(a.getClip().name));
-        return {
-            clips: [...clipNames],
-            state: rig?.current ?? null,
-            activeClip,
-            activeTime,
-            activeRunning,
-            height: Number.isFinite(box.max.y - box.min.y) ? box.max.y - box.min.y : 0,
-            minY: Number.isFinite(box.min.y) ? box.min.y : 0,
-        };
-    }
+    // ── Skeletal animation — delegated to render/AvatarAnimator ───────────────
+    public startAnimation(handle: RenderHandle, clips: THREE.AnimationClip[]): void { this.animator.start(handle, clips); }
+    public setAnimationState(handle: RenderHandle, state: string, fadeSec = 0.25): void { this.animator.setState(handle, state, fadeSec); }
+    public updateAnimation(handle: RenderHandle, dt: number): void { this.animator.update(handle, dt); }
+    public stopAnimation(handle: RenderHandle): void { this.animator.stop(handle); }
+    public getAnimationDebug(handle: RenderHandle) { return this.animator.debug(handle); }
 
     public removeHandle(handle: RenderHandle): void {
         const obj = handle as THREE.Object3D;
@@ -1248,44 +907,9 @@ export class RenderEngine {
         });
     }
 
-    /**
-     * Attach a floating billboard LABEL above a mesh — a camera-facing sprite with
-     * canvas-rendered text. Used to make interactive panel adjuncts (e4 book /
-     * e5 board / e1 link) identifiable in-world ("which one is the book?"): the
-     * label shows the adjunct's title. depthTest off so it reads over geometry;
-     * disposed with the mesh in removeHandle. Headless has no DOM/canvas → guard.
-     */
+    /** Floating billboard title label for interactive panel adjuncts (render/MediaScreens). */
     public attachLabel(handle: RenderHandle, text: string, heightOffset = 1.0): void {
-        const mesh = handle as THREE.Object3D;
-        if (!mesh || !text || typeof document === 'undefined') return;
-        const FONT = 46, PAD_X = 30, PAD_Y = 20;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.font = `bold ${FONT}px sans-serif`;
-        const tw = Math.ceil(ctx.measureText(text).width);
-        const w = tw + PAD_X * 2, h = FONT + PAD_Y * 2;
-        canvas.width = w; canvas.height = h;
-        // measuring reset the context state — restyle before drawing
-        ctx.font = `bold ${FONT}px sans-serif`;
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        const r = 20;
-        ctx.beginPath();
-        ctx.moveTo(r, 0); ctx.arcTo(w, 0, w, h, r); ctx.arcTo(w, h, 0, h, r);
-        ctx.arcTo(0, h, 0, 0, r); ctx.arcTo(0, 0, w, 0, r); ctx.closePath();
-        ctx.fillStyle = 'rgba(14,20,28,0.85)'; ctx.fill();
-        ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(120,200,255,0.35)'; ctx.stroke();
-        ctx.fillStyle = '#cfe9ff'; ctx.fillText(text, w / 2, h / 2 + 2);
-
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
-        const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
-        const worldH = 0.34;                      // readable height in metres
-        sprite.scale.set(worldH * (w / h), worldH, 1);
-        sprite.position.set(0, heightOffset, 0);
-        sprite.renderOrder = 999;
-        sprite.raycast = () => { /* labels never intercept interaction rays */ };
-        mesh.add(sprite);
+        this.media.attachLabel(handle, text, heightOffset);
     }
 
     /**

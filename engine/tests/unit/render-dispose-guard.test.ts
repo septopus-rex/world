@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { RenderEngine } from '../../src/render/RenderEngine';
+import { isolateMaterial } from '../../src/render/MaterialUtils';
 import { MeshFactory } from '../../src/render/MeshFactory';
 
 // MeshFactory's process-wide cached geometry/material are shared by reference
@@ -126,7 +127,7 @@ describe('RenderEngine.disposeMeshResources — refcounted shared resources', ()
         const shared = a.material as THREE.Material;
         const matFired = onDispose(shared);
         // Clone-on-write: a stops using the shared material...
-        (RenderEngine as any).isolateMaterial(a);
+        isolateMaterial(a as any);
         expect(a.material).not.toBe(shared);
         // ...and its reference was released — a was the ONLY user, so the shared
         // entry is freed instead of lingering forever.
