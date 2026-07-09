@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/board",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus dev board server — mutable shared state behind the e5 board adjunct (message walls / guestbooks). Channel-keyed messages with JSON-file persistence; the client BoardPanel lists/posts over HTTP, offline degrades to read-only. Swap the base URL for a production community service and nothing else changes.",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

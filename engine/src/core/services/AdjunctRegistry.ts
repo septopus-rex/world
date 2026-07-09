@@ -17,6 +17,7 @@ import { AdjunctMotif } from '../../plugins/adjunct/adjunct_motif';
 import { AdjunctAudio } from '../../plugins/adjunct/adjunct_audio';
 import { AdjunctVideo } from '../../plugins/adjunct/adjunct_video';
 import { AdjunctBook } from '../../plugins/adjunct/adjunct_book';
+import { AdjunctBoard } from '../../plugins/adjunct/adjunct_board';
 import { AdjunctSpawner } from '../../plugins/adjunct/adjunct_spawner';
 import { AdjunctNpc } from '../../plugins/adjunct/adjunct_npc';
 import { AdjunctError } from '../errors';
@@ -53,6 +54,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Audio, AdjunctAudio as unknown as AdjunctDefinition],        // spatial audio emitter
     [AdjunctType.Video, AdjunctVideo as unknown as AdjunctDefinition],        // video screen (VideoTexture)
     [AdjunctType.Book, AdjunctBook as unknown as AdjunctDefinition],          // book / paged-text reader (clickable)
+    [AdjunctType.Board, AdjunctBoard as unknown as AdjunctDefinition],         // board / server-backed message wall (clickable)
     [AdjunctType.Spawner, AdjunctSpawner as unknown as AdjunctDefinition],    // timed runtime generator (F1)
     [AdjunctType.Npc, AdjunctNpc as unknown as AdjunctDefinition],            // autonomous agent (F2)
 ]);

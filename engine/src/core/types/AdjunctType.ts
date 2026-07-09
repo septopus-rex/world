@@ -33,6 +33,7 @@ export const AdjunctType = {
     Audio: 0x00e2,    // spatial audio emitter (source → PositionalAudio)
     Video: 0x00e3,    // video screen (source → VideoTexture on a plane)
     Book: 0x00e4,     // paged text panel (pages string[] → in-scene reader)
+    Board: 0x00e5,    // message board (channel on a server → client panel; mutable shared state)
 
     /** @deprecated Renamed to `Spp` (2026-07-06). Same id 0x00b6; kept as an
      *  alias for one release so existing `AdjunctType.Particle` references and

@@ -193,7 +193,7 @@ test('3D mahjong: tiles are READABLE — each face-up tile shows its kind (slot-
     const up = faces.filter((f) => f.faceUp);
     const down = faces.filter((f) => !f.faceUp);
     expect(up.length, 'the human hand is open').toBe(14);
-    expect(up.every((f) => typeof f.tex === 'string' && f.tex.startsWith('bafy')), 'every open tile carries a CID face').toBe(true);
+    expect(up.every((f) => typeof f.tex === 'string' && f.tex.startsWith('bafk')), 'every open tile carries a CID face (real CIDv1)').toBe(true);
     expect(down.every((f) => f.tex == null), 'concealed tiles are blank').toBe(true);
 
     // The face CID really resolves through the content store (CAS roundtrip).

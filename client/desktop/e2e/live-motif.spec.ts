@@ -53,7 +53,7 @@ test('live: WebSocket hash → motif image update via IPFS', async ({ page }) =>
   // Two images → two content hashes (CIDs) in IPFS.
   const cidForest = await ingest(page, '/assets/ground-forest.png');
   const cidMoon = await ingest(page, '/assets/ground-moon.png');
-  expect(cidForest).toMatch(/^bafy/);
+  expect(cidForest).toMatch(/^bafk/); // real CIDv1
   expect(cidMoon).not.toBe(cidForest);
 
   // Place a 'panel' motif (image board) on the spawn block, initial image = forest.

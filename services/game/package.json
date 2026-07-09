@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus dev game server — the REAL process behind Pattern-A external games (Game Mode Protocol, game.md §2/§3). Hosts the same self-contained game engines the in-page loopback mocks run (imports client/core games registry), keyed by gameId sessions, speaking exactly the FetchGameApi contract (start → {gameId, state}; * → {state}). Swap the base URL for a production game server and nothing else changes.",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

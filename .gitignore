@@ -51,3 +51,4 @@ client/*/e2e/__screenshots__/
 deploy/logs/
 
 client/*/dist-chain/
+services/*/data/

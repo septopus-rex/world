@@ -14,6 +14,7 @@ import { WorldMap2D } from '@core/components/WorldMap2D';
 import { AuthorChat } from './components/AuthorChat';
 import { DialogueUI } from '@core/components/DialogueUI';
 import { BookReader } from '@core/components/BookReader';
+import { BoardPanel } from '@core/components/BoardPanel';
 import { AvatarPicker } from '@core/components/AvatarPicker';
 import { ActionRail } from './components/desktop/ActionRail';
 
@@ -158,6 +159,7 @@ function App() {
       {ready && <HealthBar loader={loader} />}
       {ready && <DialogueUI loader={loader} />}
       {ready && <BookReader loader={loader} />}
+      {ready && <BoardPanel loader={loader} />}
       <AvatarPicker loader={loader} ready={ready} />
       {ready && <Toaster loader={loader} />}
       <ParkourHUD loader={loader} ready={ready} />

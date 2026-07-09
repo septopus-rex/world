@@ -55,6 +55,7 @@
 | `0x00e2` (226) | audio | spatial audio source | §13 |
 | `0x00e3` (227) | video | video screen | §13 |
 | `0x00e4` (228) | book | clickable paged-text panel (string[]) | §14 |
+| `0x00e5` (229) | board | server-channel message wall (writable shared state) | §14.1 |
 
 ## 2. The standard 7 slots (a1 wall · a2 box · a5 water · a6 cone · a7 ball)
 
@@ -299,6 +300,22 @@ index is clamped to `[0, M-1]` (no wrap).
   "(Close the book.)"],
  "An Untitled Book"]
 ```
+
+### 14.1 e5 board (added 2026-07-08)
+
+```
+[ size, pos, rot, resource, repeat, animation, stop, channel, title? ]
+```
+
+The standard 7 slots + slot 7 `channel` (string, default `'lobby'`) + optional
+slot 8 `title`. The 5th member of the e-series panel family; the key contrast
+with e4 book: **a book's content rides in the data (immutable), a board's
+content is mutable shared state on a server** — the data declares only the
+channel id; reading/writing is a host concern via a board service (offline
+degrades to read-only), the same shape as Game mode ("the block declares
+intent, the host dials the service", [game.md](game.md) §2/§9: session state
+stays off-chain). Blocks may share a channel. Clicks ride `interact.primary`;
+presentation (the panel UI) is host-level, non-normative.
 
 ## 15. Dynamic type segment (normative, 2026-07-08)
 

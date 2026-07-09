@@ -6,6 +6,7 @@ import { HealthBar } from '@core/components/HealthBar';
 import { Toaster } from '@core/components/Toaster';
 import { DialogueUI } from '@core/components/DialogueUI';
 import { BookReader } from '@core/components/BookReader';
+import { BoardPanel } from '@core/components/BoardPanel';
 import { LeaveGameDialog } from '@core/components/LeaveGameDialog';
 import { WorldMap2D } from '@core/components/WorldMap2D';
 import { AvatarPicker } from '@core/components/AvatarPicker';
@@ -62,6 +63,7 @@ export default function MobileApp() {
             {ready && <HealthBar loader={loader} />}
             {ready && <DialogueUI loader={loader} />}
             {ready && <BookReader loader={loader} />}
+            {ready && <BoardPanel loader={loader} />}
             {ready && <Toaster loader={loader} />}
             <ParkourHUD loader={loader} ready={ready} />
             <ShootingHUD loader={loader} ready={ready} />

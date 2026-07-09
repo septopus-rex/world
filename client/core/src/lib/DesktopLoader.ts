@@ -36,6 +36,7 @@ import type { GameSetting } from '@engine/core/types/GameSetting';
 import type { IGameApi } from '@engine/core/services/IGameApi';
 import { GAMES, gameById } from '../games/registry';
 import { GameApiRouter } from '../games/GameApiRouter';
+import { ProbedGameApi } from '../games/ProbedGameApi';
 import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS } from '../scenes/demoScene';
 import demoBlockJson from '../blocks/demo.block.json';
@@ -209,6 +210,47 @@ export class DesktopLoader implements IDataSource {
         this._book = { ...this._book, page: next };
         this._onBook?.(this._book);
     }
+    /** e5 board — server-backed message wall. State mirrors to BoardPanel; the
+     *  channel's messages live on services/board (offline → read-only empty). */
+    private _boardPanel: { channel: string; title: string; messages: Array<{ author: string; text: string; at: number }> | null; offline: boolean } | null = null;
+    public get boardPanelState() { return this._boardPanel; }
+    private _onBoard: ((b: typeof this._boardPanel) => void) | null = null;
+    public onBoard(cb: (b: typeof this._boardPanel) => void): void { this._onBoard = cb; }
+    private boardBase(): string {
+        return (import.meta as any).env?.VITE_BOARD_SERVER || 'http://127.0.0.1:7786';
+    }
+    /** Open a board panel and (re)load its channel from the board service. */
+    public async openBoard(channel: string, title = ''): Promise<void> {
+        this._boardPanel = { channel, title, messages: null, offline: false };
+        this._onBoard?.(this._boardPanel);
+        try {
+            const res = await fetch(`${this.boardBase()}/v0/list?channel=${encodeURIComponent(channel)}`, { signal: AbortSignal.timeout(2000) });
+            const data = await res.json();
+            if (this._boardPanel?.channel !== channel) return; // closed/switched meanwhile
+            this._boardPanel = { ...this._boardPanel, messages: data.messages ?? [], offline: false };
+        } catch {
+            if (this._boardPanel?.channel !== channel) return;
+            this._boardPanel = { ...this._boardPanel, messages: [], offline: true };
+        }
+        this._onBoard?.(this._boardPanel);
+    }
+    /** Post to the open board's channel, then refresh the list. */
+    public async postBoardMessage(text: string, author = '游客'): Promise<boolean> {
+        const b = this._boardPanel;
+        if (!b || !text.trim()) return false;
+        try {
+            const res = await fetch(`${this.boardBase()}/v0/post`, {
+                method: 'POST', headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ channel: b.channel, author, text }),
+                signal: AbortSignal.timeout(3000),
+            });
+            if (!res.ok) return false;
+            await this.openBoard(b.channel, b.title); // refresh
+            return true;
+        } catch { return false; }
+    }
+    public closeBoard(): void { this._boardPanel = null; this._onBoard?.(null); }
+
     /** Close the reader. */
     public closeBook(): void {
         if (!this._book) return;
@@ -378,16 +420,21 @@ export class DesktopLoader implements IDataSource {
         // its own; the engine ships none). The demo scenes' b5 rows use ids 1–3.
         registerDemoItemTemplates();
 
-        // Build one transport per registered game and route by name. `?mjserver`
-        // dials each game's real server (FetchGameApi → its baseurl); otherwise the
-        // in-page loopback mock (offline). Existing demo/e2e behaviour preserved.
+        // Build one transport per registered game and route by name (offline-first
+        // tiering, services/game): default = lazy probe → the REAL dev game server
+        // (7787, HTTP + server-held sessions) when it answers, else the in-page
+        // loopback engine (same class, byte-identical play). `?mjserver` still
+        // forces each game's data-declared baseurl (the route-intercept e2e path).
         const useServer = typeof location !== 'undefined'
             && new URLSearchParams(location.search).has('mjserver');
+        const gameSrv = (import.meta as any).env?.VITE_GAME_SERVER || 'http://127.0.0.1:7787';
         const backends: Record<string, IGameApi> = {};
         for (const g of GAMES) {
             backends[g.name] = useServer
                 ? new FetchGameApi(g.setting.baseurl ?? `/api/${g.name}`)
-                : g.makeLoopback();
+                : new ProbedGameApi(`${gameSrv}/v0/health`,
+                    () => new FetchGameApi(`${gameSrv}/api/${g.name}`),
+                    () => g.makeLoopback());
         }
         this.gameApi = new GameApiRouter(backends);
 
@@ -479,6 +526,11 @@ export class DesktopLoader implements IDataSource {
             const adj = this.engine.getWorld()?.getComponent(target, 'AdjunctComponent') as any;
             const std = adj?.stdData;
             if (!std) return;
+            // e5 board: a server-backed message channel → open the board panel.
+            if (typeof std.channel === 'string' && std.channel && !Array.isArray(std.pages)) {
+                void this.openBoard(std.channel, typeof std.title === 'string' ? std.title : '');
+                return;
+            }
             // e4 book: an inline string[] of pages → open the in-scene reader.
             if (Array.isArray(std.pages) && std.pages.length > 0) {
                 this.openBook(std.pages, typeof std.title === 'string' ? std.title : '');

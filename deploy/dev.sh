@@ -39,7 +39,7 @@ command -v npm  &>/dev/null || error "npm 未安装"
 ONLY=""; HOST="127.0.0.1"; CHAIN=""
 for arg in "$@"; do
     case "$arg" in
-        desktop|mobile|ai-gw|aigw|ipfs) ONLY="${arg/aigw/ai-gw}" ;;
+        desktop|mobile|ai-gw|aigw|ipfs|game|board) ONLY="${arg/aigw/ai-gw}" ;;
         lan) HOST="0.0.0.0" ;;
         --chain|chain) CHAIN=1 ;;   # 链上启动模式(boot-chain.md dev 彩排)
         *) warn "未知参数 '$arg'(可用:desktop | mobile | ai-gw | ipfs | lan | --chain)" ;;
@@ -54,6 +54,8 @@ done
 FE_SERVICES=(
     "Desktop|client/desktop|7777|npm run dev -- --host \$HOST"
     "Mobile |client/mobile|7778|npm run dev -- --host \$HOST"
+    "Board  |services/board|7786|npm start"
+    "Game   |services/game|7787|npm start"
     "AI-GW  |services/ai-gateway|7788|npm start"
     "IPFS   |services/ipfs|7789|npm start"
 )
@@ -74,6 +76,8 @@ npm_deps() { # $1 = app dir (repo-relative), $2 = marker binary (install complet
 if [ -z "$CHAIN" ]; then
     npm_deps client/desktop vite
     npm_deps services/ai-gateway tsx
+    npm_deps services/game tsx
+    npm_deps services/board tsx
 fi
 npm_deps client/mobile vite      # chain 模式也要:链包由 mobile 壳构建
 npm_deps services/ipfs tsx
@@ -195,7 +199,9 @@ while true; do
     printf -- "\n"
     printf -- "  关卡           ${CYAN}?level=${NC}gallery | world | xianjian | coaster | parkour | refine\n"
     printf -- "  SPP粒子编辑器  ${GREEN}http://127.0.0.1:7777/?tool=stylepack${NC}\n"
-    printf -- "  AI 造物网关    ${GREEN}http://127.0.0.1:7788${NC}   provider: ${PROVIDER:-mock}（导出 PROVIDER=qwen + DASHSCOPE_API_KEY 换真 LLM）\n"
+    printf -- "  留言板服务     ${GREEN}http://127.0.0.1:7786${NC}   e5 board 频道留言(离线=只读)
+  游戏服务器     ${GREEN}http://127.0.0.1:7787${NC}   麻将/桌球会话跑服务端(不在线自动回退页面内 loopback)
+  AI 造物网关    ${GREEN}http://127.0.0.1:7788${NC}   provider: ${PROVIDER:-mock}（导出 PROVIDER=qwen + DASHSCOPE_API_KEY 换真 LLM）\n"
     printf -- "  IPFS 网关      ${GREEN}http://127.0.0.1:7789${NC}   /v0/health · /v0/names · /ipfs/<cid>(CID 与引擎同源)\n"
     printf -- "  进程内层       CAS 一级缓存(MemoryCas,离线兜底) · live 推送(FakeWebSocket)\n"
     printf -- "  链上启动       ${CYAN}bash deploy/dev.sh --chain${NC}(锚→loader→世界,无应用服务器)\n"

@@ -1,18 +1,32 @@
 import { test, expect, type Route, type Request } from '@playwright/test';
+import { spawn, type ChildProcess } from 'node:child_process';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { waitForWorldReady, stepEngine } from './helpers';
-import { MahjongGame } from '../src/games/mahjong/MahjongGame';
 
 // FULL game-setting mode against a SPECIFIED SERVER, as ONE continuous run — not
 // segment-by-segment. The mahjong table sits in the world; entering its zone makes
 // the engine resolve the Game Setting and connect to the server declared by its
 // `baseurl` (game.md §2/§3): start handshake → several moves → end, every call a
-// REAL fetch leaving the engine. The server here is route-intercepted and runs the
-// mahjong logic server-side (state held by gameId), so the client genuinely talks
-// to a server over HTTP — the in-page mock is not involved (the client uses
-// FetchGameApi via `?mjserver`).
+// REAL fetch leaving the engine. The route layer only REWRITES the data-declared
+// relative baseurl ('/api/mahjong') onto the REAL services/game process spawned
+// below — the game runs in a genuinely separate server process (2026-07-09; the
+// in-test MahjongGame fake it replaced was a client-split casualty anyway).
 
 const MAHJONG_BLOCK: [number, number] = [2049, 2048];
-const SERVER_SEED = 12345; // deterministic deal on the "server"
+const GAME_DIR = join(dirname(fileURLToPath(import.meta.url)), '../../../services/game');
+const GAME = 'http://127.0.0.1:7787';
+
+let srv: ChildProcess;
+test.beforeAll(async () => {
+    srv = spawn('npm', ['start'], { cwd: GAME_DIR, stdio: 'ignore', detached: true });
+    for (let i = 0; i < 30; i++) {
+        try { if ((await fetch(`${GAME}/v0/health`)).ok) return; } catch { /* not yet */ }
+        await new Promise(r => setTimeout(r, 500));
+    }
+    throw new Error('game service did not come up');
+});
+test.afterAll(() => { try { if (srv?.pid) process.kill(-srv.pid, 'SIGKILL'); } catch { srv?.kill('SIGKILL'); } });
 
 /** Step in separate evaluates (real gaps) until `cond` holds — lets the async
  *  fetch round-trips resolve and their game.* events flush on a later step. */
@@ -27,30 +41,18 @@ async function pumpUntil(page: any, cond: () => Promise<boolean>, maxRounds = 60
 test('full game-setting mode end to end: connect to the specified server and play', async ({ page }) => {
     test.setTimeout(120_000);
 
-    // ── The specified server: route-intercepted, runs the mahjong game server-side.
-    const games = new Map<string, MahjongGame>();
+    // ── The specified server: the data-declared RELATIVE baseurl ('/api/mahjong')
+    // is rewritten onto the real services/game process — every call still leaves
+    // the engine as a genuine fetch, and the route layer records the hits.
     const serverHits: string[] = [];
     await page.route('**/api/mahjong/**', async (route: Route, request: Request) => {
         const method = new URL(request.url()).pathname.split('/').pop()!;
-        const body = (request.postDataJSON() ?? {}) as { gameId?: string; params?: any[] };
         serverHits.push(method);
-        const json = (obj: any) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(obj) });
-        try {
-            if (method === 'start') {
-                const g = new MahjongGame(SERVER_SEED);
-                games.set(g.gameId, g);
-                return json({ gameId: g.gameId, state: g.start() });
-            }
-            const g = games.get(body.gameId ?? '');
-            if (!g) return route.fulfill({ status: 404, body: 'no such game' });
-            if (method === 'state') return json({ state: g.state() });
-            if (method === 'discard') return json({ state: g.discard(Number(body.params?.[0])) });
-            if (method === 'win') return json({ state: g.win() });
-            if (method === 'end') { const result = g.end(); games.delete(g.gameId); return json({ state: g.state(), result }); }
-            return route.fulfill({ status: 400, body: 'bad method' });
-        } catch (e) {
-            return route.fulfill({ status: 500, body: String(e) });
-        }
+        const res = await fetch(`${GAME}/api/mahjong/${method}`, {
+            method: 'POST', headers: { 'content-type': 'application/json' },
+            body: request.postData() ?? '{}',
+        });
+        await route.fulfill({ status: res.status, contentType: 'application/json', body: await res.text() });
     });
 
     // Boot the client in server mode (?mjserver → FetchGameApi dials baseurl).
