@@ -34,30 +34,6 @@
         0
       ]
     },
-    "body": {
-      "shoulder": 0.5,
-      "chest": 0.22,
-      "body": [
-        0.3,
-        0.4,
-        0.2,
-        0.8
-      ],
-      "head": [
-        0.25,
-        0.05
-      ],
-      "hand": [
-        0.2,
-        0.2,
-        0.1
-      ],
-      "leg": [
-        0.5,
-        0.5,
-        0.1
-      ]
-    },
     "capacity": {
       "rotate": 0.05,
       "speed": 10,
@@ -65,7 +41,8 @@
       "jumpForce": 8,
       "gravityMultiplier": 1,
       "ghostFlySpeed": 6,
-      "voidRecover": 20
+      "voidRecover": 20,
+      "maxHp": 100
     },
     "bag": {
       "max": 100
@@ -80,10 +57,39 @@
       "resource": 33,
       "facing": 0
     },
-    "extend": 2
+    "extend": 2,
+    "avatarCatalog": [
+      {
+        "id": 30,
+        "label": "旅者 Wanderer",
+        "facing": 3.141592653589793
+      },
+      {
+        "id": 33,
+        "label": "士兵 Soldier",
+        "facing": 0
+      },
+      {
+        "id": 34,
+        "label": "机器人 Robot",
+        "facing": 3.141592653589793
+      }
+    ],
+    "physique": {
+      "height": 1.8,
+      "eyeHeight": 1.7,
+      "stepHeight": 0.5,
+      "crouchHeight": 0.9,
+      "jumpHeight": 1.2,
+      "fallDeathHeight": 12
+    }
   },
   "blacklist": [],
   "debug": {
     "stats": true
+  },
+  "time": {
+    "epoch": 0,
+    "speed": 1.0
   }
 }

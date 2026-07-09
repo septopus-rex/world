@@ -188,7 +188,7 @@ neighbour-elimination rules: the SPP specification.
 { "initial": "idle",
   "states": {
     "<state>": {
-      "move": { "kind": "stay"|"wander"|"follow"|"flee"|"return", "speed"?, "radius"?, "stopAt"? },
+      "move": { "kind": "stay"|"wander"|"follow"|"flee"|"return", "speed"?, "radius"?, "stopAt"? },   // speed default 1 m/s (normative)
       "transitions": [{ "when": <JSONLogic>, "to": "<state>" }],   // first truthy wins
       "enter": [ <action>… ]                                       // once per state entry
     } },

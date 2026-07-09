@@ -1,11 +1,13 @@
 import type { GameSetting } from '@engine/core/types/GameSetting';
 import type { IGameApi } from '@engine/core/services/IGameApi';
-import { MAHJONG_GAME_ID, MAHJONG_SETTING } from './mahjong/setting';
 import { MahjongGameApi } from './mahjong/MahjongGameApi';
-import { POOL_GAME_ID, POOL_SETTING } from './pool/setting';
 import { PoolGameApi } from './pool/PoolGameApi';
-import { HOLDEM_GAME_ID, HOLDEM_SETTING } from './holdem/setting';
 import { HoldemGameApi } from './holdem/HoldemGameApi';
+// Game Settings are DATA documents (game.md §2: on-chain/IPFS resources),
+// frozen as *.game.json — the registry only binds id ↔ document ↔ transport.
+import mahjongSetting from './mahjong/setting.game.json';
+import poolSetting from './pool/setting.game.json';
+import holdemSetting from './holdem/setting.game.json';
 
 /**
  * Game registry — the single list of in-world games. Each entry ties a Game
@@ -30,9 +32,9 @@ export interface GameDef {
 }
 
 export const GAMES: GameDef[] = [
-    { name: 'mahjong', id: MAHJONG_GAME_ID, setting: MAHJONG_SETTING, makeLoopback: () => new MahjongGameApi(), devPort: 7787 },
-    { name: 'pool', id: POOL_GAME_ID, setting: POOL_SETTING, makeLoopback: () => new PoolGameApi(), devPort: 7785 },
-    { name: 'holdem', id: HOLDEM_GAME_ID, setting: HOLDEM_SETTING, makeLoopback: () => new HoldemGameApi(), devPort: 7784 },
+    { name: 'mahjong', id: 42, setting: mahjongSetting as unknown as GameSetting, makeLoopback: () => new MahjongGameApi(), devPort: 7787 },
+    { name: 'pool', id: 43, setting: poolSetting as unknown as GameSetting, makeLoopback: () => new PoolGameApi(), devPort: 7785 },
+    { name: 'holdem', id: 44, setting: holdemSetting as unknown as GameSetting, makeLoopback: () => new HoldemGameApi(), devPort: 7784 },
 ];
 
 export const gameById = (id: number): GameDef | undefined => GAMES.find(g => g.id === id);

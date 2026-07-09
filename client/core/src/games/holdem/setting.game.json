@@ -1,0 +1,62 @@
+{
+  "game": "holdem",
+  "baseurl": "/api/holdem",
+  "homepage": "",
+  "version": "1.0.0",
+  "blocks": [],
+  "init": {
+    "server": {
+      "maxPlayers": 1
+    }
+  },
+  "sync": null,
+  "wasm": null,
+  "methods": [
+    {
+      "name": "start",
+      "params": [],
+      "response": [
+        {
+          "type": "string",
+          "length": 12
+        }
+      ]
+    },
+    {
+      "name": "state",
+      "params": [],
+      "response": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "act",
+      "params": [
+        {
+          "type": "string",
+          "limit": [
+            0,
+            8
+          ]
+        }
+      ],
+      "response": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "end",
+      "params": [],
+      "response": [
+        {
+          "type": "string",
+          "length": 12
+        }
+      ]
+    }
+  ]
+}

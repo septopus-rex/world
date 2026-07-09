@@ -24,8 +24,13 @@ export class EntityFactory {
         // RUN baseline (walkSpeed is its own optional field). This is where the
         // previously-dead capacity config actually lands on the rigid body.
         const cap = (world.config.player as any)?.capacity ?? {};
+        // Physique baseline is DATA (player.physique, D9): avatars scale to its
+        // height, the camera rides its eyeHeight — engine values are defaults.
+        const phy = (world.config.player as any)?.physique ?? {};
+        const bodyHeight = Number(phy.height) || 1.8;
+        const eyeHeight = Number(phy.eyeHeight) || 1.7;
         world.addComponent<RigidBodyComponent>(player, "RigidBodyComponent", {
-            size: [0.6, 1.8, 0.6],
+            size: [0.6, bodyHeight, 0.6],
             offset: [0, 0, 0],
             velocity: [0, 0, 0],
             mass: 1,
@@ -48,18 +53,18 @@ export class EntityFactory {
         });
 
         world.addComponent<CameraComponent>(player, "CameraComponent", {
-            offset: [0, 1.7, 0],
+            offset: [0, eyeHeight, 0],
             fov: 75,
             active: true
         });
 
         world.addComponent<PlayerBodyComponent>(player, "PlayerBodyComponent", {
-            height: 1.8,
-            eyeHeight: 1.7,
-            stepHeight: 0.5,
-            crouchHeight: 0.9,
-            jumpHeight: 1.2,
-            fallDeathHeight: 12
+            height: bodyHeight,
+            eyeHeight,
+            stepHeight: Number(phy.stepHeight) || 0.5,
+            crouchHeight: Number(phy.crouchHeight) || 0.9,
+            jumpHeight: Number(phy.jumpHeight) || 1.2,
+            fallDeathHeight: Number(phy.fallDeathHeight) || 12
         });
 
         // The pickup chain (interact → pickup_item → InventorySystem) credits
@@ -70,9 +75,11 @@ export class EntityFactory {
             maxCapacity: (world.config.player as any)?.bag?.max ?? 30
         });
 
+        // Config-first like bag.max above; protocol default 100 (player.md §HP).
+        const maxHp = Number((world.config.player as any)?.capacity?.maxHp) || 100;
         world.addComponent<HealthComponent>(player, "HealthComponent", {
-            hp: 100,
-            maxHp: 100
+            hp: maxHp,
+            maxHp
         });
 
         const avatarHandle = world.renderEngine.createAvatarMesh();
@@ -91,12 +98,12 @@ export class EntityFactory {
         // pipeline: show the placeholder box now, swap in the loaded model when it
         // resolves (load-once-by-id, dedup-ready for future multiplayer).
         if (avatarRes != null) {
-            EntityFactory.loadAvatarModel(world, player, String(avatarRes), avatarHandle, 1.8);
+            EntityFactory.loadAvatarModel(world, player, String(avatarRes), avatarHandle, bodyHeight);
         }
 
         // Initial Camera Sync
         world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
-        world.renderEngine.setMainCameraPosition(position[0], position[1] + 1.7, position[2]);
+        world.renderEngine.setMainCameraPosition(position[0], position[1] + eyeHeight, position[2]);
 
         // Attach Controls
         const controller = world.systems.findSystem(CharacterController);
@@ -129,7 +136,9 @@ export class EntityFactory {
         const releaseId = av.resource;      // refcount to drop once the swap lands
         av.resource = resourceId;
         if (typeof facing === 'number') av.facing = facing; // per-model orientation
-        EntityFactory.loadAvatarModel(world, player, resourceId, av.handle, 1.8, releaseId);
+        // Correct the new avatar TO the world's physique baseline (D9).
+        const swapHeight = Number((world.config.player as any)?.physique?.height) || 1.8;
+        EntityFactory.loadAvatarModel(world, player, resourceId, av.handle, swapHeight, releaseId);
     }
 
     private static loadAvatarModel(world: World, player: EntityId, resourceId: string, placeholder: any, bodyHeight: number, releaseResource?: string): void {

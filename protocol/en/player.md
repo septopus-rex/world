@@ -90,10 +90,18 @@ The player carries `HealthComponent { hp, maxHp }` (default 100/100). Event flow
 Movement capacities live in `RigidBodyComponent`: `maxSpeedWalk` / `maxSpeedRun` /
 `jumpForce` / `gravity` / `friction` / `isGrounded`.
 
-> ⚠️ In world config, `player.capacity` (rotate/speed/jumpForce/gravityMultiplier)
-> and `player.body` (head/hand/leg segments) are **reserved types** — the engine
-> hardcodes defaults at player creation and does not read them. `player.bag.max`
-> **is wired**: it caps the player's bag slots (`InventoryComponent.maxCapacity`);
+> **Wired (updated 2026-07-09, base-data audit P9)**: `player.capacity`
+> (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**)
+> and `player.physique` are **both read by the engine** — data first, defaults
+> below as fallback. **physique = the body BASELINE** (replaces the removed
+> legacy VBW `body` shape, which nothing ever consumed): `height` 1.8 (avatars
+> are **scale-corrected to this** — any avatar swap normalizes to the baseline
+> height) · `eyeHeight` 1.7 (first-person camera) · `stepHeight` 0.5 ·
+> `crouchHeight` 0.9 · `jumpHeight` 1.2 · `fallDeathHeight` 12 (fatal fall, m).
+> **Embedded-spawn rescue (popOut) is normative**: spawning/teleporting into a
+> solid pops the player to the solid's top; the ≤0.08 m walking substep stays
+> under the 0.1 m trigger margin, so normal movement never trips it.
+> `player.bag.max` **is wired**: it caps the player's bag slots (`InventoryComponent.maxCapacity`);
 > the full inventory design lives in the
 > [inventory-local-first spec](../../docs/plan/specs/inventory-local-first.md)
 > (b5 item adjuncts, atomic pickup/drop, IndexedDB persistence, trigger `bag`

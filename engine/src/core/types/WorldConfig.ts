@@ -53,13 +53,17 @@ export interface WorldConfig {
             position: [number, number, number]; // Sub-local start
             rotation: [number, number, number];
         };
-        body: {
-            shoulder: number;
-            chest: number;
-            body: [number, number, number, number]; // head, body, hip, leg ratios
-            head: [number, number];                 // head height, neck
-            hand: [number, number, number];         // upper, lower, hand
-            leg: [number, number, number];          // thigh, calf, foot
+        // Physique BASELINE (base-data-audit D9): the engine-consumed body
+        // parameters. Avatars are corrected TO this baseline (scale-to-height,
+        // camera at eyeHeight); defaults per player.md. Replaces the legacy
+        // VBW `body` shape, which nothing consumed (dead data, removed).
+        physique?: {
+            height?: number;          // avatar scale target (m, default 1.8)
+            eyeHeight?: number;       // first-person camera height (default 1.7)
+            stepHeight?: number;      // walkable step-over (default 0.5)
+            crouchHeight?: number;    // crouch body height (default 0.9)
+            jumpHeight?: number;      // jump apex reference (default 1.2)
+            fallDeathHeight?: number; // fatal fall distance (m, default 12)
         };
         // Movement capacity — CONSUMED by EntityFactory.setupPlayer (rigid body)
         // and CharacterController (ghost fly / void recovery). The king's config

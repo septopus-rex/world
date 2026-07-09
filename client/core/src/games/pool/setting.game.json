@@ -1,0 +1,69 @@
+{
+  "game": "pool",
+  "baseurl": "/api/pool",
+  "homepage": "",
+  "version": "1.0.0",
+  "blocks": [],
+  "init": {
+    "server": {
+      "maxPlayers": 1
+    }
+  },
+  "sync": null,
+  "wasm": null,
+  "methods": [
+    {
+      "name": "start",
+      "params": [],
+      "response": [
+        {
+          "type": "string",
+          "length": 12
+        }
+      ]
+    },
+    {
+      "name": "state",
+      "params": [],
+      "response": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "shoot",
+      "params": [
+        {
+          "type": "number",
+          "limit": [
+            0,
+            360
+          ]
+        },
+        {
+          "type": "number",
+          "limit": [
+            0,
+            100
+          ]
+        }
+      ],
+      "response": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "end",
+      "params": [],
+      "response": [
+        {
+          "type": "string",
+          "length": 12
+        }
+      ]
+    }
+  ]
+}

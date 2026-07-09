@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
 import { AdjunctType } from '../../src/core/types/AdjunctType';
-import { registerDemoItemTemplates } from '../../src/core/mocks/ItemTemplates';
+import { registerDemoItems } from '../helpers/demo-items';
 import level from '../../../client/core/src/levels/xianjian.level.json';
 
-registerDemoItemTemplates(); // the client registers these at boot; headless must too
+registerDemoItems(); // the client registers these at boot; headless must too
 
 // THE RPG walkthrough (headless twin of e2e/rpg-xianjian.spec.ts): the 仙剑-
 // flavoured quest loop driven end-to-end through the REAL systems — dialogue

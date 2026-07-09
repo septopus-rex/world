@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "name": "Gem",
+    "category": 4,
+    "stackable": 0,
+    "visual": {
+      "shape": "sphere",
+      "size": [
+        0.4,
+        0.4,
+        0.4
+      ],
+      "color": 2280686
+    },
+    "attributes": [
+      {
+        "name": "magic",
+        "baseRange": [
+          10,
+          50
+        ],
+        "rarityScale": 0.5
+      },
+      {
+        "name": "luster",
+        "baseRange": [
+          20,
+          90
+        ],
+        "rarityScale": 0.2
+      }
+    ],
+    "rarityWeights": [
+      50,
+      25,
+      15,
+      8,
+      2
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Key",
+    "category": 3,
+    "stackable": 9,
+    "visual": {
+      "shape": "box",
+      "size": [
+        0.3,
+        0.3,
+        0.6
+      ],
+      "color": 15645491
+    },
+    "attributes": [],
+    "rarityWeights": [
+      1
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Potion",
+    "category": 1,
+    "stackable": 5,
+    "visual": {
+      "shape": "cone",
+      "size": [
+        0.35,
+        0.35,
+        0.5
+      ],
+      "color": 14496597
+    },
+    "attributes": [
+      {
+        "name": "heal",
+        "baseRange": [
+          5,
+          25
+        ],
+        "rarityScale": 0.4
+      }
+    ],
+    "rarityWeights": [
+      70,
+      30
+    ]
+  }
+]

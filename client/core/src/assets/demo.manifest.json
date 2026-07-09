@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/ground-forest.png",
+    "repeat": [
+      8,
+      8
+    ]
+  },
+  {
+    "id": 5,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/ground-moon.png",
+    "repeat": [
+      8,
+      8
+    ]
+  },
+  {
+    "id": 7,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/checker.png",
+    "repeat": [
+      1,
+      1
+    ]
+  },
+  {
+    "id": 27,
+    "type": "module",
+    "format": "gltf",
+    "path": "/assets/pyramid.gltf"
+  },
+  {
+    "id": 28,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/helmet.glb"
+  },
+  {
+    "id": 29,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/fox.glb"
+  },
+  {
+    "id": 30,
+    "type": "avatar",
+    "format": "glb",
+    "path": "/assets/avatar.glb"
+  },
+  {
+    "id": 33,
+    "type": "avatar",
+    "format": "glb",
+    "path": "/assets/soldier.glb"
+  },
+  {
+    "id": 34,
+    "type": "avatar",
+    "format": "glb",
+    "path": "/assets/robot.glb"
+  },
+  {
+    "id": 31,
+    "type": "audio",
+    "format": "wav",
+    "path": "/assets/ding.wav"
+  },
+  {
+    "id": 32,
+    "type": "video",
+    "format": "mp4",
+    "path": "/assets/sample.mp4"
+  }
+]

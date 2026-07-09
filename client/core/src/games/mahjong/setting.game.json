@@ -1,0 +1,71 @@
+{
+  "game": "mahjong",
+  "baseurl": "/api/mahjong",
+  "homepage": "",
+  "version": "1.0.0",
+  "blocks": [],
+  "init": {
+    "server": {
+      "maxPlayers": 1
+    }
+  },
+  "sync": null,
+  "wasm": null,
+  "methods": [
+    {
+      "name": "start",
+      "params": [],
+      "response": [
+        {
+          "type": "string",
+          "length": 12
+        }
+      ]
+    },
+    {
+      "name": "state",
+      "params": [],
+      "response": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "discard",
+      "params": [
+        {
+          "type": "number",
+          "limit": [
+            0,
+            26
+          ]
+        }
+      ],
+      "response": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "win",
+      "params": [],
+      "response": [
+        {
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "end",
+      "params": [],
+      "response": [
+        {
+          "type": "string",
+          "length": 12
+        }
+      ]
+    }
+  ]
+}

@@ -1,8 +1,12 @@
 import { SeptopusGlobalConstants } from './types/WorldConfig';
 
 /**
- * Global Septopus Protocol Constants.
- * These are "On-Chain" shared values across all 96 worlds.
+ * Septopus PROTOCOL constants + engine defaults (base-data-audit D7 ruling):
+ * · world.range/block/diff/max — protocol-wide invariants (world.md §1),
+ *   shared by ALL worlds, NOT overridable per world.
+ * · time.* — the DEFAULT calendar; a world doc's `time` section overrides it
+ *   (EnvironmentSystem reads the injected config first). Single worlds own
+ *   their calendar as DATA; this is only the fallback.
  */
 export const GlobalConfig: SeptopusGlobalConstants = {
     world: {

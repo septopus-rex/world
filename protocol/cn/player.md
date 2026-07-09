@@ -83,9 +83,16 @@ localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随
 运动能力在 `RigidBodyComponent`：`maxSpeedWalk` / `maxSpeedRun` / `jumpForce` /
 `gravity` / `friction` / `isGrounded`。
 
-> ⚠️ world config 中的 `player.capacity`（rotate/speed/jumpForce/gravityMultiplier）与
-> `player.body`（头/手/腿分段）为**预留类型**——引擎创建玩家时使用硬编码默认值，
-> 目前不读取。`player.bag.max` **已接线**：作为玩家背包的槽位上限
+> **已接线(2026-07-09 更新,基础数据审计 P9)**:`player.capacity`
+> (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**)
+> 与 `player.physique` **均由引擎读取**,数据优先、下表缺省兜底。
+> **physique = 体格基准**(取代已删除的旧 VBW `body` 段,后者从未被消费):
+> `height` 1.8(化身按此**缩放修正**——任何 avatar 换装后统一到基准身高)·
+> `eyeHeight` 1.7(第一人称相机)· `stepHeight` 0.5 · `crouchHeight` 0.9 ·
+> `jumpHeight` 1.2 · `fallDeathHeight` 12(致死落差,米)。
+> **深嵌救援(popOut)为规范行为**:出生/传送/重生落入固体时弹至固体顶面;
+> 行走子步 ≤0.08 m < 0.1 m 触发余量,正常移动不误触。
+> `player.bag.max` **已接线**:作为玩家背包的槽位上限
 > （`InventoryComponent.maxCapacity`），背包整体设计见
 > [inventory-local-first 规格](../../docs/plan/specs/inventory-local-first.md)
 > （b5 物品 adjunct、原子拾取/丢弃、IndexedDB 持久化、trigger `bag` 动作与

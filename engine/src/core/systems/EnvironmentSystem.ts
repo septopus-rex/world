@@ -16,7 +16,9 @@ export class EnvironmentSystem implements ISystem {
     private ambientLight: RenderHandle | null = null;
     private particleSystem: RenderHandle | null = null;
 
-    // Time Config (Synced with GlobalConfig)
+    // Time calendar: WORLD DATA first (world doc `time` section — the injected
+    // config wins, base-data-audit D7), GlobalConfig only as the protocol
+    // default when a world doc omits it.
     private timeConfig = {
         speed: GlobalConfig.time.speed,
         minute: 60,
@@ -26,6 +28,16 @@ export class EnvironmentSystem implements ISystem {
         year: 60 * 60 * 24 * 30 * 12,
         startHeight: GlobalConfig.time.epoch
     };
+    private timeConfigured = false;
+    private syncTimeFromConfig(world: World): void {
+        if (this.timeConfigured) return;
+        const t = (world.config as any)?.time;
+        if (t) {
+            if (Number.isFinite(Number(t.speed))) this.timeConfig.speed = Number(t.speed);
+            if (Number.isFinite(Number(t.epoch))) this.timeConfig.startHeight = Number(t.epoch);
+        }
+        this.timeConfigured = true;
+    }
 
     // Deterministic weather mapping — NORMATIVE cross-engine contract:
     // protocol/{cn,en}/world.md §3.1 (hash slice positions, category table,
@@ -131,6 +143,7 @@ export class EnvironmentSystem implements ISystem {
     }
 
     public update(world: World, dt: number): void {
+        this.syncTimeFromConfig(world); // once, after the world doc is injected
         const state = world.getComponent<EnvironmentStateComponent>(this.envEntity!, "EnvironmentStateComponent")!;
 
         // 1. Time progression Visuals (+ lightning flash folded in)

@@ -30,7 +30,7 @@ export const MockWorldNormal: WorldConfig = {
             position: [8, 0, 8],
             rotation: [0, 0, 0]
         },
-        body: { shoulder: 0.5, chest: 0.22, body: [0.3, 0.4, 0.2, 0.8], head: [0.25, 0.05], hand: [0.2, 0.2, 0.1], leg: [0.5, 0.5, 0.1] },
+        physique: { height: 1.8, eyeHeight: 1.7, stepHeight: 0.5, crouchHeight: 0.9, jumpHeight: 1.2, fallDeathHeight: 12 },
         // Capacity is LIVE config (EntityFactory / CharacterController consume it).
         // This block used to be dead (declared, never read) with aspirational
         // numbers; when it was wired up, values were aligned to the engine's
@@ -79,7 +79,7 @@ export const MockWorldGhostMoon: WorldConfig = {
             position: [8, 0, 8],
             rotation: [0, 0, 0]
         },
-        body: { shoulder: 0.5, chest: 0.22, body: [0.3, 0.4, 0.2, 0.8], head: [0.25, 0.05], hand: [0.2, 0.2, 0.1], leg: [0.5, 0.5, 0.1] },
+        physique: { height: 1.8, eyeHeight: 1.7, stepHeight: 0.5, crouchHeight: 0.9, jumpHeight: 1.2, fallDeathHeight: 12 },
         capacity: {
             rotate: 0.08,      // Can look around faster
             speed: 18.0,       // RUN baseline: fast gliding run (m/s)

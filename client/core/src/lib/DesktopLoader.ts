@@ -17,7 +17,8 @@
 import { Engine } from '@engine/Engine';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { TransformComponent } from '@engine/core/components/PlayerComponents';
-import { registerDemoItemTemplates } from '@engine/core/mocks/ItemTemplates';
+import { registerItemTemplate, type ItemTemplate } from '@engine/core/services/ItemRegistry';
+import demoItemsJson from '../items/demo.items.json';
 import { IDataSource } from '@engine/core/services/DataSource';
 import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataSource';
 // Authored levels are pure DATA (AuthoredLevel JSON) — content lives here with
@@ -256,6 +257,9 @@ export class DesktopLoader implements IDataSource {
      *  Game Setting `methods` whitelist is enforced by the engine before a call
      *  reaches it. Built in init() from the game registry. */
     private gameApi: IGameApi = new GameApiRouter({});
+    /** The world document actually served by world() (chain-injected or bundled)
+     *  — sync readers like avatarCatalog() consult it. */
+    private _worldDoc: any = null;
     /** THE client-side connection manager — every companion-service call routes
      *  through here (net/ServiceHub: probe/timeout/reconnect/status in one place). */
     public readonly net: ServiceHub = (() => {
@@ -331,11 +335,12 @@ export class DesktopLoader implements IDataSource {
         const injected = (globalThis as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__;
         if (injected) {
             const cfg = await injected;
-            if (cfg) return JSON.parse(JSON.stringify(cfg));
+            if (cfg) { this._worldDoc = cfg; return JSON.parse(JSON.stringify(cfg)); }
         }
         // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
         // resource/facing are baked into the doc; a saved pick overrides after
         // hydrate. Swap the backing file (or a CID fetch) to change worlds.
+        this._worldDoc = defaultWorldJson;
         return JSON.parse(JSON.stringify(defaultWorldJson));
     }
 
@@ -421,7 +426,9 @@ export class DesktopLoader implements IDataSource {
 
         // Demo item catalogue (templates are world CONTENT — the host registers
         // its own; the engine ships none). The demo scenes' b5 rows use ids 1–3.
-        registerDemoItemTemplates();
+        // Item templates are DATA (item.md: 模板=世界内容,引擎零内置) —
+        // frozen at src/items/demo.items.json (base-data-audit D3).
+        for (const t of demoItemsJson as unknown as ItemTemplate[]) registerItemTemplate(t);
 
         // Build one transport per registered game and route by name (offline-first
         // tiering, services/game): default = lazy probe → the REAL dev game server
@@ -983,11 +990,12 @@ export class DesktopLoader implements IDataSource {
      *  the legacy avatar and RobotExpressive face +Z (π). Each model is its
      *  own correction — there is no universal value. */
     public avatarCatalog(): { id: number; label: string; facing: number }[] {
-        return [
-            { id: DEMO_AVATAR_ID, label: '旅者 Wanderer', facing: Math.PI },
-            { id: 33, label: '士兵 Soldier', facing: 0 },
-            { id: 34, label: '机器人 Robot', facing: Math.PI },
-        ];
+        // DATA, not code (base-data-audit D1): the catalog rides the world doc
+        // (player.avatarCatalog); a chain-injected config missing the field
+        // falls back to the bundled document. facing stays per-model data.
+        const fromDoc = (doc: any) => doc?.player?.avatarCatalog;
+        const list = fromDoc(this._worldDoc) ?? fromDoc(defaultWorldJson) ?? [];
+        return list.map((a: any) => ({ id: Number(a.id), label: String(a.label ?? a.id), facing: Number(a.facing) || 0 }));
     }
 
     /** Live avatar id (mirrors AvatarComponent.resource; catalog default). */

@@ -128,3 +128,27 @@ resolve into differently-posed worlds.
 `size` is always a **full-length bounding box** (not half extents), Septopus axis
 order `[east-west, north-south, height]`; exceptions (a6 cone, a7 ball
 diameter semantics) are listed in [adjunct-types.md](adjunct-types.md).
+
+## 9. Engine-constant binning (normative, 2026-07-09)
+
+Implementation constants are binned three ways (base-data audit P9/D6):
+
+**Protocol invariants** (§1; shared by all worlds, never overridable): the
+4096×4096 block grid, 16×16×16 m blocks, 0.1 m height granularity, 96 worlds.
+
+**Protocol defaults (bin B)** — every engine must use the same value when the
+data omits it:
+
+| quantity | default | world-data override |
+|---|---|---|
+| gravity | **−19.62 m/s²** (a deliberate 2× standard-gravity feel value, pinned as such) | `player.capacity.gravityMultiplier` (scale) |
+| player health | 100/100 | `player.capacity.maxHp` |
+| simulation tick | 0.1 s (10 Hz grid/state sync) | — |
+| block streaming radius | 2 (a 5×5 neighbourhood) | — |
+| LOD near bound | 40 m | `world.performance.lodNear` |
+| time calendar | epoch 0 · speed 1.0 | the world doc's `time` section (`{epoch, speed}`) |
+| void-recovery depth | 20 m | `player.capacity.voidRecover` |
+
+**Client presentation (bin C, non-normative)** — implementation-defined, never
+constrained by the protocol: mouse/touch sensitivity, stick deadzones, camera
+FOV/near/far, minimap frustum, camera shake/sink, auto-level rate.

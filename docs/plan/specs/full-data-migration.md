@@ -236,6 +236,16 @@
 
 - **验收(总)**:第二引擎(先内核)对全部 golden vectors 状态哈希一致 = AC-1/2/3 达成。
 
+### P9 · 基础运行数据落地审计(2026-07-09 审计完成,修复未排)
+玩家/化身/物品/游戏设置等**基础运行数据**的落地验收——清单与三桶判定标准
+(A 世界语义→数据 · B 协议默认→规范 · C 客户端观感→点名非规范)独立成文:
+**[`base-data-audit.md`](base-data-audit.md)**。已确认达标:world.config 的
+player 全段(出生/体型/能力/背包/默认化身)、持久化通道、世界内容。缺口 D1–D8:
+avatarCatalog 硬编码 · Game Settings TS · ItemTemplates 在引擎 mocks ·
+DEMO_ASSETS 清单(=A3 主体)· 玩家 HP=100 硬编码 · Constants 未分桶
+(GRAVITY×2 手感私改=I4 靶子)· GlobalConfig 双源悬案 · moduleCatalog 喂入。
+修复批次 P9a–P9d 见审计文档。
+
 ## 5. 一致性 / Conformance
 
 - **Golden vectors**:`(数据) → (派生实体集 + 世界状态哈希 + 事件序列)`,是跨引擎唯一裁判。放 `engine/tests/golden/`,双引擎共享。

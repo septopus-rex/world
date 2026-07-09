@@ -44,26 +44,15 @@ const asset = (p: string) => {
     return base.replace(/\/$/, '') + p;
 };
 
-export const DEMO_ASSETS: DemoAsset[] = [
-    // World block-ground baselines (WorldConfigs block.texture): 1 = forest (Normal),
-    // 5 = moon (GhostMoon). Tiled across the 16 m ground via the record repeat.
-    { id: 1, type: 'texture', format: 'png', src: asset('/assets/ground-forest.png'), repeat: [8, 8] },
-    { id: 5, type: 'texture', format: 'png', src: asset('/assets/ground-moon.png'), repeat: [8, 8] },
-    { id: DEMO_TEXTURE_ID, type: 'texture', format: 'png', src: asset('/assets/checker.png'), repeat: [1, 1] },
-    { id: 27, type: 'module', format: 'gltf', src: asset('/assets/pyramid.gltf') },
-    { id: 28, type: 'module', format: 'glb', src: asset('/assets/helmet.glb') },
-    { id: 29, type: 'module', format: 'glb', src: asset('/assets/fox.glb') },
-    { id: DEMO_AVATAR_ID, type: 'avatar', format: 'glb', src: asset('/assets/avatar.glb') },
-    // Selectable avatars (frontend picker). Sources: three.js example models —
-    // soldier (Mixamo rig; clips Idle/Run/Walk = the NORMATIVE name-equality
-    // contract) and RobotExpressive by Tomás Laulhé, CC0 (clips Idle/Walking/
-    // Running/Jump = the LEGACY substring heuristics + air mapping).
-    { id: 33, type: 'avatar', format: 'glb', src: asset('/assets/soldier.glb') },
-    { id: 34, type: 'avatar', format: 'glb', src: asset('/assets/robot.glb') },
-    { id: 31, type: 'audio', format: 'wav', src: asset('/assets/ding.wav') },
-    // Video screen source (e3). Local + same-origin → no CORS issue for the
-    // VideoTexture. Not shipped (no binary in the repo): drop ANY .mp4 here to
-    // see it play; without the file the panel just renders dark (graceful).
-    // Or swap src for a CORS-enabled URL / a CID. NOT YouTube (spec §9).
-    { id: 32, type: 'video', format: 'mp4', src: asset('/assets/sample.mp4') },
-];
+// The manifest is DATA (src/assets/demo.manifest.json — resource.md §6's dev
+// registry, base-data-audit D4): id/type/format/path(+repeat). Only the
+// deploy-base resolution stays code (path → src via asset(), which is
+// environment, not content). Notes that used to live inline:
+//   · texture 1 = forest / 5 = moon (block-ground baselines, WorldConfigs)
+//   · avatars: soldier 33 = normative clip-name contract, robot 34 = legacy
+//     heuristics (protocol avatar-animation.md); video 32 = drop any .mp4.
+import demoManifestJson from '../assets/demo.manifest.json';
+export const DEMO_ASSETS: DemoAsset[] = (demoManifestJson as any[]).map((a) => ({
+    id: a.id, type: a.type, format: a.format, src: asset(a.path),
+    ...(a.repeat ? { repeat: a.repeat as [number, number] } : {}),
+}));
