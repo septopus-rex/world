@@ -8,7 +8,6 @@ import type { DesktopLoader } from '@core/lib/DesktopLoader';
  * restores the block. Degrades gracefully: gateway unreachable = an error
  * line, the world untouched.
  */
-const GATEWAY = (import.meta as any).env?.VITE_AI_GATEWAY || 'http://127.0.0.1:7788';
 
 interface Props { loader: DesktopLoader | null; ready: boolean }
 
@@ -31,14 +30,13 @@ export function AuthorChat({ loader, ready }: Props) {
         try {
             const target = doc?.target?.block ?? loader.aiTargetBlock();
             if (!target) { setStatus('附近没有可用的空地块'); return; }
-            const res = await fetch(`${GATEWAY}/v0/${doc ? 'revise' : 'generate'}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, snapshot: { targetBlock: target }, ...(doc ? { doc } : {}) }),
-            });
-            const data = await res.json();
-            if (!res.ok || data.error) {
-                setStatus(`生成失败:${data.error ?? res.status}`);
+            const { ok, status: httpStatus, data } = await loader.net.http('ai').postJsonFull(
+                `/v0/${doc ? 'revise' : 'generate'}`,
+                { prompt, snapshot: { targetBlock: target }, ...(doc ? { doc } : {}) },
+                { timeoutMs: 60_000 }, // real LLMs think slowly
+            );
+            if (!ok || data?.error) {
+                setStatus(`生成失败:${data?.error ?? httpStatus}`);
                 return;
             }
             setPlan(data.plan || data.doc?.summary || '(无摘要)');

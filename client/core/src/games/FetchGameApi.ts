@@ -1,4 +1,5 @@
 import type { IGameApi } from '@engine/core/services/IGameApi';
+import { HttpChannel } from '../net/HttpChannel';
 
 /**
  * FetchGameApi — the REAL networked transport for a Game Setting's external API.
@@ -17,19 +18,20 @@ import type { IGameApi } from '@engine/core/services/IGameApi';
  */
 export class FetchGameApi implements IGameApi {
     private gameId: string | null = null;
+    private readonly channel: HttpChannel;
 
-    constructor(private readonly baseUrl: string) {}
+    constructor(channel: HttpChannel | string) {
+        // Accepts a hub channel or a bare data-declared baseurl (Game Setting).
+        this.channel = typeof channel === 'string' ? new HttpChannel(channel) : channel;
+    }
 
     async call(game: string, method: string, params: any[] = []): Promise<any> {
-        const res = await fetch(`${this.baseUrl}/${method}`, {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ game, gameId: this.gameId, params }),
-        });
-        if (!res.ok) {
-            throw new Error(`[FetchGameApi] ${game}.${method} → server ${res.status} ${res.statusText}`);
+        let data: any;
+        try {
+            data = await this.channel.postJson(`/${method}`, { game, gameId: this.gameId, params });
+        } catch (e: any) {
+            throw new Error(`[FetchGameApi] ${game}.${method} → ${e?.message ?? e}`);
         }
-        const data = await res.json();
         if (method === 'start' && data?.gameId) this.gameId = data.gameId; // open session
         if (method === 'end') this.gameId = null;                          // close session
         return data?.state ?? data;

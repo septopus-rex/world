@@ -51,11 +51,23 @@ test('外部游戏走真进程:探测→HTTP start 握手→会话在服务端',
     await stepEngine(page, 40);
     expect(await page.evaluate(() => (window as any).loader.engine.getWorld().gameZoneActive)).toBe(true);
 
-    // Enter Game → ProbedGameApi probes 7787 (live!) → FetchGameApi handshake.
+    // Deterministic gate: the PAGE must reach the service before we enter —
+    // converts any environment/timing flake into an immediate, named failure.
+    const probe = await page.evaluate(async () => {
+        try {
+            const ok = await (window as any).loader.net.http('game').probe();
+            return { ok };
+        } catch (e) { return { ok: false, err: String(e) }; }
+    });
+    expect(probe.ok, `page-side probe reached the game service (${JSON.stringify(probe)})`).toBe(true);
+
+    // Enter Game → ProbedGameApi finds the cached online probe → FetchGameApi handshake.
     await page.getByTestId('enter-game').click();
     const started = await pumpUntil(page, async () =>
         page.evaluate(() => !!(window as any).loader.mahjongState));
     expect(started, 'board arrived after the HTTP start handshake').toBe(true);
+    const transport = await page.evaluate(() => (window as any).__SEPTOPUS_GAME_TRANSPORT__);
+    expect(transport, 'the start went over HTTP, not loopback').toBe('http');
 
     // The session lives on the SERVER — its stats moved.
     const after = await (await request.get(`${GAME}/v0/stats`)).json();

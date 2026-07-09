@@ -37,6 +37,7 @@ import type { IGameApi } from '@engine/core/services/IGameApi';
 import { GAMES, gameById } from '../games/registry';
 import { GameApiRouter } from '../games/GameApiRouter';
 import { ProbedGameApi } from '../games/ProbedGameApi';
+import { ServiceHub } from '../net/ServiceHub';
 import { FetchGameApi } from '../games/FetchGameApi';
 import { DEMO_BLOCK, DEMO_AVATAR_ID, DEFAULT_AVATAR_ID, DEMO_ASSETS } from '../scenes/demoScene';
 import demoBlockJson from '../blocks/demo.block.json';
@@ -216,16 +217,12 @@ export class DesktopLoader implements IDataSource {
     public get boardPanelState() { return this._boardPanel; }
     private _onBoard: ((b: typeof this._boardPanel) => void) | null = null;
     public onBoard(cb: (b: typeof this._boardPanel) => void): void { this._onBoard = cb; }
-    private boardBase(): string {
-        return (import.meta as any).env?.VITE_BOARD_SERVER || 'http://127.0.0.1:7786';
-    }
     /** Open a board panel and (re)load its channel from the board service. */
     public async openBoard(channel: string, title = ''): Promise<void> {
         this._boardPanel = { channel, title, messages: null, offline: false };
         this._onBoard?.(this._boardPanel);
         try {
-            const res = await fetch(`${this.boardBase()}/v0/list?channel=${encodeURIComponent(channel)}`, { signal: AbortSignal.timeout(2000) });
-            const data = await res.json();
+            const data = await this.net.http('board').getJson(`/v0/list?channel=${encodeURIComponent(channel)}`, { timeoutMs: 2000 });
             if (this._boardPanel?.channel !== channel) return; // closed/switched meanwhile
             this._boardPanel = { ...this._boardPanel, messages: data.messages ?? [], offline: false };
         } catch {
@@ -239,12 +236,7 @@ export class DesktopLoader implements IDataSource {
         const b = this._boardPanel;
         if (!b || !text.trim()) return false;
         try {
-            const res = await fetch(`${this.boardBase()}/v0/post`, {
-                method: 'POST', headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ channel: b.channel, author, text }),
-                signal: AbortSignal.timeout(3000),
-            });
-            if (!res.ok) return false;
+            await this.net.http('board').postJson('/v0/post', { channel: b.channel, author, text });
             await this.openBoard(b.channel, b.title); // refresh
             return true;
         } catch { return false; }
@@ -263,6 +255,17 @@ export class DesktopLoader implements IDataSource {
      *  Game Setting `methods` whitelist is enforced by the engine before a call
      *  reaches it. Built in init() from the game registry. */
     private gameApi: IGameApi = new GameApiRouter({});
+    /** THE client-side connection manager — every companion-service call routes
+     *  through here (net/ServiceHub: probe/timeout/reconnect/status in one place). */
+    public readonly net: ServiceHub = (() => {
+        const env = (import.meta as any).env ?? {};
+        const hub = new ServiceHub();
+        hub.register('board', env.VITE_BOARD_SERVER || 'http://127.0.0.1:7786');
+        hub.register('game', env.VITE_GAME_SERVER || 'http://127.0.0.1:7787');
+        hub.register('ipfs', env.VITE_IPFS_GATEWAY || 'http://127.0.0.1:7789');
+        hub.register('ai', env.VITE_AI_GATEWAY || 'http://127.0.0.1:7788');
+        return hub;
+    })();
     /** Active game name + its latest state (null when no game is running). The engine
      *  is the source of truth (game.started/ended carry the name). Generic — each
      *  game's HUD reads/casts gameState as it needs. */
@@ -427,21 +430,24 @@ export class DesktopLoader implements IDataSource {
         // forces each game's data-declared baseurl (the route-intercept e2e path).
         const useServer = typeof location !== 'undefined'
             && new URLSearchParams(location.search).has('mjserver');
-        const gameSrv = (import.meta as any).env?.VITE_GAME_SERVER || 'http://127.0.0.1:7787';
+        const gameCh = this.net.http('game');
         const backends: Record<string, IGameApi> = {};
         for (const g of GAMES) {
             backends[g.name] = useServer
-                ? new FetchGameApi(g.setting.baseurl ?? `/api/${g.name}`)
-                : new ProbedGameApi(`${gameSrv}/v0/health`,
-                    () => new FetchGameApi(`${gameSrv}/api/${g.name}`),
+                ? new FetchGameApi(this.net.adhoc(g.setting.baseurl ?? `/api/${g.name}`)) // data-declared server
+                : new ProbedGameApi(gameCh,
+                    () => new FetchGameApi(this.net.adhoc(`${gameCh.base}/api/${g.name}`)),
                     () => g.makeLoopback());
         }
         this.gameApi = new GameApiRouter(backends);
 
-        // Realtime transport: a (currently simulated) WebSocket implements the
-        // engine's ILiveSource. Swap FakeWebSocket → new WebSocket(url) to go live;
-        // the engine side (LiveSystem → world.events) is unchanged.
-        this._live = new WebSocketLiveSource(new FakeWebSocket());
+        // Realtime transport (ILiveSource): the WS half of the two-channel split
+        // (HTTP = request/response · WS = server push). With VITE_LIVE_WS set the
+        // live source rides a hub-managed ReconnectingSocket (backoff/heartbeat/
+        // re-subscribe-on-reopen); without it, the in-process FakeWebSocket keeps
+        // dev/e2e deterministic. The engine side (LiveSystem) never changes.
+        const liveUrl = (import.meta as any).env?.VITE_LIVE_WS;
+        this._live = new WebSocketLiveSource(liveUrl ? this.net.socket(liveUrl) : new FakeWebSocket());
 
         this.engine = new Engine(containerId, { api: this, ui, gameApi: this.gameApi, liveSource: this._live });
 
@@ -570,10 +576,10 @@ export class DesktopLoader implements IDataSource {
         // local node/cache (offline-first), only misses fall through to HTTP.
         // Absent gateway = zero cost, zero behavior change (e2e-deterministic).
         try {
-            const gw = (import.meta as any).env?.VITE_IPFS_GATEWAY || 'http://127.0.0.1:7789';
-            if (await HttpCasProvider.probe(gw)) {
-                this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(gw));
-                console.log(`[Loader] IPFS gateway online → router tier-2: ${gw}`);
+            const ipfsCh = this.net.http('ipfs');
+            if (await ipfsCh.probe()) {
+                this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(ipfsCh));
+                console.log(`[Loader] IPFS gateway online → router tier-2: ${ipfsCh.base}`);
             }
             // REAL public gateways (read-only, lowest priority): comma list, e.g.
             //   VITE_IPFS_GATEWAYS=https://ipfs.io,https://dweb.link
@@ -583,7 +589,7 @@ export class DesktopLoader implements IDataSource {
             const real = String((import.meta as any).env?.VITE_IPFS_GATEWAYS || '')
                 .split(',').map((s) => s.trim()).filter(Boolean);
             for (const base of real) {
-                this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(base, false));
+                this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(this.net.adhoc(base), false));
                 console.log(`[Loader] real IPFS gateway tier: ${base} (read-only)`);
             }
         } catch { /* never block boot on the network tier */ }

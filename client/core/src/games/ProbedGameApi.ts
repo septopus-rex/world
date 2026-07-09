@@ -1,4 +1,5 @@
 import type { IGameApi } from '@engine/core/services/IGameApi';
+import type { HttpChannel } from '../net/HttpChannel';
 
 /**
  * ProbedGameApi — offline-first transport picker for Pattern-A games, same
@@ -13,30 +14,19 @@ import type { IGameApi } from '@engine/core/services/IGameApi';
  * world full of games probes once.
  */
 export class ProbedGameApi implements IGameApi {
-    private static probes = new Map<string, Promise<boolean>>();
     private backend: IGameApi | null = null;
 
     constructor(
-        private readonly healthUrl: string,
+        private readonly channel: HttpChannel,        // the hub's game-service channel (probe cached there)
         private readonly makeServer: () => IGameApi,
         private readonly makeLoopback: () => IGameApi,
     ) {}
 
-    private static probe(url: string): Promise<boolean> {
-        let p = this.probes.get(url);
-        if (!p) {
-            p = fetch(url, { signal: AbortSignal.timeout(800) })
-                .then(async (r) => r.ok && (await r.json())?.ok === true)
-                .catch(() => false);
-            this.probes.set(url, p);
-        }
-        return p;
-    }
-
     async call(game: string, method: string, params: any[] = []): Promise<any> {
         if (!this.backend) {
-            const online = await ProbedGameApi.probe(this.healthUrl);
+            const online = await this.channel.probe();
             this.backend = online ? this.makeServer() : this.makeLoopback();
+            (globalThis as any).__SEPTOPUS_GAME_TRANSPORT__ = online ? 'http' : 'loopback'; // debug/e2e surface
             console.log(`[games] ${game} transport: ${online ? 'game server (HTTP)' : 'in-page loopback'}`);
         }
         return this.backend.call(game, method, params);
