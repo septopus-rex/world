@@ -339,6 +339,7 @@ export class ResourceManager {
             const direct = isCid(id) || /^(https?:|data:|blob:|file:)/.test(id);
             let raw: string;
             let recRepeat: [number, number] | undefined;
+            let recSize: [number, number] | undefined;
             if (direct) {
                 raw = id;
             } else {
@@ -349,12 +350,19 @@ export class ResourceManager {
                 }
                 raw = rec.raw;
                 recRepeat = rec.repeat;
+                recSize = rec.size;
             }
             const url = await this.resolveUrl(raw);
             const tex = await this.textureLoader.loadAsync(url);
 
             tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-            const rep = repeat ?? recRepeat ?? [1, 1];
+            // Tiling density (texture.md §3): a per-texture world `size` (= metres one
+            // image covers) → repeat = 1/size, applied on top of the geometry's metre
+            // UVs. `size` default [1,1] (one image per metre). Legacy records with no
+            // `size` fall back to their raw `repeat`; an explicit arg still overrides.
+            const sizeRepeat: [number, number] | undefined = recSize
+                ? [1 / recSize[0], 1 / recSize[1]] : undefined;
+            const rep = repeat ?? sizeRepeat ?? recRepeat ?? [1, 1];
             tex.repeat?.set?.(rep[0], rep[1]);
 
             // Anisotropic filtering — the main fix for grazing-angle shimmer on

@@ -427,7 +427,7 @@ export class DesktopLoader implements IDataSource {
     }
 
     /** Resource record cache: resource id → { type, format, raw=CID, repeat? }. */
-    private _resCatalog = new Map<number, { type: string; format: string; raw: string; repeat?: [number, number] }>();
+    private _resCatalog = new Map<number, { type: string; format: string; raw: string; repeat?: [number, number]; size?: [number, number] }>();
 
     /**
      * Resolve a resource id to a content-addressed record, ingesting it into the
@@ -444,7 +444,7 @@ export class DesktopLoader implements IDataSource {
         const resp = await fetch(asset.src);
         if (!resp.ok) throw new Error(`[DesktopLoader] asset fetch failed: ${asset.src} (${resp.status})`);
         const cid = await router.put(new Uint8Array(await resp.arrayBuffer()));
-        const rec = { type: asset.type, format: asset.format, raw: cid, ...(asset.repeat ? { repeat: asset.repeat } : {}) };
+        const rec = { type: asset.type, format: asset.format, raw: cid, ...(asset.repeat ? { repeat: asset.repeat } : {}), ...(asset.size ? { size: asset.size } : {}) };
         this._resCatalog.set(id, rec);
         return rec;
     }

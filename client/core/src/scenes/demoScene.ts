@@ -30,7 +30,8 @@ export interface DemoAsset {
     type: 'module' | 'avatar' | 'audio' | 'texture' | 'video';
     format: string;
     src: string;                  // seed path under public/assets (CAS ingest source)
-    repeat?: [number, number];    // texture-only
+    repeat?: [number, number];    // texture-only (legacy; prefer `size`)
+    size?: [number, number];      // texture-only: world metres one image covers (texture.md §3)
 }
 /** Deploy-base-aware asset path: vite injects BASE_URL ('/' locally, '/world/'
  *  on GitHub Pages — deploy/RELEASE.md §6). Bare absolute '/assets/…' would 404
@@ -55,4 +56,5 @@ import demoManifestJson from '../assets/demo.manifest.json';
 export const DEMO_ASSETS: DemoAsset[] = (demoManifestJson as any[]).map((a) => ({
     id: a.id, type: a.type, format: a.format, src: asset(a.path),
     ...(a.repeat ? { repeat: a.repeat as [number, number] } : {}),
+    ...(a.size ? { size: a.size as [number, number] } : {}),
 }));

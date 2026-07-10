@@ -4,9 +4,9 @@
     "type": "texture",
     "format": "png",
     "path": "/assets/ground-forest.png",
-    "repeat": [
-      8,
-      8
+    "size": [
+      0.25,
+      0.25
     ]
   },
   {
@@ -14,9 +14,9 @@
     "type": "texture",
     "format": "png",
     "path": "/assets/ground-moon.png",
-    "repeat": [
-      8,
-      8
+    "size": [
+      0.25,
+      0.25
     ]
   },
   {
@@ -24,9 +24,19 @@
     "type": "texture",
     "format": "png",
     "path": "/assets/checker.png",
-    "repeat": [
-      1,
-      1
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 8,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/checker.png",
+    "size": [
+      0.5,
+      0.5
     ]
   },
   {

@@ -1,70 +1,68 @@
 import * as THREE from 'three';
 
 /**
- * Size-derived UV tiling — the structural fix for the old engine's texture
- * "mosaic" (低 texel 密度) artifact.
+ * World-space box UVs — the structural fix for the old engine's texture "mosaic"
+ * (低 texel 密度), and the geometry half of the texture protocol
+ * (protocol/{cn,en}/texture.md §5–6).
  *
- * THE PROBLEM (old engine): a BoxGeometry's UVs are a fixed 0..1 per face,
- * independent of the face's real size. With an authored repeat of ~[1,1], a
- * single low-res image was stretched once across a multi-metre (multi-thousand
- * mm) face — each texel covered a huge area, so up close it read as blocky
- * mosaic. The millimetre scaling only made the faces bigger; the real bug was
- * that tiling never tracked face size.
+ * TWO scales, kept separate (texture.md §3–4):
+ *   · WORLD SIZE (density) — how much world one image covers — lives on the
+ *     TEXTURE as `size` and is applied via `texture.repeat = 1/size`
+ *     (ResourceManager). NOT here.
+ *   · GEOMETRY UV — this file — carries each face's extent in METRES (1 UV unit =
+ *     1 metre) so tiling tracks face size (texel density is constant: a 16 m floor
+ *     and a 1 m crate look equally crisp). Sampled tiles = metresUV × (1/size) =
+ *     faceSizeMeters / size.
  *
- * THE FIX: scale each face's UVs by faceSizeMeters / tileMeters, so ONE texture
- * tile always covers `tileMeters` of world space regardless of how large the
- * face is. Texel density is then constant — a 16 m floor and a 1 m crate show
- * the texture at the same crispness. The authored `material.repeat` still
- * applies on top of the shared texture as a fine multiplier.
- *
- * This is deterministic from (w,h,d), so it composes with MeshFactory's
- * size-keyed geometry cache (same size → same UVs → safely shared), and a
- * single shared texture (repeat [1,1]) serves every face size — preserving
- * texture dedup.
+ * ANCHOR (texture.md §6): face-local `[bottom, left]`. UVs are derived from vertex
+ * POSITIONS so the origin sits at each face's min corner, with V running along
+ * world height on the four VERTICAL faces — a wall's texture starts with a full
+ * tile at the ground, not clipped mid-tile. Deterministic from (w,h,d), so it
+ * still composes with MeshFactory's size-keyed geometry cache and preserves
+ * texture dedup (one shared texture, repeat = 1/size, serves every face size).
  */
 
-/** Default world-space size of one texture tile (metres). 1 tile per 2 m.
- *  Normative cross-engine contract (repeat_per_face = faceSizeMeters / TILE_METERS):
- *  protocol/{cn,en}/adjunct.md §6 — another engine must match this density to align. */
-export const DEFAULT_TILE_METERS = 2;
+/** 1 UV unit = this many metres. The density knob moved to per-texture `size`
+ *  (texture.md §3); the geometry side is now a plain metre mapping (=1). Kept
+ *  exported for the cross-engine density contract note in texture.md §5. */
+export const DEFAULT_TILE_METERS = 1;
 
 /**
- * Rewrite a (1-segment) BoxGeometry's UVs so texel density is constant across
- * face sizes. Box dims are Three [w(x), h(y), d(z)] in metres.
+ * Rewrite a (1-segment) BoxGeometry's UVs to world-metre, [bottom,left]-anchored
+ * coordinates. Box dims are Three [w(x), h(y), d(z)] in metres.
  *
- * Face/vertex layout for a non-segmented BoxGeometry (24 verts, 4 per face) in
- * THREE's build order: +x, -x, +y, -y, +z, -z. Each face's two UV axes map to
- * two of the three dimensions:
- *   ±x faces span (d, h) · ±y faces span (w, d) · ±z faces span (w, h)
+ * Non-segmented BoxGeometry = 24 verts, 4 per face, THREE build order
+ * +x,-x,+y,-y,+z,-z. Per face we pick the two spanning axes and map
+ * U = (pos + half) along the horizontal axis, V likewise along "up":
+ *   ±x faces span (z, y) · ±y faces span (x, z) · ±z faces span (x, y)
+ * so on the four vertical faces V = world height (y) → V=0 at the bottom edge.
  */
 export function applyBoxWorldUV(
     geometry: THREE.BufferGeometry,
-    dims: [number, number, number],
-    tileMeters: number = DEFAULT_TILE_METERS
+    dims: [number, number, number]
 ): void {
     const uv = geometry.getAttribute('uv') as THREE.BufferAttribute | undefined;
-    if (!uv || uv.count !== 24) return; // not a standard 1-segment box — leave UVs alone
+    const pos = geometry.getAttribute('position') as THREE.BufferAttribute | undefined;
+    if (!uv || !pos || uv.count !== 24) return; // not a standard 1-segment box — leave UVs alone
 
-    const tile = tileMeters > 1e-6 ? tileMeters : DEFAULT_TILE_METERS;
-    const [w, h, d] = dims;
+    const half: [number, number, number] = [dims[0] / 2, dims[1] / 2, dims[2] / 2];
+    const axis = (i: number, a: number) => (a === 0 ? pos.getX(i) : a === 1 ? pos.getY(i) : pos.getZ(i));
 
-    // [uSpanMeters, vSpanMeters] per face, in build order.
-    const faceSpans: Array<[number, number]> = [
-        [d, h], // +x
-        [d, h], // -x
-        [w, d], // +y
-        [w, d], // -y
-        [w, h], // +z
-        [w, h], // -z
+    // per face (build order): [uAxis, vAxis]. 0=x, 1=y(height), 2=z.
+    const faces: Array<[number, number]> = [
+        [2, 1], // +x : U=z, V=height
+        [2, 1], // -x
+        [0, 2], // +y (top)    : U=x, V=z
+        [0, 2], // -y (bottom)
+        [0, 1], // +z : U=x, V=height
+        [0, 1], // -z
     ];
 
-    for (let face = 0; face < 6; face++) {
-        const [uSpan, vSpan] = faceSpans[face];
-        const su = uSpan / tile;
-        const sv = vSpan / tile;
+    for (let f = 0; f < 6; f++) {
+        const [ua, va] = faces[f];
         for (let v = 0; v < 4; v++) {
-            const i = face * 4 + v;
-            uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
+            const i = f * 4 + v;
+            uv.setXY(i, axis(i, ua) + half[ua], axis(i, va) + half[va]); // metres, origin at min corner
         }
     }
     uv.needsUpdate = true;
