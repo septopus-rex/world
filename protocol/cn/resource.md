@@ -130,8 +130,8 @@ Solana (链上)                            IPFS (内容层)
 
 | 引用位置 | 引用方式 | 示例 |
 |---|---|---|
-| 附属物材质 | `adjunct raw[3]` = resource ID | `raw[3] = 2` → 纹理 #2 |
-| 附属物模型 | `adjunct raw[3]` = resource ID | `raw[3] = 27` → 模型 #27 |
+| 附属物贴图 | `a2 box raw[7]` = 贴图 id/CID（见 [texture.md](texture.md)；`raw[3]` 是颜色索引） | `raw[7] = 7` → 贴图 #7 |
+| 附属物模型 | `a4 module raw[3]` = resource ID | `raw[3] = 27` → 模型 #27 |
 | Block 可玩标记/外部 app id | `block raw[4]`(见 [block.md](block.md) §3) | `raw[4] = 42` → 外部游戏 #42 |
 | 触发器 UI 文本 | 动作参数中的 resource ID | `system.ui.dialog(18)` → 文本 #18 |
 

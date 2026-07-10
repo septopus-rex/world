@@ -89,7 +89,7 @@ export const CustomAdjunct = {
 
 | 资源类型 | 数据中的挂载位置 | 说明 |
 |---|---|---|
-| 图像 (Texture) | `adjunct raw[3]` = texture resource ID | 贴图资源，应用为漫反射/颜色贴图 |
+| 图像 (Texture) | `a2 box raw[7]` = texture id/CID（可选；`raw[3]` 是**颜色索引**、非贴图）| 漫反射/颜色贴图，完整规范见 [贴图协议](./texture.md) |
 | 3D 模型 (Module) | `adjunct raw[3]` = module resource ID | 替换标准几何体，使用完整 3D 资产 |
 | 音效 (Audio) | `STD_ROW.audio.resource` | 3D 空间音效 |
 
@@ -99,6 +99,6 @@ export const CustomAdjunct = {
 
 - **尺寸轴映射**：std `size = [x, y, z]` 是 **Septopus [东, 北, 高]** 全长；映射到引擎盒尺寸 **[宽=东, 高=Alt, 深=北]**（`Coords.getBoxDimensions`）。**枢轴 = 几何中心。**
 - **基元语义**：`box(w,h,d)` 居中全长；`sphere` 半径 = `w/2`；`cylinder/cone(w,h,d)`；`plane(w,h)`；`tube` 沿控制点 Catmull-Rom 挤出。**分段数（如球 32×32）是像素级细节，各引擎可不同**（观感等价即可）。
-- **世界空间 UV 平铺（贴图密度恒定）**：贴图按**世界尺寸**平铺而非按面拉伸——`每面 repeat = 面世界尺寸(米) / TILE_METERS`，`TILE_METERS = 2`（每 2 米一个 tile）。故 16m 地板与 1m 箱子贴图**同样清晰**。`material.repeat` 是**叠加在此之上的额外乘子**。（UE 需实现同一密度公式才对齐观感。）
+- **世界空间 UV 平铺（贴图密度恒定）**：贴图按**世界尺寸**平铺而非按面拉伸，故 16m 地板与 1m 箱子贴图**同样清晰**。尺度（贴图 `size`，默认 1m）/ 纹素密度基准（**512 px/m**）/ 锚定（`[bottom, left]`）/ 平铺公式的完整**跨引擎契约**见 [贴图协议](./texture.md)。（UE 需实现同一套规则才对齐观感。）
 - **颜色**：**规范是直接 author 十六进制色**（`material.color`）。box 的 `resource 索引 → 调色板颜色`（如 `10→#eee`、`1→#555`）是**遗留 demo 便利、非规范**——跨引擎内容请存 hex，勿依赖索引调色板。
 - **「同效果」边界**：几何摆放/朝向/尺寸/UV 密度属**语义**（必须对齐）；着色/光照/tonemapping/阴影/相机/分段数属**渲染器自决**（观感等价、非逐位相同）。

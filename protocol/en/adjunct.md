@@ -89,7 +89,7 @@ Adjuncts reference resources via **integer IDs**. For storage format, addressing
 
 | Resource Type | Reference in Data | Description |
 |---|---|---|
-| Image (Texture) | `adjunct raw[3]` = texture resource ID | Texture resource, applied as diffuse/color map |
+| Image (Texture) | `a2 box raw[7]` = texture id/CID (optional; `raw[3]` is the **color index**, not a texture) | Diffuse/color map; full spec in the [Texture Protocol](./texture.md) |
 | 3D Model (Module) | `adjunct raw[3]` = module resource ID | Replaces standard geometry with a fully loaded 3D asset |
 | Audio | `STD_ROW.audio.resource` | 3D spatial audio |
 
@@ -99,6 +99,6 @@ Adjuncts reference resources via **integer IDs**. For storage format, addressing
 
 - **Size axis mapping**: std `size = [x, y, z]` is **Septopus [East, North, Alt]** full extent, mapped to engine box dims **[width=East, height=Alt, depth=North]** (`Coords.getBoxDimensions`). **Pivot = geometry center.**
 - **Primitive semantics**: `box(w,h,d)` centered full-extent; `sphere` radius = `w/2`; `cylinder/cone(w,h,d)`; `plane(w,h)`; `tube` = Catmull-Rom extrusion along control points. **Segment counts (e.g. sphere 32×32) are pixel-level detail — engines may differ** (behavior-equivalent).
-- **World-space UV tiling (constant texel density)**: textures tile by **world size**, not stretched per face — `repeat_per_face = faceSizeMeters / TILE_METERS`, `TILE_METERS = 2` (one tile per 2 m). So a 16 m floor and a 1 m crate look equally crisp. `material.repeat` is an **additional multiplier on top**. (UE must implement the same density formula to match.)
+- **World-space UV tiling (constant texel density)**: textures tile by **world size**, not stretched per face, so a 16 m floor and a 1 m crate look equally crisp. The full **cross-engine contract** for scale (per-texture `size`, default 1 m) / texel-density baseline (**512 px/m**) / anchoring (`[bottom, left]`) / the tiling formula is in the [Texture Protocol](./texture.md). (UE must implement the same rules to match.)
 - **Color**: the norm is **authoring an explicit hex color** (`material.color`). Box's `resource index → palette color` (e.g. `10→#eee`, `1→#555`) is a **legacy demo convenience, non-normative** — store hex for cross-engine content, don't rely on the index palette.
 - **"Same effect" boundary**: geometry placement/orientation/size/UV-density are **semantic** (must match); shading/lighting/tonemapping/shadows/camera/segment-counts are **renderer-defined** (behavior-equivalent, not bit-identical).

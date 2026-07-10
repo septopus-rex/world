@@ -138,8 +138,8 @@ Other protocols reference resources via **integer IDs**. At runtime, the engine 
 
 | Reference Location | Method | Example |
 |---|---|---|
-| Adjunct material | `adjunct raw[3]` = resource ID | `raw[3] = 2` → texture #2 |
-| Adjunct model | `adjunct raw[3]` = resource ID | `raw[3] = 27` → model #27 |
+| Adjunct texture | `a2 box raw[7]` = texture id/CID (see [texture.md](texture.md); `raw[3]` is the color index) | `raw[7] = 7` → texture #7 |
+| Adjunct model | `a4 module raw[3]` = resource ID | `raw[3] = 27` → model #27 |
 | Block playable flag / external app id | `block raw[4]` (see [block.md](block.md) §3) | `raw[4] = 42` → external game #42 |
 | Trigger UI text | Action parameter resource ID | `system.ui.dialog(18)` → text #18 |
 
