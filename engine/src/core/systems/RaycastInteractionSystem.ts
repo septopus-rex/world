@@ -125,7 +125,12 @@ export class RaycastInteractionSystem implements ISystem {
                         hit.point[2] - pt.position[2],
                     ) : hit.distance;
                     if (!isEdit && playerDist > reach) {
-                        world.events.emit('interact.miss', {}, { actor: playerId });  // hit something, but out of reach
+                        // hit something, but out of reach → the client can hint "walk
+                        // closer". Carry the target so the client hints ONLY for
+                        // genuinely interactable adjuncts (not plain scenery — every
+                        // adjunct is a raycast target, so a far wall would misfire).
+                        world.events.emit('interact.miss', { reason: 'too_far', distance: playerDist, reach },
+                            { target: hitEntityId, targetKey, actor: playerId });
                     } else {
                         console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);
                         world.events.emit('interact.primary', {
@@ -138,7 +143,7 @@ export class RaycastInteractionSystem implements ISystem {
             }
         } else if (isPrimary) {
             // Hit nothing → explicit miss event (replaces the entityId:null sentinel)
-            world.events.emit('interact.miss', {}, { actor: playerId });
+            world.events.emit('interact.miss', { reason: 'no_target' }, { actor: playerId });
         }
     }
 }

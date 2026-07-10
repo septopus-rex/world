@@ -57,8 +57,19 @@ anchor = { "name": "shrine-north", "when": <JSONLogic>? }
 - 落地:写 Transform(锚点位 + 抬升 1.2m)+ 清速度;远块未加载时**悬停安全网**
   (`hasGroundBelow`=false → 等地面)+ `popOutIfEmbedded` 兜底落点嵌入——
   三件安全件全部复用,teleport 自身零新运动逻辑。
-- 事件:`teleport.done { anchor, block }` / `teleport.denied { anchor, block, reason }`
-  (reason: `bad-args` | `no-anchor` | `refused`)。
+- 事件:`teleport.begin { anchor, block }`(过渡开始)/ `teleport.done { anchor, block }`
+  / `teleport.denied { anchor, block, reason }`(reason: `bad-args` | `no-anchor` | `refused`)。
+
+### 2.2.1 传送过渡动画(引擎侧,2026-07)
+
+传送不再瞬切。`Actuator` 解析+许可通过后不直接写位置,而是交给 `CharacterController.beginTeleport`
+跑一段确定性(dt 驱动)过渡:**锁定 player(冻结:无输入/重力/碰撞)→ 相机后拉(dolly-out,
+`CameraRig.setTeleportPull`,一律三人称取景,第一人称也临时拉出可见)→ 出相位末尾**位置切换**
+(此刻 emit `teleport.done`)→ 相机推回(dolly-in)→ 解锁**。时长 `TP_OUT≈0.28s` / `TP_IN≈0.32s`,
+后拉量 `TP_PULL≈7m`。`teleport.begin`↔`teleport.done` 之间是**特效挂载窗口**(粒子/闪光后补)。
+非行走模式(Ghost/Observe/Edit)或无受控 player 时 `beginTeleport` 返回 false,`Actuator` 退回**瞬切**
+兜底(行为不变)。`teleportSeptopus`(dev/测试直传)不走过渡。切换在出相位末尾发生,故断言到达的
+测试需步进穿过过渡(见 `portal-teleport.test.ts`)。
 
 ### 2.3 传送门=配方(零新 adjunct)
 

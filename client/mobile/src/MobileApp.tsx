@@ -28,13 +28,15 @@ import { BlockInspector } from '@core/components/BlockInspector';
  *   · drag on the canvas    → engine-native touch look (InputProvider → CameraRig)
  *   · tap                   → browser-synthesized click → the raycast interact path
  *   · JUMP button           → loader.triggerPlayerJump()
+ *   · view toggle (below JUMP) → useEngine view state → loader.setCameraView
+ *     (default third-person top-down ⇄ first-person)
  *   · panels (bag/map/avatar) → shared components; map via MiniCompass (UI rework pending)
  *
  * Interaction surface (dialogue / book / HP / toasts / game HUDs / leave dialog)
  * is the SAME shared component set the desktop uses — shells only compose.
  */
 export default function MobileApp() {
-    const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState } = useEngine('three_demo');
+    const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, view, setView } = useEngine('three_demo');
     const [sheet, setSheet] = useState<'bag' | 'map' | 'avatar' | null>(null);
     const [inspecting, setInspecting] = useState(false);
 
@@ -97,10 +99,27 @@ export default function MobileApp() {
             </div>
             <div className="absolute bottom-24 right-6 z-20 pointer-events-auto">
                 <button data-testid="m-jump"
-                    onTouchStart={(e) => { e.preventDefault(); loader?.triggerPlayerJump(); }}
-                    onMouseDown={() => loader?.triggerPlayerJump()}
+                    onPointerDown={(e) => { e.preventDefault(); loader?.triggerPlayerJump(); }}
                     className="w-16 h-16 rounded-full bg-white/10 border-2 border-white/30 backdrop-blur-md flex items-center justify-center active:scale-95 shadow-xl">
                     <span className="font-extrabold text-white text-xs tracking-widest opacity-90">JUMP</span>
+                </button>
+            </div>
+
+            {/* View toggle — directly below JUMP. Flips the camera between the
+                default third-person follow-cam (slight top-down, avatar visible)
+                and first-person (at the eyes). Reuses the SAME useEngine view
+                state the desktop ActionRail drives → loader.setCameraView; the
+                icon shows the CURRENT mode (🎥 third / 👁️ first). */}
+            <div className="absolute bottom-8 right-7 z-20 pointer-events-auto">
+                {/* onClick (single fire) — a discrete toggle, unlike JUMP's
+                    hold-friendly onTouchStart. Handling BOTH touch and mouse would
+                    double-fire on a real tap (touch + synthesized mouse) and cancel
+                    the toggle out; a tap's synthesized click fires exactly once. */}
+                <button data-testid="m-view-toggle"
+                    onClick={() => setView(view === 'third' ? 'first' : 'third')}
+                    className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/25 backdrop-blur-md flex flex-col items-center justify-center gap-0.5 active:scale-95 shadow-xl">
+                    <span className="text-lg leading-none">{view === 'third' ? '🎥' : '👁️'}</span>
+                    <span className="text-[8px] font-bold tracking-widest text-white/70 leading-none">{view === 'third' ? '俯视' : '第一'}</span>
                 </button>
             </div>
 

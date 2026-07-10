@@ -56,6 +56,10 @@ export class CameraRig {
     private viewMode: 'first' | 'third' = 'third';
     private static readonly TP_DISTANCE = 4.5;  // metres the follow-cam sits behind
     private static readonly TP_HEIGHT = 1.2;    // metres above the eye
+    /** Extra metres the follow-cam is pulled back during a teleport transition
+     *  (CharacterController drives this in/out). While pulling, the camera frames
+     *  third-person even from first-person so the dolly-out is actually visible. */
+    private _teleportPull = 0;
     /** Idle rest pitch in third-person: a slight downward tilt so the avatar is framed. */
     private static readonly TP_REST_PITCH = -0.34; // rad ≈ -19.5°
     /** Most GLTF characters face +Z; engine forward is -Z, so flip the avatar to face away. */
@@ -67,6 +71,8 @@ export class CameraRig {
 
     public setViewMode(mode: 'first' | 'third'): void { this.viewMode = mode; }
     public getViewMode(): 'first' | 'third' { return this.viewMode; }
+    /** Teleport dolly-out distance (metres behind the normal follow position). */
+    public setTeleportPull(metres: number): void { this._teleportPull = Math.max(0, metres); }
     public toggleViewMode(): 'first' | 'third' {
         this.viewMode = this.viewMode === 'first' ? 'third' : 'first';
         return this.viewMode;
@@ -143,16 +149,20 @@ export class CameraRig {
         const camRot = world.renderEngine.getMainCameraRotation();
         const yaw = camRot[1];
 
-        // Camera base position by view mode.
+        // Camera base position by view mode. A teleport pull forces third-person
+        // framing (even from first-person) so the dolly-out reads on screen.
+        const pulling = this._teleportPull > 0.001;
+        const third = this.viewMode === 'third' || pulling;
         let camX: number, camY: number, camZ: number;
-        if (this.viewMode === 'third') {
+        if (third) {
             // Follow-cam: sit behind the player along the horizontal look direction and
             // raised a little for a slight top-down angle. Camera keeps its input-driven
             // rotation, so it still looks where the mouse points (player out front).
+            const dist = CameraRig.TP_DISTANCE + this._teleportPull;
             const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-            camX = eyeX - fx * CameraRig.TP_DISTANCE;
+            camX = eyeX - fx * dist;
             camY = eyeY + CameraRig.TP_HEIGHT;
-            camZ = eyeZ - fz * CameraRig.TP_DISTANCE;
+            camZ = eyeZ - fz * dist;
         } else {
             camX = eyeX; camY = eyeY; camZ = eyeZ;
         }
@@ -188,8 +198,9 @@ export class CameraRig {
             const facing = avatar.facing !== undefined ? avatar.facing : CameraRig.AVATAR_FACING;
             world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + facing, 0);
             // Visible only in third-person — in first-person the camera is inside
-            // the avatar. Ghost mode always hides it (incorporeal).
-            const show = avatar.visible !== false && this.viewMode === 'third'
+            // the avatar (but a teleport pull frames third-person, so show it then).
+            // Ghost mode always hides it (incorporeal).
+            const show = avatar.visible !== false && third
                 && world.mode !== SystemMode.Ghost;
             world.renderEngine.setObjectVisible(avatar.handle, show);
 

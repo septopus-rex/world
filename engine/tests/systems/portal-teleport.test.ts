@@ -81,7 +81,7 @@ describe('portal recipe — source-side gating (the door checks your key)', () =
         q.spp(HOME, 8, 12, 0.95);
         stepN(q.engine, 10);
         await flush();
-        stepN(q.engine, 10);
+        stepN(q.engine, 30);   // step THROUGH the teleport transition (dolly-out → swap)
         const p = q.at(SHRINE);
         expect(p.e, 'landed on the shrine pad (E)').toBeCloseTo(8, 0);
         expect(p.n, 'landed on the shrine pad (N)').toBeCloseTo(8, 0);
@@ -104,7 +104,7 @@ describe('teleport action — destination-side gating', () => {
         q.world.globalFlags.attuned = true;
         q.act({ type: 'player', method: 'teleport', target: 'inner-sanctum', params: [SHRINE] });
         await flush();
-        stepN(q.engine, 5);
+        stepN(q.engine, 30);   // step THROUGH the transition
         expect(q.at(SHRINE).e).toBeCloseTo(12, 0);
         expect(q.events.some(e => e.kind === 'done' && e.anchor === 'inner-sanctum')).toBe(true);
     });
@@ -135,7 +135,7 @@ describe('teleport to an UNLOADED far block — raw resolution + hover safety ne
         stepN(q.engine, 5);
         q.act({ type: 'player', method: 'teleport', target: 'far-shrine', params: [FAR] });
         await flush();
-        stepN(q.engine, 5);
+        stepN(q.engine, 30);   // step THROUGH the transition (unloaded-anchor resolve → swap)
         const p = q.at(FAR);
         expect(p.e).toBeCloseTo(6, 0);
         expect(p.n).toBeCloseTo(10, 0);

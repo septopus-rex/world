@@ -54,6 +54,17 @@ export class CharacterController implements ISystem {
     /** Edge detector for the embed-rescue warning (report once per episode). */
     private _wasEmbedded = false;
 
+    // ── teleport transition (specs/teleport-portal.md) ───────────────────────
+    /** An in-flight teleport: the player is FROZEN while the camera dollies out
+     *  (phase 'out'), the position swaps at the out→in boundary, then the camera
+     *  dollies back in (phase 'in'). null = not teleporting. `dest.pos` is the
+     *  final engine-space landing (arrival lift already applied). VFX can hook the
+     *  `teleport.begin` / `teleport.done` events that bracket the swap. */
+    private _tp: { phase: 'out' | 'in'; t: number; dest: { pos: [number, number, number]; block: [number, number]; name: string } } | null = null;
+    private static readonly TP_OUT = 0.28;   // s: dolly the camera back
+    private static readonly TP_IN = 0.32;    // s: dolly it back in at the destination
+    private static readonly TP_PULL = 7;     // extra metres the follow-cam pulls back
+
     /** Fall this far (m) below the last grounded spot -> treat as a void fall and
      *  recover. Engine DEFAULT — override via config player.capacity.voidRecover. */
     private static readonly VOID_RECOVER = 20;
@@ -90,6 +101,24 @@ export class CharacterController implements ISystem {
     /** Forces a solid-cache rebuild (e.g. after an editor moves an adjunct). */
     public invalidateSolidCache(): void { this.collider.invalidateSolidCache(); }
 
+    // ── teleport transition ──────────────────────────────────────────────────
+    public isTeleporting(): boolean { return this._tp !== null; }
+    /**
+     * Start the animated teleport (called by the Actuator once the anchor is
+     * resolved + permitted). Freezes the player and dollies the camera out; the
+     * position swap + `teleport.done` fire at the out→in boundary, then the camera
+     * eases back in. Returns false — so the caller does an INSTANT swap instead —
+     * when a teleport is already running, or the mode isn't a walking one (Ghost/
+     * Observe/Edit own the camera differently), or no player is controlled.
+     */
+    public beginTeleport(world: World, dest: { pos: [number, number, number]; block: [number, number]; name: string }): boolean {
+        if (this._tp || !this.controlledEntity) return false;
+        if (world.mode !== SystemMode.Normal && world.mode !== SystemMode.Game) return false;
+        this._tp = { phase: 'out', t: 0, dest };
+        world.events.emit('teleport.begin', { anchor: dest.name, block: dest.block });
+        return true;
+    }
+
     public update(world: World, dt: number): void {
         if (!this.controlledEntity) return;
         const eid = this.controlledEntity;
@@ -108,6 +137,15 @@ export class CharacterController implements ISystem {
         input.interactSecondary = false;
 
         this.syncInputState(input);
+
+        // Teleport transition: the player is frozen while the camera dollies out,
+        // swaps at the boundary, then dollies back in. Owns the frame — no input,
+        // gravity or collision until it completes.
+        if (this._tp) {
+            this.updateTeleport(world, eid, trans, body, dt, cam);
+            this.inputProvider.flushDeltas();
+            return;
+        }
 
         // Observe mode: player frozen, camera orbits the target. Owns the camera
         // itself (skips processLook) — drag to rotate, W/S to zoom.
@@ -202,6 +240,42 @@ export class CharacterController implements ISystem {
         this.processPersistence(world, trans);
 
         this.inputProvider.flushDeltas();
+    }
+
+    // ── teleport transition ──────────────────────────────────────────────────
+    /** Advance the frozen teleport one frame: dolly out → swap → dolly in. */
+    private updateTeleport(world: World, eid: EntityId, trans: TransformComponent, body: RigidBodyComponent, dt: number, cam?: CameraComponent): void {
+        const tp = this._tp!;
+        tp.t += dt;
+        body.velocity[0] = body.velocity[1] = body.velocity[2] = 0; // frozen: no input/gravity/collision
+        const ease = (k: number) => { k = Math.max(0, Math.min(1, k)); return k * k * (3 - 2 * k); };
+
+        if (tp.phase === 'out') {
+            this.camera.setTeleportPull(ease(tp.t / CharacterController.TP_OUT) * CharacterController.TP_PULL);
+            if (tp.t >= CharacterController.TP_OUT) {
+                // Swap to the destination (arrival lift already baked into dest.pos).
+                trans.position[0] = tp.dest.pos[0];
+                trans.position[1] = tp.dest.pos[1];
+                trans.position[2] = tp.dest.pos[2];
+                trans.dirty = true;
+                // Reset fall/void trackers so the short arrival drop isn't read as a
+                // fall and void-recovery doesn't yank us back to the origin's safe spot.
+                this._safe = null;
+                this._wasGrounded = false;
+                this._fallStartY = trans.position[1];
+                world.events.emit('teleport.done', { anchor: tp.dest.name, block: tp.dest.block });
+                tp.phase = 'in';
+                tp.t = 0;
+            }
+        } else {
+            this.camera.setTeleportPull((1 - ease(tp.t / CharacterController.TP_IN)) * CharacterController.TP_PULL);
+            if (tp.t >= CharacterController.TP_IN) {
+                this.camera.setTeleportPull(0);
+                this._tp = null; // unlock — normal movement resumes next frame
+            }
+        }
+        // Keep the camera + avatar following so the dolly (and the swap) render.
+        this.camera.syncCameraAndAvatar(world, eid, trans, body, dt, cam);
     }
 
     // ── input ────────────────────────────────────────────────────────────────

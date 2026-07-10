@@ -24,7 +24,13 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove, onStop, size = 120 }
         if (!isDragging && !isInitiating) return;
         if (!containerRef.current) return;
 
-        if (e.cancelable && e.type.startsWith('touch')) {
+        // preventDefault ONLY on the native, non-passive window listeners (drag
+        // moves). The initiating call comes from React's onTouchStart, which React
+        // registers as a PASSIVE root listener — preventDefault there throws
+        // "Unable to preventDefault inside passive event listener" (console flood).
+        // The container's `touch-none` (touch-action:none) already suppresses the
+        // browser's default touch behaviour on start, so skipping it is safe.
+        if (!isInitiating && e.cancelable && e.type.startsWith('touch')) {
             e.preventDefault();
         }
 

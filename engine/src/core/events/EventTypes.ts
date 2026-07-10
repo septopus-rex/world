@@ -61,7 +61,10 @@ export interface EventMap {
     // ── interact ──
     'interact.primary': { metadata: unknown; distance: number; point: [number, number, number] };
     'interact.context': { metadata: unknown; distance: number; point: [number, number, number]; screenPos: [number, number] };
-    'interact.miss': Record<string, never>;
+    // reason distinguishes "hit a target but out of reach" (too_far — the client
+    // can hint "walk closer") from "hit nothing" (no_target). Absent = unspecified
+    // (legacy). EditSystem/ShootingRangeSystem read only the event's presence.
+    'interact.miss': { reason?: 'too_far' | 'no_target'; distance?: number; reach?: number };
     // ── item / inventory / effect ──
     'item.pickup': { itemId: string; amount: number; metadata?: unknown };
     'item.consume': { itemId: string; amount: number };
@@ -80,6 +83,9 @@ export interface EventMap {
     'combat.hit': { targetKind: 'player' | 'npc'; adjunctId?: string; amount: number };
     'npc.died': { adjunctId: string };
     // ── teleport (specs/teleport-portal.md) ──
+    // begin → the transition starts (camera dolly-out); done → the position has
+    // swapped (VFX can bracket the swap between these two).
+    'teleport.begin': { anchor: string; block: [number, number] };
     'teleport.done': { anchor: string; block: [number, number] };
     'teleport.denied': { anchor: string; block: [number, number]; reason: 'bad-args' | 'no-anchor' | 'refused' };
     // ── dialogue (F4 dialogue-quests) ──

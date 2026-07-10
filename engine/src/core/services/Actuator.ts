@@ -386,9 +386,21 @@ export class LocalActuator implements IActuator {
         const trans = world.getComponent<TransformComponent>(playerId, "TransformComponent");
         const body = world.getComponent<RigidBodyComponent>(playerId, "RigidBodyComponent");
         if (!trans) return;
-        trans.position[0] = anchor.pos[0];
-        trans.position[1] = anchor.pos[1] + 1.2;   // arrive slightly above the pad
-        trans.position[2] = anchor.pos[2];
+        const dest = {
+            pos: [anchor.pos[0], anchor.pos[1] + 1.2, anchor.pos[2]] as [number, number, number], // arrive slightly above the pad
+            block: anchor.block, name,
+        };
+        // Animated transition (specs/teleport-portal.md): freeze the player + dolly
+        // the camera out → swap → dolly back in. The CharacterController owns the
+        // position swap + `teleport.done`. Falls back to an INSTANT swap below when
+        // there's no walking-mode controller (Ghost/Observe/Edit, or a headless edge
+        // with no controlled player) so the relocation always happens.
+        const cc: any = (world as any).systems?.findSystemByName?.('CharacterController');
+        if (cc?.beginTeleport?.(world, dest)) return;
+
+        trans.position[0] = dest.pos[0];
+        trans.position[1] = dest.pos[1];
+        trans.position[2] = dest.pos[2];
         trans.dirty = true;
         if (body) { body.velocity[0] = 0; body.velocity[1] = 0; body.velocity[2] = 0; }
         world.events?.emit?.('teleport.done', { anchor: name, block: anchor.block });

@@ -1395,6 +1395,24 @@ export class DesktopLoader implements IDataSource {
         this.engine?.jump();
     }
 
+    /** Would tapping this entity DO something if in reach? True for the things a
+     *  player taps to use: e4 book(pages) / e5 board(channel) / e1 link(url),
+     *  b5 items, ba NPCs (dialogue or a click interact verb). Used to hint
+     *  "太远了 · walk closer" ONLY for real interactables — every adjunct is a
+     *  raycast target, so plain scenery (walls/ground) must NOT trigger the hint. */
+    public isInteractableTarget(target: any): boolean {
+        const w = this.engine?.getWorld();
+        if (!w || target === undefined || target === null) return false;
+        if (w.getComponent(target, 'ItemComponent')) return true;               // b5 item
+        const std = (w.getComponent(target, 'AdjunctComponent') as any)?.stdData;
+        if (!std) return false;
+        if (Array.isArray(std.pages) && std.pages.length > 0) return true;       // e4 book
+        if (typeof std.channel === 'string' && std.channel) return true;         // e5 board
+        if (typeof std.url === 'string' && /^https?:\/\//.test(std.url)) return true; // e1 link
+        if (std.dialogue || std.interact) return true;                           // ba npc
+        return false;
+    }
+
     public getPlayerRotationY(): number {
         if (!this.engine) return 0;
         const world = this.engine.getWorld();
