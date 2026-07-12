@@ -135,7 +135,11 @@ export class RaycastInteractionSystem implements ISystem {
                         console.log(`[Interaction] Selected Entity: ${hitEntityId}`, hitTargetComp.metadata);
                         world.events.emit('interact.primary', {
                             metadata: hitTargetComp.metadata,
-                            distance: hit.distance,
+                            // PLAYER→hit distance — what consumers mean by "distance"
+                            // (DialogueSystem TALK_RANGE, npc.distToPlayer context).
+                            // camera→hit would overstate it by the third-person boom
+                            // and silently fail every range check downstream.
+                            distance: playerDist,
                             point: [hit.point[0], hit.point[1], hit.point[2]],
                         }, { target: hitEntityId, targetKey, actor: playerId });
                     }

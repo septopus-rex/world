@@ -162,6 +162,11 @@ export class AdjunctFactory {
             world.renderEngine.addObjectToGroup(meshGroup, model);
             world.renderEngine.removeHandle(placeholder);
 
+            // The group was made raycastable at init, but that traversal ran on
+            // the PLACEHOLDER — this clone arrived later on the default layer and
+            // would be invisible to interaction rays (an NPC you can't click).
+            world.renderEngine.setRaycastable(model, true);
+
             // Skinned models: register the decoded clips (rig root = the GROUP,
             // the handle systems address) so animation-state feeds land on a live
             // mixer — NPCSystem's walk/idle drive starts working the moment the
