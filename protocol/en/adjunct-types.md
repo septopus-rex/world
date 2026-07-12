@@ -43,6 +43,7 @@
 | `0x00a5` (165) | water | standard box (translucent water, no collision) | §2 |
 | `0x00a6` (166) | cone | cone / truncated cone | §2.1 |
 | `0x00a7` (167) | ball | sphere (visual; for collision use b4 BALL) | §2 |
+| `0x00a8` (168) | sign | unlit textured plane (signage / decals / floating guides) | §2.2 |
 | `0x00b4` (180) | stop | invisible collider, **three shapes**: box/cylinder/slope | §5 |
 | `0x00b5` (181) | item | pickable item (template + seed deterministic instance) | §6 |
 | `0x00b6` (182) | spp | SPP string-particle source, expands to standard adjuncts | §7 |
@@ -78,6 +79,24 @@
 
 `size = [bottomRadius, height, topRadius]` (not a bounding box). Top radius 0 =
 cone, > 0 = truncated cone.
+
+### 2.2 a8 sign (added 2026-07-12)
+
+An UNLIT textured plane — guide arrows, posters, decals, floating waypoint markers: imagery that must read at a glance from any angle at any time of day. Three deliberate contrasts with a textured a2 box: unlit (immune to day/night and shadows), a single plane rather than a closed box (no "through-print" mirroring), and a fitted texture (0..1 UV — reference a texture record WITHOUT `size`, so the shared texture's repeat stays [1,1]). Non-solid; casts no shadow.
+
+```
+[ size[E,N], pos[ox,oy,oz], rot[rx,ry,rz], texture, opacity? ]
+```
+
+| slot | meaning |
+|---|---|
+| 0 | plane extent `[east-west, north-south]` (metres; no thickness) |
+| 1 | in-block offset |
+| 2 | rotation (engine-frame Euler, per §0) |
+| 3 | texture resource id |
+| 4 | opacity (optional, default 1; `<1` honours the texture's alpha — use 0.95 for transparent-background "floating glyph" signs) |
+
+**Orientation contract**: at rot=[0,0,0] the sign lies FLAT (normal = up) with the texture's V+ (image "up") pointing NORTH — an upright arrow drawn in the image points travel-north in the world. Positive `rx` tilts the top edge toward south (an overhead guide facing a north-bound walker); `rx = π/2` stands it fully vertical facing south.
 
 ## 3. a3 light
 

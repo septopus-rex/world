@@ -52,6 +52,7 @@ export interface MaterialConfig {
     rotation?: number;              // 纹理旋转
     opacity?: number;               // 透明度 [0, 1]
     fit?: boolean;                  // 贴图贴满整面（0..1 UV，标签/贴花），而非按尺寸平铺
+    unlit?: boolean;                // 无光照（MeshBasicMaterial）：路标/贴花等须恒定可读的图面
 }
 
 /**

@@ -27,6 +27,7 @@ export const PLACEABLE_ADJUNCTS: ReadonlyArray<{ typeId: number; label: string }
     { typeId: AdjunctType.Light, label: 'Light' },
     { typeId: AdjunctType.Cone, label: 'Cone' },
     { typeId: AdjunctType.Ball, label: 'Ball' },
+    { typeId: AdjunctType.Sign, label: 'Sign' },
     { typeId: AdjunctType.Stop, label: 'Stop' },
     { typeId: AdjunctType.Item, label: 'Item' },
     { typeId: AdjunctType.Trigger, label: 'Trigger' },
@@ -58,6 +59,8 @@ export function defaultRawFor(typeId: number, pos: Pos, opts?: PlaceOpts): any[]
             return [[0.8, 0.8, 1], [x, y, z + 0.5], [0, 0, 0], 0, [1, 1], 0, 0];
         case AdjunctType.Ball: // ball
             return [[0.8, 0.8, 0.8], [x, y, z + 0.4], [0, 0, 0], 0, [1, 1], 0, 0];
+        case AdjunctType.Sign: // sign: [size[E,N], pos, rot, texture, opacity] — flat guide plane
+            return [[1.2, 2], [x, y, z + 2.2], [0, 0, 0], 7, 1];
         case AdjunctType.Stop: // stop: [size, pos, rot, stopMode, animation]
             return [[1, 1, 1], [x, y, z + 0.5], [0, 0, 0], 0, null];
         case AdjunctType.Item: // item: [pos, templateId, seed, count, rot] — gem, no random attrs

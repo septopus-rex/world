@@ -21,6 +21,7 @@ export const AdjunctType = {
     Water: 0x00a5,
     Cone: 0x00a6,
     Ball: 0x00a7,     // rendered as a sphere
+    Sign: 0x00a8,     // unlit textured plane (signage / decals / floating guide markers)
     Stop: 0x00b4,     // invisible collider
     Item: 0x00b5,     // pickable
     Spp: 0x00b6,      // SPP source (string-particle chunk); expands to standard adjuncts

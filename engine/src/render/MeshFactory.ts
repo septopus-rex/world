@@ -61,6 +61,14 @@ export class MeshFactory {
                     this.getMaterial(material)
                 );
                 break;
+            case 'sign':
+                // Unlit textured plane (a8): lies FLAT at rotation 0 (normal up,
+                // texture V+ = north — see adjunct_sign.ts orientation contract).
+                object = new THREE.Mesh(
+                    this.getGeometry('sign', w, h, d),
+                    this.getMaterial(material)
+                );
+                break;
             case 'cylinder':
             case 'cone':
                 object = new THREE.Mesh(
@@ -110,8 +118,8 @@ export class MeshFactory {
         // shadow reads as a bug.
         if ((object as THREE.Mesh).isMesh) {
             const transparent = material?.opacity !== undefined && material.opacity < 1;
-            object.castShadow = !transparent && !data.invisible;
-            object.receiveShadow = true;
+            object.castShadow = !transparent && !data.invisible && data.type !== 'sign';
+            object.receiveShadow = data.type !== 'sign'; // unlit — light/shadow irrelevant
         }
 
         // Invisible-but-raycastable (touch trigger volumes): Three's Raycaster
@@ -138,6 +146,14 @@ export class MeshFactory {
                     break;
                 case 'plane':
                     geo = new THREE.PlaneGeometry(w, h);
+                    break;
+                case 'sign':
+                    // Engine dims are [w=E, h=Alt, d=N]; the sign plane spans E×N.
+                    // rotateX(-90°) lays it flat facing up, mapping the plane's
+                    // local +y (texture V+) onto world −z = NORTH: an arrow drawn
+                    // upright in the image points travel-north in the world.
+                    geo = new THREE.PlaneGeometry(w, d);
+                    geo.rotateX(-Math.PI / 2);
                     break;
                 case 'cylinder':
                     geo = new THREE.CylinderGeometry(w, h, d, 32);
@@ -217,9 +233,34 @@ export class MeshFactory {
     /**
      * Get or create a cached material instance.
      */
-    private static getMaterial(config?: MaterialConfig): THREE.MeshStandardMaterial {
+    private static getMaterial(config?: MaterialConfig): THREE.MeshStandardMaterial | THREE.MeshBasicMaterial {
         const color = config?.color ?? 0xcccccc;
         const opacity = config?.opacity ?? 1;
+
+        // Unlit (a8 sign / decals): MeshBasicMaterial — reads identically from any
+        // angle at any time of day. Same lifecycle split as the lit path below:
+        // textured = fresh per-surface material, colour-only = cached + shared.
+        if (config?.unlit) {
+            if (config?.texture) {
+                return new THREE.MeshBasicMaterial({
+                    color, transparent: opacity < 1, opacity, side: THREE.DoubleSide,
+                });
+            }
+            const ukey = `unlit:${color},${opacity}`;
+            let uentry = this._matCache.get(ukey) as { res: any; refs: number } | undefined;
+            if (!uentry) {
+                const mat = new THREE.MeshBasicMaterial({
+                    color, transparent: opacity < 1, opacity, side: THREE.DoubleSide,
+                });
+                mat.userData.shared = true;
+                mat.userData.cacheKind = 'mat';
+                mat.userData.cacheKey = ukey;
+                uentry = { res: mat, refs: 0 };
+                this._matCache.set(ukey, uentry as any);
+            }
+            uentry.refs++;
+            return uentry.res;
+        }
 
         // Textured surfaces get a FRESH, un-cached, un-shared material. AdjunctFactory
         // assigns its .map async per surface; the .map TEXTURE is shared + ref-counted

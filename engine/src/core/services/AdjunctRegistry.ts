@@ -20,6 +20,7 @@ import { AdjunctBook } from '../../plugins/adjunct/adjunct_book';
 import { AdjunctBoard } from '../../plugins/adjunct/adjunct_board';
 import { AdjunctSpawner } from '../../plugins/adjunct/adjunct_spawner';
 import { AdjunctNpc } from '../../plugins/adjunct/adjunct_npc';
+import { AdjunctSign } from '../../plugins/adjunct/adjunct_sign';
 import { AdjunctError } from '../errors';
 
 /**
@@ -44,6 +45,7 @@ export const BUILTIN_ADJUNCTS: ReadonlyMap<number, AdjunctDefinition> = new Map<
     [AdjunctType.Water, BasicWaterAdjunct as unknown as AdjunctDefinition],   // water (translucent)
     [AdjunctType.Cone, BasicConeAdjunct as unknown as AdjunctDefinition],     // cone
     [AdjunctType.Ball, BasicSphereAdjunct as unknown as AdjunctDefinition],   // ball -> sphere
+    [AdjunctType.Sign, AdjunctSign as unknown as AdjunctDefinition],         // sign (unlit textured plane)
     [AdjunctType.Stop, AdjunctStop as unknown as AdjunctDefinition],          // stop (invisible collider)
     [AdjunctType.Item, AdjunctItem as unknown as AdjunctDefinition],          // item (pickable)
     [AdjunctType.Spp, AdjunctSpp as unknown as AdjunctDefinition],  // SPP source (string-particle chunk)
