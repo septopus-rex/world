@@ -8,6 +8,8 @@ import { MinimapPass } from './MinimapPass';
 import { MediaScreens } from './MediaScreens';
 import { isolateMaterial } from './MaterialUtils';
 import { MeshFactory } from './MeshFactory';
+import { ParticleFX } from './ParticleFX';
+import { EditorHelpers } from './EditorHelpers';
 
 export interface RenderEngineConfig {
     containerId: string;
@@ -70,8 +72,16 @@ export class RenderEngine {
      *  (drawing into a dead context throws). Simulation keeps stepping. */
     private _contextLost = false;
 
+    /** Frame counter for render-side throttles (label proximity gate). */
+    private _frameCount = 0;
+
     // Skeletal animation — delegated to render/AvatarAnimator.
     private readonly animator = new AvatarAnimator();
+
+    // Particle effects + editor helper visuals — delegated (see ParticleFX /
+    // EditorHelpers). Instantiated in the constructor once worldRoot exists.
+    private readonly particles: ParticleFX;
+    private readonly editorHelpers: EditorHelpers;
 
     constructor(config: RenderEngineConfig) {
         const domElement = document.getElementById(config.containerId);
@@ -89,6 +99,8 @@ export class RenderEngine {
         // origin notes above.
         this.worldRoot = new THREE.Group();
         this.scene.add(this.worldRoot);
+        this.particles = new ParticleFX(this.worldRoot);
+        this.editorHelpers = new EditorHelpers(this.worldRoot);
 
         // 2. Initialize Main Camera
         const aspect = this.container.clientWidth > 0 ? (this.container.clientWidth / this.container.clientHeight) : 1;
@@ -489,6 +501,11 @@ export class RenderEngine {
         this.stats?.begin();
         this.maybeRebaseOrigin();
         this.anchorSunShadow();
+        // Label proximity gate (view-only): re-evaluate every 10 frames — walking
+        // speed vs a 3 m fade band makes per-frame checks pointless.
+        if ((this._frameCount++ % 10) === 0) {
+            this.media.updateLabels(this.mainCamera.position, this.scene);
+        }
         if (!isMinimapActive) {
             this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
             this.renderer.setScissorTest(false);
@@ -554,83 +571,17 @@ export class RenderEngine {
         return mesh;
     }
 
+    // ── Editor helper visuals — delegated to render/EditorHelpers ──────────────
     public createSelectionHighlight(target: RenderHandle, color: number = 0x00ffff): RenderHandle {
-        const size = this.getObjectSize(target);
-        const helper = MeshFactory.create({
-            type: 'wirebox',
-            params: {
-                size: [size[0] * 1.05, size[1] * 1.05, size[2] * 1.05],
-                position: [0, 0, 0],
-                rotation: [0, 0, 0]
-            },
-            material: { color: color, opacity: 1.0 }
-        });
-        helper.raycast = () => { }; // Ignore selection rays
-        this.worldRoot.add(helper);
-        return helper;
+        return this.editorHelpers.selectionHighlight(target, color);
     }
 
-    /**
-     * Helper Visualization
-     */
     public createBlockHighlight(parent: RenderHandle, bw: number, bl: number, bh: number): RenderHandle {
-        const group = this.createGroup(parent) as THREE.Group;
-        const planeHeight = 0.2;
-        const opacity = 0.3;
-
-        // Position the group at the center of the block's floor volume
-        group.position.set(bw / 2, 0, -bl / 2);
-
-        const planeConfigs = [
-            { pos: [0, planeHeight / 2, -bl / 2], rot: [0, 0, 0], color: 0xffff00, size: bw },
-            { pos: [0, planeHeight / 2, bl / 2], rot: [0, Math.PI, 0], color: 0xff0000, size: bw },
-            { pos: [bw / 2, planeHeight / 2, 0], rot: [0, -Math.PI / 2, 0], color: 0x0000ff, size: bl },
-            { pos: [-bw / 2, planeHeight / 2, 0], rot: [0, Math.PI / 2, 0], color: 0x00ff00, size: bl }
-        ];
-
-        planeConfigs.forEach(p => {
-            const mesh = MeshFactory.create({
-                type: 'plane',
-                params: {
-                    size: [p.size, planeHeight, 0],
-                    position: p.pos as [number, number, number],
-                    rotation: p.rot as [number, number, number]
-                },
-                material: { color: p.color, opacity: opacity }
-            });
-            mesh.raycast = () => { };
-            group.add(mesh);
-        });
-
-        // Add a Wireframe Volume Box
-        const helper = MeshFactory.create({
-            type: 'wirebox',
-            params: {
-                size: [bw, bh, bl],
-                position: [0, bh / 2, 0],
-                rotation: [0, 0, 0]
-            },
-            material: { color: 0xffffff, opacity: 0.5 }
-        });
-        helper.raycast = () => { };
-        group.add(helper);
-
-        return group;
+        return this.editorHelpers.blockHighlight(parent, bw, bl, bh);
     }
 
-    public createGridHelper(size: number, divisions: number, color1: number = 0x444444, color2: number = 0x888888): RenderHandle {
-        const grid = MeshFactory.create({
-            type: 'grid',
-            params: {
-                size: [size, divisions, 0],
-                position: [0, 0, 0],
-                rotation: [0, 0, 0]
-            },
-            material: { color: color2 } // Using color2 as primary for factory logic simplicity
-        });
-        grid.raycast = () => { };
-        this.worldRoot.add(grid);
-        return grid;
+    public createGridHelper(size: number, divisions: number, _color1: number = 0x444444, color2: number = 0x888888): RenderHandle {
+        return this.editorHelpers.gridHelper(size, divisions, color2);
     }
 
     /**
@@ -651,32 +602,18 @@ export class RenderEngine {
      * Interaction API
      */
     public castRayFromCamera(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
-        this.raycaster.layers.set(1); // ONLY intersect with objects on Layer 1
-        this._tmpVec2.set(ndcX, ndcY);
-        this.raycaster.setFromCamera(this._tmpVec2, this.mainCamera);
-
-        const intersects = this.raycaster.intersectObjects(this.scene.children, true);
-        for (const hit of intersects) {
-            let current: THREE.Object3D | null = hit.object;
-            while (current) {
-                if (current.userData && current.userData.entityId !== undefined) {
-                    return {
-                        entityId: current.userData.entityId,
-                        distance: hit.distance,
-                        // hit.point is render space → back to ABSOLUTE world for callers.
-                        point: [hit.point.x + this.renderOrigin.x, hit.point.y + this.renderOrigin.y, hit.point.z + this.renderOrigin.z]
-                    };
-                }
-                current = current.parent;
-            }
-        }
-        return null;
+        return this.castRay(this.mainCamera, ndcX, ndcY);
     }
 
     public castRayFromMinimap(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
-        this.raycaster.layers.set(1); // Minimap should also respect layers if we allow picking there
+        return this.castRay(this.minimap.cameraInstance, ndcX, ndcY);
+    }
+
+    /** Pick the nearest entity-owning object along a camera ray (Layer 1 only). */
+    private castRay(camera: THREE.Camera, ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
+        this.raycaster.layers.set(1); // ONLY intersect with objects on Layer 1
         this._tmpVec2.set(ndcX, ndcY);
-        this.raycaster.setFromCamera(this._tmpVec2, this.minimap.cameraInstance);
+        this.raycaster.setFromCamera(this._tmpVec2, camera);
 
         const intersects = this.raycaster.intersectObjects(this.scene.children, true);
         for (const hit of intersects) {
@@ -731,84 +668,19 @@ export class RenderEngine {
         };
     }
 
-    public createWeatherParticles(): RenderHandle {
-        const particleCount = 2000;
-        const geometry = new THREE.BufferGeometry();
-        const vertices = new Float32Array(particleCount * 3);
-
-        for (let i = 0; i < particleCount; i++) {
-            vertices[i * 3 + 0] = Math.random() * 50;
-            vertices[i * 3 + 1] = Math.random() * 40;
-            vertices[i * 3 + 2] = Math.random() * 50;
-        }
-
-        geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-
-        const material = new THREE.PointsMaterial({
-            color: 0x88CCFF,
-            size: 0.2,
-            transparent: true,
-            opacity: 0.6,
-        });
-
-        const points = new THREE.Points(geometry, material);
-        points.visible = false;
-        this.worldRoot.add(points);
-        return points;
-    }
+    // ── Particle effects (weather sheet + bursts) — delegated to render/ParticleFX ─
+    public createWeatherParticles(): RenderHandle { return this.particles.createWeather(); }
 
     public updateWeatherParticles(points: RenderHandle, x: number, y: number, z: number, visible: boolean): void {
-        const p = points as THREE.Points;
-        p.position.set(x - 25, y - 20, z - 25);
-        p.visible = visible;
+        this.particles.updateWeather(points, x, y, z, visible);
     }
 
-    /**
-     * Particle Burst API
-     */
     public createParticleBurst(particleCount: number, color: number): { handle: RenderHandle, velocities: Float32Array } {
-        const geometry = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        const velocities = new Float32Array(particleCount * 3);
-
-        for (let i = 0; i < particleCount; i++) {
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.acos((Math.random() * 2) - 1);
-            const speed = Math.random() * 15 + 5;
-            velocities[i * 3 + 0] = speed * Math.sin(phi) * Math.cos(theta);
-            velocities[i * 3 + 1] = speed * Math.cos(phi) + 5;
-            velocities[i * 3 + 2] = speed * Math.sin(phi) * Math.sin(theta);
-        }
-
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const material = new THREE.PointsMaterial({
-            color: color,
-            size: 0.2,
-            transparent: true,
-            opacity: 1.0,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-
-        const points = new THREE.Points(geometry, material);
-        this.worldRoot.add(points);
-
-        return { handle: points, velocities };
+        return this.particles.createBurst(particleCount, color);
     }
 
     public updateParticleBurst(handle: RenderHandle, dt: number, velocities: Float32Array, opacity: number): void {
-        const points = handle as THREE.Points;
-        const positions = points.geometry.attributes.position.array as Float32Array;
-
-        for (let i = 0; i < velocities.length / 3; i++) {
-            positions[i * 3 + 0] += velocities[i * 3 + 0] * dt;
-            positions[i * 3 + 1] += velocities[i * 3 + 1] * dt;
-            positions[i * 3 + 2] += velocities[i * 3 + 2] * dt;
-            velocities[i * 3 + 1] -= 9.8 * dt; // Gravity
-        }
-
-        points.geometry.attributes.position.needsUpdate = true;
-        (points.material as THREE.PointsMaterial).opacity = opacity;
+        this.particles.updateBurst(handle, dt, velocities, opacity);
     }
 
     public getObjectByEntityId(id: string | number): RenderHandle | null {

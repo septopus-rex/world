@@ -10,6 +10,38 @@ import { isolateMaterial } from './MaterialUtils';
  * frees them on eviction — this class only creates. Headless (no DOM) → no-op.
  */
 export class MediaScreens {
+    // ── Label proximity gate ───────────────────────────────────────────────────
+    // Labels are depthTest:false billboards — always-on they read over the whole
+    // scene from any distance (visual noise). Pure VIEW policy: fully readable
+    // inside LABEL_FULL metres of the camera, fade out to LABEL_MAX, hidden
+    // beyond. No data field, no simulation impact — updateLabels is driven from
+    // RenderEngine.render() on a frame throttle.
+    private static readonly LABEL_FULL = 6;
+    private static readonly LABEL_MAX = 9;
+    private readonly labels = new Set<THREE.Sprite>();
+    private readonly _tmpPos = new THREE.Vector3();
+
+    /**
+     * Re-evaluate every registered label against the camera (render-space on
+     * both sides, so the floating origin cancels). Sprites whose handle was
+     * evicted (detached from the scene) self-unregister here.
+     */
+    updateLabels(camPos: THREE.Vector3, scene: THREE.Object3D): void {
+        for (const sprite of this.labels) {
+            let root: THREE.Object3D = sprite;
+            while (root.parent) root = root.parent;
+            if (root !== scene) { this.labels.delete(sprite); continue; } // evicted with its mesh
+            const dist = sprite.getWorldPosition(this._tmpPos).distanceTo(camPos);
+            if (dist >= MediaScreens.LABEL_MAX) {
+                sprite.visible = false;
+                continue;
+            }
+            sprite.visible = true;
+            (sprite.material as THREE.SpriteMaterial).opacity = dist <= MediaScreens.LABEL_FULL
+                ? 1
+                : 1 - (dist - MediaScreens.LABEL_FULL) / (MediaScreens.LABEL_MAX - MediaScreens.LABEL_FULL);
+        }
+    }
     /**
      * Attach a live VideoTexture to a mesh's material (video screen, e3). A
      * `<video>` → THREE.VideoTexture (auto-updates each render) → material.map,
@@ -82,6 +114,8 @@ export class MediaScreens {
         sprite.position.set(0, heightOffset, 0);
         sprite.renderOrder = 999;
         sprite.raycast = () => { /* labels never intercept interaction rays */ };
+        sprite.visible = false;                     // hidden until updateLabels proves it near
         mesh.add(sprite);
+        this.labels.add(sprite);
     }
 }
