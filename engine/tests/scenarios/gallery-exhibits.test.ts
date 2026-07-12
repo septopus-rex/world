@@ -5,6 +5,7 @@ import level from '../../../client/core/src/levels/gallery.level.json';
 import xianjianLevel from '../../../client/core/src/levels/xianjian.level.json';
 import coasterLevel from '../../../client/core/src/levels/coaster.level.json';
 import parkourLevel from '../../../client/core/src/levels/parkour.level.json';
+import fallbackBlock from '../../../client/core/src/blocks/fallback.block.json';
 import { levelSceneProvider } from '../../src/core/services/AuthoredLevel';
 
 // The gallery's NEW tail blocks (1013–1017: b4 three-shape stops · b9 spawner ·
@@ -68,7 +69,7 @@ describe('画廊新展块(⑭–⑲):语义 headless 验证', () => {
 
 
 describe('⑳ 传送广场:include 组合 + 锚点制传送(数据形状)', () => {
-    const CONTENT: Record<string, any> = { xianjian: xianjianLevel, coaster: coasterLevel, parkour: parkourLevel };
+    const CONTENT: Record<string, any> = { xianjian: xianjianLevel, coaster: coasterLevel, parkour: parkourLevel, fallback: fallbackBlock };
     const p = levelSceneProvider(level as any, (ref: string) => CONTENT[ref] ?? null);
     const b8rows = (raw: any) => (raw[2] as any[]).find((g) => g[0] === 0x00b8)?.[1] ?? [];
     const anchors = (raw: any) => b8rows(raw).map((r: any) => r[6]?.name).filter(Boolean);

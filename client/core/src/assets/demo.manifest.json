@@ -86,5 +86,11 @@
     "type": "video",
     "format": "mp4",
     "path": "/assets/sample.mp4"
+  },
+  {
+    "id": 9,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/arrow-guide.png"
   }
 ]

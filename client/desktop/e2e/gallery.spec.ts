@@ -37,6 +37,7 @@ test('功能展厅:出生朝北 → 每格一功能 + 入口书 → 走廊向北
     expect(await countType(page, 0x00a6), '① geometry: the cone exhibit is in the spawn block').toBeGreaterThanOrEqual(1);
     expect(await countType(page, 0x00ba), '② the NPC agent is in the loaded neighbourhood').toBeGreaterThanOrEqual(1);
     expect(await countType(page, 0x00e4), 'entrance books exist in the loaded blocks').toBeGreaterThanOrEqual(2);
+    expect(await countType(page, 0x00a8), 'floating a8 guide arrows chain down the hall').toBeGreaterThanOrEqual(2);
     await page.screenshot({ path: 'test-results/gallery-0-spawn.png' });
 
     // ── walk NORTH down the hall — spawn faces north, so forward [0,1] = north ─
