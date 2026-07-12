@@ -3,8 +3,9 @@
 #
 # The client is a three-way split (client/core shared + desktop + mobile,
 # specs/mobile-client.md), so dev now runs TWO frontends over one engine source.
-# Default = a solo-style DASHBOARD: both dev servers in the background + a live
-# status table (port probe / uptime / last log line), Ctrl+C stops everything.
+# Default = a solo-style DASHBOARD: all services in the background, with live
+# [ON]/[OFF] port-probe lights inline on the UI 入口 / API 服务 rows (no separate
+# status table — each entry IS its own status line). Ctrl+C stops everything.
 #
 # Usage:
 #   bash deploy/dev.sh                # dashboard: desktop(7777)+mobile(7778)+ai-gw(7788)+ipfs(7789)
@@ -63,11 +64,13 @@ FE_SERVICES=(
 )
 
 # ── deps: npm apps (missing / incomplete / stale lockfile → reinstall) ────────
-npm_deps() { # $1 = app dir (repo-relative), $2 = marker binary (install completeness tell-tale)
-    local dir="$ROOT/$1" marker="${2:-vite}" reason=
+npm_deps() { # $1 = app dir (repo-relative), $2 = marker (install completeness tell-tale:
+    #            bin name under node_modules/.bin, or a path with '/' checked under node_modules)
+    local dir="$ROOT/$1" marker="${2:-vite}" reason= probe
+    case "$marker" in */*) probe="$dir/node_modules/$marker" ;; *) probe="$dir/node_modules/.bin/$marker" ;; esac
     [ -d "$dir" ] || error "找不到 $dir"
     if   [ ! -d "$dir/node_modules" ]; then reason="缺少 node_modules"
-    elif [ ! -x "$dir/node_modules/.bin/$marker" ]; then reason="依赖不完整（$marker 未安装，可能上次安装中断）"
+    elif [ ! -e "$probe" ]; then reason="依赖不完整（$marker 未安装，可能上次安装中断）"
     elif [ -f "$dir/package-lock.json" ] && [ "$dir/package-lock.json" -nt "$dir/node_modules/.package-lock.json" ]; then reason="依赖已过期（package-lock.json 比上次安装新）"
     fi
     if [ -n "$reason" ]; then
@@ -77,6 +80,7 @@ npm_deps() { # $1 = app dir (repo-relative), $2 = marker binary (install complet
 }
 if [ -z "$CHAIN" ]; then
     npm_deps client/desktop vite
+    npm_deps services ws/package.json   # shared services/lib deps (game-host imports 'ws' → walk-up)
     npm_deps services/ai-gateway tsx
     npm_deps services/mahjong tsx
     npm_deps services/pool tsx
@@ -130,14 +134,11 @@ if [ -n "$ONLY" ]; then
 fi
 
 # ── dashboard mode: launch everything in the background ───────────────────────
-FE_PIDS=(); FE_START=()
-for i in "${!FE_SERVICES[@]}"; do
-    IFS='|' read -r name path port cmd <<< "${FE_SERVICES[$i]}"
+for row in "${FE_SERVICES[@]}"; do
+    IFS='|' read -r name path port cmd <<< "$row"
     free_port "$port"
     log="$LOG_DIR/$(echo "$name" | tr -d ' ' | tr '[:upper:]' '[:lower:]' | tr -d '-').log"
     ( cd "$ROOT/$path" && eval "$cmd" > "$log" 2>&1 ) &
-    FE_PIDS[$i]=$!
-    FE_START[$i]=$(date +%s)
 done
 
 cleanup() {
@@ -167,37 +168,24 @@ LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{p
 START_TOTAL=$(date +%s)
 clear; tput civis 2>/dev/null || true
 
-# ── dashboard loop (solo-style: repaint the status table every 2s) ────────────
+# ── dashboard loop (solo-style: repaint every 2s) ─────────────────────────────
+# 每行前的 [ON]/[OFF] 即实时状态灯(lsof 端口探针,同端口行共用一个事实);
+# 服务 [OFF] 时看 deploy/logs/<service>.log(说明段有全表)。
+st() { if lsof -i ":$1" -sTCP:LISTEN &>/dev/null; then printf '%s' "${GREEN}[ON] ${NC}"; else printf '%s' "${RED}[OFF]${NC}"; fi; }
 while true; do
     tput cup 0 0 2>/dev/null || clear
     printf -- "${BLUE}${BOLD}=== SEPTOPUS WORLD · DEV DASHBOARD ===${NC}\n"
-    printf -- "${CYAN}Uptime: $(($(date +%s) - START_TOTAL))s | host: $HOST$( [ "$HOST" = "0.0.0.0" ] && [ -n "$LAN_IP" ] && echo " | LAN: $LAN_IP" )${NC}\n\n"
-
-    printf -- "${BOLD}%-10s %-6s %-8s %-8s %s${NC}\n" "SERVICE" "PORT" "STATUS" "UPTIME" "LOG"
-    printf -- "--------------------------------------------------------------------------------\n"
-    for i in "${!FE_SERVICES[@]}"; do
-        IFS='|' read -r name path port cmd <<< "${FE_SERVICES[$i]}"
-        log="$LOG_DIR/$(echo "$name" | tr -d ' ' | tr '[:upper:]' '[:lower:]' | tr -d '-').log"
-        if lsof -i ":$port" -sTCP:LISTEN &>/dev/null; then
-            ST="${GREEN}[ON]${NC}"; UP="$(($(date +%s) - FE_START[$i]))s"
-        else
-            ST="${RED}[OFF]${NC}"; UP="-"
-        fi
-        # ASCII-only, byte-safe: multibyte chars (→ ➜ —) in service logs can be
-        # split by cut and render as mojibake — strip them before truncating.
-        LAST=$([ -f "$log" ] && tail -n 1 "$log" | LC_ALL=C tr -cd '\11\40-\176' | cut -c1-46 || echo "-")
-        printf -- "%-10s %-6s %-8b %-8s %s\n" "$name" "$port" "$ST" "$UP" "$LAST"
-    done
+    printf -- "${CYAN}Uptime: $(($(date +%s) - START_TOTAL))s | host: $HOST$( [ "$HOST" = "0.0.0.0" ] && [ -n "$LAN_IP" ] && echo " | LAN: $LAN_IP" )${NC}\n"
 
     if [ -n "$CHAIN" ]; then
     printf -- "\n${BOLD}UI 入口(浏览器打开)${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
-    printf -- "  链上启动       ${GREEN}$CHAIN_URL${NC}\n"
-    printf -- "                 锚(anchor:septopus)→ ROOT loader → 封套验证 → 3D 世界;无应用服务器\n"
-    printf -- "  协议 stub      ${GREEN}http://127.0.0.1:7789/boot${NC}(anchor:world,微型 loader 彩排)\n"
+    printf -- "  链上启动       $(st 7789) ${GREEN}$CHAIN_URL${NC}\n"
+    printf -- "                       锚(anchor:septopus)→ ROOT loader → 封套验证 → 3D 世界;无应用服务器\n"
+    printf -- "  协议 stub      $(st 7789) ${GREEN}http://127.0.0.1:7789/boot${NC}(anchor:world,微型 loader 彩排)\n"
     printf -- "\n${BOLD}API 服务${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
-    printf -- "  IPFS 网关      ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file>\n"
+    printf -- "  IPFS 网关      $(st 7789) ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file>\n"
     printf -- "\n${BOLD}说明${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
     printf -- "  人工核实       services/ipfs/data/{app,content}/(符号链接镜像,blobs/ 为真身)\n"
@@ -206,21 +194,21 @@ while true; do
     else
     printf -- "\n${BOLD}UI 入口(浏览器打开)${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
-    printf -- "  桌面世界       ${GREEN}http://127.0.0.1:7777/${NC}(默认=功能展厅走廊 ①–⑳,尽头传送广场)\n"
-    printf -- "  移动世界       ${GREEN}http://127.0.0.1:7778/${NC}"
+    printf -- "  桌面世界       $(st 7777) ${GREEN}http://127.0.0.1:7777/${NC}(默认=功能展厅走廊 ①–⑳,尽头传送广场)\n"
+    printf -- "  移动世界       $(st 7778) ${GREEN}http://127.0.0.1:7778/${NC}"
     [ "$HOST" = "0.0.0.0" ] && [ -n "$LAN_IP" ] && printf -- "   ${CYAN}真机 → http://$LAN_IP:7778/${NC}"
     printf -- "\n"
-    printf -- "  综合演示区     ${GREEN}http://127.0.0.1:7777/?level=demo${NC}(游戏桌/编辑器素材,旧默认场景)\n"
-    printf -- "  SPP粒子编辑器  ${GREEN}http://127.0.0.1:7777/?tool=stylepack${NC}\n"
-    printf -- "  链上启动页     ${GREEN}http://127.0.0.1:7789/boot?name=septopus${NC}(先发版,见下)\n"
+    printf -- "  综合演示区     $(st 7777) ${GREEN}http://127.0.0.1:7777/?level=demo${NC}(游戏桌/编辑器素材,旧默认场景)\n"
+    printf -- "  SPP粒子编辑器  $(st 7777) ${GREEN}http://127.0.0.1:7777/?tool=stylepack${NC}\n"
+    printf -- "  链上启动页     $(st 7789) ${GREEN}http://127.0.0.1:7789/boot?name=septopus${NC}(先发版,见下)\n"
     printf -- "\n${BOLD}API 服务${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
-    printf -- "  德州扑克       ${GREEN}:7784${NC}  POST /api/holdem/{start,state,act,end} · ws /live\n"
-    printf -- "  桌球           ${GREEN}:7785${NC}  POST /api/pool/{start,state,shoot,end} · ws /live\n"
-    printf -- "  留言板         ${GREEN}:7786${NC}  GET /v0/list?channel= · POST /v0/post\n"
-    printf -- "  麻将           ${GREEN}:7787${NC}  POST /api/mahjong/{start,state,discard,win,end} · ws /live\n"
-    printf -- "  AI 造物        ${GREEN}:7788${NC}  POST /v0/generate · POST /v0/revise\n"
-    printf -- "  IPFS 网关      ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file> · POST /v0/add\n"
+    printf -- "  德州扑克       $(st 7784) ${GREEN}:7784${NC}  POST /api/holdem/{start,state,act,end} · ws /live\n"
+    printf -- "  桌球           $(st 7785) ${GREEN}:7785${NC}  POST /api/pool/{start,state,shoot,end} · ws /live\n"
+    printf -- "  留言板         $(st 7786) ${GREEN}:7786${NC}  GET /v0/list?channel= · POST /v0/post\n"
+    printf -- "  麻将           $(st 7787) ${GREEN}:7787${NC}  POST /api/mahjong/{start,state,discard,win,end} · ws /live\n"
+    printf -- "  AI 造物        $(st 7788) ${GREEN}:7788${NC}  POST /v0/generate · POST /v0/revise\n"
+    printf -- "  IPFS 网关      $(st 7789) ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file> · POST /v0/add\n"
     printf -- "\n${BOLD}说明${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
     printf -- "  游戏服务       一游戏一服务(会话在服务端);服务不在线时页面内 loopback 自动兜底\n"
