@@ -200,6 +200,7 @@ export class NPCSystem implements ISystem {
             }), { tag: '[NPCSystem]', severity: 'warn' });
         }
         const hp = typeof adj.stdData?.hp === 'number' && adj.stdData.hp > 0 ? adj.stdData.hp : 0;
+        const facing = Number((adj.stdData?.visual as any)?.facing);
         const b: BehaviorComponent = {
             doc,
             state: doc?.initial ?? 'idle',
@@ -211,6 +212,7 @@ export class NPCSystem implements ISystem {
             hp,
             maxHp: hp,
             dead: false,
+            facing: Number.isFinite(facing) ? facing : 0,
         };
         world.addComponent<BehaviorComponent>(eid, "BehaviorComponent", b);
         return world.getComponent<BehaviorComponent>(eid, "BehaviorComponent")!;
@@ -273,6 +275,10 @@ export class NPCSystem implements ISystem {
         const stepLen = Math.min(speed * dt, away ? speed * dt : dist);
         trans.position[0] += (dx / n) * stepLen;
         trans.position[2] += (dz / n) * stepLen;
+        // Face the travel direction (a module body walking sideways reads as
+        // broken; the box body is rotation-invariant so this is free). Same yaw
+        // convention as the player avatar: heading + per-model facing correction.
+        trans.rotation[1] = Math.atan2(-dx, -dz) + (b.facing ?? 0);
         trans.dirty = true;
         b.lastMoved = true;
     }

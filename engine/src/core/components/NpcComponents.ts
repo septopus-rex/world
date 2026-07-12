@@ -22,6 +22,9 @@ export interface BehaviorComponent {
     entered: boolean;
     /** True when the last step actually moved the agent (drives walk/idle anim). */
     lastMoved?: boolean;
+    /** Per-model forward correction (radians, from visual.facing) — the same
+     *  convention as the avatar catalog's `facing`. Undefined/0 = no correction. */
+    facing?: number;
     /** Runtime hit points (combat spec §1.2). 0 with maxHp 0 = invulnerable.
      *  Never persisted — block reload = full-health respawn (arcade semantics). */
     hp: number;

@@ -162,6 +162,15 @@ export class AdjunctFactory {
             world.renderEngine.addObjectToGroup(meshGroup, model);
             world.renderEngine.removeHandle(placeholder);
 
+            // Skinned models: register the decoded clips (rig root = the GROUP,
+            // the handle systems address) so animation-state feeds land on a live
+            // mixer — NPCSystem's walk/idle drive starts working the moment the
+            // swap lands. Idle plays by default; a handle nobody updates stays at
+            // pose zero (same as before). removeHandle stops + frees the rig.
+            if (entry.animations?.length) {
+                (world.renderEngine as any).startAnimation?.(meshGroup, entry.animations);
+            }
+
             const ud = (meshGroup as any).userData ?? ((meshGroup as any).userData = {});
             ud.loadedResources = [...(ud.loadedResources ?? []), resource];
         }).catch((err: unknown) => {
