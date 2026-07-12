@@ -30,9 +30,12 @@ test('功能展厅:出生朝北 → 每格一功能 + 入口书 → 走廊向北
     const start = await loc(page);
     expect(start.block, 'spawned at the south end block').toEqual([2000, 1000]);
 
-    // The SPP hut (b6) expanded into standard walls (a1); the entrance books (e4)
-    // are present across the loaded neighbourhood.
-    expect(await countType(page, 0x00a1), 'the b6 SPP hut expanded into a1 walls').toBeGreaterThanOrEqual(3);
+    // Opening exhibits: ① geometry primitives (cone/ball among the bricks) and
+    // ② the soldier NPC (ba) sit in the first two blocks; the entrance books
+    // (e4) are present across the loaded neighbourhood. (The b6 SPP hut moved
+    // mid-hall to ⑫ [2000,1011] — complex exhibits no longer lead the walk.)
+    expect(await countType(page, 0x00a6), '① geometry: the cone exhibit is in the spawn block').toBeGreaterThanOrEqual(1);
+    expect(await countType(page, 0x00ba), '② the NPC agent is in the loaded neighbourhood').toBeGreaterThanOrEqual(1);
     expect(await countType(page, 0x00e4), 'entrance books exist in the loaded blocks').toBeGreaterThanOrEqual(2);
     await page.screenshot({ path: 'test-results/gallery-0-spawn.png' });
 
