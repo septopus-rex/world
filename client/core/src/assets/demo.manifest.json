@@ -98,5 +98,35 @@
     "type": "module",
     "format": "gltf",
     "path": "/assets/tree.gltf"
+  },
+  {
+    "id": 36,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/terran-wall.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 37,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/terran-roof.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 38,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/terran-accent.png",
+    "size": [
+      0.5,
+      0.5
+    ]
   }
 ]

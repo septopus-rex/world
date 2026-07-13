@@ -1,0 +1,53 @@
+{
+  "format": "septopus.spp.stylepack",
+  "version": 1,
+  "id": "terran",
+  "thickness": 0.3,
+  "closed": [
+    {
+      "key": "solid",
+      "name": "solid",
+      "parts": [
+        { "type": 162, "u": 0, "v": 0, "su": 1, "sv": 1, "props": [0, [1, 1], 0, 1, 36] }
+      ]
+    },
+    {
+      "key": "doorway",
+      "name": "doorway",
+      "parts": [
+        { "type": 162, "u": 0, "v": 0, "su": 0.3, "sv": 1, "props": [0, [1, 1], 0, 1, 36] },
+        { "type": 162, "u": 0.7, "v": 0, "su": 0.3, "sv": 1, "props": [0, [1, 1], 0, 1, 36] },
+        { "type": 162, "u": 0.3, "v": 0.75, "su": 0.4, "sv": 0.25, "props": [0, [1, 1], 0, 1, 36] },
+        { "type": 162, "u": 0.3, "v": 0.68, "su": 0.4, "sv": 0.07, "props": [0, [1, 1], 0, 1, 38] }
+      ]
+    },
+    {
+      "key": "window",
+      "name": "window",
+      "parts": [
+        { "type": 162, "u": 0, "v": 0, "su": 1, "sv": 0.36, "props": [0, [1, 1], 0, 1, 36] },
+        { "type": 162, "u": 0, "v": 0.36, "su": 1, "sv": 0.04, "props": [0, [1, 1], 0, 1, 38] },
+        { "type": 162, "u": 0, "v": 0.4, "su": 0.25, "sv": 0.45, "props": [0, [1, 1], 0, 1, 36] },
+        { "type": 162, "u": 0.75, "v": 0.4, "su": 0.25, "sv": 0.45, "props": [0, [1, 1], 0, 1, 36] },
+        { "type": 162, "u": 0, "v": 0.85, "su": 1, "sv": 0.15, "props": [0, [1, 1], 0, 1, 36] }
+      ]
+    },
+    {
+      "key": "roof",
+      "name": "roof",
+      "parts": [
+        { "type": 162, "u": 0, "v": 0, "su": 1, "sv": 1, "props": [0, [1, 1], 0, 1, 37] }
+      ]
+    },
+    {
+      "key": "deck",
+      "name": "deck",
+      "parts": [
+        { "type": 162, "u": 0, "v": 0, "su": 1, "sv": 1, "props": [0, [1, 1], 0, 1, 37] }
+      ]
+    }
+  ],
+  "open": [
+    { "key": "empty", "name": "empty", "pieces": [] }
+  ]
+}
