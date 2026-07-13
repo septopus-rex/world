@@ -25,7 +25,12 @@ export const GlobalConfig: SeptopusGlobalConstants = {
         hour: 0,
         minute: 0,
         second: 0,
-        speed: 1.0           // Normal time flow
+        speed: 1.0,          // Normal time flow — CHAIN calendar (day/month/year) only
+        // One full LOCAL sun cycle = 600 real seconds (10 min), chain-independent
+        // (EnvironmentSystem §"sub-day time"): matches Bitcoin's own average
+        // block spacing so a day/night cycle roughly completes between blocks,
+        // purely for a coherent FEEL — mechanically the two are decoupled.
+        localDaySeconds: 600
     }
 };
 

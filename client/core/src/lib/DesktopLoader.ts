@@ -15,7 +15,8 @@
  *   · AiAuthoring — AI 造物 preview/build/cancel (depends on WorldContent).
  *   · SppStudio   — SPP sandbox editor + style-pack switcher.
  *   · PanelState  — e4 book / e5 board display state.
- *   · EnvClock    — the mock chain-height ticker (day/night + weather).
+ *   · EnvClock    — the mock chain-height ticker (day/night + weather); real
+ *     Bitcoin-driven time (BtcClock, VITE_BTC_CLOCK) swaps in the same seam.
  *
  * The facade keeps: the Engine handle + boot orchestration (init), the UI
  * mirrors React subscribes to (mode/zone/leave-intent), thin engine-verb
@@ -48,6 +49,7 @@ import { WorldContent, type MapCell, type SeptopusPlayerState } from './loader/W
 import { GameBridge } from './loader/GameBridge';
 import { AiAuthoring } from './loader/AiAuthoring';
 import { EnvClock } from './loader/EnvClock';
+import { BtcClock } from './loader/BtcClock';
 
 // The map + player-state shapes moved to WorldContent with the content core;
 // re-exported so existing `import { MapCell } from '../lib/DesktopLoader'` holds.
@@ -79,7 +81,13 @@ export class DesktopLoader implements IDataSource {
         setMode: (m) => this.setMode(m),
     });
     private ai = new AiAuthoring(() => this.engine, this.content);
-    private env = new EnvClock((h, hash, i) => this.engine?.feedChainState(h, hash, i));
+    // VITE_BTC_CLOCK set → real Bitcoin blocks drive the calendar (1 block = 1
+    // day, protocol/world.md §3.1); unset (dev/demo/e2e default) → the mock
+    // ticker keeps the ~2-minute demo day/night cycle, deterministic and
+    // network-free. Same idiom as VITE_LIVE_WS's real-vs-fake transport pick.
+    private env: EnvClock | BtcClock = (import.meta as any).env?.VITE_BTC_CLOCK
+        ? new BtcClock((h, hash, i) => this.engine?.feedChainState(h, hash, i))
+        : new EnvClock((h, hash, i) => this.engine?.feedChainState(h, hash, i));
     private panels = new PanelState(() => this.net);
     private spp = new SppStudio({
         world: () => this.engine?.getWorld() ?? null,

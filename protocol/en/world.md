@@ -29,25 +29,27 @@ Set upon the genesis of the Septopus Engine and cannot be altered by individual 
 - **Celestial Bodies**: Standardized skybox configurations (1 Sun, 3 Moons).
 - **Maximum Block Expansion**: The hard limit of `4096 x 4096`.
 
-### 3.1 Deterministic Time & Weather Derivation (Normative)
+### 3.1 Deterministic Calendar & Weather Derivation (Normative)
 
-> "Data is logic": world time and weather derive as pure functions of **chain
-> height + chain hash** — any engine (TS / UE) must produce the SAME moment and
-> the SAME rain for the same inputs. Reference implementation:
-> `engine/src/core/systems/EnvironmentSystem.ts`.
+> "Data is logic": the world's CALENDAR (year/month/day) and weather derive as
+> pure functions of **chain height + chain hash** — any engine (TS / UE) must
+> produce the SAME calendar date and the SAME rain for the same inputs.
+> Hour/minute/second (the moment-to-moment time of day) are explicitly
+> OUT of this contract — see the "Calendar / sub-day boundary" note below and
+> §3.2. Reference implementation: `engine/src/core/systems/EnvironmentSystem.ts`.
 
 **Inputs**: `height` (chain block height), `hash` (`0x`-prefixed hex string,
 length ≥ 20), `interval` (chain block interval, seconds), `epoch` (genesis start
 height, default 0), `speed` (time-flow multiplier, default 1.0).
 
-**World time** (fixed-unit calendar):
+**World calendar** (fixed-unit, day granularity — NOT hour/minute/second):
 ```
 elapsed = max(0, height − epoch) × interval × speed        (seconds)
 year  = elapsed ÷ 31104000 (= 360 days), then with the remainder:
-month = ÷ 2592000 (= 30 days) · day = ÷ 86400 · hour = ÷ 3600 · minute = ÷ 60 · second = remainder
+month = ÷ 2592000 (= 30 days) · day = ÷ 86400 (remainder discarded)
 ```
-Every unit is assigned **unconditionally** (crossing a day boundary must reset
-the lower units to 0, never keep stale values).
+Every unit is assigned **unconditionally** (crossing a year boundary must reset
+month/day to 0, never keep stale values).
 
 **Weather** (hash slices; character positions count **after stripping the `0x`
 prefix**, 0-based):
@@ -58,10 +60,67 @@ grade    = parseInt(hash[12..13], 16) mod 4  →  0..3 (intensity)
 A slice that fails to parse counts as 0. **Thunderstorm predicate**:
 `category == rain && grade ≥ 1`.
 
-**Semantic / renderer boundary**: `(time, category, grade, storm predicate)` are
-**semantic** (must match across engines); sun angle, light intensities, the
-lightning flash envelope and particle density are **renderer-defined**
-(behavior-equivalent, per the adjunct protocol §6 "same effect" boundary).
+**Semantic / renderer boundary**: `(year, month, day, category, grade, storm
+predicate)` are **semantic** (must match across engines); sun angle, light
+intensities, the lightning flash envelope and particle density are
+**renderer-defined** (behavior-equivalent, per the adjunct protocol §6 "same
+effect" boundary).
+
+**Calendar / sub-day boundary (2026-07-13)**: hour/minute/second are **not**
+derived from chain height/hash at all — they are a LOCAL, chain-independent
+client simulation (a continuously-advancing sub-day clock, `localDaySeconds`
+real seconds per full cycle; see §3.2). Rationale: under the §3.2 "1 Bitcoin
+block = 1 day" convention, `interval` is an exact multiple of a day, so an
+hour/minute/second derived the same way as year/month/day would ALWAYS compute
+to zero — the sun would freeze at a fixed hour and only ever jump between
+blocks, defeating the point of a day/night cycle. Splitting the derivation
+this way keeps the calendar date chain-verified (semantic) while letting the
+sun move continuously and independently (ambiance, not semantic — same
+boundary the sun-angle/light-intensity renderer split already draws, just
+pushed one level up to include the raw hour/minute/second numbers themselves).
+
+### 3.2 Reference Chain Binding: Bitcoin (Normative)
+
+The formula in §3.1 is chain-agnostic by design, but a specific World must bind
+to ONE concrete chain so every engine derives the identical calendar. The
+reference client binds to **Bitcoin**: `height`/`hash` are the current tip's
+block height and block hash, read from any Bitcoin light client or public
+explorer (no account, no RPC key, no smart contract — pure public data).
+Rationale: Bitcoin is already this project's anchor chain for boot-time content
+versioning (`protocol/{cn,en}/boot-chain.md`'s `{p,name,version,cid}` anchor) —
+one external dependency, not two — and its hash is a permissionless,
+hard-to-manipulate public randomness source.
+
+**Convention: 1 Bitcoin block = 1 Septopus day.**
+```
+interval = 86400   (seconds of Septopus world-time per block)
+speed    = 1.0     (engine default — bin B, §9 — unchanged)
+epoch    = <the Bitcoin height at world genesis, chosen by the Lord at launch>
+```
+Bitcoin's own real cadence (~600 s/block on average, difficulty-retargeted
+every 2016 blocks to hold that average — individual blocks vary from seconds
+to over an hour) is **not** wired through as a measured, per-block value: two
+clients observing the same `(height, hash)` must derive the same calendar date
+regardless of how long that particular block actually took to mine, so
+`interval` is the fixed protocol constant above, never a measured gap.
+Reference implementation: `client/core/src/lib/loader/BtcClock.ts` (polls
+public Esplora-compatible explorers on a ~60 s cadence; a block only actually
+arrives roughly every 10 minutes, so most polls see no height change — expected,
+not a bug). Dev/demo builds without a live network feed use a synthetic mock
+ticker instead (`EnvClock.ts`) to advance the CALENDAR at a much faster,
+arbitrary cadence for legibility while testing — the mock is **not** part of
+this normative binding and never claims to represent real Bitcoin state. Note
+that swapping BtcClock ↔ EnvClock only changes how fast the CALENDAR (day
+count) advances; per §3.1 the sun's hour/minute/second never come from either
+clock, so the day/night cycle looks identical either way (see `localDaySeconds`
+below).
+
+**Sub-day pacing default**: `localDaySeconds = 600` (10 real minutes per full
+local day/night cycle, `GlobalConfig.time.localDaySeconds`) — chosen to roughly
+match Bitcoin's own average block spacing, so a sun cycle and a calendar-day
+tick feel like they're pacing each other even though (per §3.1) they are
+mechanically independent and never forced into lockstep. A world doc's `time`
+section may override it like `speed`/`epoch`.
 
 ### Mutable Configuration (Lord Level)
 Stored in a smart contract and configurable by the World's Lord.
@@ -147,7 +206,7 @@ data omits it:
 | simulation tick | 0.1 s (10 Hz grid/state sync) | — |
 | block streaming radius | 2 (a 5×5 neighbourhood) | — |
 | LOD near bound | 40 m | `world.performance.lodNear` |
-| time calendar | epoch 0 · speed 1.0 | the world doc's `time` section (`{epoch, speed}`) |
+| time calendar | epoch 0 · speed 1.0 · localDaySeconds 600 | the world doc's `time` section (`{epoch, speed, localDaySeconds}`) |
 | void-recovery depth | 20 m | `player.capacity.voidRecover` |
 
 **Client presentation (bin C, non-normative)** — implementation-defined, never

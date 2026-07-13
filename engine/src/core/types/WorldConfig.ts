@@ -20,7 +20,8 @@ export interface SeptopusGlobalConstants {
         epoch: number;             // Genesis block height
         year: number; month: number; day: number;
         hour: number; minute: number; second: number;
-        speed: number;             // Ratio of Septopus time vs Reality
+        speed: number;             // Ratio of Septopus time vs Reality (chain calendar only — day-and-above)
+        localDaySeconds: number;   // Real seconds for one LOCAL sun cycle (hour/minute/second) — chain-independent
     };
 }
 
