@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/ai-builder",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Experimental AI-authoring gateway (spec docs/plan/specs/ai-builder.md) — same GenerationDoc contract as ai-gateway, direct-adjunct-first generation + server-side spatial collision check with regenerate-on-conflict.",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
