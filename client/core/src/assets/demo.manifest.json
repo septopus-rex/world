@@ -43,7 +43,7 @@
     "id": 27,
     "type": "module",
     "format": "gltf",
-    "path": "/assets/pyramid.gltf"
+    "path": "/assets/pagoda.gltf"
   },
   {
     "id": 28,
@@ -92,5 +92,11 @@
     "type": "texture",
     "format": "png",
     "path": "/assets/arrow-guide.png"
+  },
+  {
+    "id": 35,
+    "type": "module",
+    "format": "gltf",
+    "path": "/assets/tree.gltf"
   }
 ]
