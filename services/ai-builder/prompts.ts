@@ -64,7 +64,9 @@ export const SYSTEM_PROMPT = `你是 Septopus 3D 虚拟世界的内容生成器,
 {"plan","doc"} JSON,不要只输出改动的部分。
 
 ## 布局规则
-- 占地物体(wall/box/cone/ball/stop)彼此之间、以及跟 existing 里的占地物体之间不能重叠。
+- 占地物体(wall/box/cone/ball/stop)彼此之间、以及跟 existing 里的占地物体之间不能重叠——包括
+  同一件组合物件内部的各个零件(比如一棵树 = 树干 box + 树冠 cone,树干顶要贴着树冠底,不能
+  伸进树冠里面;两个零件的 pos.z 和各自半高要衔接上,不要让包围盒互相嵌套)。
 - 灯/水/触发器/物品/NPC/链接不算占地,可以贴着别的物体放(比如灯挂在墙上、触发器嵌在门口)。
 - 一个 block 最多 24 个 piece。
 - 用户指定了数量/颜色/位置就严格遵守;没说的自行合理设计,构图不要贴边,四周留 ≥0.5 米。
@@ -87,9 +89,9 @@ export const FEW_SHOT: Array<{ role: 'user' | 'assistant'; content: string }> = 
                 summary: '河边两棵树 + 一盏灯',
                 pieces: [
                     { kind: 'adjunct', typeId: 162, raw: [[0.3, 0.3, 1.2], [3, 5, 0.6], [0, 0, 0], 1, [1, 1], 0, 0] },
-                    { kind: 'adjunct', typeId: 166, raw: [[1.6, 1.6, 2], [3, 5, 1.8], [0, 0, 0], 1, [1, 1], 0, 0] },
+                    { kind: 'adjunct', typeId: 166, raw: [[1.6, 1.6, 2], [3, 5, 2.2], [0, 0, 0], 1, [1, 1], 0, 0] },
                     { kind: 'adjunct', typeId: 162, raw: [[0.3, 0.3, 1.2], [13, 5, 0.6], [0, 0, 0], 1, [1, 1], 0, 0] },
-                    { kind: 'adjunct', typeId: 166, raw: [[1.6, 1.6, 2], [13, 5, 1.8], [0, 0, 0], 1, [1, 1], 0, 0] },
+                    { kind: 'adjunct', typeId: 166, raw: [[1.6, 1.6, 2], [13, 5, 2.2], [0, 0, 0], 1, [1, 1], 0, 0] },
                     { kind: 'adjunct', typeId: 163, raw: [0, [8, 4, 3], [0, 0, 0], 16755780, 2, 12, 0, 0] },
                 ],
             },
