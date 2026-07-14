@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
+import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 import { RenderHandle } from '../core/types/Adjunct';
 import { reportError, EngineError } from '../core/errors';
 import { SpatialAudio } from './SpatialAudio';
@@ -32,6 +33,11 @@ export class RenderEngine {
     private readonly minimap = new MinimapPass();
     private readonly media = new MediaScreens();
     private renderer: THREE.WebGLRenderer;
+    /** Gaussian-splat batching helper (Spark) — a THREE.Mesh added ONCE to the
+     *  scene; it collects every live SplatMesh and renders them together with
+     *  correct depth sorting. Individual SplatMesh instances are plain
+     *  THREE.Object3D added to worldRoot like any other content (see loadSplat). */
+    private sparkRenderer!: SparkRenderer;
     /** The shadow-casting sun (first directional light) + its authored direction. */
     private sunLight: THREE.DirectionalLight | null = null;
     private _sunDir = new THREE.Vector3(0.45, 0.89, 0.45);
@@ -154,6 +160,13 @@ export class RenderEngine {
                 code: 'RENDER_CONTEXT', userMessage: '图形上下文已恢复',
             }), { tag: '[RenderEngine]', severity: 'warn' });
         });
+
+        // Gaussian-splat rendering (Spark): one SparkRenderer per scene, added
+        // directly to the scene (like a light) rather than worldRoot — it holds
+        // no world content itself, just the batched sort/render pass for whatever
+        // SplatMesh instances are currently in the scene graph.
+        this.sparkRenderer = new SparkRenderer({ renderer: this.renderer });
+        this.scene.add(this.sparkRenderer);
 
         // Spatial audio subsystem (render/SpatialAudio) — the listener rides the
         // camera, positional sounds add to worldRoot. Autoplay-policy gate + LRU
@@ -553,6 +566,26 @@ export class RenderEngine {
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.set(0, 0.9, 0); // Position it so feet are at origin
         mesh.raycast = () => { }; // Ignore for raycasting
+        this.worldRoot.add(mesh);
+        return mesh;
+    }
+
+    /**
+     * Load a Gaussian-splat asset (PLY/SPZ/SPLAT/KSPLAT/SOG — anything Spark's
+     * SplatLoader recognizes) and add it to worldRoot. SplatMesh extends
+     * THREE.Object3D, so once resolved it takes the same generic
+     * setObjectPosition/Rotation/Scale calls as any other RenderHandle.
+     *
+     * SPIKE-STAGE (2026-07-14): proves Spark renders correctly inside this
+     * engine's Three.js scene. NOT YET wired to an adjunct type/protocol — no
+     * ref-counted load-once-by-id sharing (unlike ResourceManager.getModel),
+     * no placeholder-then-swap, no disposal hookup in removeHandle. Fine for a
+     * handful of exhibit-scale test instances; revisit before treating this as
+     * a real content pipeline (see docs/plan/specs, still to be written).
+     */
+    public async loadSplat(url: string): Promise<RenderHandle> {
+        const mesh = new SplatMesh({ url });
+        await mesh.initialized;
         this.worldRoot.add(mesh);
         return mesh;
     }
