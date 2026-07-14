@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { SplatMesh } from '@sparkjsdev/spark';
 import { IDataSource } from '../core/services/DataSource';
 import { isCid } from '../core/services/ipfs';
 import type { IpfsRouter } from '../core/services/ipfs';
@@ -279,6 +280,27 @@ export class ResourceManager {
         if (!entry) {
             throw new Error(`[ResourceManager] instance('${id}') before getModel resolved`);
         }
+
+        // Splats: SplatMesh has no working clone()/copy() (THREE's default knows
+        // nothing about its Dyno/GPU-buffer internals — cloning the template
+        // directly would silently produce an empty, non-rendering object). Mint a
+        // FRESH SplatMesh sharing the template's already-decoded PackedSplats
+        // instead — cheap (no re-fetch/re-decode), and Spark's own intended reuse
+        // path. `isSplatInstance` tells RenderEngine's disposal path to call this
+        // instance's own .dispose() rather than the generic geometry/material
+        // traversal (a SplatMesh has neither, so that traversal would no-op and
+        // leak its GPU resources). Known simplification (v1, exhibit-scale
+        // content only): each instance is disposed independently on removal —
+        // untested against Spark's internals for many concurrent instances of the
+        // SAME resource id sharing one PackedSplats; revisit if splats become a
+        // mass-placed content type rather than rare showcase exhibits.
+        if (entry.template instanceof SplatMesh) {
+            const splatClone = new SplatMesh({ packedSplats: (entry.template as any).packedSplats });
+            (splatClone as any).userData = { ...(splatClone as any).userData, resourceId: id, isModelInstance: true, isSplatInstance: true };
+            entry.refCount++;
+            return splatClone as unknown as THREE.Object3D;
+        }
+
         const clone = entry.rigged ? skeletonClone(entry.template) : entry.template.clone(true);
         // Mark every clone mesh shared so RenderEngine disposal NEVER disposes the
         // template's geometry/material (which the clone shares by reference).
@@ -449,6 +471,11 @@ export class ResourceManager {
 
     /** Dispose a template's owned geometry + materials (+ their maps). */
     private disposeObject(root: THREE.Object3D): void {
+        // The throwaway bounds-only SplatMesh template (see ModelLoader.parseSplat)
+        // has neither .geometry nor .material for the traversal below to find —
+        // its own dispose() is the documented way to free the shared PackedSplats'
+        // GPU texture.
+        if (root instanceof SplatMesh) { root.dispose(); return; }
         root.traverse((child: any) => {
             if (child.geometry) child.geometry.dispose?.();
             const mat = child.material;

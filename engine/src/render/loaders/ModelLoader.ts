@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SplatLoader, SplatMesh, PackedSplats } from '@sparkjsdev/spark';
 import { ResourceError, attempt } from '../../core/errors';
 
 /**
@@ -29,6 +30,10 @@ type ThreeLoader = { loadAsync(url: string): Promise<any> };
 const FIRST_CLASS = new Set(['gltf', 'glb', 'fbx', 'obj']);
 /** Best-effort formats — wired but not part of the stability gate. */
 const BEST_EFFORT = new Set(['dae', 'mf', '3mf']);
+/** Gaussian-splat formats — routed through Spark's SplatLoader instead of a
+ *  Three.js mesh loader. See computeBounds/ResourceManager.instance for the
+ *  matching special-casing (a SplatMesh is not a conventional Mesh/Group). */
+const SPLAT_FORMATS = new Set(['ply', 'spz', 'splat', 'ksplat', 'sog']);
 
 export class ModelLoader implements IModelLoader {
     /** One loader instance per format type, reused for every file (old `instances[type]`). */
@@ -36,6 +41,8 @@ export class ModelLoader implements IModelLoader {
 
     async parse(format: string, url: string): Promise<THREE.Object3D> {
         const fmt = (format || '').toLowerCase();
+
+        if (SPLAT_FORMATS.has(fmt)) return this.parseSplat(url);
 
         if (!FIRST_CLASS.has(fmt) && !BEST_EFFORT.has(fmt)) {
             // 3ds / mmd / collada-variants etc.: the old engine advertised these
@@ -65,6 +72,32 @@ export class ModelLoader implements IModelLoader {
         }
         if (result && (result as THREE.Object3D).isObject3D) return result as THREE.Object3D;
         throw new ResourceError(`[ModelLoader] '${fmt}' loader returned a non-Object3D result`, { code: 'RESOURCE_FORMAT', kind: 'model' });
+    }
+
+    /**
+     * Gaussian-splat load path (Spark). Decodes the file ONCE into a shared
+     * PackedSplats, then wraps it in ONE SplatMesh so the rest of ResourceManager
+     * can treat it like any other "template" — traversal (rigged-check, always
+     * false), computeBounds (special-cased below), userData.animations (never
+     * set, so it stays empty — correct, splats carry no clips).
+     *
+     * The template's own `.packedSplats` is what ResourceManager.instance()
+     * re-wraps into a FRESH SplatMesh per placement (see its splat branch) —
+     * SplatMesh has no working clone()/copy() (it doesn't override THREE's
+     * default, which knows nothing about its Dyno/GPU-buffer internals), so
+     * cloning the template directly would silently produce an empty object.
+     * Re-constructing from the shared, already-decoded PackedSplats is Spark's
+     * own intended reuse path (SplatLoader.parse() mirrors this) and is cheap —
+     * no re-fetch, no re-decode, just new per-instance transform/generator state.
+     */
+    private async parseSplat(url: string): Promise<THREE.Object3D> {
+        const packedSplats = await new SplatLoader().loadAsync(url);
+        if (!(packedSplats instanceof PackedSplats)) {
+            throw new ResourceError('[ModelLoader] ExtSplats (multi-file splat bundles) not supported', { code: 'RESOURCE_FORMAT', kind: 'model' });
+        }
+        const mesh = new SplatMesh({ packedSplats });
+        await mesh.initialized;
+        return mesh;
     }
 
     /**
@@ -118,6 +151,17 @@ export class ModelLoader implements IModelLoader {
      * a clone to fit a desired authored size (std size triple).
      */
     static computeBounds(template: THREE.Object3D): THREE.Box3 {
+        // A SplatMesh has no conventional BufferGeometry position attribute for
+        // Box3.setFromObject's traversal to find (its splat centers live in a
+        // Dyno/GPU-buffer graph, not scene-graph geometry) — it exposes its own
+        // bounds method instead.
+        if (template instanceof SplatMesh) {
+            return attempt(
+                { tag: '[ModelLoader]', severity: 'warn', code: 'RESOURCE_FORMAT', kind: 'model' },
+                () => template.getBoundingBox(),
+                new THREE.Box3(),
+            );
+        }
         // Some malformed/rigged geometries throw in setFromObject; bounds are
         // a sizing convenience, not a load gate — fall back to an empty box.
         // `attempt` reports (no longer silent) and returns the fallback.

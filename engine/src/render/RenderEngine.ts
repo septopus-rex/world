@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import Stats from 'three/examples/jsm/libs/stats.module.js';
-import { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
+import { SparkRenderer } from '@sparkjsdev/spark';
 import { RenderHandle } from '../core/types/Adjunct';
 import { reportError, EngineError } from '../core/errors';
 import { SpatialAudio } from './SpatialAudio';
@@ -36,7 +36,9 @@ export class RenderEngine {
     /** Gaussian-splat batching helper (Spark) — a THREE.Mesh added ONCE to the
      *  scene; it collects every live SplatMesh and renders them together with
      *  correct depth sorting. Individual SplatMesh instances are plain
-     *  THREE.Object3D added to worldRoot like any other content (see loadSplat). */
+     *  THREE.Object3D added to worldRoot like any other content — loaded through
+     *  the normal ResourceManager/ModelLoader path (a4 module adjunct with a
+     *  splat-format resource record), not a bespoke method on this class. */
     private sparkRenderer!: SparkRenderer;
     /** The shadow-casting sun (first directional light) + its authored direction. */
     private sunLight: THREE.DirectionalLight | null = null;
@@ -570,26 +572,6 @@ export class RenderEngine {
         return mesh;
     }
 
-    /**
-     * Load a Gaussian-splat asset (PLY/SPZ/SPLAT/KSPLAT/SOG — anything Spark's
-     * SplatLoader recognizes) and add it to worldRoot. SplatMesh extends
-     * THREE.Object3D, so once resolved it takes the same generic
-     * setObjectPosition/Rotation/Scale calls as any other RenderHandle.
-     *
-     * SPIKE-STAGE (2026-07-14): proves Spark renders correctly inside this
-     * engine's Three.js scene. NOT YET wired to an adjunct type/protocol — no
-     * ref-counted load-once-by-id sharing (unlike ResourceManager.getModel),
-     * no placeholder-then-swap, no disposal hookup in removeHandle. Fine for a
-     * handful of exhibit-scale test instances; revisit before treating this as
-     * a real content pipeline (see docs/plan/specs, still to be written).
-     */
-    public async loadSplat(url: string): Promise<RenderHandle> {
-        const mesh = new SplatMesh({ url });
-        await mesh.initialized;
-        this.worldRoot.add(mesh);
-        return mesh;
-    }
-
     public createMinimapMarker(): THREE.Mesh {
         const geometry = new THREE.ConeGeometry(3, 8, 3);
         geometry.translate(0, 4, 0);
@@ -830,6 +812,16 @@ export class RenderEngine {
      * it is unit-testable without a WebGL context.
      */
     private static disposeMeshResources(child: any): void {
+        // Splat instances (ResourceManager.instance's SplatMesh branch): neither
+        // isMesh nor isPoints, so the guard below would otherwise skip it entirely
+        // and leak its GPU resources. Each instance owns its own dispose() call
+        // (see ResourceManager.instance's doc comment on the sharing simplification).
+        if (child?.userData?.isSplatInstance) {
+            if (child.userData.__resourcesFreed) return;
+            child.userData.__resourcesFreed = true;
+            child.dispose?.();
+            return;
+        }
         if (!child || !(child.isMesh || child.isPoints)) return;
         // Model-clone meshes (ResourceManager instance-many): the TEMPLATE's
         // geometry/materials are ref-counted by ResourceManager — hands off here.

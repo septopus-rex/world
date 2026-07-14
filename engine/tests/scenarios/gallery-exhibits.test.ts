@@ -9,10 +9,13 @@ import fallbackBlock from '../../../client/core/src/blocks/fallback.block.json';
 import { levelSceneProvider } from '../../src/core/services/AuthoredLevel';
 
 // The gallery's NEW tail blocks (1013–1017: b4 three-shape stops · b9 spawner ·
-// c2 motif arch · c1 track · e5 board · ⑲ holdem game block) verified headless with the SAME client JSON the
-// browser loads — the e2e walks the south corridor; this covers the exhibits'
-// SEMANTICS (collision shapes exist, spawner actually spawns and caps, motif
-// derives its boxes, track entity builds) without a 16-block walk.
+// c2 motif arch · c1 track · e5 board · ⑲ holdem game block · ⑳ plaza · ㉑ AI-
+// generated-world splat exhibit, added after the plaza, real render verified
+// separately in e2e/splat-module.spec.ts) verified headless with the SAME
+// client JSON the browser loads — the e2e walks the south corridor; this
+// covers the exhibits' SEMANTICS (collision shapes exist, spawner actually
+// spawns and caps, motif derives its boxes, track entity builds) without a
+// 16-block walk.
 
 const X = 2000;
 
@@ -42,7 +45,7 @@ describe('画廊新展块(⑭–⑲):语义 headless 验证', () => {
         expect(new Set(shapes).size, 'three DISTINCT shapes').toBe(3);
 
         expect(adjunctsOf(world, AdjunctType.Track).length, 'the S-curve tube').toBe(1);
-        expect(adjunctsOf(world, AdjunctType.Book).length, 'numbered books + plaza gate signs').toBe(10);
+        expect(adjunctsOf(world, AdjunctType.Book).length, 'numbered books + plaza gate signs').toBe(11);
         const boards = adjunctsOf(world, AdjunctType.Board);
         expect(boards.length, '⑱ the e5 message board').toBe(1);
         expect(boards[0].stdData?.channel, 'channel declared in data').toBe('gallery');
