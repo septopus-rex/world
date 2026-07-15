@@ -40,27 +40,30 @@ command -v npm  &>/dev/null || error "npm 未安装"
 ONLY=""; HOST="127.0.0.1"; CHAIN=""
 for arg in "$@"; do
     case "$arg" in
-        desktop|mobile|ai-gw|aigw|ipfs|mahjong|pool|holdem|board) ONLY="${arg/aigw/ai-gw}" ;;
+        desktop|mobile|ai-gw|aigw|ipfs|mahjong|pool|holdem|board|worldlabs) ONLY="${arg/aigw/ai-gw}" ;;
         lan) HOST="0.0.0.0" ;;
         --chain|chain) CHAIN=1 ;;   # 链上启动模式(boot-chain.md dev 彩排)
-        *) warn "未知参数 '$arg'(可用:desktop | mobile | ai-gw | ipfs | lan | --chain)" ;;
+        *) warn "未知参数 '$arg'(可用:desktop | mobile | ai-gw | ipfs | worldlabs | lan | --chain)" ;;
     esac
 done
 
 # ── services (name|path|port|cmd) — add a row here when a new service lands ──
 # 说明:ai-gateway = AI 造物(PROVIDER=mock 免钥,导出 PROVIDER=qwen 换真 LLM);
-# ipfs = 内容网关(file-CAS,CID 与引擎同源,启动时种入 core 内容+资产;客户端
-# IpfsRouter 未命中时落到它——进程内 CAS 仍是一级缓存/离线兜底)。
+# worldlabs = 画廊㉑ AI 生成世界演示(WORLDLABS_PROVIDER=mock 免钥离线,导出
+# WORLDLABS_PROVIDER=real + WORLDLABS_API_KEY 换真 Marble API——真调用耗真额度
+# +约 5 分钟,谨慎);ipfs = 内容网关(file-CAS,CID 与引擎同源,启动时种入 core
+# 内容+资产;客户端 IpfsRouter 未命中时落到它——进程内 CAS 仍是一级缓存/离线兜底)。
 # live 推送(FakeWebSocket)仍为进程内假件。
 FE_SERVICES=(
-    "Desktop|client/desktop|7777|npm run dev -- --host \$HOST"
-    "Mobile |client/mobile|7778|npm run dev -- --host \$HOST"
-    "Board  |services/board|7786|npm start"
-    "Holdem |services/holdem|7784|npm start"
-    "Pool   |services/pool|7785|npm start"
-    "Mahjong|services/mahjong|7787|npm start"
-    "AI-GW  |services/ai-gateway|7788|npm start"
-    "IPFS   |services/ipfs|7789|npm start"
+    "Desktop  |client/desktop|7777|npm run dev -- --host \$HOST"
+    "Mobile   |client/mobile|7778|npm run dev -- --host \$HOST"
+    "Board    |services/board|7786|npm start"
+    "Holdem   |services/holdem|7784|npm start"
+    "Pool     |services/pool|7785|npm start"
+    "Mahjong  |services/mahjong|7787|npm start"
+    "AI-GW    |services/ai-gateway|7788|npm start"
+    "WorldLabs|services/worldlabs|7790|npm start"
+    "IPFS     |services/ipfs|7789|npm start"
 )
 
 # ── deps: npm apps (missing / incomplete / stale lockfile → reinstall) ────────
@@ -82,6 +85,7 @@ if [ -z "$CHAIN" ]; then
     npm_deps client/desktop vite
     npm_deps services ws/package.json   # shared services/lib deps (game-host imports 'ws' → walk-up)
     npm_deps services/ai-gateway tsx
+    npm_deps services/worldlabs tsx
     npm_deps services/mahjong tsx
     npm_deps services/pool tsx
     npm_deps services/holdem tsx
@@ -208,15 +212,17 @@ while true; do
     printf -- "  留言板         $(st 7786) ${GREEN}:7786${NC}  GET /v0/list?channel= · POST /v0/post\n"
     printf -- "  麻将           $(st 7787) ${GREEN}:7787${NC}  POST /api/mahjong/{start,state,discard,win,end} · ws /live\n"
     printf -- "  AI 造物        $(st 7788) ${GREEN}:7788${NC}  POST /v0/generate · POST /v0/revise\n"
+    printf -- "  AI 生成世界    $(st 7790) ${GREEN}:7790${NC}  POST /v0/generate · GET /v0/jobs/:id(画廊㉑,Marble API)\n"
     printf -- "  IPFS 网关      $(st 7789) ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file> · POST /v0/add\n"
     printf -- "\n${BOLD}说明${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"
     printf -- "  游戏服务       一游戏一服务(会话在服务端);服务不在线时页面内 loopback 自动兜底\n"
     printf -- "  AI provider    ${PROVIDER:-mock}(导出 PROVIDER=qwen + DASHSCOPE_API_KEY 换真 LLM)\n"
+    printf -- "  世界生成provider ${WORLDLABS_PROVIDER:-mock}(导出 WORLDLABS_PROVIDER=real + WORLDLABS_API_KEY 换真 Marble,耗真额度+约5分钟)\n"
     printf -- "  进程内层       CAS 一级缓存(MemoryCas,离线兜底) · live 推送(FakeWebSocket)\n"
     printf -- "  链上启动模式   ${CYAN}bash deploy/dev.sh --chain${NC}(只起网关;锚→loader→世界)\n"
     printf -- "  发版彩排       ${CYAN}bash deploy/publish-chain.sh${NC}(构建链包+组装 loader/锚)\n"
-    printf -- "  日志           deploy/logs/{desktop,mobile,holdem,pool,board,mahjong,aigw,ipfs}.log\n"
+    printf -- "  日志           deploy/logs/{desktop,mobile,holdem,pool,board,mahjong,aigw,worldlabs,ipfs}.log\n"
     fi
 
     printf -- "\n${YELLOW}Ctrl+C 停止全部。${NC}\n"

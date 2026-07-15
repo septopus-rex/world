@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/worldlabs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus World Labs (Marble) gateway — text prompt → Gaussian-splat 3D world (docs.worldlabs.ai/api). Thin: prompt → provider (mock/real) → job id, polled by the client until a splat URL comes back; the real asset is downloaded server-side and re-served locally so the browser never depends on worldlabs.ai's CORS policy. Default provider is `mock` (instant, offline, free — CI/e2e/default dev); WORLDLABS_PROVIDER=real + WORLDLABS_API_KEY switches to the real Marble API (~5 min/generation, costs credits).",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

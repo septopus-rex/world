@@ -61,5 +61,15 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 30_000,
     },
+    {
+      // World Labs (Marble) gateway — the gallery ㉑ AI-generated-world demo.
+      // WORLDLABS_PROVIDER defaults to mock (instant, offline, CI-safe); export
+      // WORLDLABS_PROVIDER=real + WORLDLABS_API_KEY for the live ~5-minute API
+      // (never do this in CI — costs real Marble credits).
+      command: 'npm start --prefix ../../services/worldlabs',
+      url: 'http://127.0.0.1:7790/v0/health',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
   ],
 });

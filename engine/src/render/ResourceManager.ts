@@ -220,13 +220,32 @@ export class ResourceManager {
         if (existing) return existing;
 
         const promise = this.withSlot(async (): Promise<ModelEntry> => {
-            const records = await this.datasource.module([Number(id)]);
-            const rec = records?.[id] ?? records?.[Number(id)];
-            if (!rec || !rec.format) {
-                throw new Error(`[ResourceManager] no model record for id ${id}`);
+            // Direct locator: an explicit URL is already the address — resolve it
+            // without a datasource id lookup, the same bypass getTexture/getAudioUrl/
+            // getVideoUrl already have (the id map is only for numeric ids). Lets
+            // runtime-generated content (e.g. an AI world-generation service's splat
+            // output) be placed as a module without a static manifest entry. Unlike
+            // those three, a model MUST know its format up front to pick a loader, so
+            // (unlike them) a bare CID isn't accepted here — it carries no extension
+            // to infer one from.
+            const direct = /^(https?:|data:|blob:|file:)/.test(id);
+            let format: string, rawSrc: string;
+            if (direct || isCid(id)) {
+                rawSrc = id;
+                const ext = id.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
+                if (!ext) throw new Error(`[ResourceManager] direct model URL has no extension to infer a format from: ${id}`);
+                format = ext;
+            } else {
+                const records = await this.datasource.module([Number(id)]);
+                const rec = records?.[id] ?? records?.[Number(id)];
+                if (!rec || !rec.format) {
+                    throw new Error(`[ResourceManager] no model record for id ${id}`);
+                }
+                format = rec.format;
+                rawSrc = rec.raw;
             }
-            const url = await this.resolveUrl(rec.raw);
-            const template = await this.loader.parse(rec.format, url);
+            const url = await this.resolveUrl(rawSrc);
+            const template = await this.loader.parse(format, url);
 
             let rigged = false;
             template.traverse((o: any) => { if (o.isSkinnedMesh) rigged = true; });
@@ -245,7 +264,7 @@ export class ResourceManager {
                 // lift them out while they are still real AnimationClip instances.
                 animations: (template.userData?.animations as THREE.AnimationClip[]) ?? [],
                 refCount: 0,
-                src: rec.raw,
+                src: rawSrc,
             };
             this.modelEntries.set(id, entry);
             return entry;

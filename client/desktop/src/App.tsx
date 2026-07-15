@@ -13,6 +13,7 @@ import { ShootingHUD } from '@core/components/ShootingHUD';
 import { LeaveGameDialog } from '@core/components/LeaveGameDialog';
 import { WorldMap2D } from '@core/components/WorldMap2D';
 import { AuthorChat } from './components/AuthorChat';
+import { WorldLabsPanel } from './components/WorldLabsPanel';
 import { DialogueUI } from '@core/components/DialogueUI';
 import { BookReader } from '@core/components/BookReader';
 import { BoardPanel } from '@core/components/BoardPanel';
@@ -167,6 +168,7 @@ function App() {
       <ShootingHUD loader={loader} ready={ready} />
       <WorldMap2D loader={loader} open={show2DMap} onClose={() => setShow2DMap(false)} />
       <AuthorChat loader={loader} ready={ready} />
+      <WorldLabsPanel loader={loader} ready={ready} />
 
       {/* Game-mode entry is ZONE-GATED: this prompt appears only while the player
           stands in a playable block (block.game, surfaced via game.zone_enter).

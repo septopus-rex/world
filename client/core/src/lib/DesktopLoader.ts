@@ -48,6 +48,7 @@ import { PanelState, type BookState, type BoardState } from './loader/PanelState
 import { WorldContent, type MapCell, type SeptopusPlayerState } from './loader/WorldContent';
 import { GameBridge } from './loader/GameBridge';
 import { AiAuthoring } from './loader/AiAuthoring';
+import { WorldLabsAuthoring } from './loader/WorldLabsAuthoring';
 import { EnvClock } from './loader/EnvClock';
 import { BtcClock } from './loader/BtcClock';
 
@@ -70,6 +71,7 @@ export class DesktopLoader implements IDataSource {
         hub.register('board', env.VITE_BOARD_SERVER || 'http://127.0.0.1:7786');
         hub.register('ipfs', env.VITE_IPFS_GATEWAY || 'http://127.0.0.1:7789');
         hub.register('ai', env.VITE_AI_GATEWAY || 'http://127.0.0.1:7788');
+        hub.register('worldlabs', env.VITE_WORLDLABS_GATEWAY || 'http://127.0.0.1:7790');
         return hub;
     })();
 
@@ -81,6 +83,7 @@ export class DesktopLoader implements IDataSource {
         setMode: (m) => this.setMode(m),
     });
     private ai = new AiAuthoring(() => this.engine, this.content);
+    private worldlabs = new WorldLabsAuthoring(() => this.engine, this.net);
     // VITE_BTC_CLOCK set → real Bitcoin blocks drive the calendar (1 block = 1
     // day, protocol/world.md §3.1); unset (dev/demo/e2e default) → the mock
     // ticker keeps the ~2-minute demo day/night cycle, deterministic and
@@ -225,6 +228,13 @@ export class DesktopLoader implements IDataSource {
     public aiPreview(doc: any): boolean { return this.ai.aiPreview(doc); }
     public aiBuild(): boolean { return this.ai.aiBuild(); }
     public aiCancel(): void { this.ai.aiCancel(); }
+
+    // ── World Labs (WorldLabsAuthoring) — AI-generated 3D world demo ─────────
+
+    public worldlabsGenerate(prompt: string) { return this.worldlabs.generate(prompt); }
+    public worldlabsPoll(jobId: string) { return this.worldlabs.pollAndPlace(jobId); }
+    public worldlabsPlace(url: string): boolean { return this.worldlabs.placeResult(url); }
+    public worldlabsExhibitBlock(): [number, number] { return this.worldlabs.exhibitBlock(); }
 
     // ── Boot ──────────────────────────────────────────────────────────────────
 
