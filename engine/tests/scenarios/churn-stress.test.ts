@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
 import { AdjunctType } from '../../src/core/types/AdjunctType';
 import { SystemMode } from '../../src/core/types/SystemMode';
-import { RenderEngine } from '../../src/render/RenderEngine';
+import { disposeMeshResources } from '../../src/render/HandleDisposal';
 import { MeshFactory } from '../../src/render/MeshFactory';
 
 // Churn stress — the cross-system lifecycle debt left by the hardening batch:
@@ -77,7 +77,7 @@ describe('world churn — repeated inject→play→evict cycles stay bounded', (
 });
 
 describe('MeshFactory churn — shared caches return to baseline under volume', () => {
-    const dispose = (obj: any) => (RenderEngine as any).disposeMeshResources(obj);
+    const dispose = (obj: any) => disposeMeshResources(obj);
     const ro = (size: number[], color: number, texture?: string) => ({
         type: 'box',
         params: { size, position: [0, 0, 0], rotation: [0, 0, 0] },

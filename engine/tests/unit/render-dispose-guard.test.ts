@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { RenderEngine } from '../../src/render/RenderEngine';
+import { disposeMeshResources } from '../../src/render/HandleDisposal';
 import { isolateMaterial } from '../../src/render/MaterialUtils';
 import { MeshFactory } from '../../src/render/MeshFactory';
 
@@ -13,7 +13,7 @@ import { MeshFactory } from '../../src/render/MeshFactory';
 //      MeshFactory.release) and are disposed + evicted at zero users.
 // We test the REAL paths (static, no WebGL context needed).
 
-const dispose = (obj: any) => (RenderEngine as any).disposeMeshResources(obj);
+const dispose = (obj: any) => disposeMeshResources(obj);
 const ro = (size: number[], color: number, texture?: string) => ({
     type: 'box',
     params: { size, position: [0, 0, 0], rotation: [0, 0, 0] },
@@ -51,7 +51,7 @@ describe('MeshFactory — shared-by-reference tagging', () => {
     });
 });
 
-describe('RenderEngine.disposeMeshResources — refcounted shared resources', () => {
+describe('disposeMeshResources (render/HandleDisposal) — refcounted shared resources', () => {
     it('SAFETY: evicting one mesh leaves a sibling sharing the same geometry intact', () => {
         const a = MeshFactory.create(ro([5, 1, 5], 0xabcdef)) as THREE.Mesh;
         const b = MeshFactory.create(ro([5, 1, 5], 0xabcdef)) as THREE.Mesh;

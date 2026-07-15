@@ -11,6 +11,10 @@ import { isolateMaterial } from './MaterialUtils';
 import { MeshFactory } from './MeshFactory';
 import { ParticleFX } from './ParticleFX';
 import { EditorHelpers } from './EditorHelpers';
+import { FloatingOrigin } from './FloatingOrigin';
+import { SceneLighting } from './SceneLighting';
+import { Picking } from './Picking';
+import { disposeMeshResources, disposeMediaResources } from './HandleDisposal';
 
 export interface RenderEngineConfig {
     containerId: string;
@@ -33,45 +37,34 @@ export class RenderEngine {
     private readonly minimap = new MinimapPass();
     private readonly media = new MediaScreens();
     private renderer: THREE.WebGLRenderer;
-    /** Gaussian-splat batching helper (Spark) — a THREE.Mesh added ONCE to the
-     *  scene; it collects every live SplatMesh and renders them together with
-     *  correct depth sorting. Individual SplatMesh instances are plain
-     *  THREE.Object3D added to worldRoot like any other content — loaded through
-     *  the normal ResourceManager/ModelLoader path (a4 module adjunct with a
-     *  splat-format resource record), not a bespoke method on this class. */
-    private sparkRenderer!: SparkRenderer;
-    /** The shadow-casting sun (first directional light) + its authored direction. */
-    private sunLight: THREE.DirectionalLight | null = null;
-    private _sunDir = new THREE.Vector3(0.45, 0.89, 0.45);
     private container: HTMLElement;
     private stats: Stats | null = null;
 
-    // Reusable raycaster — never instantiated per-frame
-    private raycaster: THREE.Raycaster = new THREE.Raycaster();
-
     // ── Floating origin ────────────────────────────────────────────────────────
-    // The Septopus world spans tens of kilometres (4096 blocks × 16 m, spawn at the
-    // CENTRE ≈ 32 km from origin). At those magnitudes float32 — what the GPU uses —
-    // resolves to ~4 mm, which wrecks the shadow-coordinate maths and produces
-    // distance-dependent shadow acne ("waves"). Fix: all WORLD content lives under
-    // `worldRoot`, offset by −renderOrigin, and the cameras are offset to match, so
-    // everything the GPU sees sits near 0. The ECS keeps absolute float64 coords
-    // (physics/triggers untouched); this layer translates at the render boundary.
-    // renderOrigin is rebased (O(1) — just move the root + cameras) when the player
-    // strays past REBASE_THRESHOLD, keeping render-space coords always small.
+    // See render/FloatingOrigin.ts for the full rationale (float32 precision at
+    // the Septopus world's ~32 km scale). All world content hangs off
+    // `floatingOrigin.root`; the cameras are offset to match at the render
+    // boundary (this class is the only place that does that translation — the
+    // ECS keeps absolute float64 coords throughout).
+    private readonly floatingOrigin: FloatingOrigin;
     private worldRoot!: THREE.Group;
-    private renderOrigin = new THREE.Vector3(0, 0, 0);
     private _cameraAbs = new THREE.Vector3();   // last ABSOLUTE main-camera position
-    private static readonly REBASE_THRESHOLD = 1024;
+
+    /** Render-space ↔ absolute-world conversion origin — see FloatingOrigin. */
+    private get renderOrigin(): THREE.Vector3 { return this.floatingOrigin.origin; }
+
+    // Scene-wide lighting (ambient/hemisphere/directional + fog + sun-shadow
+    // anchor) — delegated to render/SceneLighting.
+    private readonly lighting: SceneLighting;
+    /** The shadow-casting sun (first directional light set via setDirectionalLight). */
+    private get sunLight(): THREE.DirectionalLight | null { return this.lighting.sunLight; }
+
+    // Raycasting / picking — delegated to render/Picking.
+    private readonly picking: Picking;
 
     // Reusable scratch objects to avoid per-call allocations
     private _tmpBox3 = new THREE.Box3();
     private _tmpSize = new THREE.Vector3();
-    private _tmpVec2 = new THREE.Vector2();
-    private _tmpPlane = new THREE.Plane();
-    private _tmpPlaneNormal = new THREE.Vector3();
-    private _tmpPlanePoint = new THREE.Vector3();
-    private _tmpPlaneTarget = new THREE.Vector3();
 
     // O(1) entityId → Object3D index (populated by setObjectUserData)
     private _entityObjectIndex = new Map<string | number, THREE.Object3D>();
@@ -103,12 +96,13 @@ export class RenderEngine {
         this.scene.background = new THREE.Color(config.clearColor ?? 0x87ceeb);
 
         // All world content hangs off worldRoot (offset by −renderOrigin); only the
-        // cameras and the global lights are direct scene children. See the floating
-        // origin notes above.
-        this.worldRoot = new THREE.Group();
-        this.scene.add(this.worldRoot);
+        // cameras and the global lights are direct scene children. See
+        // render/FloatingOrigin.ts for the rationale.
+        this.floatingOrigin = new FloatingOrigin(this.scene);
+        this.worldRoot = this.floatingOrigin.root;
         this.particles = new ParticleFX(this.worldRoot);
         this.editorHelpers = new EditorHelpers(this.worldRoot);
+        this.picking = new Picking(this.scene, this.floatingOrigin.origin);
 
         // 2. Initialize Main Camera
         const aspect = this.container.clientWidth > 0 ? (this.container.clientWidth / this.container.clientHeight) : 1;
@@ -166,18 +160,21 @@ export class RenderEngine {
         // Gaussian-splat rendering (Spark): one SparkRenderer per scene, added
         // directly to the scene (like a light) rather than worldRoot — it holds
         // no world content itself, just the batched sort/render pass for whatever
-        // SplatMesh instances are currently in the scene graph.
-        this.sparkRenderer = new SparkRenderer({ renderer: this.renderer });
-        this.scene.add(this.sparkRenderer);
+        // SplatMesh instances are currently in the scene graph. Not kept as a
+        // field: nothing reads it back after construction.
+        this.scene.add(new SparkRenderer({ renderer: this.renderer }));
 
         // Spatial audio subsystem (render/SpatialAudio) — the listener rides the
         // camera, positional sounds add to worldRoot. Autoplay-policy gate + LRU
         // buffer cache live inside it; this facade just forwards.
         this.audio = new SpatialAudio(this.mainCamera, this.worldRoot);
 
+        // Scene-wide lighting (render/SceneLighting) — ambient/hemisphere/
+        // directional lights, fog, and the sun-shadow anchor.
+        this.lighting = new SceneLighting(this.scene);
+
         // 5. Default Lighting (dim ambient so adjunct lights are visible)
-        const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.3);
-        this.scene.add(hemi);
+        this.lighting.setHemisphere(0xffffff, 0x444444, 0.3);
 
         // 6. Stats (optional performance monitor)
         if (config.stats) {
@@ -400,110 +397,45 @@ export class RenderEngine {
         for (const child of toRemove) {
             this.worldRoot.remove(child);
             // Same shared-resource guard as removeHandle (don't dispose cached/shared).
-            RenderEngine.disposeMeshResources(child);
+            disposeMeshResources(child);
         }
     }
 
     /**
-     * Lighting API
+     * Lighting API — delegated to render/SceneLighting.
      */
     public setAmbientLight(color: number, intensity: number): RenderHandle {
-        const light = new THREE.AmbientLight(color, intensity);
-        this.scene.add(light);
-        return light;
+        return this.lighting.setAmbient(color, intensity);
     }
 
-    /**
-     * Distance fog matching the sky. Blocks stream in a bounded window, so the far
-     * edge of the loaded region is a hard chunk boundary against the sky; fading it
-     * into the sky colour hides that staircase. `near`/`far` are sized to the load
-     * window by the caller. Colour defaults to the scene background so terrain
-     * dissolves seamlessly. (Distance is camera-relative → unaffected by the
-     * floating origin.)
-     */
     public setFog(near: number, far: number, color?: number): void {
-        const c = color ?? (this.scene.background instanceof THREE.Color ? this.scene.background.getHex() : 0x87ceeb);
-        this.scene.fog = new THREE.Fog(c, near, far);
+        this.lighting.setFog(near, far, color);
     }
 
     public setDirectionalLight(color: number, intensity: number, x: number, y: number, z: number): RenderHandle {
-        const light = new THREE.DirectionalLight(color, intensity);
-        light.position.set(x, y, z);
-        this.scene.add(light);
-
-        // The FIRST directional light becomes the shadow-casting "sun". Its
-        // authored position only encodes the DIRECTION — the world spans tens of
-        // kilometres while a directional shadow camera covers ~100 m, so render()
-        // re-anchors the light around the main camera every frame.
-        if (!this.sunLight) {
-            this.sunLight = light;
-            if ((x * x + y * y + z * z) > 1e-6) this._sunDir.set(x, y, z).normalize();
-            light.castShadow = true;
-            light.shadow.mapSize.set(1024, 1024);
-            const cam = light.shadow.camera;
-            cam.left = -80; cam.right = 80; cam.top = 80; cam.bottom = -80;
-            cam.near = 1; cam.far = 400;
-            // Shadow bias — WITHOUT this the flat ground self-shadows. It looks fine
-            // when the sun is overhead (noon) but as the sun arcs to a grazing angle
-            // each shadow texel smears across the ground and the surface shadows
-            // itself, producing regular moiré "waves". normalBias offsets the sample
-            // along the surface normal (the right fix for grazing angles); the small
-            // constant bias handles the residual depth-compare acne. Kept modest so
-            // the avatar's contact shadow doesn't peter-pan off its feet.
-            light.shadow.bias = -0.0005;
-            light.shadow.normalBias = 0.05;
-            this.scene.add(light.target);
-        }
-        return light;
-    }
-
-    /** Keep the sun's shadow frustum centred on the player (called per render). */
-    private anchorSunShadow(): void {
-        const sun = this.sunLight;
-        if (!sun) return;
-        const anchor = this.mainCamera.position;
-        sun.target.position.copy(anchor);
-        sun.position.copy(anchor).addScaledVector(this._sunDir, 150);
-        sun.target.updateMatrixWorld();
+        return this.lighting.setDirectional(color, intensity, x, y, z);
     }
 
     public setHemisphereLight(skyColor: number, groundColor: number, intensity: number): RenderHandle {
-        const light = new THREE.HemisphereLight(skyColor, groundColor, intensity);
-        this.scene.add(light);
-        return light;
+        return this.lighting.setHemisphere(skyColor, groundColor, intensity);
     }
 
     public updateAmbientLight(light: RenderHandle, color: number, intensity: number): void {
-        const l = light as THREE.AmbientLight;
-        l.color.setHex(color);
-        l.intensity = intensity;
+        this.lighting.updateAmbient(light, color, intensity);
     }
 
     public updateDirectionalLight(light: RenderHandle, color: number, intensity: number, x: number, y: number, z: number): void {
-        const l = light as THREE.DirectionalLight;
-        l.color.setHex(color);
-        l.intensity = intensity;
-        l.position.set(x, y, z);
-        // For the sun, the authored position encodes its DIRECTION (sun cycle
-        // around the origin) — record it; anchorSunShadow re-bases the actual
-        // position around the camera each frame.
-        if (l === this.sunLight && (x * x + y * y + z * z) > 1e-6) {
-            this._sunDir.set(x, y, z).normalize();
-        }
+        this.lighting.updateDirectional(light, color, intensity, x, y, z);
     }
 
     /**
-     * If the main camera has strayed past REBASE_THRESHOLD from the current render
-     * origin, re-base the origin onto it: move worldRoot and re-derive the cameras
-     * so render-space coords stay small (and float32-safe). O(1) — worldRoot holds
-     * all world content, so one move rebases everything; the rendered image is
-     * unchanged because the cameras shift by the same delta.
+     * If the main camera has strayed past the floating-origin's rebase threshold,
+     * re-base the origin onto it (render/FloatingOrigin) and re-derive whatever
+     * ELSE is expressed in render-space that FloatingOrigin doesn't own: the main
+     * camera position and the minimap pass.
      */
     private maybeRebaseOrigin(): void {
-        if (this._cameraAbs.distanceToSquared(this.renderOrigin) <= RenderEngine.REBASE_THRESHOLD * RenderEngine.REBASE_THRESHOLD) return;
-        this.renderOrigin.copy(this._cameraAbs);
-        this.worldRoot.position.set(-this.renderOrigin.x, -this.renderOrigin.y, -this.renderOrigin.z);
-        this.worldRoot.updateMatrixWorld(true);
+        if (!this.floatingOrigin.maybeRebase(this._cameraAbs)) return;
         this.mainCamera.position.set(this._cameraAbs.x - this.renderOrigin.x, this._cameraAbs.y - this.renderOrigin.y, this._cameraAbs.z - this.renderOrigin.z);
         this.minimap.rebase(this.renderOrigin);
     }
@@ -515,7 +447,7 @@ export class RenderEngine {
         if (this._contextLost) return; // context dead — resume on 'webglcontextrestored'
         this.stats?.begin();
         this.maybeRebaseOrigin();
-        this.anchorSunShadow();
+        this.lighting.anchorSunShadow(this.mainCamera.position);
         // Label proximity gate (view-only): re-evaluate every 10 frames — walking
         // speed vs a 3 m fade band makes per-frame checks pointless.
         if ((this._frameCount++ % 10) === 0) {
@@ -614,73 +546,28 @@ export class RenderEngine {
     }
 
     /**
-     * Interaction API
+     * Interaction API — delegated to render/Picking.
      */
     public castRayFromCamera(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
-        return this.castRay(this.mainCamera, ndcX, ndcY);
+        return this.picking.castRay(this.mainCamera, ndcX, ndcY);
     }
 
     public castRayFromMinimap(ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
-        return this.castRay(this.minimap.cameraInstance, ndcX, ndcY);
-    }
-
-    /** Pick the nearest entity-owning object along a camera ray (Layer 1 only). */
-    private castRay(camera: THREE.Camera, ndcX: number, ndcY: number): { entityId: string | number, distance: number, point: [number, number, number] } | null {
-        this.raycaster.layers.set(1); // ONLY intersect with objects on Layer 1
-        this._tmpVec2.set(ndcX, ndcY);
-        this.raycaster.setFromCamera(this._tmpVec2, camera);
-
-        const intersects = this.raycaster.intersectObjects(this.scene.children, true);
-        for (const hit of intersects) {
-            let current: THREE.Object3D | null = hit.object;
-            while (current) {
-                if (current.userData && current.userData.entityId !== undefined) {
-                    return {
-                        entityId: current.userData.entityId,
-                        distance: hit.distance,
-                        // hit.point is render space → back to ABSOLUTE world for callers.
-                        point: [hit.point.x + this.renderOrigin.x, hit.point.y + this.renderOrigin.y, hit.point.z + this.renderOrigin.z]
-                    };
-                }
-                current = current.parent;
-            }
-        }
-        return null;
+        return this.picking.castRay(this.minimap.cameraInstance, ndcX, ndcY);
     }
 
     /**
      * Projects a ray from the camera and intersects it with a mathematical plane.
      */
     public intersectRayWithPlane(ndcX: number, ndcY: number, planeNormal: [number, number, number], planePoint: [number, number, number]): [number, number, number] | null {
-        this.raycaster.layers.enableAll();
-        this._tmpVec2.set(ndcX, ndcY);
-        this.raycaster.setFromCamera(this._tmpVec2, this.mainCamera);
-
-        // planePoint is ABSOLUTE world; the ray is in render space. Define the plane
-        // in render space (shift the point by −origin), then shift the hit back.
-        this._tmpPlaneNormal.set(planeNormal[0], planeNormal[1], planeNormal[2]);
-        this._tmpPlanePoint.set(planePoint[0] - this.renderOrigin.x, planePoint[1] - this.renderOrigin.y, planePoint[2] - this.renderOrigin.z);
-        this._tmpPlane.normal.copy(this._tmpPlaneNormal);
-        this._tmpPlane.constant = -this._tmpPlaneNormal.dot(this._tmpPlanePoint);
-
-        const result = this.raycaster.ray.intersectPlane(this._tmpPlane, this._tmpPlaneTarget);
-        return result ? [result.x + this.renderOrigin.x, result.y + this.renderOrigin.y, result.z + this.renderOrigin.z] : null;
+        return this.picking.intersectRayWithPlane(this.mainCamera, ndcX, ndcY, planeNormal, planePoint);
     }
 
     /**
      * Projects a 3D world point to 2D screen coordinates (Normalized 0-1 range)
      */
     public worldToScreen(x: number, y: number, z: number): { x: number, y: number } {
-        // (x,y,z) is ABSOLUTE world; project from render space.
-        this._tmpSize.set(x - this.renderOrigin.x, y - this.renderOrigin.y, z - this.renderOrigin.z);
-        this._tmpSize.project(this.mainCamera);
-        const vector = this._tmpSize;
-
-        // Convert -1..1 to 0..1
-        return {
-            x: (vector.x + 1) / 2,
-            y: (-vector.y + 1) / 2
-        };
+        return this.picking.worldToScreen(this.mainCamera, x, y, z);
     }
 
     // ── Particle effects (weather sheet + bursts) — delegated to render/ParticleFX ─
@@ -746,16 +633,6 @@ export class RenderEngine {
         this.media.attachVideo(handle, url, opts);
     }
 
-    /** Stop + free any A/V media attached to a mesh (called from removeHandle). */
-    private static disposeMediaResources(child: any): void {
-        const m = child?.userData?.__media;
-        if (!m) return;
-        if (m.audio) { try { m.audio.stop(); } catch { /* not playing */ } m.audio.disconnect?.(); m.audio.parent?.remove(m.audio); }
-        if (m.video) { try { m.video.pause(); } catch { /* already stopped */ } m.video.removeAttribute('src'); m.video.load?.(); }
-        m.texture?.dispose?.();
-        child.userData.__media = undefined;
-    }
-
     // ── Skeletal animation — delegated to render/AvatarAnimator ───────────────
     public startAnimation(handle: RenderHandle, clips: THREE.AnimationClip[]): void { this.animator.start(handle, clips); }
     public setAnimationState(handle: RenderHandle, state: string, fadeSec = 0.25): void { this.animator.setState(handle, state, fadeSec); }
@@ -783,10 +660,10 @@ export class RenderEngine {
             this._entityObjectIndex.delete(obj.userData.entityId);
         }
 
-        // Recursive disposal, guarded against shared resources (see disposeMeshResources).
+        // Recursive disposal, guarded against shared resources (see render/HandleDisposal).
         obj.traverse((child) => {
-            RenderEngine.disposeMediaResources(child);   // stop <video>/PositionalAudio first
-            RenderEngine.disposeMeshResources(child);
+            disposeMediaResources(child);   // stop <video>/PositionalAudio first
+            disposeMeshResources(child);
             if ((child as any).isSprite) {               // floating label (attachLabel)
                 const m = (child as THREE.Sprite).material as THREE.SpriteMaterial;
                 m?.map?.dispose(); m?.dispose();
@@ -797,54 +674,6 @@ export class RenderEngine {
     /** Floating billboard title label for interactive panel adjuncts (render/MediaScreens). */
     public attachLabel(handle: RenderHandle, text: string, heightOffset = 1.0): void {
         this.media.attachLabel(handle, text, heightOffset);
-    }
-
-    /**
-     * Dispose a mesh's geometry + material UNLESS they are shared — disposing a
-     * shared resource corrupts every other live block/instance that references it.
-     * Two shared kinds:
-     *   • whole-mesh shared: ResourceManager model clones share the template's
-     *     geometry+material by reference (userData.shared on the mesh) → skip all.
-     *   • per-resource shared: MeshFactory's process-wide cached geometry + colour
-     *     materials (userData.shared on the geometry / material) → skip that one.
-     * Only instance-owned (fresh) resources are disposed; shared ones are freed by
-     * ResourceManager.release / MeshFactory.clearCache. Static + dependency-free so
-     * it is unit-testable without a WebGL context.
-     */
-    private static disposeMeshResources(child: any): void {
-        // Splat instances (ResourceManager.instance's SplatMesh branch): neither
-        // isMesh nor isPoints, so the guard below would otherwise skip it entirely
-        // and leak its GPU resources. Each instance owns its own dispose() call
-        // (see ResourceManager.instance's doc comment on the sharing simplification).
-        if (child?.userData?.isSplatInstance) {
-            if (child.userData.__resourcesFreed) return;
-            child.userData.__resourcesFreed = true;
-            child.dispose?.();
-            return;
-        }
-        if (!child || !(child.isMesh || child.isPoints)) return;
-        // Model-clone meshes (ResourceManager instance-many): the TEMPLATE's
-        // geometry/materials are ref-counted by ResourceManager — hands off here.
-        if (child.userData?.shared) return;
-        // Idempotence guard: the same mesh can reach here twice (removeHandle +
-        // placeholder-swap paths) — releasing a refcount twice would free an
-        // entry other users still render with.
-        if (child.userData?.__resourcesFreed) return;
-        child.userData.__resourcesFreed = true;
-        // MeshFactory-cached (shared) resources are RELEASED (refcount −1;
-        // disposed at zero); instance-owned ones are disposed directly.
-        const geo = child.geometry;
-        if (geo) {
-            if (geo.userData?.shared) MeshFactory.release(geo);
-            else geo.dispose();
-        }
-        const one = (m: any) => {
-            if (!m) return;
-            if (m.userData?.shared) MeshFactory.release(m);
-            else m.dispose();
-        };
-        const mat = child.material;
-        if (Array.isArray(mat)) mat.forEach(one); else one(mat);
     }
 
     public dispose(): void {
