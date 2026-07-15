@@ -3,6 +3,7 @@ import { makeHeadlessEngineWith, stepN } from '../helpers/make-world';
 import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 import { SystemMode } from '../../src/core/types/SystemMode';
 import { serializeBlockToRaw } from '../../src/core/utils/BlockSerializer';
+import { CharacterController } from '../../src/core/movement/CharacterController';
 
 // Game-mode entry is ZONE-GATED on the block-level `game` flag (raw[4]), the
 // single, explicit, on-chain-queryable signal that any interpreter reads off
@@ -198,5 +199,57 @@ describe('exitPolicy + session anchoring (corrected game-mode)', () => {
             { world, playerId: 0, mode: world.mode });
         expect(world.mode).toBe(SystemMode.Normal);
         expect(world.activeGameBlock).toBeNull();
+    });
+});
+
+// Movement lock: an opt-in per-session restriction (e.g. seated card/board
+// gameplay) that piggybacks on the same enterGame contract as exitPolicy —
+// NOT a new gate, just a flag CharacterController checks in Game mode.
+describe('moveLocked — opt-in per-session movement lock', () => {
+    function enterGame(world: any, opts?: { exitPolicy?: string; lockMovement?: boolean }) {
+        const player = world.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const params = opts === undefined ? [] : [opts];
+        world.actuator.execute({ type: 'player', target: '', method: 'enterGame', params } as any,
+            { world, playerId: player, mode: world.mode });
+    }
+
+    it('enterGame({lockMovement:true}) sets world.moveLocked; unconditionally clears on exit', async () => {
+        const { world } = await bootInBlock(1);
+        expect(world.moveLocked).toBe(false); // default off — pool/mahjong-style games unaffected
+
+        enterGame(world, { lockMovement: true });
+        expect(world.moveLocked).toBe(true);
+
+        world.actuator.execute({ type: 'player', target: '', method: 'exitGame', params: [] } as any,
+            { world, playerId: 0, mode: world.mode });
+        expect(world.moveLocked).toBe(false); // cleared regardless of how the session ended
+
+        enterGame(world); // bare call, no options object at all
+        expect(world.moveLocked).toBe(false);
+    });
+
+    it('CharacterController drops the walk intent while locked, and resumes once unlocked', async () => {
+        const { engine, world } = await bootInBlock(1);
+        const cc = world.systems.findSystem(CharacterController)!;
+        const ip = (cc as any).inputProvider;
+        const trans = playerTransform(world);
+
+        enterGame(world, { lockMovement: true });
+        expect(world.mode).toBe(SystemMode.Game);
+
+        const frozen = [...trans.position];
+        ip.keys.add('KeyW');
+        stepN(engine, 10);
+        // Horizontal (walk) position is frozen; Y is deliberately left to gravity/
+        // ground-contact (a locked player must still settle, not float).
+        expect(trans.position[0]).toBeCloseTo(frozen[0], 6);
+        expect(trans.position[2]).toBeCloseTo(frozen[2], 6);
+
+        world.actuator.execute({ type: 'player', target: '', method: 'exitGame', params: [] } as any,
+            { world, playerId: 0, mode: world.mode });
+        enterGame(world); // re-enter the SAME zone without the lock this time
+        stepN(engine, 10);
+        // Forward walk (yaw 0) moves along Z, not X — see computeDesiredVelocity.
+        expect(trans.position[2]).not.toBeCloseTo(frozen[2], 3); // free to walk again
     });
 });

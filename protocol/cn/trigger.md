@@ -124,7 +124,7 @@ interface TriggerAction {
 | `bag` | itemId（`tpl_{模板}` / `itm_{模板}_{seed}`） | `give` / `take` | `[数量]` | 给予/扣除玩家背包物品。**仅 Game 模式生效**（其余模式警告跳过）。 |
 | `player` | （不使用） | `damage` / `heal` | `[数值]` | 扣减/恢复玩家生命值（HealthSystem；hp≤0 死亡并重生于出生点）。**仅 Game 模式生效**。 |
 | | | `setSpawn` | `[]` | 把重生点移到触发体位置（跑酷检查点；任意模式）。 |
-| | | `enterGame` / `exitGame` | `[{ exitPolicy? }]` | 数据驱动的 Game 模式进入/退出（**区域门控**：仅在 `block.game≥1` 的地块内可成功）；`exitPolicy` = `ephemeral`（走出块即拆局，缺省）/ `confirm`（弹确认）/ `persistent`（存档重入，规划中）。 |
+| | | `enterGame` / `exitGame` | `[{ exitPolicy?, lockMovement? }]` | 数据驱动的 Game 模式进入/退出（**区域门控**：仅在 `block.game≥1` 的地块内可成功）；`exitPolicy` = `ephemeral`（走出块即拆局，缺省）/ `confirm`（弹确认）/ `persistent`（存档重入，规划中）。`lockMovement`（缺省 `false`）：置位后玩家在本局内不能行走/跳跃（视角仍可自由转动）——为落座类玩法（牌桌等）准备，不影响未声明它的现有玩法（台球/麻将等仍可绕桌走动）；无论会话如何结束（含异常退出），离开 Game 模式时**无条件**复位，玩家绝不会卡死。 |
 | | | `teleport` | `[[nx, ny]]`，`target` = **锚点名** | 锚点制传送（任意模式）：目的块提示 `[nx,ny]` 仅作路由，**合法性来自目的块中同名 `anchor`**（无锚点 → 拒绝；锚点 `when` 不过 → 拒绝）。结果经 `teleport.done` / `teleport.denied` 事件。见 [传送/传送门规格](../../docs/plan/specs/teleport-portal.md)。 |
 | `sound` | 音频资源 id（或直接 URL/路径） | `play` | `[音量]` | 3D 空间音效，锚定在触发体位置（无位置则平面播放）。资源经 `ResourceManager.getAudioUrl` 解析（CID/路径），缓冲按 URL 去重。 |
 | `system` | （空） | `log` | `[...任意]` | 控制台日志（调试用）。 |

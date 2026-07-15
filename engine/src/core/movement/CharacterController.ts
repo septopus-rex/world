@@ -175,20 +175,32 @@ export class CharacterController implements ISystem {
             return;
         }
 
-        this.computeDesiredVelocity(world, input, body);
+        // Movement lock (world.moveLocked, opt-in per Game session — e.g. seated
+        // at a card/board table): drop the walk intent + jump, but let gravity/
+        // collision/grounding run normally below so a mid-air lock doesn't leave
+        // the player floating. Camera look (already processed above) is
+        // unaffected — only WALKING is suppressed.
+        if (world.mode === SystemMode.Game && world.moveLocked) {
+            body.velocity[0] = 0;
+            body.velocity[2] = 0;
+            input.jump = false;
+            this._jumpBufferedSec = 0;
+        } else {
+            this.computeDesiredVelocity(world, input, body);
 
-        // jump impulse — buffered: a press arms a short window so a tap landing on
-        // a grounded-flicker frame (or a few frames before landing) still fires.
-        if (input.jump) this._jumpBufferedSec = CharacterController.JUMP_BUFFER;
-        input.jump = false;
-        if (this._jumpBufferedSec > 0) {
-            if (body.isGrounded) {
-                body.velocity[1] = body.jumpForce;
-                body.isGrounded = false;
-                this.collider.clearSupport();
-                this._jumpBufferedSec = 0;
-            } else {
-                this._jumpBufferedSec = Math.max(0, this._jumpBufferedSec - dt);
+            // jump impulse — buffered: a press arms a short window so a tap landing on
+            // a grounded-flicker frame (or a few frames before landing) still fires.
+            if (input.jump) this._jumpBufferedSec = CharacterController.JUMP_BUFFER;
+            input.jump = false;
+            if (this._jumpBufferedSec > 0) {
+                if (body.isGrounded) {
+                    body.velocity[1] = body.jumpForce;
+                    body.isGrounded = false;
+                    this.collider.clearSupport();
+                    this._jumpBufferedSec = 0;
+                } else {
+                    this._jumpBufferedSec = Math.max(0, this._jumpBufferedSec - dt);
+                }
             }
         }
 

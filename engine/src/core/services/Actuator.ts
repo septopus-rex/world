@@ -317,11 +317,14 @@ export class LocalActuator implements IActuator {
         // honour the same gate. enterGame runs OUTSIDE Game by design.
         if (action.method === 'enterGame') {
             // The game trigger declares how this session ends. params[0] may be a
-            // plain policy string or an options object { exitPolicy }. Set it BEFORE
-            // setMode so GameZoneSystem/native Systems see it the same frame.
+            // plain policy string or an options object { exitPolicy, lockMovement? }.
+            // Set both BEFORE setMode so GameZoneSystem/native Systems/
+            // CharacterController see them the same frame.
             const p0 = action.params?.[0];
-            const policy = typeof p0 === 'object' && p0 !== null ? (p0 as any).exitPolicy : p0;
+            const opts = typeof p0 === 'object' && p0 !== null ? (p0 as any) : null;
+            const policy = opts ? opts.exitPolicy : p0;
             ctx.world.gameExitPolicy = asExitPolicy(policy);
+            ctx.world.moveLocked = !!opts?.lockMovement;
             ctx.world.setMode(SystemMode.Game);
             return;
         }

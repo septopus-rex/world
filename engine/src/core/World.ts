@@ -257,6 +257,18 @@ export class World {
      */
     public gameExitPolicy: GameExitPolicy = 'ephemeral';
 
+    /**
+     * Movement lock for the active Game session (e.g. seated at a card/board
+     * table): CharacterController suppresses horizontal walking + jumping while
+     * `mode === Game && moveLocked` (camera look still works — only the walk
+     * intent is dropped). Opt-in per session via `enterGame`'s `lockMovement`
+     * param; unset by default so existing walk-around-the-table games (pool,
+     * mahjong) are unaffected. Reset to false unconditionally on leaving Game
+     * (mirrors gameExitPolicy/activeGameBlock) so a session can never leave the
+     * player stuck if it ends abnormally.
+     */
+    public moveLocked: boolean = false;
+
     // 4. Events
     private listeners: Map<string, Function[]> = new Map();
 
@@ -491,9 +503,13 @@ export class World {
             if (oldMode !== SystemMode.Game) this.activeGameBlock = this.computePlayerBlock();
             this.events.emit("system.preload", { scope: 'all' });
         } else if (oldMode === SystemMode.Game) {
-            // Left Game → the session is over; clear its anchor + reset the policy.
+            // Left Game → the session is over; clear its anchor + reset the policy
+            // + release any movement lock (unconditional, so an abnormal session
+            // end — force exit, walked-off-and-evicted native game — can never
+            // leave the player permanently unable to walk).
             this.activeGameBlock = null;
             this.gameExitPolicy = 'ephemeral';
+            this.moveLocked = false;
         }
         return true;
     }
