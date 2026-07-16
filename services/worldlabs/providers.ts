@@ -61,6 +61,13 @@ export function mockProvider(): WorldProvider {
 const API_BASE = 'https://api.worldlabs.ai';
 
 export function worldlabsProvider(apiKey: string, model = process.env.WORLDLABS_MODEL || 'marble-1.1'): WorldProvider {
+    // Cache the resolved World object once Marble itself reports done, so a
+    // transient failure in the LOCAL asset-download step only needs to retry
+    // the download on the next poll — not re-ask Marble (whose answer for a
+    // finished operation never changes, and re-querying needlessly risks
+    // hitting `expires_at`'s edge for no reason).
+    const resolved = new Map<string, any>();
+
     return {
         name: `worldlabs(${model})`,
         async start(prompt) {
@@ -80,34 +87,50 @@ export function worldlabsProvider(apiKey: string, model = process.env.WORLDLABS_
             return opId;
         },
         async poll(jobId) {
-            const res = await fetch(`${API_BASE}/marble/v1/operations/${jobId}`, {
-                headers: { 'WLT-Api-Key': apiKey },
-            });
-            if (!res.ok) throw new Error(`worldlabs poll HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
-            const op: any = await res.json();
-            if (op.error) return { done: true, error: String(op.error?.message ?? op.error) };
-            if (!op.done) {
-                return { done: false, status: op.metadata?.progress?.description ?? op.metadata?.progress?.status ?? 'IN_PROGRESS' };
+            // EVERY fetch below (operation status, then asset download) can
+            // transiently fail at the network level in a way that throws before
+            // any response — that must NEVER read as a permanent failure (Marble
+            // itself may already be done; only OUR local hop glitched). Server.ts
+            // only treats done:true as terminal, so any network exception here
+            // resolves to done:false — the next poll just tries again. Only a
+            // genuine terminal DATA answer from Marble (op.error, or a completed
+            // world missing its splat asset) is reported as done:true+error.
+            try {
+                let world = resolved.get(jobId);
+                if (!world) {
+                    const res = await fetch(`${API_BASE}/marble/v1/operations/${jobId}`, {
+                        headers: { 'WLT-Api-Key': apiKey },
+                    });
+                    if (!res.ok) return { done: false, status: `重试查询状态(HTTP ${res.status})` };
+                    const op: any = await res.json();
+                    if (op.error) return { done: true, error: String(op.error?.message ?? op.error) };
+                    if (!op.done) {
+                        return { done: false, status: op.metadata?.progress?.description ?? op.metadata?.progress?.status ?? 'IN_PROGRESS' };
+                    }
+                    world = op.response;
+                    resolved.set(jobId, world);
+                }
+
+                // Smallest splat variant — a live in-world demo wants a fast load,
+                // not the full-res export.
+                const spzUrl: string | undefined = world?.assets?.splats?.spz_urls?.['100k']
+                    ?? world?.assets?.splats?.spz_urls?.full_res;
+                if (!spzUrl) return { done: true, error: 'worldlabs: completed with no splat asset' };
+
+                const assetRes = await fetch(spzUrl);
+                if (!assetRes.ok) return { done: false, status: `重试下载资源(HTTP ${assetRes.status})` };
+                const bytes = Buffer.from(await assetRes.arrayBuffer());
+                const dest = path.join(GENERATED_DIR, `${jobId}.spz`);
+                fs.writeFileSync(dest, bytes);
+                return {
+                    done: true,
+                    status: 'SUCCEEDED',
+                    splatUrl: `/assets/generated/${jobId}.spz`,
+                    thumbnailUrl: world?.assets?.thumbnail_url,
+                };
+            } catch (e: any) {
+                return { done: false, status: `网络重试中(${e?.message ?? e})` };
             }
-            const world = op.response;
-            // Smallest splat variant — a live in-world demo wants a fast load, not
-            // the full-res export.
-            const spzUrl: string | undefined = world?.assets?.splats?.spz_urls?.['100k']
-                ?? world?.assets?.splats?.spz_urls?.full_res;
-            if (!spzUrl) return { done: true, error: 'worldlabs: completed with no splat asset' };
-
-            const assetRes = await fetch(spzUrl);
-            if (!assetRes.ok) return { done: true, error: `worldlabs: asset download HTTP ${assetRes.status}` };
-            const bytes = Buffer.from(await assetRes.arrayBuffer());
-            const dest = path.join(GENERATED_DIR, `${jobId}.spz`);
-            fs.writeFileSync(dest, bytes);
-
-            return {
-                done: true,
-                status: 'SUCCEEDED',
-                splatUrl: `/assets/generated/${jobId}.spz`,
-                thumbnailUrl: world?.assets?.thumbnail_url,
-            };
         },
     };
 }

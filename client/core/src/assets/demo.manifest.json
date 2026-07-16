@@ -134,5 +134,11 @@
     "type": "module",
     "format": "ply",
     "path": "/assets/test-splat.ply"
+  },
+  {
+    "id": 40,
+    "type": "module",
+    "format": "spz",
+    "path": "/assets/protoss-village.spz"
   }
 ]

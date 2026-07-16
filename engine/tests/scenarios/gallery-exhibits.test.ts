@@ -45,7 +45,7 @@ describe('画廊新展块(⑭–⑲):语义 headless 验证', () => {
         expect(new Set(shapes).size, 'three DISTINCT shapes').toBe(3);
 
         expect(adjunctsOf(world, AdjunctType.Track).length, 'the S-curve tube').toBe(1);
-        expect(adjunctsOf(world, AdjunctType.Book).length, 'numbered books + plaza gate signs').toBe(11);
+        expect(adjunctsOf(world, AdjunctType.Book).length, 'numbered books + plaza gate signs').toBe(12);
         const boards = adjunctsOf(world, AdjunctType.Board);
         expect(boards.length, '⑱ the e5 message board').toBe(1);
         expect(boards[0].stdData?.channel, 'channel declared in data').toBe('gallery');
