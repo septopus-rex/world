@@ -71,6 +71,44 @@ describe('画廊新展块(⑭–⑲):语义 headless 验证', () => {
 });
 
 
+describe('⑧ 空间音频:大喇叭(a4)+ 开关(b8 touch → sound mp3)', () => {
+    async function bootAudioExhibit() {
+        const engine = await makeHeadlessEngine();
+        const world: any = engine.getWorld()!;
+        const b = (level as any).blocks.find((x: any) => x.x === 2000 && x.y === 1007);
+        engine.injectBlock({ x: b.x, y: b.y, world: 'main', elevation: b.raw[0], adjuncts: b.raw });
+        stepN(engine, 10);
+        return { engine, world };
+    }
+
+    it('autoplay 循环已撤,喇叭模型 + touch 开关就位', async () => {
+        const { world } = await bootAudioExhibit();
+        expect(adjunctsOf(world, AdjunctType.Audio).length, '进场即响的 e2 行已移除').toBe(0);
+        const modules = adjunctsOf(world, AdjunctType.Module);
+        expect(modules.map((m: any) => m.stdData?.resource), '大喇叭模型(资源 42)').toContain('42');
+        const triggers = adjunctsOf(world, AdjunctType.Trigger);
+        expect(triggers.length, '开关触发器').toBe(1);
+        expect(triggers[0].stdData?.events?.[0]?.type, '点击而非走入').toBe('touch');
+    });
+
+    it('点击开关 → sound 动作播放 mp3(资源 41,3D 定位于开关处)', async () => {
+        const { engine, world } = await bootAudioExhibit();
+        let played: any = null;
+        world.on('audio:played', (ev: any) => { played = ev.payload; });
+
+        const trigEid = world.getEntitiesWith(['TriggerComponent'])[0];
+        const player = world.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        world.events.emit('interact.primary',
+            { metadata: {}, distance: 2, point: [0, 0, 0] },
+            { target: trigEid, actor: player });
+        stepN(engine, 3);
+
+        expect(played?.target, '长曲 mp3 资源').toBe(41);
+        expect(played?.position, '在开关位置定位发声').toBeTruthy();
+    });
+});
+
+
 describe('⑳ 传送广场:include 组合 + 锚点制传送(数据形状)', () => {
     const CONTENT: Record<string, any> = { xianjian: xianjianLevel, coaster: coasterLevel, parkour: parkourLevel, fallback: fallbackBlock };
     const p = levelSceneProvider(level as any, (ref: string) => CONTENT[ref] ?? null);

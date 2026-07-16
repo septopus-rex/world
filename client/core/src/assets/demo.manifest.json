@@ -140,5 +140,17 @@
     "type": "module",
     "format": "spz",
     "path": "/assets/protoss-village.spz"
+  },
+  {
+    "id": 41,
+    "type": "audio",
+    "format": "mp3",
+    "path": "/assets/loudspeaker-tune.mp3"
+  },
+  {
+    "id": 42,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/loudspeaker.glb"
   }
 ]
