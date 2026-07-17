@@ -68,12 +68,20 @@
       {
         "id": 33,
         "label": "士兵 Soldier",
-        "facing": 0
+        "facing": 0,
+        "physique": {
+          "height": 1.8,
+          "eyeHeight": 1.7
+        }
       },
       {
         "id": 34,
         "label": "机器人 Robot",
-        "facing": 3.141592653589793
+        "facing": 3.141592653589793,
+        "physique": {
+          "height": 2.2,
+          "eyeHeight": 2.0
+        }
       }
     ],
     "physique": {

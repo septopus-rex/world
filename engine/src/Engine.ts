@@ -388,17 +388,20 @@ export class Engine {
 
     /** Swap the player's avatar model at runtime (frontend picker seam). The
      *  resource id resolves through the same ResourceManager pipeline as boot;
-     *  a failed load keeps the current body. */
-    public setAvatar(resourceId: string | number, facing?: number): void {
+     *  a failed load keeps the current body. `physique` is the avatar's DECLARED
+     *  visual body (catalog data): scale target + camera eyeHeight, world-clamped
+     *  on land; omitted = reset to the world physique baseline. */
+    public setAvatar(resourceId: string | number, facing?: number, physique?: { height?: number; eyeHeight?: number }): void {
         const world = this.world;
         if (!world) return;
-        EntityFactory.swapAvatar(world, String(resourceId), facing);
+        EntityFactory.swapAvatar(world, String(resourceId), facing, physique);
     }
 
     /** Debug/verification snapshot of the live avatar: resource id, registered
-     *  clips, current animation state + the clip it resolved to, and the
-     *  world-space height/foot line (body-parameter checks in e2e). */
-    public avatarInfo(): { resource?: string; footOffset: number | null; facing: number | null; clips: string[]; state: string | null; activeClip: string | null; height: number; minY: number } | null {
+     *  clips, current animation state + the clip it resolved to, the world-space
+     *  height/foot line, and the visual-physique face — declared body params +
+     *  the live camera eyeHeight (body-parameter checks in e2e). */
+    public avatarInfo(): { resource?: string; footOffset: number | null; facing: number | null; physique: { height?: number; eyeHeight?: number } | null; eyeHeight: number | null; clips: string[]; state: string | null; activeClip: string | null; height: number; minY: number } | null {
         const world = this.world;
         if (!world) return null;
         const players = world.queryEntities("AvatarComponent", "InputStateComponent");
@@ -410,7 +413,11 @@ export class Engine {
         // (deterministic; the live Box3 min.y is unreliable for skinned meshes).
         const footOffset = typeof av.footOffset === 'number' ? av.footOffset : null;
         const facing = typeof av.facing === 'number' ? av.facing : null;
-        return dbg ? { resource: av.resource, footOffset, facing, ...dbg } : { resource: av.resource, footOffset, facing, clips: [], state: null, activeClip: null, height: 0, minY: 0 };
+        const physique = av.physique ?? null;
+        // The eye the camera actually rides (updates when a declared body lands).
+        const cam = world.getComponent<any>(players[0], "CameraComponent");
+        const eyeHeight = typeof cam?.offset?.[1] === 'number' ? cam.offset[1] : null;
+        return dbg ? { resource: av.resource, footOffset, facing, physique, eyeHeight, ...dbg } : { resource: av.resource, footOffset, facing, physique, eyeHeight, clips: [], state: null, activeClip: null, height: 0, minY: 0 };
     }
 
     // ── SPP style packs ────────────────────────────────────────────────────────

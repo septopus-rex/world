@@ -134,7 +134,7 @@ morph/blendshape 落地（与 Septopus 动画的 `morph` 通道复用 `RenderEng
 
 | 环节 | 现状 |
 |---|---|
-| 形象：load / scale-to-height / 占位 swap / 第一人称隐藏 | ✅ |
+| 形象：load / scale-to-声明身高(§7.1 physique,未声明=基线) / 占位 swap / 第一人称隐藏 | ✅ |
 | 内嵌剪辑解码 + 注册 mixer（rigged `avatar.glb`；e2e `avatar.spec.ts` 断言 clipCount/mixerCount>0）| ✅ |
 | 状态派生 + `setAnimationState` crossfade + **每帧推进 mixer**（`RenderEngine.updateAnimation`，`core/movement/CameraRig.ts:180-188`——`CharacterController` 将 avatar 姿态/动画委托给 `CameraRig`）| ✅ **内嵌剪辑确实在播** |
 | 状态→剪辑映射 | ✅ **v1 已落地**：规范契约（§3 名称相等、大小写不敏感）优先 + §2 回退链（`run→walk→idle`、`air→jump→idle`、`land→idle`）+ §2 阈值派生（`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` 线性，`CameraRig`）；旧正则启发式仅作**不合规素材的降级兜底**（`ANIM_STATE_PATTERNS`）|
@@ -154,7 +154,8 @@ morph/blendshape 落地（与 Septopus 动画的 `morph` 通道复用 `RenderEng
 | 参数 | 语义 | 来源 |
 |---|---|---|
 | **facing** | yaw 修正(弧度):`CameraRig` 实际施加 `playerYaw + facing`。align 模型 forward → Septopus 北(−Z) | 逐模型 author(客户端 avatar 目录) |
-| **height→scale** | 均匀缩放使包围盒高 = 身体高(1.8m) | 自动(装载时 `bounds` 推导) |
+| **physique** | **声明制视觉体格** `{height?, eyeHeight?}`(米):模型缩放目标 + 相机眼高,世界经 `avatarHeightRange` 夹取;未声明=世界基线(规范见 [player.md §3.1](./player.md),2026-07-17) | 逐模型 author(目录数据,绝不量 bbox) |
+| **height→scale** | 均匀缩放使包围盒高 = **声明身高**(未声明=基线 1.8m):`k = 声明身高 / 原生bbox高` | 自动(装载时 `bounds` 推导系数;目标值来自 physique) |
 | **footOffset** | 缩放后包围盒底相对原点的 Y;落地时 `feetY − footOffset` 使脚贴地(无论 pivot 在脚还是身体中心) | 自动 |
 
 **实证对齐值(v1.1,3 个 demo 素材)**:

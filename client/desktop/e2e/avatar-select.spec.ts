@@ -6,9 +6,12 @@ import { bootDeterministic, stepEngine, waitForWorldReady } from './helpers';
 //    case-insensitive name-equality mapping;
 //  • robot (34, RobotExpressive): clips Idle/Walking/Running/Jump — the LEGACY
 //    substring heuristics (Walking→walk) + air mapping;
-//  • body parameters: every avatar is uniform-scaled to the 1.8 m body height
-//    with its feet planted on the ground (footOffset), collider untouched;
-//  • the pick persists across reload (DraftStore meta).
+//  • body parameters are DECLARED per avatar (catalog physique, player.md §3):
+//    soldier declares 1.8/1.7, the robot 2.2/2.0 — the model scales to ITS OWN
+//    height and the camera eye follows when the model lands; feet stay planted
+//    (footOffset), the collision capsule stays on the world baseline;
+//  • the pick persists across reload (DraftStore meta) — and the boot path
+//    re-attaches the catalog physique to the saved pick.
 
 const info = (page: any) => page.evaluate(() => (window as any).loader.engine.avatarInfo());
 
@@ -60,8 +63,9 @@ test('化身选择:两套动作契约 + 身体参数 + 重载持久', async ({ p
 
     let i = await info(page);
     expect(i.clips, 'soldier clip set').toEqual(expect.arrayContaining(['Idle', 'Walk', 'Run']));
-    expect(i.height, 'scaled to the 1.8 m body').toBeGreaterThan(1.5);
+    expect(i.height, 'scaled to soldier\'s DECLARED 1.8 m').toBeGreaterThan(1.5);
     expect(i.height).toBeLessThan(2.1);
+    expect(i.eyeHeight, 'camera rides soldier\'s declared eye').toBeCloseTo(1.7, 5);
     // Body-parameter check: the controller plants feet at feetY − footOffset, so a
     // finite footOffset within a body height proves the scale-to-1.8 + foot-plant
     // ran (the live skinned-mesh Box3 min.y is unreliable, hence footOffset).
@@ -94,8 +98,11 @@ test('化身选择:两套动作契约 + 身体参数 + 重载持久', async ({ p
 
     i = await info(page);
     expect(i.clips).toEqual(expect.arrayContaining(['Idle', 'Walking', 'Running', 'Jump']));
-    expect(i.height).toBeGreaterThan(1.5);
-    expect(i.height).toBeLessThan(2.1);
+    // The robot DECLARES a taller body (catalog physique 2.2/2.0) — the visual
+    // contract is per-avatar now, not one normalized 1.8.
+    expect(i.height, 'scaled to the robot\'s DECLARED 2.2 m').toBeGreaterThan(1.9);
+    expect(i.height).toBeLessThan(2.5);
+    expect(i.eyeHeight, 'camera rides the robot\'s declared eye').toBeCloseTo(2.0, 5);
     expect(i.footOffset).not.toBeNull();
     expect(Math.abs(i.footOffset)).toBeLessThan(2);
     expect(i.activeClip).toBe('Idle');
@@ -114,7 +121,12 @@ test('化身选择:两套动作契约 + 身体参数 + 重载持久', async ({ p
     await page.evaluate(() => (window as any).loader.engine.stop());
     await stepEngine(page, 60);
     await waitAvatar(page, '34', 'Walking');
-    expect((await info(page)).resource, 'avatar pick survived reload').toBe('34');
+    const r = await info(page);
+    expect(r.resource, 'avatar pick survived reload').toBe('34');
+    // The boot path re-attaches the catalog physique to the saved pick
+    // (WorldContent.withAvatarPhysique) — the tall body survives reload too.
+    expect(r.height, 'declared 2.2 m body survived reload').toBeGreaterThan(1.9);
+    expect(r.eyeHeight, 'declared eye survived reload').toBeCloseTo(2.0, 5);
 
     // eslint-disable-next-line no-console
     console.log('AVATAR-SELECT', JSON.stringify(await info(page)));

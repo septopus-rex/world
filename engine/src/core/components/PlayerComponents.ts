@@ -130,4 +130,10 @@ export interface AvatarComponent {
      *  "front" (+Z vs −Z). The controller applies playerYaw + facing. Default
      *  Math.PI (the legacy avatar's convention). See protocol avatar-animation.md. */
     facing?: number;
+    /** DECLARED visual physique (avatar-catalog data, protocol player.md §3):
+     *  height = model scale target, eyeHeight = first-person camera height.
+     *  Applied world-clamped when the model lands (resolveAvatarPhysique);
+     *  undefined = world physique baseline. Physics never reads this — the
+     *  collision capsule stays on the world baseline. */
+    physique?: { height?: number; eyeHeight?: number };
 }

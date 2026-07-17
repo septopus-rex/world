@@ -265,6 +265,19 @@ export class WorldContent {
         return cfg;
     }
 
+    /** Attach the DECLARED physique of whatever avatar resource ended up
+     *  effective (doc default or saved pick) from its catalog entry — the
+     *  engine reads `player.avatar.physique` when the boot model lands. An
+     *  undeclared avatar carries none (world-baseline body). */
+    private withAvatarPhysique(cfg: any): any {
+        const av = cfg?.player?.avatar;
+        if (!av) return cfg;
+        const entry = this.avatarCatalog().find((a) => a.id === Number(av.resource));
+        if (entry?.physique) av.physique = { ...entry.physique };
+        else delete av.physique;
+        return cfg;
+    }
+
     public async world(_index: number): Promise<any> {
         // Chain boot (boot-chain.md §3): the ROOT loader prelude starts fetching
         // the world config by the anchor-pinned CID and leaves the promise on
@@ -273,13 +286,13 @@ export class WorldContent {
         const injected = (globalThis as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__;
         if (injected) {
             const cfg = await injected;
-            if (cfg) { this._worldDoc = cfg; return this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(cfg)))); }
+            if (cfg) { this._worldDoc = cfg; return this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(cfg))))); }
         }
         // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
         // resource/facing are baked into the doc; a saved pick overrides after
         // hydrate. Swap the backing file (or a CID fetch) to change worlds.
         this._worldDoc = defaultWorldJson;
-        return this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson))));
+        return this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson)))));
     }
 
     public async view(x: number, y: number, ext: number): Promise<any> {
@@ -360,13 +373,23 @@ export class WorldContent {
 
     /** Selectable avatars for the frontend picker. `facing` = per-model yaw
      *  correction (radians) aligning each GLTF's authored forward with Septopus
-     *  north (protocol avatar-animation.md). DATA, not code (base-data D1): the
+     *  north (protocol avatar-animation.md). `physique` = the avatar's DECLARED
+     *  visual body (height = scale target, eyeHeight = camera; player.md §3) —
+     *  omitted entries fall back to the world physique baseline, declared ones
+     *  are world-clamped by the engine. DATA, not code (base-data D1): the
      *  catalog rides the world doc; a chain-injected config missing the field
      *  falls back to the bundled document. */
-    public avatarCatalog(): { id: number; label: string; facing: number }[] {
+    public avatarCatalog(): { id: number; label: string; facing: number; physique?: { height?: number; eyeHeight?: number } }[] {
         const fromDoc = (doc: any) => doc?.player?.avatarCatalog;
         const list = fromDoc(this._worldDoc) ?? fromDoc(defaultWorldJson) ?? [];
-        return list.map((a: any) => ({ id: Number(a.id), label: String(a.label ?? a.id), facing: Number(a.facing) || 0 }));
+        const physiqueOf = (a: any): { height?: number; eyeHeight?: number } | undefined => {
+            const h = Number(a?.physique?.height), e = Number(a?.physique?.eyeHeight);
+            const out: { height?: number; eyeHeight?: number } = {};
+            if (Number.isFinite(h) && h > 0) out.height = h;
+            if (Number.isFinite(e) && e > 0) out.eyeHeight = e;
+            return out.height != null || out.eyeHeight != null ? out : undefined;
+        };
+        return list.map((a: any) => ({ id: Number(a.id), label: String(a.label ?? a.id), facing: Number(a.facing) || 0, physique: physiqueOf(a) }));
     }
 
     // ── streaming (the resident block window) ─────────────────────────────────

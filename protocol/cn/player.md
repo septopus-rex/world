@@ -73,8 +73,8 @@ localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随
 
 | 字段 | 说明 | 状态 |
 |---|---|---|
-| `height` | 碰撞柱体总高（m） | ✅ |
-| `eyeHeight` | 眼高（相机偏移，m） | ✅ |
+| `height` | 碰撞柱体总高（m）——物理权威，不随 avatar 变 | ✅ |
+| `eyeHeight` | 眼高基线（m）；**实际相机眼高随 avatar 声明**（§3.1），此值是物理侧记录 + 未声明回退 | ✅ |
 | `stepHeight` | 自动跨步/阻挡的单阈值（m） | ✅ |
 | `fallDeathHeight` | 触发 `player:fell` 的坠距（m） | ✅ |
 | `crouchHeight` | 蹲伏高度 | 🚧 预留 |
@@ -86,10 +86,13 @@ localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随
 > **已接线(2026-07-09 更新,基础数据审计 P9)**:`player.capacity`
 > (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**/**reach**)
 > 与 `player.physique` **均由引擎读取**,数据优先、下表缺省兜底。
-> **physique = 体格基准**(取代已删除的旧 VBW `body` 段,后者从未被消费):
-> `height` 1.8(化身按此**缩放修正**——任何 avatar 换装后统一到基准身高)·
-> `eyeHeight` 1.7(第一人称相机)· `stepHeight` 0.5 · `crouchHeight` 0.9 ·
-> `jumpHeight` 1.2 · `fallDeathHeight` 12(致死落差,米)。
+> **physique = 物理基准 + 视觉回退(2026-07-17 起两层拆分)**(取代已删除的旧 VBW
+> `body` 段,后者从未被消费):碰撞胶囊/跨步/跳跃**始终**用基准——`height` 1.8 ·
+> `stepHeight` 0.5 · `crouchHeight` 0.9 · `jumpHeight` 1.2 · `fallDeathHeight` 12
+> (致死落差,米);**视觉身体(模型缩放目标 + 相机眼高)跟随 avatar 自己的声明体格**
+> (§3.1),未声明才回落基准 `height` 1.8 / `eyeHeight` 1.7,声明值经
+> `physique.avatarHeightRange`(缺省 `[0.5, 3.0]` 米)由世界夹取。
+> 一句话:**物理归世界、视觉归 avatar、参数走声明数据**。
 > **深嵌救援(popOut)为规范行为**:出生/传送/重生落入固体时弹至固体顶面;
 > 行走子步 ≤0.08 m < 0.1 m 触发余量,正常移动不误触。
 > `player.bag.max` **已接线**:作为玩家背包的槽位上限
@@ -109,23 +112,36 @@ load-once + instance-many 通道，不存在并行的资产路径。
 ```json
 // world config（领主配置）
 "player": {
-    "avatar": { "max": 2097152, "scale": [1, 1, 1], "resource": 30 }
+    "avatar": { "max": 2097152, "scale": [1, 1, 1], "resource": 33, "facing": 0,
+                "physique": { "height": 1.8, "eyeHeight": 1.7 } },
+    "avatarCatalog": [
+        { "id": 33, "label": "士兵 Soldier", "facing": 0,
+          "physique": { "height": 1.8, "eyeHeight": 1.7 } },
+        { "id": 34, "label": "机器人 Robot", "facing": 3.141592653589793,
+          "physique": { "height": 2.2, "eyeHeight": 2.0 } }
+    ]
 }
 ```
 
 | 字段 | 说明 | 状态 |
 |---|---|---|
-| `resource` | 模型资源 id（经 `IDataSource.module()` 解析为 `{format, raw: <路径/CID>}`） | ✅ 唯一被引擎消费的字段 |
-| `scale` | 体格缩放 | 🚧 **预留**——引擎当前按身高等比 scale-to-fit，不读取此字段 |
+| `resource` | 模型资源 id（经 `IDataSource.module()` 解析为 `{format, raw: <路径/CID>}`） | ✅ |
+| `facing` | 逐模型 yaw 朝向修正（弧度，见动画协议 §7.1） | ✅ |
+| `physique` | **声明制视觉体格** `{height?, eyeHeight?}`（米）——缩放目标 + 相机眼高，见 §3.1 | ✅（2026-07-17） |
+| `scale` | 体格缩放 | 🚧 **预留**——引擎按 §3.1 声明身高等比 scale-to-fit，不读取此字段 |
 | `max` | Avatar 文件大小上限（字节） | 🚧 **预留**——引擎未校验 |
+
+`avatarCatalog` = 可选化身目录（数据随世界文档，客户端选择器消费）；每项
+`{id, label, facing, physique?}`——换装时目录里的 facing/physique 随 id 一起下发。
 
 装载流程（`EntityFactory.loadAvatarModel`）：
 
 1. 出生即显示**占位盒**（半透明 0.6×1.8×0.6）。
 2. `ResourceManager.getModel(resource)` 异步加载（按 id 去重，多人共用同一 id
    时只加载一次、各自克隆实例——为未来多人做好了去重）。
-3. 加载成功后**等比缩放到身体高度**（保持比例，不拉伸），swap 替换占位盒；
-   失败则保留占位盒。
+3. 加载成功后**等比缩放到该化身的声明身高**（未声明=世界基线；保持比例，不拉伸），
+   swap 替换占位盒**并把相机眼高切到其声明眼高**（§3.1）；失败则保留占位盒
+   （眼高也不动——眼跟着可见的身体走）。
 4. 模型内嵌的骨骼动画剪辑（`AnimationClip`）经 `RenderEngine.startAnimation` 注册到 mixer，
    `CharacterController` 每帧按运动状态调 `setAnimationState`（idle/walk/run/air + crossfade）
    并经 `RenderEngine.updateAnimation` 推进 mixer——**内嵌剪辑确实在播**。
@@ -136,6 +152,25 @@ load-once + instance-many 通道，不存在并行的资产路径。
 **支持格式**：GLTF/GLB、FBX、OBJ、DAE（`ModelLoader`）。**VRM 暂不支持**（见动画协议 §7 v3）。
 
 **可见性**：Avatar 仅在第三人称视角下渲染（第一人称时相机位于体内，强制隐藏）。
+
+### 3.1 声明制视觉体格（规范，2026-07-17）
+
+**物理归世界、视觉归 avatar、参数走声明数据**——把 §2 的 physique 拆成两层：
+
+- **声明**：化身在目录/记录里声明 `physique: { height?, eyeHeight? }`（米）。参数是
+  **数据**，**绝不从模型几何（bbox）测量**——bbox 会被帽子/翅膀/武器污染，且异步到达、
+  可被资产作者操纵；bbox 只用于求缩放系数 `k = 声明身高 / 原生bbox高`。
+- **视觉**：模型等比缩放到声明 `height`；相机骑声明 `eyeHeight`。二者都在**模型落地
+  那一刻**生效——装载失败保留旧身体与旧眼高，快速连点换装以最后请求者为准
+  （stale-load 守卫）。
+- **世界夹取**：声明身高经 `player.physique.avatarHeightRange`（缺省 `[0.5, 3.0]` 米）
+  夹取——世界对极端身体保留最终权威；眼高不得高于头顶（`eyeHeight ≤ height`）。
+  只声明身高时，眼高按基线比例（`基线eyeHeight / 基线height`）推导，相机自动落在脸部。
+- **物理不读声明**：碰撞胶囊、跨步、跳跃始终用世界 physique 基准——换装**不改变**能钻
+  的门洞、跑酷判定与任何 gameplay（多人 hitbox 归一化同理，公平性 + 内容按基线创作 +
+  出生帧同步可用 + 确定性四重理由）。
+- 解析入口 `resolveAvatarPhysique`（`EntityFactory`）是唯一纯函数缝，任何解释器按上述
+  规则实现即与官方引擎逐位一致。
 
 ### 未实现 / 规划中
 
@@ -150,8 +185,9 @@ load-once + instance-many 通道，不存在并行的资产路径。
 - **独立 Avatar 元数据文件**（`{body, action, emotion, datasource, format}`）：
   当前没有元数据层，avatar 仅是"一个模型资源 id"。如未来需要骨架重定向、
   动画集声明、碰撞体格匹配，可引入专门的 `IDataSource.avatar()` 元数据接口。
-- **体格重定向**：按身高/肩宽等体格参数匹配碰撞框（当前碰撞柱体与模型互不感知，
-  仅做整体等比缩放）。
+- **碰撞体格匹配**：把碰撞胶囊也随声明体格调整（身高/肩宽）。视觉层已声明制落地
+  （§3.1，2026-07-17）；碰撞留在世界基准是**有意的**（见 §3.1 物理不读声明），若未来
+  放开也必须走"声明 + 世界夹取"，不量模型。
 
 去中心化方向不变：Avatar 以内容寻址（IPFS CID）分发，加载管线已具备 CID
 解析能力，上链/IPFS 发布属 P3–P4 范畴。

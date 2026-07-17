@@ -55,16 +55,20 @@ export interface WorldConfig {
             rotation: [number, number, number];
         };
         // Physique BASELINE (base-data-audit D9): the engine-consumed body
-        // parameters. Avatars are corrected TO this baseline (scale-to-height,
-        // camera at eyeHeight); defaults per player.md. Replaces the legacy
-        // VBW `body` shape, which nothing consumed (dead data, removed).
+        // parameters — the PHYSICS authority (collision capsule, step, jump)
+        // and the visual fallback for avatars that declare no physique of
+        // their own (player.md §2/§3). Defaults per player.md. Replaces the
+        // legacy VBW `body` shape, which nothing consumed (dead data, removed).
         physique?: {
-            height?: number;          // avatar scale target (m, default 1.8)
-            eyeHeight?: number;       // first-person camera height (default 1.7)
+            height?: number;          // physics body height + visual fallback (m, default 1.8)
+            eyeHeight?: number;       // first-person camera fallback (default 1.7)
             stepHeight?: number;      // walkable step-over (default 0.5)
             crouchHeight?: number;    // crouch body height (default 0.9)
             jumpHeight?: number;      // jump apex reference (default 1.2)
             fallDeathHeight?: number; // fatal fall distance (m, default 12)
+            // World clamp on avatar-DECLARED visual heights (world authority
+            // over extreme bodies); default [0.5, 3.0] m.
+            avatarHeightRange?: [number, number];
         };
         // Movement capacity — CONSUMED by EntityFactory.setupPlayer (rigid body)
         // and CharacterController (ghost fly / void recovery). The king's config
@@ -82,7 +86,13 @@ export interface WorldConfig {
         bag: { max: number };
         // `resource`: optional model id (IPFS CID / path) for the player's avatar,
         // loaded via ResourceManager; omit to keep the placeholder body box.
-        avatar: { max: number, scale: [number, number, number], resource?: string | number };
+        // `facing`: per-model yaw correction (radians). `physique`: the avatar's
+        // DECLARED visual body (height = scale target, eyeHeight = camera) —
+        // world-clamped via physique.avatarHeightRange; omit = world baseline.
+        avatar: {
+            max: number, scale: [number, number, number], resource?: string | number,
+            facing?: number, physique?: { height?: number; eyeHeight?: number },
+        };
         extend: number; // Viewport loading radius
     };
 

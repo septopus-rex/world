@@ -495,7 +495,7 @@ export class DesktopLoader implements IDataSource {
     }
 
     /** Selectable avatars for the frontend picker (data rides the world doc). */
-    public avatarCatalog(): { id: number; label: string; facing: number }[] {
+    public avatarCatalog(): { id: number; label: string; facing: number; physique?: { height?: number; eyeHeight?: number } }[] {
         return this.content.avatarCatalog();
     }
 
@@ -507,10 +507,12 @@ export class DesktopLoader implements IDataSource {
     }
 
     /** Swap the player's avatar (runtime seam) + persist the pick. Passes the
-     *  catalog's per-model facing so external models orient correctly. */
+     *  catalog's per-model facing so external models orient correctly, and its
+     *  declared physique so the body scale + camera eye follow the avatar
+     *  (undeclared = world baseline; player.md §3). */
     public setAvatar(id: number): void {
-        const facing = this.avatarCatalog().find(a => a.id === id)?.facing;
-        this.engine?.setAvatar(String(id), facing);
+        const entry = this.avatarCatalog().find(a => a.id === id);
+        this.engine?.setAvatar(String(id), entry?.facing, entry?.physique);
         this.engine?.getWorld()?.draftStore.saveMeta(0, 'avatar', id);
     }
 

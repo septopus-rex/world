@@ -148,7 +148,7 @@ layer; neither replaces the other.
 
 | Step | Status |
 |---|---|
-| form: load / scale-to-height / placeholder swap / hide in first-person | ✅ |
+| form: load / scale-to-DECLARED-height (§7.1 physique, baseline when undeclared) / placeholder swap / hide in first-person | ✅ |
 | embedded clips decoded + registered on a mixer (rigged `avatar.glb`; e2e `avatar.spec.ts` asserts clipCount/mixerCount > 0) | ✅ |
 | state derivation + `setAnimationState` crossfade + **per-frame mixer advance** (`RenderEngine.updateAnimation`, `core/movement/CameraRig.ts:180-188` — `CharacterController` delegates avatar pose/animation to `CameraRig`) | ✅ **embedded clips do play** |
 | state → clip mapping | ✅ **v1 landed**: normative contract first (§3 case-insensitive name equality) + §2 fallback chains (`run→walk→idle`, `air→jump→idle`, `land→idle`) + §2 threshold derivation (`IDLE_MAX 0.5` / `WALK_MAX = maxSpeedWalk×1.2` linear, `CameraRig`); the old regex heuristics remain only as a **degrade for non-compliant assets** (`ANIM_STATE_PATTERNS`) |
@@ -171,7 +171,8 @@ carries a small set of correction parameters that align it to the Septopus frame
 | Parameter | Meaning | Source |
 |---|---|---|
 | **facing** | yaw correction (radians): `CameraRig` applies `playerYaw + facing`, aligning the model's forward to Septopus north (−Z) | authored per model (client avatar catalog) |
-| **height→scale** | uniform scale so the bbox height = body height (1.8 m) | automatic (derived from `bounds` at load) |
+| **physique** | **declared visual physique** `{height?, eyeHeight?}` (m): model scale target + camera eye, world-clamped via `avatarHeightRange`; undeclared = world baseline (normative in [player.md §3.1](./player.md), 2026-07-17) | authored per model (catalog data — never measured from the bbox) |
+| **height→scale** | uniform scale so the bbox height = the **declared height** (baseline 1.8 m when undeclared): `k = declaredHeight / nativeBboxHeight` | automatic (factor derived from `bounds` at load; the target comes from physique) |
 | **footOffset** | scaled bbox bottom relative to the origin; planting at `feetY − footOffset` puts the feet on the ground regardless of the pivot | automatic |
 
 **Empirical facing values (v1.1, 3 demo assets):**

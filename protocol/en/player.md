@@ -80,8 +80,8 @@ The player carries `HealthComponent { hp, maxHp }` (default 100/100). Event flow
 
 | Field | Description | Status |
 |---|---|---|
-| `height` | Collision column height (m) | ✅ |
-| `eyeHeight` | Eye height above feet (camera offset, m) | ✅ |
+| `height` | Collision column height (m) — the physics authority, avatar-independent | ✅ |
+| `eyeHeight` | Eye-height BASELINE (m); **the live camera eye follows the avatar's declaration** (§3.1) — this value is the physics-side record + the undeclared fallback | ✅ |
 | `stepHeight` | The single step-over/block threshold (m) | ✅ |
 | `fallDeathHeight` | Drop distance (m) that emits `player:fell` | ✅ |
 | `crouchHeight` | Crouch height | 🚧 reserved |
@@ -93,11 +93,17 @@ Movement capacities live in `RigidBodyComponent`: `maxSpeedWalk` / `maxSpeedRun`
 > **Wired (updated 2026-07-09, base-data audit P9)**: `player.capacity`
 > (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**/**reach**)
 > and `player.physique` are **both read by the engine** — data first, defaults
-> below as fallback. **physique = the body BASELINE** (replaces the removed
-> legacy VBW `body` shape, which nothing ever consumed): `height` 1.8 (avatars
-> are **scale-corrected to this** — any avatar swap normalizes to the baseline
-> height) · `eyeHeight` 1.7 (first-person camera) · `stepHeight` 0.5 ·
-> `crouchHeight` 0.9 · `jumpHeight` 1.2 · `fallDeathHeight` 12 (fatal fall, m).
+> below as fallback. **physique = the PHYSICS baseline + the visual fallback
+> (split into two layers as of 2026-07-17)** (replaces the removed legacy VBW
+> `body` shape, which nothing ever consumed): the collision capsule, step-over
+> and jump **always** use the baseline — `height` 1.8 · `stepHeight` 0.5 ·
+> `crouchHeight` 0.9 · `jumpHeight` 1.2 · `fallDeathHeight` 12 (fatal fall, m);
+> the **visual body (model scale target + camera eye) follows the avatar's own
+> DECLARED physique** (§3.1), falling back to the baseline `height` 1.8 /
+> `eyeHeight` 1.7 only when undeclared, with declared values world-clamped via
+> `physique.avatarHeightRange` (default `[0.5, 3.0]` m). In one line: **the
+> world owns physics, the avatar owns visuals, and the parameters are declared
+> data**.
 > **Embedded-spawn rescue (popOut) is normative**: spawning/teleporting into a
 > solid pops the player to the solid's top; the ≤0.08 m walking substep stays
 > under the 0.1 m trigger margin, so normal movement never trips it.
@@ -119,15 +125,28 @@ asset path.
 ```json
 // world config (king's config)
 "player": {
-    "avatar": { "max": 2097152, "scale": [1, 1, 1], "resource": 30 }
+    "avatar": { "max": 2097152, "scale": [1, 1, 1], "resource": 33, "facing": 0,
+                "physique": { "height": 1.8, "eyeHeight": 1.7 } },
+    "avatarCatalog": [
+        { "id": 33, "label": "Soldier", "facing": 0,
+          "physique": { "height": 1.8, "eyeHeight": 1.7 } },
+        { "id": 34, "label": "Robot", "facing": 3.141592653589793,
+          "physique": { "height": 2.2, "eyeHeight": 2.0 } }
+    ]
 }
 ```
 
 | Field | Description | Status |
 |---|---|---|
-| `resource` | Model resource id (resolved via `IDataSource.module()` to `{format, raw: <path/CID>}`) | ✅ the only field the engine consumes |
-| `scale` | Body scaling | 🚧 **Reserved** — the engine scales uniformly to body height and ignores this field |
+| `resource` | Model resource id (resolved via `IDataSource.module()` to `{format, raw: <path/CID>}`) | ✅ |
+| `facing` | Per-model yaw orientation correction (radians, see animation protocol §7.1) | ✅ |
+| `physique` | **Declared visual physique** `{height?, eyeHeight?}` (m) — scale target + camera eye, see §3.1 | ✅ (2026-07-17) |
+| `scale` | Body scaling | 🚧 **Reserved** — the engine scale-to-fits the §3.1 declared height and ignores this field |
 | `max` | Avatar file size cap (bytes) | 🚧 **Reserved** — not validated |
+
+`avatarCatalog` = the optional avatar catalog (data riding the world doc, consumed
+by the client picker); each entry is `{id, label, facing, physique?}` — on swap the
+catalog's facing/physique travel with the id.
 
 Loading flow (`EntityFactory.loadAvatarModel`):
 
@@ -135,9 +154,11 @@ Loading flow (`EntityFactory.loadAvatarModel`):
 2. `ResourceManager.getModel(resource)` loads asynchronously (deduped by id —
    multiple players sharing an id load the file once and each gets a clone;
    multiplayer-ready dedup).
-3. On success the model is **uniformly scaled to body height** (aspect preserved,
-   never stretched) and swapped in for the placeholder; on failure the placeholder
-   stays.
+3. On success the model is **uniformly scaled to the avatar's DECLARED height**
+   (world baseline when undeclared; aspect preserved, never stretched), swapped in
+   for the placeholder, **and the camera eye switches to its declared eyeHeight**
+   (§3.1); on failure the placeholder stays (and so does the old eye — the eye
+   follows the visible body).
 4. Skeletal animation clips embedded in the model (`AnimationClip`) are registered to a
    mixer via `RenderEngine.startAnimation`; `CharacterController` calls `setAnimationState`
    each frame per movement state (idle/walk/run/air + crossfade) and advances the mixer via
@@ -153,6 +174,35 @@ supported yet** (see animation protocol §7 v3).
 
 **Visibility**: the avatar renders only in third-person view (in first-person the
 camera sits inside it, so it is force-hidden).
+
+### 3.1 Declared visual physique (normative, 2026-07-17)
+
+**The world owns physics, the avatar owns visuals, and the parameters are declared
+data** — §2's physique splits into two layers:
+
+- **Declaration**: an avatar declares `physique: { height?, eyeHeight? }` (metres)
+  in its catalog entry / record. The parameters are **data** — **never measured
+  from the model's geometry (bbox)**: a bbox is polluted by hats/wings/weapons,
+  arrives asynchronously, and can be gamed by the asset author. The bbox is used
+  only to derive the scale factor `k = declaredHeight / nativeBboxHeight`.
+- **Visuals**: the model uniform-scales to the declared `height`; the camera rides
+  the declared `eyeHeight`. Both take effect **the moment the model lands** — a
+  failed load keeps the old body AND the old eye, and rapid re-picks resolve to
+  the LAST requested avatar (stale-load guard).
+- **World clamp**: declared heights are clamped by
+  `player.physique.avatarHeightRange` (default `[0.5, 3.0]` m) — the world keeps
+  final authority over extreme bodies; the eye can never sit above the head
+  (`eyeHeight ≤ height`). A declared height without an eyeHeight derives the eye
+  proportionally from the baseline ratio (`baselineEye / baselineHeight`), so the
+  camera lands on the face automatically.
+- **Physics never reads the declaration**: the collision capsule, step-over and
+  jump always use the world physique baseline — swapping avatars **never changes**
+  which doorways you fit through, parkour outcomes, or any gameplay (multiplayer
+  hitbox normalization; four reasons: fairness, content authored against the
+  baseline, synchronous availability at spawn, determinism).
+- The resolver `resolveAvatarPhysique` (`EntityFactory`) is the single pure seam;
+  any interpreter implementing the rules above matches the official engine
+  bit-for-bit.
 
 ### Not implemented / planned
 
@@ -170,9 +220,11 @@ prevent mis-citation (full spec in the [Avatar Animation Protocol](./avatar-anim
   resource id". If rig retargeting, animation-set declarations, or collision body
   matching are needed later, a dedicated `IDataSource.avatar()` metadata interface
   can be introduced.
-- **Body retargeting**: matching the collision capsule to body parameters
-  (height/shoulder width). Today the collision column and the model are mutually
-  unaware; only whole-model uniform scaling is applied.
+- **Collision-body matching**: adjusting the collision capsule to the declared
+  physique (height/shoulder width). The VISUAL layer is declaration-driven now
+  (§3.1, 2026-07-17); the capsule staying on the world baseline is **deliberate**
+  (see §3.1) — if ever opened up it must also go "declaration + world clamp",
+  never measured from the model.
 
 The decentralization direction stands: avatars are content-addressed (IPFS CID)
 and the loading pipeline already resolves CIDs; chain/IPFS publishing belongs to
