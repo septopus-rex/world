@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { ResourceManager } from '../../src/render/ResourceManager';
+import { IpfsRouter } from '../../src/core/services/ipfs/IpfsRouter';
+import { MemoryCasProvider } from '../../src/core/services/ipfs/MemoryCasProvider';
 import {
     FakeModelLoader,
     FakeTextureLoader,
@@ -117,6 +119,33 @@ describe('ResourceManager — ref-counted release (memory stays bounded)', () =>
         await expect(rm.getModel('99')).rejects.toThrow();
         await expect(rm.getModel('99')).rejects.toThrow();
         expect(ds.moduleCalls['99']).toBe(2); // retried, not stuck on a poisoned cache entry
+    });
+});
+
+describe('ResourceManager — content-addressed model (`<cid>.<ext>`)', () => {
+    it('routes bytes through the CAS router; the suffix gives the format, the stem stays the src', async () => {
+        const router = new IpfsRouter([new MemoryCasProvider()]);
+        const cid = await router.put(new TextEncoder().encode('fake-splat-bytes'));
+
+        const calls: Array<{ format: string; url: string }> = [];
+        const loader = { parse: async (format: string, url: string) => { calls.push({ format, url }); return makePlainTemplate(); } };
+        const ds = new CountingDataSource({}, {});
+        const rm = new ResourceManager(ds as any, { loader: loader as any, ipfsRouter: router });
+
+        const entry = await rm.getModel(`${cid}.spz`);
+        expect(calls[0].format, 'format from the filename-style suffix').toBe('spz');
+        expect(calls[0].url, 'bytes came via the router, not a direct fetch of the id').toMatch(/^(blob:|data:)/);
+        // src is the BARE cid — release() only revokes router object-URLs for
+        // isCid(src), so keeping the suffix there would leak the blob.
+        expect(entry.src).toBe(cid);
+        expect(Object.keys(ds.moduleCalls).length, 'no datasource id lookup').toBe(0);
+    });
+
+    it('a bare CID is rejected with guidance — a model must know its format up front', async () => {
+        const router = new IpfsRouter([new MemoryCasProvider()]);
+        const cid = await router.put(new TextEncoder().encode('some-bytes'));
+        const rm = new ResourceManager(new CountingDataSource({}, {}) as any, { loader: new FakeModelLoader(), ipfsRouter: router });
+        await expect(rm.getModel(cid)).rejects.toThrow(/bare CID/);
     });
 });
 

@@ -61,11 +61,18 @@ const attribute: AdjunctAttribute = {
         };
     },
     serialize: (std: STDObject) => {
+        // Slot 3 prefers the live `resource` — edit set / runtime swap write ONLY
+        // that field, so `module` (the deserialize-time copy) goes stale after a
+        // set and would persist the pre-edit id. Numeric strings stay numeric ids;
+        // anything else (URL, `<cid>.<ext>`) persists verbatim — Number() of those
+        // is NaN, which `??` would have let through into the raw.
+        const res = std.resource ?? std.module ?? 0;
+        const n = Number(res);
         return [
             [std.x, std.y, std.z],
             [std.ox, std.oy, std.oz],
             [std.rx, std.ry, std.rz],
-            std.module ?? Number(std.resource) ?? 0,
+            Number.isFinite(n) ? n : res,
             std.animate,
             std.stop
         ];

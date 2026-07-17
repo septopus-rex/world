@@ -112,7 +112,12 @@
 [ size, pos, rot, resourceId, animation, stop ]
 ```
 
-`resourceId` 经世界资源目录解析到模型文件(格式 GLTF/GLB/FBX/OBJ/DAE)。
+`resourceId` 接受三种形态(2026-07 起):**数字 id** 经世界资源目录解析到模型记录
+(记录携带 `format`);**直接 URL**(`http(s):`/`data:`/`blob:`/`file:`,格式从路径
+后缀推断,无后缀=错误);**`<cid>.<ext>`**——stem 为内容寻址 CID(字节经引擎 CAS
+路由取回并逐位重哈希校验),文件名式后缀携带格式(模型必须先知格式才能选加载器,
+这点不同于贴图/音视频的字节自描述;裸 CID 不合法)。格式含 GLTF/GLB/FBX/OBJ/DAE
+及高斯泼溅(`ply/spz/splat/ksplat/sog`)。
 装载语义:**占位盒 → 异步加载 → 替换**;同 id 多处摆放须**一次加载、多实例引用**。
 模型缩放到 `size` 包围盒(authored 尺寸优先于模型原生尺寸)。骨骼动画剪辑名
 契约见 [avatar-animation.md](avatar-animation.md)。

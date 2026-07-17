@@ -233,7 +233,8 @@ export class DesktopLoader implements IDataSource {
 
     public worldlabsGenerate(prompt: string) { return this.worldlabs.generate(prompt); }
     public worldlabsPoll(jobId: string) { return this.worldlabs.pollAndPlace(jobId); }
-    public worldlabsPlace(url: string): boolean { return this.worldlabs.placeResult(url); }
+    public worldlabsPlace(resource?: string): boolean { return this.worldlabs.placeResult(resource); }
+    public worldlabsSave() { return this.worldlabs.saveToWorld(); }
     public worldlabsExhibitBlock(): [number, number] { return this.worldlabs.exhibitBlock(); }
 
     // ── Boot ──────────────────────────────────────────────────────────────────

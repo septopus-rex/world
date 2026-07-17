@@ -121,9 +121,18 @@ An UNLIT textured plane — guide arrows, posters, decals, floating waypoint mar
 [ size, pos, rot, resourceId, animation, stop ]
 ```
 
-`resourceId` resolves through the world resource catalog to a model file
-(GLTF/GLB/FBX/OBJ/DAE). Loading semantics: **placeholder box → async load →
-swap**; multiple placements of the same id must **load once, instance many**.
+`resourceId` accepts three forms (since 2026-07): a **numeric id** resolved
+through the world resource catalog to a model record (the record carries
+`format`); a **direct URL** (`http(s):`/`data:`/`blob:`/`file:`, format
+inferred from the path suffix — no suffix is an error); and **`<cid>.<ext>`**
+— the stem is a content-addressed CID (bytes fetched through the engine's CAS
+router and re-hashed bit-for-bit for integrity) while the filename-style
+suffix carries the format (a model must know its format up front to pick a
+loader, unlike textures/audio/video whose bytes self-describe; a bare CID is
+invalid). Formats include GLTF/GLB/FBX/OBJ/DAE and Gaussian splats
+(`ply/spz/splat/ksplat/sog`). Loading semantics: **placeholder box → async
+load → swap**; multiple placements of the same id must **load once, instance
+many**.
 The model is scaled to the authored `size` bounding box (authored size wins
 over native model size). Skeletal-clip naming contract:
 [avatar-animation.md](avatar-animation.md).

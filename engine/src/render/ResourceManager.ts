@@ -227,10 +227,20 @@ export class ResourceManager {
             // output) be placed as a module without a static manifest entry. Unlike
             // those three, a model MUST know its format up front to pick a loader, so
             // (unlike them) a bare CID isn't accepted here — it carries no extension
-            // to infer one from.
+            // to infer one from. `<cid>.<ext>` IS accepted: the filename-style suffix
+            // carries the format while the stem stays content-addressed (bytes route
+            // through resolveUrl(cid) → IpfsRouter CAS tiers), and the whole reference
+            // remains a single string that fits an a4 resource slot / draft row.
             const direct = /^(https?:|data:|blob:|file:)/.test(id);
+            const dot = direct ? -1 : id.lastIndexOf('.');
+            const cidStem = dot > 0 && isCid(id.slice(0, dot)) ? id.slice(0, dot) : null;
             let format: string, rawSrc: string;
-            if (direct || isCid(id)) {
+            if (cidStem) {
+                rawSrc = cidStem;
+                format = id.slice(dot + 1).toLowerCase();
+            } else if (isCid(id)) {
+                throw new Error(`[ResourceManager] bare CID carries no model format — reference it as '<cid>.<ext>': ${id}`);
+            } else if (direct) {
                 rawSrc = id;
                 const ext = id.split(/[?#]/)[0].split('.').pop()?.toLowerCase();
                 if (!ext) throw new Error(`[ResourceManager] direct model URL has no extension to infer a format from: ${id}`);

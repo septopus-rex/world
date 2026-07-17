@@ -21,6 +21,10 @@ import { makeProvider, GENERATED_DIR, type JobResult } from './providers';
 const PORT = Number(process.env.PORT || 7790);
 const MAX_BODY = 8 * 1024;
 const provider = makeProvider();
+/** The dev CAS gateway (services/ipfs) — finished splats are ingested there so
+ *  the client can persist them as content-addressed block data (`<cid>.<ext>`
+ *  a4 resource) instead of a mutable URL into this process's disk. */
+const IPFS_GATEWAY = process.env.IPFS_GATEWAY || 'http://127.0.0.1:7789';
 
 // Real generation costs money + ~5 minutes — a much tighter per-process quota
 // than a text gateway's. Mock is unmetered (no cost, nothing to protect).
@@ -72,11 +76,36 @@ const MIME: Record<string, string> = {
     '.ksplat': 'application/octet-stream',
 };
 
+/** Ingest a finished splat into the CAS gateway → its CID, or undefined when
+ *  the gateway is down (session-only placement still works; the next poll of
+ *  the same job retries, so a gateway restart heals without regenerating). */
+async function ingestToCas(splatUrl: string): Promise<string | undefined> {
+    try {
+        const bytes = fs.readFileSync(path.join(GENERATED_DIR, path.basename(splatUrl)));
+        const res = await fetch(`${IPFS_GATEWAY}/v0/add`, { method: 'POST', body: bytes });
+        if (!res.ok) return undefined;
+        const cid = (await res.json() as any)?.cid;
+        return typeof cid === 'string' ? cid : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 async function pollJob(jobId: string): Promise<JobResult> {
     const cached = jobs.get(jobId);
-    if (cached?.done) return cached; // terminal — nothing left to ask the provider
+    if (cached?.done) {
+        // Terminal — nothing left to ask the provider; only a missing CAS ingest
+        // (gateway was down when the job finished) is worth retrying.
+        if (cached.splatUrl && !cached.error && !cached.cid) {
+            cached.cid = await ingestToCas(cached.splatUrl);
+        }
+        return cached;
+    }
     try {
         const result = await provider.poll(jobId);
+        if (result.done && result.splatUrl && !result.error) {
+            result.cid = await ingestToCas(result.splatUrl);
+        }
         jobs.set(jobId, result);
         return result;
     } catch (e: any) {

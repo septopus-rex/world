@@ -6,8 +6,10 @@ import type { DesktopLoader } from '@core/lib/DesktopLoader';
  * thin gateway over World Labs' Marble World API, docs.worldlabs.ai/api).
  * Text prompt → generate → poll until a splat is ready → placed live on the
  * gallery ㉑ exhibit's pedestal (block [2000,1020]). Mirrors AuthorChat's
- * corner-panel shape; unlike AI 造物 there's no plan/preview/build step — the
- * "document" here is just a URL, and placement is immediate once ready.
+ * corner-panel shape AND its preview→build split: placement is immediate and
+ * session-only; the explicit 保存 button persists the exhibit as a draft —
+ * only offered when the splat came back content-addressed (`<cid>.<ext>`),
+ * because a draft pointing at a mutable dev URL would rot.
  *
  * Real generation takes ~5 minutes (Marble's own budget) — the mock provider
  * (default; see services/worldlabs) finishes on the first poll so the whole
@@ -26,7 +28,9 @@ export function WorldLabsPanel({ loader, ready }: Props) {
     const [status, setStatus] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
     const [splatUrl, setSplatUrl] = useState<string | null>(null);
+    const [cid, setCid] = useState<string | null>(null);
     const [placed, setPlaced] = useState(false);
+    const [saved, setSaved] = useState(false);
     const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const stopPolling = () => {
@@ -45,6 +49,7 @@ export function WorldLabsPanel({ loader, ready }: Props) {
         stopPolling();
         setBusy(false);
         setSplatUrl(r.splatUrl ?? null);
+        setCid(r.cid ?? null);
         setPlaced(!!r.placed);
         setStatus(r.placed ? '已生成并放到画廊㉑展台——去看看！' : '已生成,但要走到画廊㉑展台才能看到它');
     };
@@ -52,7 +57,7 @@ export function WorldLabsPanel({ loader, ready }: Props) {
     const send = async () => {
         const prompt = input.trim();
         if (!prompt || busy || !loader) return;
-        setBusy(true); setError(null); setSplatUrl(null); setPlaced(false);
+        setBusy(true); setError(null); setSplatUrl(null); setCid(null); setPlaced(false); setSaved(false);
         setStatus('提交生成请求…');
         const r = await loader.worldlabsGenerate(prompt);
         if (r.error || !r.jobId) {
@@ -67,9 +72,22 @@ export function WorldLabsPanel({ loader, ready }: Props) {
 
     const retryPlace = () => {
         if (!loader || !splatUrl) return;
-        const ok = loader.worldlabsPlace(splatUrl);
+        const ok = loader.worldlabsPlace(); // the loader kept the last resource (CID-form when available)
         setPlaced(ok);
         setStatus(ok ? '已放到画廊㉑展台——去看看！' : '还是没找到展台(㉑ 在 [2000,1020],先走过去再试)');
+    };
+
+    // Persist the placed generation as a draft (CID-form only — see
+    // WorldLabsAuthoring.saveToWorld): survives reload via the CAS gateway.
+    const save = () => {
+        if (!loader) return;
+        const r = loader.worldlabsSave();
+        setSaved(r.ok);
+        setStatus(r.ok
+            ? '已保存到世界(本地草稿)——重载后仍在展台上'
+            : r.reason === 'block-not-loaded'
+                ? '要先走到画廊㉑展台附近才能保存'
+                : `保存失败(${r.reason ?? '未知'})`);
     };
 
     if (!ready || !loader) return null;
@@ -107,6 +125,15 @@ export function WorldLabsPanel({ loader, ready }: Props) {
                             className="py-1.5 rounded bg-amber-600/80 hover:bg-amber-500 font-bold">
                             在展台放置
                         </button>
+                    )}
+                    {placed && cid && !saved && (
+                        <button data-testid="worldlabs-save" onClick={save}
+                            className="py-1.5 rounded bg-emerald-700/80 hover:bg-emerald-600 font-bold">
+                            保存到世界(重载仍在)
+                        </button>
+                    )}
+                    {placed && !cid && (
+                        <div className="text-[10px] text-amber-300/70">CAS 网关不在线——本次生成仅当前会话可见,无法保存</div>
                     )}
                 </div>
             )}

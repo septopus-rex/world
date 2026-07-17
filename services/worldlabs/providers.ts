@@ -24,6 +24,11 @@ export interface JobResult {
     /** Path under THIS service once done, e.g. /assets/generated/<jobId>.spz. */
     splatUrl?: string;
     thumbnailUrl?: string;
+    /** CID of the splat bytes once server.ts has ingested them into the CAS
+     *  gateway (services/ipfs /v0/add — engine Cid.ts, zero drift). Absent when
+     *  the gateway is unreachable: the client then falls back to the mutable
+     *  splatUrl (session-only placement, nothing to persist). */
+    cid?: string;
 }
 
 export interface WorldProvider {
