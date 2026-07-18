@@ -1,11 +1,14 @@
 # 宫殿关卡(Palace)——6×6 连片大场景 + 流式压力测试
 
-> 状态:**规划(2026-07-18,未实现)**。
-> 落点:`client/core/src/levels/palace.level.json`(`?level=palace`)+ 一次性生成
-> 脚本(跑完冻结即删,内容=数据纪律)+ headless scenario + e2e + 真浏览器基线。
+> 状态:**spec + P1–P4 同日实现(2026-07-18)**。
+> 落点:`client/core/src/levels/palace.level.json`(127 KB,36 块 392 行,
+> `?level=palace`)+ headless `engine/tests/scenarios/palace-stress.test.ts`(5)
+> + e2e `client/desktop/e2e/palace.spec.ts`;生成脚本已按冻结纪律删除。
+> **真浏览器 renderer.info 基线(§6/§8)未测——手动步骤,待跑**;c1 观光轨道=v2。
 > 预决策(与用户确认,2026-07-18):**6×6 连片宫殿**(带内院、功能房间);
 > **不改 `extend`**(=2,5×5 常驻窗口)——动态换入换出正是要测的对象,「全部
 > 同时在场」不是目标;房间边界压块边界、边界墙单侧归属(§3)。
+> 实现记录见 §10。
 
 ## 1. 动机:一石二鸟
 
@@ -218,3 +221,29 @@ demo 族 [2046..2050,2047..2050]、hub/仙剑 [2026..2030,705]。`fallback` 引
 - **(v2 可选)**:c1 环宫观光轨道(CoasterSystem `rideActive` 冻结 zone 追踪
   ×流式驱逐的组合从未测过);gallery 传送广场增设「宫殿」门(include 或跨
   关卡锚点);`extend=3`/`lodNear` 调参对比实验。
+
+## 10. 实现记录(2026-07-18,P1–P4 同日落地)
+
+- **产出**:36 块 392 行 26 盏灯(预算内),21 型覆盖 20(c1 除外)全部落地;
+  游戏五房按 §7.2 构建期合并(读 `blocks/*.block.json` 原 raw 追加外壳行,
+  **合并追加在既有行之后**——组内实例序即 `adj_~_~_tid_idx`,先追加会挪走
+  游戏块自带触发器的 idx);宝库滑门=本块 a2 **第 0 行**(内容行先于结构行
+  推入,门触发器可用块相对 id 指到它)。
+- **宝库门=in/out 对称配方**:`moveZ` 是**相对量**(`stdData.oz +=`),单
+  'in' 会随重进反复叠加(画廊③即如此)——门用 `in +3.2 / out −3.2` 同条件
+  对称对,进开出合、无界叠加免疫。
+- **headless 镜像两坑**:① terran 是客户端风格包**非引擎内置**,scenario 须
+  `registerStylePack(terranPack)` 镜像客户端 boot,否则 b6 展开静默为零;
+  ② `derivedFrom` 在 **`stdData`** 上(`AdjunctComponent.stdData.derivedFrom`),
+  组件顶层没有。
+- **测试传送两坑**:① 把玩家 spp 进关着的门板固体 → `popOutIfEmbedded` 弹上
+  门顶、脱离触发区(测试要传到门侧净空);② 出生点距南墙 3m → 第三人称相机
+  回拉嵌进外墙、满屏灰墙背(已把 start 挪到 y=6;**镜头回拉半径≈4m 是出生点
+  选址的隐性约束**)。
+- **scenario 5 断言**:环巡常驻 ≤25+驱逐零残留(实体归属常驻块)+全 36 块
+  streamed;大门/回廊步行可通(高度sane);b6 驱逐重进逐位一致;国王赐印→
+  宝库门开合;拾取药膳经 draft overlay 重进不复活(mini-streamer 复刻客户端
+  「required→evict→inject、draft 优先」算法,引擎侧不变量为被测物)。
+- **e2e**:真客户端流式回路——步入大门门洞、环廊 12 块传送巡回逐块断言
+  `getLoadedBlockCount() ≤ 25`、NW terran 派生 >10、驱逐后重返门厅重建、
+  内院截图(SwiftShader ~3.5 分钟,只断正确性)。
