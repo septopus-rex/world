@@ -29,7 +29,10 @@ test('rigged avatar loads with animations (no placeholder fallback)', async ({ p
       isModelInstance: !!handle?.userData?.isModelInstance,
       clipCount: handle?.userData?.animations?.length ?? 0,
       skinnedMeshes: skinned,
-      mixerCount: (w.renderEngine as any)._mixers?.size ?? 0,
+      // The mixer lives in render/AvatarAnimator (it used to be a private map on
+      // RenderEngine, and this probe silently read undefined after the move).
+      // avatarInfo() is the supported debug surface for the running state machine.
+      anim: (window as any).loader.engine.avatarInfo?.() ?? null,
     };
   });
 
@@ -38,5 +41,6 @@ test('rigged avatar loads with animations (no placeholder fallback)', async ({ p
   expect(avatar.isModelInstance, 'placeholder box should have been swapped for the model').toBe(true);
   expect(avatar.skinnedMeshes).toBeGreaterThan(0);
   expect(avatar.clipCount, 'decoded AnimationClips should ride the instance').toBeGreaterThan(0);
-  expect(avatar.mixerCount, 'an AnimationMixer should be driving the avatar').toBeGreaterThan(0);
+  expect(avatar.anim?.activeClip, 'an AnimationMixer should be driving the avatar').toBeTruthy();
+  expect(avatar.anim?.activeRunning, 'and its action should actually be running').toBe(true);
 });

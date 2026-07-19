@@ -108,18 +108,20 @@ export default function MobileApp() {
             {/* View toggle — directly below JUMP. Flips the camera between the
                 default third-person follow-cam (slight top-down, avatar visible)
                 and first-person (at the eyes). Reuses the SAME useEngine view
-                state the desktop ActionRail drives → loader.setCameraView; the
-                icon shows the CURRENT mode (🎥 third / 👁️ first). */}
+                state the desktop ActionRail drives → loader.setCameraView.
+                The label is the CURRENT view, typeset exactly like JUMP so the
+                two read as one control set — the emoji + Chinese caption stack it
+                replaces put three visual languages in a 56 px circle. */}
             <div className="absolute bottom-8 right-7 z-20 pointer-events-auto">
                 {/* onClick (single fire) — a discrete toggle, unlike JUMP's
                     hold-friendly onTouchStart. Handling BOTH touch and mouse would
                     double-fire on a real tap (touch + synthesized mouse) and cancel
                     the toggle out; a tap's synthesized click fires exactly once. */}
                 <button data-testid="m-view-toggle"
+                    aria-label={view === 'third' ? '第三人称视角' : '第一人称视角'}
                     onClick={() => setView(view === 'third' ? 'first' : 'third')}
-                    className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/25 backdrop-blur-md flex flex-col items-center justify-center gap-0.5 active:scale-95 shadow-xl">
-                    <span className="text-lg leading-none">{view === 'third' ? '🎥' : '👁️'}</span>
-                    <span className="text-[8px] font-bold tracking-widest text-white/70 leading-none">{view === 'third' ? '俯视' : '第一'}</span>
+                    className="w-14 h-14 rounded-full bg-white/10 border-2 border-white/25 backdrop-blur-md flex items-center justify-center active:scale-95 shadow-xl">
+                    <span className="font-extrabold text-white text-xs tracking-widest opacity-90">{view === 'third' ? '3RD' : '1ST'}</span>
                 </button>
             </div>
 

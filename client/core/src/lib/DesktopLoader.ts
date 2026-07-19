@@ -571,8 +571,8 @@ export class DesktopLoader implements IDataSource {
         return this.engine?.setMode(mode as any) ?? false;
     }
 
-    public setCameraView(mode: 'first' | 'third') {
-        this.engine?.setCameraView(mode);
+    public setCameraView(mode: 'first' | 'third', immediate = false) {
+        this.engine?.setCameraView(mode, immediate);
     }
 
     /** Toggle first/third-person; returns the new mode. */

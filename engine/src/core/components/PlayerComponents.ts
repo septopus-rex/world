@@ -107,7 +107,10 @@ export interface SolidComponent {
 // -----------------------------------------------------------------------------
 export interface CameraComponent {
     // If an entity has this, the World's 3D camera should attach to its Transform.
-    offset: [number, number, number]; // Eye height
+    /** Eye offset from the body. **Y is an eye HEIGHT — measured from the FEET**
+     *  (protocol player.md §3.1), NOT from the transform, which is the collision
+     *  capsule's centre; see `utils/Body.feetY`. X/Z are plain lateral offsets. */
+    offset: [number, number, number];
     fov: number;
     active: boolean;                  // is this the currently rendering camera?
 }

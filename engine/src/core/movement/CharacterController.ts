@@ -88,7 +88,7 @@ export class CharacterController implements ISystem {
     }
 
     // ── camera / view delegates (preserved public surface) ───────────────────
-    public setViewMode(mode: 'first' | 'third'): void { this.camera.setViewMode(mode); }
+    public setViewMode(mode: 'first' | 'third', immediate = false): void { this.camera.setViewMode(mode, immediate); }
     public getViewMode(): 'first' | 'third' { return this.camera.getViewMode(); }
     public toggleViewMode(): 'first' | 'third' { return this.camera.toggleViewMode(); }
     public getCameraShake(): number { return this.camera.getCameraShake(); }
@@ -150,7 +150,7 @@ export class CharacterController implements ISystem {
         // Observe mode: player frozen, camera orbits the target. Owns the camera
         // itself (skips processLook) — drag to rotate, W/S to zoom.
         if (world.mode === SystemMode.Observe) {
-            this.camera.processObserve(world, eid, trans, input, dt);
+            this.camera.processObserve(world, eid, trans, input, dt, body);
             this.inputProvider.flushDeltas();
             return;
         }

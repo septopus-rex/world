@@ -7,6 +7,7 @@ import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent, RigidBodyComponent } from '../components/PlayerComponents';
 import { BlockComponent } from '../components/BlockComponent';
 import { spawnRelative } from '../utils/Spawn';
+import { feetY } from '../utils/Body';
 import { damageNpc } from '../utils/Combat';
 import { setEntityColor } from '../utils/Appearance';
 import { AdjunctType } from '../types/AdjunctType';
@@ -244,8 +245,10 @@ export class LocalActuator implements IActuator {
                 ? world.getComponent<TransformComponent>(ctx.playerId, "TransformComponent") : null;
             const pt = world.getComponent<TransformComponent>(spawned.entityId, "TransformComponent");
             if (pTrans && pt) {
+                const pBody = ctx.playerId != null
+                    ? world.getComponent<RigidBodyComponent>(ctx.playerId, "RigidBodyComponent") : null;
                 const dx = pTrans.position[0] - pt.position[0];
-                const dy = (pTrans.position[1] + 1.0) - pt.position[1]; // chest height
+                const dy = (feetY(pTrans, pBody) + 1.0) - pt.position[1]; // chest height (above the FEET)
                 const dz = pTrans.position[2] - pt.position[2];
                 const len = Math.hypot(dx, dy, dz) || 1;
                 v = [(dx / len) * speed, (dy / len) * speed, (dz / len) * speed];

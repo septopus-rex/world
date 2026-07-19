@@ -36,7 +36,10 @@ describe('observe mode (orbit camera)', () => {
         engine.setMode(SystemMode.Observe);
         engine.step(1 / 60);
 
-        const target = [trans.position[0], trans.position[1] + 1, trans.position[2]];
+        // Orbit target = chest, i.e. 1 m above the FEET — and the transform is the
+        // collision capsule's CENTRE, so the half-height comes off first.
+        const body = world.getComponent<any>(player, 'RigidBodyComponent');
+        const target = [trans.position[0], trans.position[1] - body.size[1] / 2 + 1, trans.position[2]];
         const cam = nullEngine.__counts.lastCameraPos!;
         expect(dist(cam, target)).toBeCloseTo(8, 1);                   // default radius
         expect(nullEngine.__counts.lastCameraLookAt).toEqual(target);  // faces the target

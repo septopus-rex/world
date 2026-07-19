@@ -163,6 +163,12 @@ load-once + instance-many 通道，不存在并行的资产路径。
 - **视觉**：模型等比缩放到声明 `height`；相机骑声明 `eyeHeight`。二者都在**模型落地
   那一刻**生效——装载失败保留旧身体与旧眼高，快速连点换装以最后请求者为准
   （stale-load 守卫）。
+- **基准面 = 脚底（规范，2026-07-19 补明）**：`height` 与 `eyeHeight` 都**自脚底量起**
+  （所以才有 `eyeHeight ≤ height` 这条夹取）。实现须注意：官方引擎的
+  `TransformComponent.position` 是**碰撞胶囊中心**（物理侧一律 `position ± size/2`），
+  把眼高直接加到该 position 上会高出半个身子——1.8 m 的士兵眼睛跑到 2.6 m。
+  取脚底的唯一入口是 `utils/Body.feetY`。同理，"胸高"这类锚点（投射物瞄准/命中）
+  也一律自脚底量起。
 - **世界夹取**：声明身高经 `player.physique.avatarHeightRange`（缺省 `[0.5, 3.0]` 米）
   夹取——世界对极端身体保留最终权威；眼高不得高于头顶（`eyeHeight ≤ height`）。
   只声明身高时，眼高按基线比例（`基线eyeHeight / 基线height`）推导，相机自动落在脸部。

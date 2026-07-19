@@ -90,7 +90,7 @@ test('overview screenshot: the labyrinth + Athenian framing', async ({ page }) =
   // before gravity pulls the camera down.
   await page.evaluate(() => {
     const loader = (window as any).loader;
-    loader.setCameraView('first');
+    loader.setCameraView('first', true);   // snap: we shoot the very next frame
     loader.teleportSeptopus([2047, 2048], [8, -7, 13]);
     loader.engine.getWorld().renderEngine?.setMainCameraRotation?.(-0.62, 0, 0);
     loader.engine.step(1 / 60);

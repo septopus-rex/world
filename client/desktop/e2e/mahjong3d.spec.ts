@@ -116,7 +116,7 @@ test('3D mahjong: a REAL mouse click on a hand tile discards it (truly playable)
     // is right in front of them (the real way you'd sit down to a table).
     await page.evaluate(() => {
         const l = (window as any).loader;
-        l.engine.setCameraView('first');
+        l.engine.setCameraView('first', true);   // snap: the click rays must start at the eye
         l.teleportSeptopus([2047, 2048], [8, 4.0, 2]);
     });
     await stepEngine(page, 25); // land + camera settle

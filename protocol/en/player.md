@@ -189,6 +189,14 @@ data** — §2's physique splits into two layers:
   the declared `eyeHeight`. Both take effect **the moment the model lands** — a
   failed load keeps the old body AND the old eye, and rapid re-picks resolve to
   the LAST requested avatar (stale-load guard).
+- **Datum = the FEET (normative, spelled out 2026-07-19)**: both `height` and
+  `eyeHeight` are measured **from the feet up** — which is what makes the
+  `eyeHeight ≤ height` clamp meaningful. Implementation note: the reference
+  engine's `TransformComponent.position` is the collision capsule's **centre**
+  (physics works in `position ± size/2` throughout), so adding an eye height
+  straight onto it puts the camera half a body too high — a 1.8 m soldier's eyes
+  end up at 2.6 m. `utils/Body.feetY` is the single entry point for the feet.
+  The same holds for "chest" anchors (projectile aim / hit tests): feet-relative.
 - **World clamp**: declared heights are clamped by
   `player.physique.avatarHeightRange` (default `[0.5, 3.0]` m) — the world keeps
   final authority over extreme bodies; the eye can never sit above the head

@@ -101,7 +101,7 @@ test('the hut is genuinely rendered: camera ray hits a visible derived wall whos
     // than ~4.5m behind (third-person), where the lift-ball at N12 lurks in a
     // southward ray and was intermittently hit instead of the wall. Step a few
     // frames to settle the camera into place.
-    w.systems.findSystemByName('CharacterController')?.setViewMode?.('first');
+    w.systems.findSystemByName('CharacterController')?.setViewMode?.('first', true); // snap: pixel probe
     for (let i = 0; i < 6; i++) loader.engine.step(1 / 60);
 
     /** Render a frame facing (pitch, yaw), then read the canvas center pixel

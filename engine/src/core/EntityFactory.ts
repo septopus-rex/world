@@ -4,6 +4,7 @@ import { TransformComponent, RigidBodyComponent, CameraComponent, InputStateComp
 import { InventoryComponent } from './components/InventoryComponent';
 import { HealthComponent } from './components/HealthComponent';
 import { CharacterController } from './movement/CharacterController';
+import { feetY } from './utils/Body';
 
 /** Per-avatar DECLARED visual physique (catalog/record data — never measured
  *  from the model's geometry). See protocol player.md §3. */
@@ -140,9 +141,11 @@ export class EntityFactory {
             EntityFactory.loadAvatarModel(world, player, String(avatarRes), avatarHandle);
         }
 
-        // Initial Camera Sync
+        // Initial Camera Sync — the eye rides eyeHeight above the FEET, and
+        // `position` is the capsule centre (utils/Body.feetY); the body was just
+        // created with offset 0, so the feet are half a body below it.
         world.renderEngine.setMainCameraRotation(rotation[0], rotation[1], rotation[2]);
-        world.renderEngine.setMainCameraPosition(position[0], position[1] + eyeHeight, position[2]);
+        world.renderEngine.setMainCameraPosition(position[0], position[1] - bodyHeight / 2 + eyeHeight, position[2]);
 
         // Attach Controls
         const controller = world.systems.findSystem(CharacterController);
@@ -221,8 +224,7 @@ export class EntityFactory {
             const t = world.getComponent<TransformComponent>(player, "TransformComponent");
             const rb = world.getComponent<RigidBodyComponent>(player, "RigidBodyComponent");
             if (t) {
-                const feetY = rb ? t.position[1] + rb.offset[1] - rb.size[1] / 2 : t.position[1];
-                model.position?.set?.(t.position[0], feetY - (av.footOffset ?? 0), t.position[2]);
+                model.position?.set?.(t.position[0], feetY(t, rb) - (av.footOffset ?? 0), t.position[2]);
             }
 
             world.renderEngine.add(model);          // into the scene; posed each frame by the controller

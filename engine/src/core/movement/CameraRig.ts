@@ -6,6 +6,7 @@ import {
 import { CONTROL_CONSTANTS } from '../Constants';
 import { SystemMode } from '../types/SystemMode';
 import { InputProvider } from '../systems/InputProvider';
+import { feetY } from '../utils/Body';
 
 /**
  * CameraRig — the camera + avatar half of the controlled player, extracted from
@@ -56,6 +57,15 @@ export class CameraRig {
     private viewMode: 'first' | 'third' = 'third';
     private static readonly TP_DISTANCE = 4.5;  // metres the follow-cam sits behind
     private static readonly TP_HEIGHT = 1.2;    // metres above the eye
+    /** First↔third dolly progress in [0,1] (0 = at the eyes, 1 = full follow-cam).
+     *  Ramps at a fixed rate so it lands EXACTLY on the endpoint after
+     *  VIEW_BLEND_SEC; a mid-transition flip just walks back the way it came. */
+    private _viewT = 1;                          // matches viewMode's 'third' default
+    private static readonly VIEW_BLEND_SEC = 0.3;
+    /** Below this dolly distance the camera is inside the avatar's head — keep it
+     *  hidden until the dolly clears the body, or the first frames of a
+     *  first→third switch are a faceful of skull interior. */
+    private static readonly AVATAR_CLEAR_DIST = 1.0;
     /** Extra metres the follow-cam is pulled back during a teleport transition
      *  (CharacterController drives this in/out). While pulling, the camera frames
      *  third-person even from first-person so the dolly-out is actually visible. */
@@ -69,8 +79,16 @@ export class CameraRig {
         this.inputProvider = inputProvider;
     }
 
-    public setViewMode(mode: 'first' | 'third'): void { this.viewMode = mode; }
+    /** Switch view. The dolly EASES by default (a user toggle should read as a
+     *  camera move); `immediate` snaps it for tooling that positions the camera
+     *  and samples the very next frame — screenshot rigs, pixel probes. */
+    public setViewMode(mode: 'first' | 'third', immediate = false): void {
+        this.viewMode = mode;
+        if (immediate) this._viewT = mode === 'third' ? 1 : 0;
+    }
     public getViewMode(): 'first' | 'third' { return this.viewMode; }
+    /** Dolly progress in [0,1] (0 = first-person, 1 = full follow-cam) — diagnostics/tests. */
+    public getViewBlend(): number { return this._viewT; }
     /** Teleport dolly-out distance (metres behind the normal follow position). */
     public setTeleportPull(metres: number): void { this._teleportPull = Math.max(0, metres); }
     public toggleViewMode(): 'first' | 'third' {
@@ -142,7 +160,9 @@ export class CameraRig {
     // ── camera + avatar sync ─────────────────────────────────────────────────
     public syncCameraAndAvatar(world: World, eid: EntityId, trans: TransformComponent, body: RigidBodyComponent, dt: number, cam?: CameraComponent): void {
         const ox = cam?.offset[0] ?? 0, oy = cam?.offset[1] ?? 1.7, oz = cam?.offset[2] ?? 0;
-        const eyeX = trans.position[0] + ox, eyeY = trans.position[1] + oy, eyeZ = trans.position[2] + oz;
+        // The eye offset's Y is an eye HEIGHT — measured from the feet (protocol
+        // player.md §3.1), not from the transform, which is the capsule centre.
+        const eyeX = trans.position[0] + ox, eyeY = feetY(trans, body) + oy, eyeZ = trans.position[2] + oz;
 
         // Look rotation is input-driven on the camera; read it first so third-person
         // can offset the camera by the current yaw.
@@ -151,21 +171,25 @@ export class CameraRig {
 
         // Camera base position by view mode. A teleport pull forces third-person
         // framing (even from first-person) so the dolly-out reads on screen.
+        //
+        // The toggle moves the TARGET, not the camera: `_viewT` ramps at a fixed
+        // rate and the follow-cam offsets scale by its smoothstep, so switching
+        // is a dolly rather than a cut (the pitch already eased via auto-level —
+        // only the position used to jump). blend 0 lands exactly on the eye.
         const pulling = this._teleportPull > 0.001;
-        const third = this.viewMode === 'third' || pulling;
-        let camX: number, camY: number, camZ: number;
-        if (third) {
-            // Follow-cam: sit behind the player along the horizontal look direction and
-            // raised a little for a slight top-down angle. Camera keeps its input-driven
-            // rotation, so it still looks where the mouse points (player out front).
-            const dist = CameraRig.TP_DISTANCE + this._teleportPull;
-            const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-            camX = eyeX - fx * dist;
-            camY = eyeY + CameraRig.TP_HEIGHT;
-            camZ = eyeZ - fz * dist;
-        } else {
-            camX = eyeX; camY = eyeY; camZ = eyeZ;
-        }
+        const rate = dt / CameraRig.VIEW_BLEND_SEC;
+        this._viewT = Math.max(0, Math.min(1,
+            this._viewT + ((this.viewMode === 'third' || pulling) ? rate : -rate)));
+        const blend = this._viewT * this._viewT * (3 - 2 * this._viewT);
+
+        // Follow-cam: sit behind the player along the horizontal look direction and
+        // raised a little for a slight top-down angle. Camera keeps its input-driven
+        // rotation, so it still looks where the mouse points (player out front).
+        const dist = CameraRig.TP_DISTANCE * blend + this._teleportPull;
+        const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+        let camX = eyeX - fx * dist;
+        let camY = eyeY + CameraRig.TP_HEIGHT * blend;
+        let camZ = eyeZ - fz * dist;
 
         // Fold in the decaying impact shake — a downward dip + lateral jitter,
         // applied to the camera ONLY (the player transform stays clean).
@@ -190,17 +214,19 @@ export class CameraRig {
             // the collision feet. The centred box placeholder leaves footOffset
             // undefined → placed at the body centre, as before.
             const avatarY = avatar.footOffset !== undefined
-                ? (trans.position[1] + body.offset[1] - body.size[1] / 2) - avatar.footOffset
+                ? feetY(trans, body) - avatar.footOffset
                 : trans.position[1];
             world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], avatarY, trans.position[2]);
             // Per-model facing correction (external models disagree on forward);
             // falls back to the legacy default when the avatar didn't declare one.
             const facing = avatar.facing !== undefined ? avatar.facing : CameraRig.AVATAR_FACING;
             world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + facing, 0);
-            // Visible only in third-person — in first-person the camera is inside
-            // the avatar (but a teleport pull frames third-person, so show it then).
+            // Visible once the dolly has CLEARED the body — not merely "in
+            // third-person": mid-transition (and during a teleport pull from
+            // first-person) the camera passes through the avatar's head, and
+            // showing it there fills the screen with backfaces.
             // Ghost mode always hides it (incorporeal).
-            const show = avatar.visible !== false && third
+            const show = avatar.visible !== false && dist >= CameraRig.AVATAR_CLEAR_DIST
                 && world.mode !== SystemMode.Ghost;
             world.renderEngine.setObjectVisible(avatar.handle, show);
 
@@ -226,7 +252,7 @@ export class CameraRig {
     }
 
     // ── observe-mode orbit camera ─────────────────────────────────────────────
-    public processObserve(world: World, eid: EntityId, trans: TransformComponent, input: InputStateComponent, dt: number): void {
+    public processObserve(world: World, eid: EntityId, trans: TransformComponent, input: InputStateComponent, dt: number, body?: RigidBodyComponent): void {
         const ip = this.inputProvider;
         const sens = CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
         this._obsAzimuth -= (ip.mouseDeltaX + ip.touchDeltaX) * sens;
@@ -241,7 +267,8 @@ export class CameraRig {
         if (input.backward) this._obsRadius = Math.min(CameraRig.OBS_MAX_RADIUS, this._obsRadius + CameraRig.OBS_ZOOM_SPEED * dt);
 
         // Orbit around the player's chest height; camera always faces the target.
-        const tx = trans.position[0], ty = trans.position[1] + 1, tz = trans.position[2];
+        // Chest = 1 m ABOVE THE FEET (the transform is the capsule centre).
+        const tx = trans.position[0], ty = feetY(trans, body) + 1, tz = trans.position[2];
         const ce = Math.cos(this._obsElevation), se = Math.sin(this._obsElevation), r = this._obsRadius;
         world.renderEngine.setMainCameraPosition(
             tx + r * ce * Math.sin(this._obsAzimuth),

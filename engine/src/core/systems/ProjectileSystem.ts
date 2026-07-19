@@ -1,5 +1,6 @@
 import { World, ISystem } from '../World';
-import { TransformComponent } from '../components/PlayerComponents';
+import { TransformComponent, RigidBodyComponent } from '../components/PlayerComponents';
+import { feetY } from '../utils/Body';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { BehaviorComponent, ProjectileComponent } from '../components/NpcComponents';
 import { damageNpc } from '../utils/Combat';
@@ -22,6 +23,8 @@ export class ProjectileSystem implements ISystem {
         const playerId = players[0];
         const pTrans = playerId !== undefined
             ? world.getComponent<TransformComponent>(playerId, "TransformComponent") : null;
+        const pBody = playerId !== undefined
+            ? world.getComponent<RigidBodyComponent>(playerId, "RigidBodyComponent") : null;
         const blocks: any = world.systems.findSystemByName('BlockSystem');
 
         // Living NPC targets, gathered once per frame.
@@ -46,11 +49,12 @@ export class ProjectileSystem implements ISystem {
             let dead = p.ttl <= 0;
 
             if (!dead && world.mode === SystemMode.Game) {
-                // Player hit: sphere vs body-center (~1m above feet).
+                // Player hit: sphere vs body-center (1 m above the FEET — the
+                // transform itself is the capsule centre, utils/Body.feetY).
                 if (pTrans && playerId !== undefined) {
                     const d = Math.hypot(
                         t.position[0] - pTrans.position[0],
-                        t.position[1] - (pTrans.position[1] + 1.0),
+                        t.position[1] - (feetY(pTrans, pBody) + 1.0),
                         t.position[2] - pTrans.position[2]);
                     if (d < p.radius + 0.5) {
                         world.events?.emit?.('combat.hit', { targetKind: 'player', amount: p.damage });
