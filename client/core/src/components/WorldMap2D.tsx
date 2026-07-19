@@ -23,6 +23,7 @@ const DEFAULT_CELL = 20;
 const TICK_MS = 80;     // redraw + ensure-loaded cadence (setInterval, e2e-robust)
 const FETCH_PER_TICK = 48;
 const CACHE_CAP = 4000;
+const SHEET_MS = 300;   // bottom-sheet slide duration (mirrors duration-300 below)
 
 interface Props {
     loader: DesktopLoader | null;
@@ -43,6 +44,21 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
     const inited = useRef(false);
 
     const [selected, setSelected] = useState<MapCell | null>(null);
+    // Sheet slide-in as a CSS ANIMATION, not a transition: an animation plays from
+    // mount, so there is no "render at translate-y-full, flip on the next frame"
+    // dance — and that dance needed requestAnimationFrame, which an idle headless
+    // page starves (helpers.ts documents the same trap), leaving the sheet parked
+    // off-screen while everything downstream measured it.
+    // `settled` publishes the end of the slide as `data-settled`: anything
+    // measuring the canvas (e2e hit-testing above all) must not aim at a moving
+    // target. A timer, not `animationend` — that event never fires if the
+    // animation is optimised away, and a hang is worse than 40 ms of slack.
+    const [settled, setSettled] = useState(false);
+    useEffect(() => {
+        if (!open) { setSettled(false); return; }
+        const t = window.setTimeout(() => setSettled(true), SHEET_MS + 40);
+        return () => { window.clearTimeout(t); setSettled(false); };
+    }, [open]);
     // Mirror into a ref so the (once-created) draw loop always reads the current
     // selection rather than the value captured when the interval was set up.
     const selectedRef = useRef<MapCell | null>(null);
@@ -276,70 +292,96 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
 
     if (!open) return null;
 
+    // Bottom sheet, half the viewport — the world stays on screen above it, which
+    // is the point of a map. (It used to take the whole screen.)
     return (
-        <div className="absolute inset-0 z-40 bg-black/85 flex flex-col select-none" data-testid="map2d">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-cyan-500/30">
-                <span className="text-[11px] font-black tracking-[0.3em] text-cyan-300/80 uppercase">2D World Map</span>
-                <div className="flex items-center gap-2">
-                    <button
-                        data-testid="map2d-reset"
-                        onClick={recenter}
-                        className="px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase text-cyan-200 bg-cyan-500/20 border border-cyan-400/50 hover:bg-cyan-500/35 transition-all"
-                    >定位玩家 · Reset</button>
-                    <button
-                        data-testid="map2d-close"
-                        onClick={onClose}
-                        className="px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase text-gray-300 bg-white/10 border border-white/20 hover:bg-white/20 transition-all"
-                    >关闭 · Close</button>
-                </div>
-            </div>
+        // z-50, above the HUD rails: as a half-height sheet its top edge lands at
+        // mid-screen, which is exactly where the desktop shell's right-hand mode
+        // rail sits — at the old z-40 (a tie, and the rail renders later) the rail
+        // painted over the header and swallowed clicks on ✕. A scrimmed sheet is a
+        // modal surface anyway; the HUD belongs underneath it.
+        <div className="absolute inset-0 z-50 select-none" data-testid="map2d">
+            {/* Scrim over the visible world: dims it and dismisses on tap, so the
+                sheet can't be left open swallowing clicks meant for the 3D. */}
+            <div data-testid="map2d-scrim" onClick={onClose} className="absolute inset-0 bg-black/40" />
 
-            <div ref={wrapRef} className="relative flex-1 overflow-hidden cursor-grab active:cursor-grabbing">
-                <canvas
-                    ref={canvasRef}
-                    data-testid="map2d-canvas"
-                    className="absolute inset-0 w-full h-full touch-none"
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={onPointerUp}
-                    onPointerLeave={() => { drag.current.on = false; }}
-                    onWheel={onWheel}
-                />
+            <style>{`@keyframes map2d-rise{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+            <div data-testid="map2d-sheet" data-settled={settled ? '1' : '0'}
+                style={{ animation: `map2d-rise ${SHEET_MS}ms cubic-bezier(0.16,1,0.3,1)` }}
+                className="absolute inset-x-0 bottom-0 h-1/2 min-h-[240px] flex flex-col rounded-t-2xl
+                border-t border-cyan-500/30 bg-[#0a0e14]/95 shadow-[0_-8px_40px_rgba(0,0,0,0.55)]">
+                {/* grab handle — the affordance that says "sheet", not "page" */}
+                <div className="flex justify-center pt-2 pb-0.5"><div className="w-10 h-1 rounded-full bg-white/25" /></div>
 
-                {/* legend */}
-                <div className="absolute bottom-3 left-3 bg-black/60 border border-white/15 rounded-lg px-3 py-2 text-[10px] font-mono text-gray-300 flex flex-col gap-1 pointer-events-none">
-                    <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(50,220,120,0.6)' }} />可玩区 game zone</span>
-                    <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(0,200,255,0.6)' }} />有内容 occupied</span>
-                    <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#ffd23f' }} />玩家 player · 拖拽平移 · 滚轮缩放</span>
-                </div>
-
-                {/* selected block inspect */}
-                {selected && (
-                    <div data-testid="map2d-inspect" className="absolute top-3 right-3 bg-cyan-900/80 backdrop-blur-md border border-cyan-400/50 p-3 rounded-lg shadow-2xl text-white font-mono text-xs min-w-[170px]">
-                        <p className="text-[10px] text-cyan-300 font-bold uppercase mb-1">Block</p>
-                        <p>坐标 Coord: <span className="text-cyan-400">[{selected.x}, {selected.y}]</span></p>
-                        <p>内容 Adjuncts: <span className="text-cyan-400">{selected.count}</span></p>
-                        <p>可玩 Game: <span className={selected.game >= 1 ? 'text-green-400' : 'text-gray-400'}>{selected.game >= 1 ? 'yes' : 'no'}</span></p>
-                        <p>海拔 Elev: <span className="text-cyan-400">{selected.elevation}</span></p>
-                        {(selected.anchors?.length ?? 0) > 0 && (
-                            <div className="mt-2 pt-2 border-t border-cyan-400/30">
-                                <p className="text-[10px] text-purple-300 font-bold uppercase mb-1">传送锚点 Anchors</p>
-                                {selected.anchors.map((a) => (
-                                    <button
-                                        key={a.name}
-                                        data-testid={`map2d-travel-${a.name}`}
-                                        onClick={() => loader?.fastTravel(a.name, [selected.x, selected.y])}
-                                        className="mt-1 w-full py-1 text-[10px] bg-purple-500/20 text-purple-200 rounded border border-purple-400/40 hover:bg-purple-500/35"
-                                    >⟡ {a.name} · 传送 Travel</button>
-                                ))}
-                            </div>
-                        )}
+                {/* Header sized for the narrowest shell (390 px): short labels and
+                    nowrap, or the title and both buttons wrap onto two lines each. */}
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-cyan-500/25">
+                    <span className="text-[11px] font-black tracking-[0.2em] text-cyan-300/80 uppercase whitespace-nowrap">2D Map</span>
+                    <div className="flex items-center gap-2">
                         <button
-                            onClick={() => setSelected(null)}
-                            className="mt-2 w-full py-1 text-[10px] bg-white/10 text-gray-300 rounded border border-white/20 hover:bg-white/20"
-                        >清除 Clear</button>
+                            data-testid="map2d-reset"
+                            onClick={recenter}
+                            className="px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase whitespace-nowrap text-cyan-200 bg-cyan-500/20 border border-cyan-400/50 hover:bg-cyan-500/35 transition-all"
+                        >定位</button>
+                        <button
+                            data-testid="map2d-close"
+                            onClick={onClose}
+                            aria-label="关闭地图"
+                            className="w-7 h-7 grid place-items-center rounded-lg text-xs font-black text-gray-300 bg-white/10 border border-white/20 hover:bg-white/20 transition-all"
+                        >✕</button>
                     </div>
-                )}
+                </div>
+
+                <div ref={wrapRef} className="relative flex-1 overflow-hidden cursor-grab active:cursor-grabbing">
+                    <canvas
+                        ref={canvasRef}
+                        data-testid="map2d-canvas"
+                        className="absolute inset-0 w-full h-full touch-none"
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                        onPointerLeave={() => { drag.current.on = false; }}
+                        onWheel={onWheel}
+                    />
+
+                    {/* legend — one wrapping row: half a screen is too little height
+                        to spend three stacked lines on a colour key */}
+                    <div className="absolute bottom-2 left-2 right-2 bg-black/55 border border-white/15 rounded-lg px-2.5 py-1 text-[10px] font-mono text-gray-300 flex flex-wrap items-center gap-x-3 gap-y-0.5 pointer-events-none">
+                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(50,220,120,0.6)' }} />可玩区</span>
+                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(0,200,255,0.6)' }} />有内容</span>
+                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#c084fc' }} />传送点</span>
+                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#ffd23f' }} />玩家</span>
+                        <span className="text-gray-500">拖拽平移 · 滚轮缩放</span>
+                    </div>
+
+                    {/* selected block inspect */}
+                    {selected && (
+                        <div data-testid="map2d-inspect" className="absolute top-3 right-3 bg-cyan-900/80 backdrop-blur-md border border-cyan-400/50 p-3 rounded-lg shadow-2xl text-white font-mono text-xs min-w-[170px]">
+                            <p className="text-[10px] text-cyan-300 font-bold uppercase mb-1">Block</p>
+                            <p>坐标 Coord: <span className="text-cyan-400">[{selected.x}, {selected.y}]</span></p>
+                            <p>内容 Adjuncts: <span className="text-cyan-400">{selected.count}</span></p>
+                            <p>可玩 Game: <span className={selected.game >= 1 ? 'text-green-400' : 'text-gray-400'}>{selected.game >= 1 ? 'yes' : 'no'}</span></p>
+                            <p>海拔 Elev: <span className="text-cyan-400">{selected.elevation}</span></p>
+                            {(selected.anchors?.length ?? 0) > 0 && (
+                                <div className="mt-2 pt-2 border-t border-cyan-400/30">
+                                    <p className="text-[10px] text-purple-300 font-bold uppercase mb-1">传送锚点 Anchors</p>
+                                    {selected.anchors.map((a) => (
+                                        <button
+                                            key={a.name}
+                                            data-testid={`map2d-travel-${a.name}`}
+                                            onClick={() => loader?.fastTravel(a.name, [selected.x, selected.y])}
+                                            className="mt-1 w-full py-1 text-[10px] bg-purple-500/20 text-purple-200 rounded border border-purple-400/40 hover:bg-purple-500/35"
+                                        >⟡ {a.name} · 传送 Travel</button>
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                onClick={() => setSelected(null)}
+                                className="mt-2 w-full py-1 text-[10px] bg-white/10 text-gray-300 rounded border border-white/20 hover:bg-white/20"
+                            >清除 Clear</button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

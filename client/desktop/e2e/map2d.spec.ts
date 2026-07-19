@@ -19,6 +19,9 @@ test('2D map opens, dynamically loads the region, and pans/zooms/selects', async
     await page.locator('[data-testid="map2d-toggle"]').click();
     await expect(page.locator(map())).toBeVisible();
     await expect(page.locator('[data-testid="map2d-canvas"]')).toBeVisible();
+    // The map is a bottom SHEET that slides up — wait for it to settle before
+    // measuring the canvas, or the hit coordinates below aim at a moving target.
+    await page.waitForSelector('[data-testid="map2d-sheet"][data-settled="1"]');
 
     // Dynamic region load: the viewport drives fetching — cells appear without the
     // player being there.

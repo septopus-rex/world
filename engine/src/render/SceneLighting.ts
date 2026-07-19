@@ -85,6 +85,11 @@ export class SceneLighting {
             // shadow doesn't peter-pan off its feet.
             light.shadow.bias = -0.0005;
             light.shadow.normalBias = 0.05;
+            // Penumbra width, in texels of the Vogel sampling disk. FREE quality
+            // under r183's PCF — the tap count is fixed at 5 regardless of radius
+            // (see RenderEngine's filter note), so this only widens the disk. At
+            // 6 cm/texel, 3 gives a ~18 cm soft edge: sunlight, not a stencil.
+            light.shadow.radius = 3;
             this.scene.add(light.target);
         }
         return light;

@@ -252,7 +252,7 @@ export class CameraRig {
     }
 
     // ── observe-mode orbit camera ─────────────────────────────────────────────
-    public processObserve(world: World, eid: EntityId, trans: TransformComponent, input: InputStateComponent, dt: number, body?: RigidBodyComponent): void {
+    public processObserve(world: World, eid: EntityId, trans: TransformComponent, input: InputStateComponent, dt: number): void {
         const ip = this.inputProvider;
         const sens = CONTROL_CONSTANTS.MOUSE_SENSITIVITY;
         this._obsAzimuth -= (ip.mouseDeltaX + ip.touchDeltaX) * sens;
@@ -266,9 +266,12 @@ export class CameraRig {
         if (input.forward) this._obsRadius = Math.max(CameraRig.OBS_MIN_RADIUS, this._obsRadius - CameraRig.OBS_ZOOM_SPEED * dt);
         if (input.backward) this._obsRadius = Math.min(CameraRig.OBS_MAX_RADIUS, this._obsRadius + CameraRig.OBS_ZOOM_SPEED * dt);
 
-        // Orbit around the player's chest height; camera always faces the target.
-        // Chest = 1 m ABOVE THE FEET (the transform is the capsule centre).
-        const tx = trans.position[0], ty = feetY(trans, body) + 1, tz = trans.position[2];
+        // Orbit anchor: 1 m above the body CENTRE (≈ head height). Deliberately
+        // transform-relative and NOT feet-anchored like the eye — this is a
+        // framing choice, not a measured body landmark, and the tools that orbit
+        // (SPP sandbox, block preview) set their azimuth/elevation/radius against
+        // exactly this anchor. Re-basing it to the feet silently re-framed them.
+        const tx = trans.position[0], ty = trans.position[1] + 1, tz = trans.position[2];
         const ce = Math.cos(this._obsElevation), se = Math.sin(this._obsElevation), r = this._obsRadius;
         world.renderEngine.setMainCameraPosition(
             tx + r * ce * Math.sin(this._obsAzimuth),

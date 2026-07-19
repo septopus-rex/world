@@ -138,7 +138,19 @@ export class RenderEngine {
         // A/B quality and cost. (The day/night cycle is live in EnvironmentSystem,
         // so leaving it on through a sun arc is how you see the grazing-angle case.)
         this.renderer.shadowMap.enabled = config.shadows ?? false;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Filter: PCF. Not a compromise — in three r183 `PCFSoftShadowMap` is
+        // DEPRECATED (it silently falls back to this, with a console warning),
+        // because the PCF path was rewritten to be both softer and cheaper than
+        // the old "soft" variant: 5 taps on a Vogel disk, rotated per pixel by
+        // interleaved gradient noise, each tap a hardware `sampler2DShadow`
+        // compare (= 4-tap bilinear) — ~20 effective taps for 5 fetches, with
+        // the banding-prone regular grid replaced by a noise-rotated disk.
+        // The alternatives are worse for us: VSMShadowMap needs float render
+        // targets plus a separate two-pass blur AND promotes every receiver to a
+        // caster (light bleeding on top); BasicShadowMap is one raw tap (hard,
+        // aliased edges). Softness is `shadow.radius` in SceneLighting — the tap
+        // COUNT is fixed at 5, so widening the penumbra there is free.
+        this.renderer.shadowMap.type = THREE.PCFShadowMap;
         this.container.appendChild(this.renderer.domElement);
 
         // WebGL context loss (hardening ③): a GPU reset / driver crash fires

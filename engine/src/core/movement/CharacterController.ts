@@ -150,7 +150,7 @@ export class CharacterController implements ISystem {
         // Observe mode: player frozen, camera orbits the target. Owns the camera
         // itself (skips processLook) — drag to rotate, W/S to zoom.
         if (world.mode === SystemMode.Observe) {
-            this.camera.processObserve(world, eid, trans, input, dt, body);
+            this.camera.processObserve(world, eid, trans, input, dt);
             this.inputProvider.flushDeltas();
             return;
         }

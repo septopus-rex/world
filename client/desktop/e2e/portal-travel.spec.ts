@@ -34,6 +34,9 @@ test('地图快速旅行:锚点标记 → 门控拒绝 → 开放锚点传送', 
     // Open the 2D map and let the viewport stream the destination cell.
     await page.locator('[data-testid="map2d-toggle"]').click();
     await expect(page.locator('[data-testid="map2d-canvas"]')).toBeVisible();
+    // The map is a bottom SHEET that slides up — wait for it to settle before
+    // measuring the canvas, or the hit coordinates below aim at a moving target.
+    await page.waitForSelector('[data-testid="map2d-sheet"][data-settled="1"]');
     await page.waitForFunction(() => ((window as any).__map2d?.loaded ?? 0) > 20, undefined, { timeout: 20_000 });
 
     // Click the destination cell (map opens centred on the player's block at

@@ -116,6 +116,21 @@ export class DefaultUIProvider implements IUIProvider {
         });
 
         this.container.appendChild(group);
+
+        // Float-above-target placement must be CLAMPED into the viewport. The
+        // group is drawn above its anchor (translate −50%,−100% then −20px), so an
+        // anchor near the top edge — an object close to a downward-tilted camera,
+        // which is the normal case when placing at your feet in Edit mode — pushes
+        // the whole group off-screen and its buttons become unreachable. Measure
+        // after mount (the size isn't known before) and re-express in px.
+        if (typeof position !== 'string') {
+            const W = this.container.clientWidth, H = this.container.clientHeight;
+            const gw = group.offsetWidth, gh = group.offsetHeight, m = 6;
+            const px = Math.min(Math.max(position.x * W, gw / 2 + m), Math.max(gw / 2 + m, W - gw / 2 - m));
+            const py = Math.min(Math.max(position.y * H, gh + 20 + m), Math.max(gh + 20 + m, H - m));
+            group.style.left = `${px}px`;
+            group.style.top = `${py}px`;
+        }
         this.overlays.set(id, group);
     }
 
