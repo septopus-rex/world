@@ -94,7 +94,6 @@ export interface EventMap {
     'dialogue.ended': { adjunctId: string };
     // ── edit ──
     'edit.draft_saved': { blockKey: string };
-    'edit.upload_request': { drafts: unknown };
     // ── actuator ──
     'actuator.requested': { reqId: number; action: unknown };
     'actuator.settled': { reqId: number; ok: boolean; result?: unknown; error?: string };

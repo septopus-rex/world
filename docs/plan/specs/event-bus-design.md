@@ -78,7 +78,8 @@ export interface EventMap {
     'effect.spawn':         { position: [number, number, number]; type: string };
     // ── edit ──
     'edit.draft_saved':     { blockKey: string };
-    'edit.upload_request':  { drafts: unknown };
+    // 'edit.upload_request' 已于 2026-07-19 删除——链耦合时代的 Upload 按钮
+    // (EditSystem.showUploadButtonIfNeeded) 连同这个零订阅通道一起退役。
     // ── actuator（P2）──
     'actuator.requested':   { reqId: number; action: unknown };                                // target=trigger eid
     'actuator.settled':     { reqId: number; ok: boolean; result?: unknown; error?: string };

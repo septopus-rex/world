@@ -590,9 +590,6 @@ export class EditSystem implements ISystem {
         world.ui?.hide("context-menu");
         world.ui?.hide("edit-form");
         world.ui?.hide("edit-controls");
-
-        // Check if any drafts exist — show upload button
-        this.showUploadButtonIfNeeded(world);
     }
 
     /**
@@ -601,21 +598,6 @@ export class EditSystem implements ISystem {
      */
     private saveDraft(world: World, blockEntityId: EntityId): void {
         saveBlockDraft(world, blockEntityId);
-    }
-
-    private showUploadButtonIfNeeded(world: World): void {
-        const drafts = world.draftStore.list(0);
-        if (drafts.length > 0 && world.ui) {
-            world.ui.showButton("upload-drafts", {
-                label: `⬆️ Upload (${drafts.length})`,
-                variant: 'primary',
-                onClick: () => {
-                    world.events.emit("edit.upload_request", { drafts });
-                    world.ui?.showToast("Upload requested — awaiting chain connection.");
-                    world.ui?.hide("upload-drafts");
-                }
-            });
-        }
     }
 
     // ─────────────────────────────────────────────────────────────

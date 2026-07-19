@@ -30,6 +30,9 @@ export default defineConfig({
       // app's node_modules at build time (rolldown resolves relative to importer).
       'react': resolve(__dirname, 'node_modules/react'),
       'react-dom': resolve(__dirname, 'node_modules/react-dom'),
+      // Must precede bare 'three' — see vite.config.ts for why (Spark's
+      // 'three/addons/*' deep imports need three's examples/jsm path).
+      'three/addons': resolve(__dirname, 'node_modules/three/examples/jsm'),
       'three': resolve(__dirname, 'node_modules/three'),
     },
   },

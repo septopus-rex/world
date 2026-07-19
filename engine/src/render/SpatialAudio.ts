@@ -99,7 +99,10 @@ export class SpatialAudio {
                 sound.setVolume(volume);
                 sound.position.set(position[0], position[1], position[2]);
                 this.worldRoot.add(sound); // absolute local; the root offset puts it in render space
-                sound.onEnded = () => { sound.isPlaying = false; this.worldRoot.remove(sound); };
+                // Chain to three's own onEnded (it clears isPlaying) rather than
+                // clearing the flag by hand — it is a readonly property in the types.
+                const clearFlag = sound.onEnded.bind(sound);
+                sound.onEnded = () => { clearFlag(); this.worldRoot.remove(sound); };
                 sound.play();
             } else {
                 const sound = new THREE.Audio(listener);

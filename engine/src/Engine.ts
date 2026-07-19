@@ -63,7 +63,6 @@ const LEGACY_EVENT_MAP: Record<string, string> = {
     'player:state': 'player.state',
     'world:mode_changed': 'system.mode',
     'world:draft_saved': 'edit.draft_saved',
-    'world:upload_request': 'edit.upload_request',
 };
 
 export interface EngineOnOptions {

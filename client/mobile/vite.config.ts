@@ -25,6 +25,13 @@ export default defineConfig({
       // app's node_modules at build time (rolldown resolves relative to importer).
       'react': resolve(__dirname, 'node_modules/react'),
       'react-dom': resolve(__dirname, 'node_modules/react-dom'),
+      // MUST precede the bare 'three' alias below: object aliases are literal
+      // path substitutions (no package.json `exports` map applied), so a deep
+      // import like 'three/addons/x' would otherwise resolve to a literal,
+      // nonexistent 'node_modules/three/addons/x' on disk instead of three's
+      // real 'examples/jsm/x' (Spark, the Gaussian-splat renderer, imports
+      // three's postprocessing helpers this way).
+      'three/addons': resolve(__dirname, 'node_modules/three/examples/jsm'),
       'three': resolve(__dirname, 'node_modules/three'),
     },
   },
