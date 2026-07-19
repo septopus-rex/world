@@ -398,6 +398,22 @@ export class Engine {
         EntityFactory.swapAvatar(world, String(resourceId), facing, physique);
     }
 
+    /** Turn the sun's shadow map on/off at runtime (quality-vs-cost A/B). Off by
+     *  default; `debug.shadows` in the world config sets the boot state. */
+    public setShadows(on: boolean): void {
+        (this.world?.renderEngine as any)?.setShadowsEnabled?.(on);
+    }
+
+    public shadowsEnabled(): boolean {
+        return !!(this.world?.renderEngine as any)?.getShadowsEnabled?.();
+    }
+
+    /** Last frame's GPU work + resident resources (draw calls, triangles, …) —
+     *  the measurement half of the shadow A/B. Null on a headless renderer. */
+    public perfInfo(): Record<string, number | boolean> | null {
+        return (this.world?.renderEngine as any)?.perfInfo?.() ?? null;
+    }
+
     /** Debug/verification snapshot of the live avatar: resource id, registered
      *  clips, current animation state + the clip it resolved to, the world-space
      *  height/foot line, and the visual-physique face — declared body params +

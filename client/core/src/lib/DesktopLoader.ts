@@ -575,6 +575,13 @@ export class DesktopLoader implements IDataSource {
         this.engine?.setCameraView(mode, immediate);
     }
 
+    /** Sun shadow map on/off at runtime (quality-vs-cost A/B; off by default). */
+    public setShadows(on: boolean) { this.engine?.setShadows(on); }
+    public shadowsEnabled(): boolean { return !!this.engine?.shadowsEnabled(); }
+    /** Last frame's draw calls / triangles / resident resources — the measurement
+     *  half of the shadow A/B (the frame RATE is sampled in the UI's own rAF). */
+    public perfInfo(): Record<string, number | boolean> | null { return this.engine?.perfInfo() ?? null; }
+
     /** Toggle first/third-person; returns the new mode. */
     public toggleCameraView(): 'first' | 'third' | undefined {
         return this.engine?.toggleCameraView();

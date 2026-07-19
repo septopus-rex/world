@@ -101,7 +101,8 @@ export interface WorldConfig {
 
     // Debug options
     debug?: {
-        stats?: boolean;   // Show Three.js Stats (FPS/MS/MB)
+        stats?: boolean;     // Show Three.js Stats (FPS/MS/MB)
+        shadows?: boolean;   // Start with the sun's shadow map on (runtime: Engine.setShadows)
     };
 }
 

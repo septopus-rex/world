@@ -259,8 +259,9 @@ export class ResourceManager {
 
             let rigged = false;
             template.traverse((o: any) => { if (o.isSkinnedMesh) rigged = true; });
-            // Mark the template's own meshes shared so it survives a stray removeHandle.
-            this.markShared(template);
+            // Mark the template's own meshes shared so it survives a stray removeHandle
+            // (and cast/receive, so a clone inherits it even before prepareInstance).
+            this.prepareInstance(template);
 
             const bounds = ModelLoader.computeBounds(template);
             const bsz = new THREE.Vector3();
@@ -333,7 +334,7 @@ export class ResourceManager {
         const clone = entry.rigged ? skeletonClone(entry.template) : entry.template.clone(true);
         // Mark every clone mesh shared so RenderEngine disposal NEVER disposes the
         // template's geometry/material (which the clone shares by reference).
-        this.markShared(clone as THREE.Object3D);
+        this.prepareInstance(clone as THREE.Object3D);
         (clone as any).userData = { ...(clone as any).userData, resourceId: id, isModelInstance: true };
         // Re-attach the REAL clips: cloning JSON-mangled the userData copy (see
         // ModelEntry.animations). Consumers read clone.userData.animations.
@@ -489,11 +490,22 @@ export class ResourceManager {
         }
     }
 
-    /** Tag every Mesh in a tree as sharing template-owned geometry/material. */
-    private markShared(root: THREE.Object3D): void {
+    /**
+     * Prepare a fresh clone: tag every Mesh as sharing template-owned
+     * geometry/material (so disposal never frees the template's), and enrol it in
+     * the sun's shadow pass. Loaded models — modules AND the player avatar — used
+     * to be the one mesh family with no cast/receive flags (MeshFactory sets them
+     * on its primitives), so with shadows on the avatar was the only thing in the
+     * scene not casting one.
+     */
+    private prepareInstance(root: THREE.Object3D): void {
         root.traverse((child: any) => {
             if (child.isMesh || child.isPoints || child.isLine) {
                 child.userData = { ...child.userData, shared: true };
+            }
+            if (child.isMesh || child.isSkinnedMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
             }
         });
     }

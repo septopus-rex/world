@@ -12,7 +12,10 @@ export function StatusPanel({ loader, version, onInspect }: { loader: any; versi
     const [mode, setMode] = useState<string>('normal');
     const [jx, setJx] = useState('');
     const [jy, setJy] = useState('');
+    const [shadows, setShadows] = useState(false);
+    const [perf, setPerf] = useState({ fps: 0, calls: 0, tris: 0 });
     const raf = useRef<number>(0);
+    const fpsWin = useRef<{ last: number; frames: number; since: number }>({ last: 0, frames: 0, since: 0 });
 
     // Prefill the jump inputs with the current block each time the card opens.
     useEffect(() => {
@@ -32,14 +35,38 @@ export function StatusPanel({ loader, version, onInspect }: { loader: any; versi
     };
 
     useEffect(() => {
-        const tick = () => {
+        const tick = (now: number) => {
             const m = loader?.engine?.getWorld?.()?.mode;
             if (m && m !== mode) setMode(String(m));
+            // Frame rate, sampled here rather than in the engine: this rAF and the
+            // engine's are throttled by the SAME compositor, so the interval
+            // between our callbacks IS the real frame time. Averaged over ~0.5 s
+            // windows — a per-frame number is unreadable. Only while the card is
+            // open (a closed panel shouldn't pay for a debug HUD).
+            if (open) {
+                const w = fpsWin.current;
+                if (w.last) { w.frames++; w.since += now - w.last; }
+                w.last = now;
+                if (w.since >= 500) {
+                    const info = loader?.perfInfo?.();
+                    setPerf({
+                        fps: Math.round((w.frames * 1000) / w.since),
+                        calls: Number(info?.calls ?? 0),
+                        tris: Number(info?.triangles ?? 0),
+                    });
+                    w.frames = 0; w.since = 0;
+                }
+            } else {
+                fpsWin.current = { last: 0, frames: 0, since: 0 };
+            }
             raf.current = requestAnimationFrame(tick);
         };
         raf.current = requestAnimationFrame(tick);
         return () => cancelAnimationFrame(raf.current);
-    }, [loader, mode]);
+    }, [loader, mode, open]);
+
+    // Mirror the engine's live shadow state each time the card opens.
+    useEffect(() => { if (open) setShadows(!!loader?.shadowsEnabled?.()); }, [open, loader]);
 
     const dot = mode === 'game' ? 'bg-green-400' : mode === 'edit' ? 'bg-amber-400' : 'bg-cyan-400';
 
@@ -60,6 +87,25 @@ export function StatusPanel({ loader, version, onInspect }: { loader: any; versi
                 <div data-testid="status-body" className="mt-1.5 w-40 px-3 py-2 rounded-xl bg-black/55 border border-white/10 backdrop-blur text-[11px] font-mono space-y-1">
                     <div className="flex justify-between"><span className="text-white/40">模式</span><span className="text-cyan-200 uppercase font-bold">{mode}</span></div>
                     <div className="flex justify-between"><span className="text-white/40">版本</span><span className="text-cyan-200">v{version}</span></div>
+                    {/* Renderer A/B: frame rate (sampled from this component's own
+                        rAF) + last frame's GPU work. Draw calls roughly double with
+                        shadows on — the sun re-draws every caster into a depth map
+                        before the beauty pass. */}
+                    <div className="flex justify-between">
+                        <span className="text-white/40">帧率</span>
+                        <span className={perf.fps >= 50 ? 'text-emerald-300' : perf.fps >= 30 ? 'text-amber-300' : 'text-rose-300'}>
+                            {perf.fps || '–'} fps
+                        </span>
+                    </div>
+                    <div className="flex justify-between"><span className="text-white/40">绘制</span>
+                        <span className="text-cyan-200">{perf.calls} · {(perf.tris / 1000).toFixed(0)}k△</span></div>
+                    <button data-testid="toggle-shadows"
+                        onClick={() => { const next = !shadows; loader?.setShadows?.(next); setShadows(next); }}
+                        className={`w-full mt-0.5 py-1 rounded-lg border text-[10px] font-bold active:scale-95 ${shadows
+                            ? 'bg-amber-500/20 border-amber-400/40 text-amber-200'
+                            : 'bg-white/5 border-white/15 text-white/60'}`}>
+                        {shadows ? '☀ 阴影 开' : '☀ 阴影 关'}
+                    </button>
                     {onInspect && (
                         <button data-testid="open-inspector" onClick={onInspect}
                             className="w-full mt-0.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-400/30 text-[10px] font-bold text-cyan-200 active:scale-95">

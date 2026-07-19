@@ -65,7 +65,15 @@ export class SceneLighting {
             light.castShadow = true;
             light.shadow.mapSize.set(1024, 1024);
             const cam = light.shadow.camera;
-            cam.left = -80; cam.right = 80; cam.top = 80; cam.bottom = -80;
+            // Shadow radius vs texel density (measured 2026-07-19, gallery grass):
+            // ±80 m over 1024² is 16 cm per texel, and the ground broke into
+            // banded tiles of acne — worst near the zenith, where a flat ground is
+            // perpendicular to the light and every texel's depth ties with the
+            // surface it lands on. ±30 m is 6 cm per texel and the banding is gone;
+            // the frustum still reaches ~2 blocks past the player, well past what
+            // fog and BlockLOD leave legible. (Bias/normalBias and the shadow
+            // camera's `up` were both ruled out by A/B — density was the cause.)
+            cam.left = -30; cam.right = 30; cam.top = 30; cam.bottom = -30;
             cam.near = 1; cam.far = 400;
             // Shadow bias — WITHOUT this the flat ground self-shadows. It looks
             // fine when the sun is overhead (noon) but as the sun arcs to a

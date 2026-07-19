@@ -317,7 +317,8 @@ export class World {
         this.renderEngine = deps.renderEngine ?? new RenderEngine({
             containerId: config.world.containerId,
             clearColor: 0x87ceeb,
-            stats: config.debug?.stats ?? false
+            stats: config.debug?.stats ?? false,
+            shadows: config.debug?.shadows ?? false
         });
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 

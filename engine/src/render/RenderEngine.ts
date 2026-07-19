@@ -20,6 +20,8 @@ export interface RenderEngineConfig {
     containerId: string;
     clearColor?: number;
     stats?: boolean;
+    /** Start with the sun's shadow map on (default off — see the constructor). */
+    shadows?: boolean;
 }
 
 export enum CameraType {
@@ -129,11 +131,13 @@ export class RenderEngine {
         // Color management: render in sRGB so albedo textures aren't gamma-wrong
         // (linear-treated-as-sRGB). Color textures are tagged SRGBColorSpace on load.
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        // Shadows: OFF pending bias tuning — the grazing-angle moiré made them
-        // unstable and distracting. The sun's castShadow + bias/back-face setup in
-        // setDirectionalLight is left intact; flip this to true once the shadow
-        // bias is tuned. (The day/night cycle itself is live in EnvironmentSystem.)
-        this.renderer.shadowMap.enabled = false;
+        // Shadows: OFF by default pending bias tuning — the grazing-angle moiré
+        // made them unstable and distracting. Everything else is wired (the sun's
+        // castShadow + bias in SceneLighting, cast/receive flags on every mesh), so
+        // this is the single master switch — flip it live via setShadowsEnabled to
+        // A/B quality and cost. (The day/night cycle is live in EnvironmentSystem,
+        // so leaving it on through a sun arc is how you see the grazing-angle case.)
+        this.renderer.shadowMap.enabled = config.shadows ?? false;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         this.container.appendChild(this.renderer.domElement);
 
@@ -467,6 +471,46 @@ export class RenderEngine {
             this.minimap.render(this.renderer, this.scene, this.container);
         }
         this.stats?.end();
+    }
+
+    /**
+     * Flip the sun's shadow map at runtime — the A/B switch for "how much does
+     * this cost and does it look right?".
+     *
+     * Three compiles one program per material and bakes `shadowMap.enabled` into
+     * it, so an existing material keeps rendering unshadowed until it is flagged
+     * for recompile — hence the traversal. That makes the flip itself expensive
+     * (a shader rebuild for every live material); it is a debug/settings action,
+     * not something to drive per frame.
+     */
+    public setShadowsEnabled(on: boolean): void {
+        if (this.renderer.shadowMap.enabled === on) return;
+        this.renderer.shadowMap.enabled = on;
+        this.renderer.shadowMap.needsUpdate = true;
+        this.scene.traverse((o: any) => {
+            const m = o.material;
+            if (Array.isArray(m)) m.forEach((x: any) => { if (x) x.needsUpdate = true; });
+            else if (m) m.needsUpdate = true;
+        });
+    }
+
+    public getShadowsEnabled(): boolean { return this.renderer.shadowMap.enabled; }
+
+    /** Per-frame GPU work from the last render + resident resources (debug HUD).
+     *  `calls` roughly doubles with shadows on: the sun's depth pass re-draws
+     *  every caster before the beauty pass. */
+    public perfInfo(): { calls: number; triangles: number; lines: number; points: number; geometries: number; textures: number; programs: number; shadows: boolean } {
+        const info = this.renderer.info;
+        return {
+            calls: info.render.calls,
+            triangles: info.render.triangles,
+            lines: info.render.lines,
+            points: info.render.points,
+            geometries: info.memory.geometries,
+            textures: info.memory.textures,
+            programs: info.programs?.length ?? 0,
+            shadows: this.renderer.shadowMap.enabled,
+        };
     }
 
     public getDomElement(): HTMLElement {
