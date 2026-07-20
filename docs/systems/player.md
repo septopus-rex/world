@@ -68,9 +68,18 @@
    `TransformComponent`。
 3. **相机与化身同步**：
    - 相机移到眼位（第三人称时退后并抬高，跟随视角偏航）。
-   - Avatar 句柄同步到玩家位置/朝向，**仅第三人称可见**（第一人称强制隐藏），
-     并按运动状态调 `setAnimationState`（idle/walk/run/air）+ `updateAnimation` 每帧推进
-     mixer——内嵌剪辑确实在播；完整契约见[虚拟化身动画协议](../../protocol/cn/avatar-animation.md)。
+   - **一/三人称切换是推轨，不是硬切（2026-07-19）**：`CameraRig._viewT` 走定速斜坡
+     （`VIEW_BLEND_SEC` 0.3s）+ smoothstep 缩放后拉距/抬高，端点精确到达、半途反向就
+     原路走回。此前只有俯仰经 auto-level 渐变，位置是 4.5m 瞬移。
+     `setCameraView(mode, immediate)` 的 `immediate` 是给截图/像素探针的**瞬切逃生舱**
+     （maze/spp/mahjong3d 三个 e2e 装置用之），不是给玩家路径的。
+   - Avatar 句柄同步到玩家位置/朝向，可见性**按推轨距离 ≥1m 判定**（不是按视角模式的
+     布尔量——穿过头部那几帧不能露出模型背面），并按运动状态调 `setAnimationState`
+     （idle/walk/run/air）+ `updateAnimation` 每帧推进 mixer——内嵌剪辑确实在播；
+     完整契约见[虚拟化身动画协议](../../protocol/cn/avatar-animation.md)。
+   - **Observe 模式的轨道锚点有意不跟随上述眼高修正**：它是构图选择，不是量出来的
+     身体标志——SPP 沙盘与块预览的方位角/仰角/半径都是对着它调的，改了会静默重构图。
+   - 回归测试：`engine/tests/systems/camera-rig.test.ts`（眼高锚点 3 条 + 推轨 4 条）。
 4. **状态上报**：超过阈值时发 `player:state`（见 §1）。
 
 ## 4. 虚拟化身 (Avatar)

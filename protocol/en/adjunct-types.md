@@ -1,6 +1,6 @@
 # Septopus Adjunct Type Registry
 
-> **Normative.** This document defines the raw data slot semantics of all 19
+> **Normative.** This document defines the raw data slot semantics of all 21
 > built-in adjunct types — the core reference behind the "cross-engine,
 > pure-data 3D world" promise: any engine implementing these codecs must
 > resolve the same block data into the same world. Architecture & lifecycle:

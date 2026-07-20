@@ -79,7 +79,8 @@ git tag -a v0.1.1 -m "Septopus World v0.1.1" && git push origin main v0.1.1
 
 - **地址**:`https://septopus-rex.github.io/world/`(构建时 `VITE_BASE=/world/`,
   资产与 PWA scope 都按子路径解析;demo 资源目录经 `BASE_URL` 前缀,勿在内容里
-  写死 `/assets/...` 绝对路径)。
+  写死 `/assets/...` 绝对路径——**写死了本地一切正常、只在子路径部署下 404**,
+  照 `demoScene` 的 `asset()` 写法办)。
 - **一次性仓库设置**:GitHub → Settings → Pages → **Source = GitHub Actions**
   (不设置则 deploy 任务失败)。
 - **重新部署**(不发新版):Actions → Deploy Pages → Run workflow(dispatch 会

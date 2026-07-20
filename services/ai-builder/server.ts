@@ -19,7 +19,7 @@
  * new). Either failure feeds back into the SAME retry loop as structured
  * errors — collision.ts's errors are GenError-shaped on purpose.
  *
- *   PROVIDER=mock|qwen  DASHSCOPE_API_KEY=…  PORT=7790  npx tsx server.ts
+ *   PROVIDER=mock|qwen  DASHSCOPE_API_KEY=…  npx tsx server.ts   (默认 7791)
  */
 import http from 'node:http';
 import { validateGenerationDoc, GEN_ADJUNCT_WHITELIST, GEN_LIMITS } from '../../engine/src/core/protocol/GenerationDoc';
@@ -28,7 +28,8 @@ import { buildMessages } from './prompts';
 import { buildAdjunctCatalog, BLOCK_SCHEMA_TEXT } from './catalog';
 import { detectCollisions } from './collision';
 
-const PORT = Number(process.env.PORT || 7790);
+// 7791 — 7790 是 worldlabs（客户端 ServiceHub / playwright / e2e 都锚在它上面）。
+const PORT = Number(process.env.PORT || 7791);
 const MAX_BODY = 64 * 1024;
 // One more than v1's cap — collision is a second, independent failure axis on
 // top of schema validation, so the same budget clears fewer rounds in practice.

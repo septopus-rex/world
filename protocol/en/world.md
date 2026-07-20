@@ -106,8 +106,9 @@ regardless of how long that particular block actually took to mine, so
 Reference implementation: `client/core/src/lib/loader/BtcClock.ts` (polls
 public Esplora-compatible explorers on a ~60 s cadence; a block only actually
 arrives roughly every 10 minutes, so most polls see no height change — expected,
-not a bug). Dev/demo builds without a live network feed use a synthetic mock
-ticker instead (`EnvClock.ts`) to advance the CALENDAR at a much faster,
+not a bug; the reference implementation gates it behind a `VITE_BTC_CLOCK`
+switch). Dev/demo builds without a live network feed use a synthetic mock
+ticker instead (`EnvClock.ts`, the dev/e2e default) to advance the CALENDAR at a much faster,
 arbitrary cadence for legibility while testing — the mock is **not** part of
 this normative binding and never claims to represent real Bitcoin state. Note
 that swapping BtcClock ↔ EnvClock only changes how fast the CALENDAR (day

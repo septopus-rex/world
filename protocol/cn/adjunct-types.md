@@ -1,6 +1,6 @@
 # Septopus 附属物类型规范(Adjunct Type Registry)
 
-> **规范级(Normative)**。本文逐一定义 20 个内置附属物类型的 raw 数据槽位语义——
+> **规范级(Normative)**。本文逐一定义 21 个内置附属物类型的 raw 数据槽位语义——
 > 这是「跨端、纯数据 3D 世界」承诺的核心参考:任何引擎按本文实现编解码,
 > 同一份地块数据必须解出同一个世界。架构与生命周期见 [adjunct.md](adjunct.md);
 > 触发器逻辑与动作词汇见 [trigger.md](trigger.md);确定性钉点见

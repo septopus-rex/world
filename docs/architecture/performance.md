@@ -16,7 +16,16 @@ Septopus World 引擎采用纯 Web 前端运行的架构，因此要在浏览器
     **仿真不受影响**——物理/触发器/物品照常运行，只裁渲染。0.25s 间隔评估，
     Edit 模式强制全显。流式驱逐管内存，LOD 管这两个半径之间的 draw call。
 *   **阴影成本控制**：单一投影太阳光、1024² PCF 软阴影、阴影视锥逐帧锚定玩家
-    （世界跨数万米，静止视锥永远照不到玩家）。
+    （世界跨数万米，静止视锥永远照不到玩家）。默认关闭，`Engine.setShadows(on)`
+    运行时切换（`debug.shadows` 配开机态），`Engine.perfInfo()` 出 draw calls/triangles。
+    **可用化时踩过的两处（2026-07-19，勿重蹈）**：
+    *   加载模型（module + **玩家 avatar**）曾是唯一没有 cast/receive 标记的网格族
+        ——`MeshFactory` 只给自己造的图元加，于是开了阴影角色也不投影；
+        标记补在 `ResourceManager.prepareInstance`。
+    *   阴影相机 ±80m / 1024² = 16cm 一个 texel，地面碎成条带状 acne（近天顶最糟：
+        平地垂直于光，每个 texel 的深度与落点打平）。收到 **±30m（6cm/texel）** 后条带消失。
+        **这是密度问题，不是偏移问题**——bias/normalBias 与阴影相机 `up` 都 A/B 排除过，
+        再遇到条带先算 texel 密度，别再去调 bias。真机性能基线待手测。
 *   **InstancedMesh（评估后延迟）**：逐 adjunct 的 mesh group 承载着 per-entity
     的拾取/编辑/驱逐语义（userData.entityId 射线映射、单体增删、按组释放资源），
     合并进 InstancedMesh 会与这三者冲突；当前对象量级下 LOD + 共享几何已够。

@@ -32,6 +32,24 @@ C -->|资源与材质系统| D[加入 Scene 并渲染]
    `Three(x, y, z) = Septopus(x, z, -y)`
 4. **注入剔除队列**：将最终生成的 Mesh 加入 `scene.children` 并在离开视窗一定距离后自动 `dispose()` 释放 GPU 内存。
 
+### 模型加载：格式无关（2026-07-14 起含高斯泼溅）
+
+`ResourceManager` + `loaders/ModelLoader` 按**资源记录的 `format` 字段**分流，`a4 module`
+这一层不知道也不关心资产是谁生成的：
+
+*   `.ply/.spz/.splat/.ksplat/.sog` → `@sparkjsdev/spark` 的 `SplatLoader`
+*   其余（glTF/FBX/OBJ/DAE）→ Three.js 各 loader
+
+于是 World Labs Marble、腾讯 HY-World 2.0 这类"文字/图片生成 3D 世界"的 AI 产出，
+作为静态资产走的正是这条既有通道，无需为它开第二条路径。
+`resource` 的三种形态（数字 id / URL / `<cid>.<ext>`）见
+[adjunct-types.md §4](../../protocol/cn/adjunct-types.md)。
+
+**实现坑**：`SplatMesh` 没有可用的 `clone()/copy()`，load-once + instance-many 的常规做法
+在它身上不成立——`ResourceManager.instance()` 改为**共享已解码的 `PackedSplats` 重建新实例**
+（画廊㉑有同一资源两处独立摆放的实证）。给整条管线加新格式时先确认它的实例化语义，
+别默认 `clone()` 可用。
+
 ## 3. 编辑态与线框叠加 (Editor Overlay)
 
 相比纯浏览态，Edit Mode（编辑模式）在底层具有更高的刷新频率且需要在 `Scene` 里重叠第二套特殊元素库。

@@ -98,7 +98,8 @@ export const CustomAdjunct = {
 > 「数据即逻辑」要求 std_3d 的**几何/材质如何 realize** 也写死，否则换引擎（UE）造出的世界会不同。以下为规范；旋转/坐标见 [坐标系统](../../docs/architecture/coordinate.md#31-旋转的欧拉序与坐标系跨引擎契约)。
 
 - **尺寸轴映射**：std `size = [x, y, z]` 是 **Septopus [东, 北, 高]** 全长；映射到引擎盒尺寸 **[宽=东, 高=Alt, 深=北]**（`Coords.getBoxDimensions`）。**枢轴 = 几何中心。**
-- **基元语义**：`box(w,h,d)` 居中全长；`sphere` 半径 = `w/2`；`cylinder/cone(w,h,d)`；`plane(w,h)`；`tube` 沿控制点 Catmull-Rom 挤出。**分段数（如球 32×32）是像素级细节，各引擎可不同**（观感等价即可）。
+- **基元语义**：`box(w,h,d)` 居中全长；`sphere` 半径 = `w/2`；`cylinder/cone(w,h,d)`；`plane(w,h)`；`tube` 沿控制点 Catmull-Rom 挤出；`wedge(w,h,d)` 楔形坡，沿某一水平轴由 0 升到 `h`。**分段数（如球 32×32）是像素级细节，各引擎可不同**（观感等价即可）。
+- **`wedge` 是 `b4` slope 碰撞形状的视觉孪生**：其斜面必须与碰撞侧 `topYAt` 用**同一个平面方程**求解，否则玩家会浮在坡面上方或陷进去（见 [adjunct-types.md](./adjunct-types.md) §5）。
 - **世界空间 UV 平铺（贴图密度恒定）**：贴图按**世界尺寸**平铺而非按面拉伸，故 16m 地板与 1m 箱子贴图**同样清晰**。尺度（贴图 `size`，默认 1m）/ 纹素密度基准（**512 px/m**）/ 锚定（`[bottom, left]`）/ 平铺公式的完整**跨引擎契约**见 [贴图协议](./texture.md)。（UE 需实现同一套规则才对齐观感。）
 - **颜色**：**规范是直接 author 十六进制色**（`material.color`）。box 的 `resource 索引 → 调色板颜色`（如 `10→#eee`、`1→#555`）是**遗留 demo 便利、非规范**——跨引擎内容请存 hex，勿依赖索引调色板。
 - **「同效果」边界**：几何摆放/朝向/尺寸/UV 密度属**语义**（必须对齐）；着色/光照/tonemapping/阴影/相机/分段数属**渲染器自决**（观感等价、非逐位相同）。
