@@ -33,15 +33,39 @@ const playerBy = (page: any) => page.evaluate(() => {
 
 const complete = (page: any) => page.evaluate(() => (window as any).loader.levelComplete);
 
-/** Walk with `intent` and jump periodically (clears the gap; bounces forward on
- *  the strips). Steps in chunks so async block streaming lands between them. */
+/** Absolute northing in metres — the single number that says "did we get further". */
+const northAbs = (page: any) => page.evaluate(() => {
+    const w = (window as any).loader.engine.getWorld();
+    const pid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
+    return -w.getComponent(pid, 'TransformComponent').position[2];
+});
+
+/** Walk with `intent`, jumping on a cadence, and RE-TIME the jump when progress
+ *  stalls. Steps in chunks so async block streaming lands between them.
+ *
+ *  The re-timing is the load-bearing part. Running at a fixed speed and jumping
+ *  on a fixed cadence makes the landing points deterministic and evenly spaced
+ *  (~3.9 m per leap) — and one of them can fall exactly inside the course's only
+ *  gap (block 2050, n 7–9), at which point the run loops forever between the
+ *  checkpoint and the hole. That is the fixture's fault, not the engine's: a
+ *  blind metronome is not how anyone runs a parkour course. So when the player
+ *  stops gaining northing, shift the jump phase and try again — the way a player
+ *  re-times a leap they just missed. Converges regardless of how the course,
+ *  the run speed or the jump impulse are later tuned. */
 async function walkJumpUntil(page: any, intent: [number, number], done: () => Promise<boolean>, maxSteps: number) {
     await page.evaluate(([x, y]: number[]) => (window as any).loader.setPlayerMoveIntent(x, y), intent);
-    let ok = false;
-    for (let s = 0; s < maxSteps && !ok; s += 10) {
-        if (s % 20 === 0) await page.evaluate(() => (window as any).loader.triggerPlayerJump());
+    let ok = false, every = 2, best = -Infinity, stale = 0, i = 0;
+    for (let s = 0; s < maxSteps && !ok; s += 10, i++) {
+        if (i % every === 0) await page.evaluate(() => (window as any).loader.triggerPlayerJump());
         await stepEngine(page, 10);
         ok = await done();
+        const n = await northAbs(page);
+        if (n > best + 0.5) { best = n; stale = 0; }
+        // Vary the CADENCE, not merely its phase: the jump is buffered, so a
+        // trigger issued mid-air simply fires on landing — shifting the phase
+        // inside one cadence changes nothing. A different cadence does, because
+        // it changes whether a trigger is still pending when the player lands.
+        else if (++stale >= 15) { every = 2 + ((every - 1) % 4); stale = 0; }
     }
     await page.evaluate(() => (window as any).loader.setPlayerMoveIntent(0, 0));
     return ok;

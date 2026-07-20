@@ -51,12 +51,16 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
     // off-screen while everything downstream measured it.
     // `settled` publishes the end of the slide as `data-settled`: anything
     // measuring the canvas (e2e hit-testing above all) must not aim at a moving
-    // target. A timer, not `animationend` — that event never fires if the
-    // animation is optimised away, and a hang is worse than 40 ms of slack.
+    // target. `animationend` is the PRIMARY signal — a bare duration timer assumes
+    // the animation also STARTED on time, and on a loaded machine it doesn't, so
+    // the flag flipped mid-slide and the measurement was taken against a moving
+    // sheet anyway. The timer stays as a fallback (generous, since it must not
+    // pre-empt a late-but-honest animation) for the case where no animation runs
+    // at all and animationend therefore never fires — a hang is worse than slack.
     const [settled, setSettled] = useState(false);
     useEffect(() => {
         if (!open) { setSettled(false); return; }
-        const t = window.setTimeout(() => setSettled(true), SHEET_MS + 40);
+        const t = window.setTimeout(() => setSettled(true), SHEET_MS * 6);
         return () => { window.clearTimeout(t); setSettled(false); };
     }, [open]);
     // Mirror into a ref so the (once-created) draw loop always reads the current
@@ -307,6 +311,7 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
 
             <style>{`@keyframes map2d-rise{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
             <div data-testid="map2d-sheet" data-settled={settled ? '1' : '0'}
+                onAnimationEnd={() => setSettled(true)}
                 style={{ animation: `map2d-rise ${SHEET_MS}ms cubic-bezier(0.16,1,0.3,1)` }}
                 className="absolute inset-x-0 bottom-0 h-1/2 min-h-[240px] flex flex-col rounded-t-2xl
                 border-t border-cyan-500/30 bg-[#0a0e14]/95 shadow-[0_-8px_40px_rgba(0,0,0,0.55)]">

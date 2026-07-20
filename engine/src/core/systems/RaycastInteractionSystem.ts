@@ -116,8 +116,12 @@ export class RaycastInteractionSystem implements ISystem {
                     // the map. Edit mode is exempt (place/select at any range).
                     // Measured PLAYER→hit, not camera→hit: the third-person camera
                     // sits metres behind the avatar, so hit.distance overstates reach.
-                    // reach = player.capacity.reach (data), default 3.5 m (player.md).
-                    const reach = Number((world.config.player as any)?.capacity?.reach) || 3.5;
+                    // reach = player.capacity.reach (data), default 3.5 m (player.md),
+                    // unless a live session raised it (world.interactReach — a ranged
+                    // game like the shooting gallery, which the 3.5 m hand-reach gate
+                    // would otherwise turn into an unbroken stream of misses).
+                    const reach = world.interactReach
+                        ?? (Number((world.config.player as any)?.capacity?.reach) || 3.5);
                     const pt = world.getComponent<any>(playerId, "TransformComponent");
                     const playerDist = pt ? Math.hypot(
                         hit.point[0] - pt.position[0],

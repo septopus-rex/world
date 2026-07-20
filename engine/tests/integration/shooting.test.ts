@@ -156,6 +156,21 @@ describe('3D shooting range (ShootingRangeSystem)', () => {
         expect(spheres.length).toBe(5); // still exactly 5, not 10
     });
 
+    it('lifts the interact reach gate while the round is live, and restores it after', async () => {
+        // A gallery is played at RANGE. The world's 3.5 m hand-reach gate (the
+        // "don't open a book across the map" rule) turned every shot into
+        // interact.miss{too_far} once it landed — so a ranged session raises
+        // World.interactReach for its duration and must put it back.
+        const engine = await bootRange();
+        const w = engine.getWorld()!;
+        expect(w.interactReach, 'raised while shooting').toBe(Infinity);
+
+        engine.setMode(SystemMode.Normal, { force: true });
+        stepN(engine, 2);
+        expect(w.getEntitiesWith(['ShootingTargetComponent']).length, 'round torn down').toBe(0);
+        expect(w.interactReach, 'back to the world default').toBeNull();
+    });
+
     it('is fully deterministic for a fixed firing script', async () => {
         const play = async () => {
             const engine = await bootRange();

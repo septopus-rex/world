@@ -86,6 +86,12 @@ localStorage——其余字段（`stop`/`posture` 等）保持容器默认值随
 > **已接线(2026-07-09 更新,基础数据审计 P9)**:`player.capacity`
 > (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**/**reach**)
 > 与 `player.physique` **均由引擎读取**,数据优先、下表缺省兜底。
+> **`reach` 是「手够得着」的交互闸(缺省 3.5 m,按【玩家→命中点】而非相机→命中点
+> 量,第三人称相机在身后数米会虚报距离)**;超出则发 `interact.miss{too_far}` 供
+> 客户端提示"走近些"。**远程玩法是例外(2026-07-20)**:射击场这类"就是要隔着打"的
+> 会话由所属 System 在开局时抬高 `World.interactReach`、收局时复位——否则 3.5 m
+> 闸会把每一枪都变成 too_far;抬闸期间由该 System 自行校验点中的是不是它的目标
+> (Game 模式本就限定在单个 block 内)。近战(F3 打 NPC)仍走基线 reach,不受影响。
 > **physique = 物理基准 + 视觉回退(2026-07-17 起两层拆分)**(取代已删除的旧 VBW
 > `body` 段,后者从未被消费):碰撞胶囊/跨步/跳跃**始终**用基准——`height` 1.8 ·
 > `stepHeight` 0.5 · `crouchHeight` 0.9 · `jumpHeight` 1.2 · `fallDeathHeight` 12

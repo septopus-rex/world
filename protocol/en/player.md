@@ -93,7 +93,17 @@ Movement capacities live in `RigidBodyComponent`: `maxSpeedWalk` / `maxSpeedRun`
 > **Wired (updated 2026-07-09, base-data audit P9)**: `player.capacity`
 > (speed/walkSpeed/jumpForce/gravityMultiplier/ghostFlySpeed/voidRecover/**maxHp**/**reach**)
 > and `player.physique` are **both read by the engine** — data first, defaults
-> below as fallback. **physique = the PHYSICS baseline + the visual fallback
+> below as fallback.
+> **`reach` is the hand-reach interaction gate** (default 3.5 m, measured
+> PLAYER→hit rather than camera→hit — a third-person camera sitting metres behind
+> the avatar overstates the distance); beyond it the engine emits
+> `interact.miss{too_far}` so the client can hint "walk closer". **Ranged play is
+> the exception (2026-07-20)**: a session whose whole premise is hitting things at
+> distance (the shooting gallery) raises `World.interactReach` while it runs and
+> restores it on teardown — otherwise the 3.5 m gate turns every shot into
+> too_far. While raised, that System validates what a click may resolve to (and
+> Game mode is already scoped to a single block). Melee (F3 attacks on NPCs)
+> stays on the baseline reach. **physique = the PHYSICS baseline + the visual fallback
 > (split into two layers as of 2026-07-17)** (replaces the removed legacy VBW
 > `body` shape, which nothing ever consumed): the collision capsule, step-over
 > and jump **always** use the baseline — `height` 1.8 · `stepHeight` 0.5 ·

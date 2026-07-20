@@ -250,6 +250,21 @@ export class World {
     public activeGameBlock: [number, number] | null = null;
 
     /**
+     * Interact-reach override in metres for the ACTIVE session, or null for the
+     * world default (`player.capacity.reach`, 3.5 m).
+     *
+     * The reach gate is a hand-interaction rule — you shouldn't open a book or
+     * punch an NPC from across the map. A RANGED game is the exception: the
+     * shooting gallery's whole premise is hitting things at distance, and the
+     * global 3.5 m gate silently turned every shot into `interact.miss
+     * {too_far}`. A game System raises this while its session is live and clears
+     * it on teardown; it owns validating what a click may legally resolve to
+     * (ShootingRangeSystem only scores entities carrying its own target
+     * component, and Game mode is already zone-bounded to one block).
+     */
+    public interactReach: number | null = null;
+
+    /**
      * How the active session ends when the player leaves its block (see
      * GameExitPolicy). Set by the `enterGame` trigger action; default 'ephemeral'
      * (the silent walk-off-and-tear-down used by direct setMode/the legacy button).

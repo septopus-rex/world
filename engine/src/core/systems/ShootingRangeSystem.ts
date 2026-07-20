@@ -91,6 +91,11 @@ export class ShootingRangeSystem implements ISystem {
         };
         this.rangeEid = world.createEntity();
         world.addComponent(this.rangeEid, 'ShootingRangeComponent', range);
+        // A gallery is played at RANGE — lift the world's 3.5 m hand-reach gate for
+        // the duration (World.interactReach). Unbounded is safe here: fireAtEntity
+        // only scores entities carrying this system's own target component, and
+        // Game mode is already scoped to this one block.
+        world.interactReach = Infinity;
 
         const cx = config.origin[0];
         const cy = config.origin[1] + (config.dist ?? 0);
@@ -124,6 +129,7 @@ export class ShootingRangeSystem implements ISystem {
             if (bs?.destroyAdjunct) bs.destroyAdjunct(world, eid); else world.destroyEntity?.(eid);
         }
         if (this.rangeEid != null) world.destroyEntity?.(this.rangeEid);
+        world.interactReach = null;   // back to the world's hand-reach gate
         this.targetEids = [];
         this.rangeEid = null;
         this.interactReader = null;

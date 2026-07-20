@@ -24,7 +24,11 @@ const adjunctCountAt = (page: any, bx: number, by: number) =>
     }, [bx, by]);
 
 test('宫殿: 大门步入 → 环廊巡回流式(常驻≤25) → 驱逐重返重建 → 截图', async ({ page }) => {
-    test.setTimeout(300_000);
+    // 600s, not the usual 300s: 36 blocks × 392 adjuncts under SwiftShader is the
+    // heaviest spec in the suite (~3.5 min alone), and inside the full serial run
+    // it crossed the 5-minute budget mid-ring — a wall-clock loss, not a logic
+    // failure. Give the slowest spec room rather than trimming its coverage.
+    test.setTimeout(600_000);
 
     await page.goto('/?level=palace');
     await waitForWorldReady(page);
