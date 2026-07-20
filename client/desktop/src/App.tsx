@@ -11,7 +11,8 @@ import { PoolHUD } from '@core/components/PoolHUD';
 import { HoldemHUD } from '@core/components/HoldemHUD';
 import { ShootingHUD } from '@core/components/ShootingHUD';
 import { LeaveGameDialog } from '@core/components/LeaveGameDialog';
-import { WorldMap2D } from '@core/components/WorldMap2D';
+import { mapPage } from '@core/components/WorldMap2D';
+import { PageHost, PageProvider, usePages } from '@core/components/page';
 import { AuthorChat } from './components/AuthorChat';
 import { WorldLabsPanel } from './components/WorldLabsPanel';
 import { DialogueUI } from '@core/components/DialogueUI';
@@ -22,10 +23,10 @@ import { ActionRail } from './components/desktop/ActionRail';
 
 function App() {
   const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
+  const pages = usePages();
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
   const [isFollowing, setIsFollowing] = useState(true);
-  const [show2DMap, setShow2DMap] = useState(false);
   const [sandbox, setSandbox] = useState(false);
   const [sandboxSaved, setSandboxSaved] = useState(false);
   const [sandboxCell, setSandboxCell] = useState<number | null>(null);
@@ -166,7 +167,6 @@ function App() {
       {ready && <Toaster loader={loader} />}
       <ParkourHUD loader={loader} ready={ready} />
       <ShootingHUD loader={loader} ready={ready} />
-      <WorldMap2D loader={loader} open={show2DMap} onClose={() => setShow2DMap(false)} />
       <AuthorChat loader={loader} ready={ready} />
       <WorldLabsPanel loader={loader} ready={ready} />
 
@@ -296,11 +296,23 @@ function App() {
         setView={setView}
         mode={mode}
         setMode={setMode}
-        onOpenMap={() => setShow2DMap(true)}
+        onOpenMap={() => pages.push(mapPage(loader))}
         onEnterSandbox={() => { loader?.enterSandbox(); setSandbox(true); setSppStyles(loader?.listSppStyles() ?? []); setSppStyle(loader?.sppStyle ?? null); }}
       />
+
+      {/* The 2D page stack (map → block detail → …), above the HUD rails.
+          Last child so it also wins the paint order at equal z. */}
+      <PageHost />
     </div>
   );
 }
 
-export default App;
+/** The provider wraps the shell so ActionRail and every panel can `usePages()`;
+ *  it renders no DOM of its own — <PageHost/> above places the surface. */
+export default function AppRoot() {
+  return (
+    <PageProvider>
+      <App />
+    </PageProvider>
+  );
+}

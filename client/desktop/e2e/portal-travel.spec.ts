@@ -34,24 +34,27 @@ test('地图快速旅行:锚点标记 → 门控拒绝 → 开放锚点传送', 
     // Open the 2D map and let the viewport stream the destination cell.
     await page.locator('[data-testid="map2d-toggle"]').click();
     await expect(page.locator('[data-testid="map2d-canvas"]')).toBeVisible();
-    // The map is a bottom SHEET that slides up — wait for it to settle before
-    // measuring the canvas, or the hit coordinates below aim at a moving target.
-    await page.waitForSelector('[data-testid="map2d-sheet"][data-settled="1"]');
+    // The map is a PAGE on the shared stack, and its surface animates in — wait
+    // for it to settle before measuring the canvas, or the hit coordinates below
+    // aim at a moving target.
+    await page.waitForSelector('[data-testid="page-surface"][data-settled="1"]');
     await page.waitForFunction(() => ((window as any).__map2d?.loaded ?? 0) > 20, undefined, { timeout: 20_000 });
 
     // Click the destination cell (map opens centred on the player's block at
     // 20 px/cell → [2052,2048] sits 80 px east of centre).
     const box = await page.locator('[data-testid="map2d-canvas"]').boundingBox();
+    // Clicking a cell PUSHES its detail page onto the stack (the map stays
+    // mounted underneath it) — the anchors live there.
     await page.mouse.click(box!.x + box!.width / 2 + 4 * 20, box!.y + box!.height / 2);
-    await expect(page.locator('[data-testid="map2d-inspect"]')).toBeVisible();
+    await expect(page.locator('[data-testid="block-detail"]')).toBeVisible();
     await expect(page.locator('[data-testid="map2d-travel-e2e-pad"]'), 'anchor discovered on the map').toBeVisible();
 
     // Gated anchor first: the map shows it, but the destination refuses — the
-    // map stays open and the player has not moved.
+    // stack stays up and the player has not moved.
     await page.locator('[data-testid="map2d-travel-e2e-vault"]').click();
     await stepEngine(page, 10);
     expect(await playerBlock(page), 'refused: still home').toEqual([2048, 2048]);
-    await expect(page.locator('[data-testid="map2d"]'), 'map still open after denial').toBeVisible();
+    await expect(page.locator('[data-testid="page-host"]'), 'pages still open after denial').toBeVisible();
 
     // Open anchor: teleport lands the player in the destination block and the
     // map closes on teleport.done.

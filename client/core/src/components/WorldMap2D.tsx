@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Coords } from '@engine/core/utils/Coords';
 import type { DesktopLoader, MapCell } from '../lib/DesktopLoader';
+import { usePageActive, usePages, type PageSpec } from './page';
+import { blockDetailPage } from './BlockDetailPage';
 
 /**
  * WorldMap2D — a pannable 2D world map (the old engine's render_2d / control_2d
@@ -10,8 +12,13 @@ import type { DesktopLoader, MapCell } from '../lib/DesktopLoader';
  * region loading, decoupled from the player's position.
  *
  * Features (parity with old engine): drag to pan, wheel to zoom (cursor-anchored),
- * click a block to inspect, reset-to-player. Cells colour by occupancy / playable
- * (block.game) zone; the player shows as a live heading marker.
+ * click a block to open its detail page, reset-to-player. Cells colour by
+ * occupancy / playable (block.game) zone; the player shows as a live heading
+ * marker.
+ *
+ * This is the CONTENT of a page, not a panel of its own: the surface, scrim,
+ * header, entry animation and Esc handling all belong to the page stack
+ * (components/page). Open it with `pages.push(mapPage(loader))`.
  *
  * Design note: this is the SCREEN-space 2D map (canvas), distinct from the PiP 3D
  * minimap (a top-down Three.js camera). See docs/plan/specs/2d-map.md.
@@ -23,17 +30,31 @@ const DEFAULT_CELL = 20;
 const TICK_MS = 80;     // redraw + ensure-loaded cadence (setInterval, e2e-robust)
 const FETCH_PER_TICK = 48;
 const CACHE_CAP = 4000;
-const SHEET_MS = 300;   // bottom-sheet slide duration (mirrors duration-300 below)
+
+/** The map as a page — `pages.push(mapPage(loader))` from any shell/HUD. */
+export function mapPage(loader: DesktopLoader | null): PageSpec {
+    return {
+        id: 'map2d',
+        title: '2D 地图 · World Map',
+        // A canvas has no intrinsic height to fit, so the surface takes a FIXED
+        // size band (see page/types.ts) and the canvas fills it.
+        size: 'half',
+        padded: false,
+        content: <WorldMap2D loader={loader} />,
+    };
+}
 
 interface Props {
     loader: DesktopLoader | null;
-    open: boolean;
-    onClose: () => void;
 }
 
-export function WorldMap2D({ loader, open, onClose }: Props) {
+export function WorldMap2D({ loader }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const wrapRef = useRef<HTMLDivElement>(null);
+    const pages = usePages();
+    // The map stays MOUNTED under a pushed detail page (pan/zoom and the streamed
+    // cell cache survive the round trip); it just stops drawing while buried.
+    const active = usePageActive();
 
     // Imperative view state (refs so pan/zoom don't thrash React).
     const center = useRef({ x: 2048.5, y: 2048.5 }); // block-space coord at screen center
@@ -43,60 +64,51 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
     const drag = useRef<{ on: boolean; lastX: number; lastY: number; moved: number }>({ on: false, lastX: 0, lastY: 0, moved: 0 });
     const inited = useRef(false);
 
-    const [selected, setSelected] = useState<MapCell | null>(null);
-    // Sheet slide-in as a CSS ANIMATION, not a transition: an animation plays from
-    // mount, so there is no "render at translate-y-full, flip on the next frame"
-    // dance — and that dance needed requestAnimationFrame, which an idle headless
-    // page starves (helpers.ts documents the same trap), leaving the sheet parked
-    // off-screen while everything downstream measured it.
-    // `settled` publishes the end of the slide as `data-settled`: anything
-    // measuring the canvas (e2e hit-testing above all) must not aim at a moving
-    // target. `animationend` is the PRIMARY signal — a bare duration timer assumes
-    // the animation also STARTED on time, and on a loaded machine it doesn't, so
-    // the flag flipped mid-slide and the measurement was taken against a moving
-    // sheet anyway. The timer stays as a fallback (generous, since it must not
-    // pre-empt a late-but-honest animation) for the case where no animation runs
-    // at all and animationend therefore never fires — a hang is worse than slack.
-    const [settled, setSettled] = useState(false);
-    useEffect(() => {
-        if (!open) { setSettled(false); return; }
-        const t = window.setTimeout(() => setSettled(true), SHEET_MS * 6);
-        return () => { window.clearTimeout(t); setSettled(false); };
-    }, [open]);
+    // Selection is just a COORD: the detail page reads the cell itself, so the
+    // two never disagree about a cell that streamed in after the click.
+    const [selected, setSelected] = useState<[number, number] | null>(null);
     // Mirror into a ref so the (once-created) draw loop always reads the current
     // selection rather than the value captured when the interval was set up.
-    const selectedRef = useRef<MapCell | null>(null);
+    const selectedRef = useRef<[number, number] | null>(null);
     useEffect(() => { selectedRef.current = selected; }, [selected]);
 
     // Center on the player the first time the map opens.
     useEffect(() => {
-        if (!open) { inited.current = false; return; }
         if (!inited.current && loader) {
             const [bx, by] = loader.playerState.block;
             center.current = { x: bx + 0.5, y: by + 0.5 };
             inited.current = true;
         }
-    }, [open, loader]);
+    }, [loader]);
 
     // Draw + dynamic-load loop. setInterval (not rAF) so it keeps ticking even when
-    // the engine's rAF loop is stopped (deterministic e2e).
+    // the engine's rAF loop is stopped (deterministic e2e). Idle while buried
+    // under a pushed page — the cache and viewport live in refs, so resuming
+    // costs nothing and refetches nothing.
     useEffect(() => {
-        if (!open) return;
+        if (!active) return;
         const id = window.setInterval(() => tick(), TICK_MS);
         tick(); // immediate first paint
         return () => window.clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, loader]);
+    }, [active, loader]);
 
-    // Fast travel succeeded → the map's job is done; close and let the 3D take over.
-    // (A denied teleport leaves the map open — the anchor's `when` said no.)
+    // Fast travel succeeded → the map's job is done; dismiss the whole stack
+    // (detail page included) and let the 3D take over. (A denied teleport leaves
+    // the map open — the anchor's `when` said no.)
     useEffect(() => {
-        if (!open || !loader?.engine) return;
-        const done = () => onClose();
+        if (!loader?.engine) return;
+        const done = () => pages.close();
         loader.engine.on('teleport.done', done);
         return () => loader.engine?.off('teleport.done', done);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [open, loader]);
+    }, [loader]);
+
+    /** Open a block's detail page; clearing the selection when it leaves. */
+    function inspect(cell: MapCell) {
+        setSelected([cell.x, cell.y]);
+        pages.push(blockDetailPage(loader, cell, () => setSelected(null)));
+    }
 
     function tick() {
         const canvas = canvasRef.current, wrap = wrapRef.current;
@@ -131,22 +143,13 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
         }
         if (cache.current.size > CACHE_CAP) evict(bx0 - 8, by0 - 8, bx1 + 8, by1 + 8);
 
-        // Selecting a cell BEFORE its fetch lands snapshots the empty fallback —
-        // refresh the inspect panel once the real cell arrives (reference check:
-        // one setSelected per landing, then they're identical).
-        const sel = selectedRef.current;
-        if (sel) {
-            const fresh = cache.current.get(`${sel.x}_${sel.y}`);
-            if (fresh && fresh !== sel) setSelected(fresh);
-        }
-
         draw(ctx, W, H);
 
         // e2e/test seam.
         (window as any).__map2d = {
             center: { x: cx, y: cy }, cell: c, loaded: cache.current.size,
             view: [bx0, by0, bx1, by1], range: [rangeX, rangeY],
-            selected: selectedRef.current ? [selectedRef.current.x, selectedRef.current.y] : null,
+            selected: selectedRef.current,
         };
     }
 
@@ -216,7 +219,7 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
         if (sel) {
             ctx.strokeStyle = '#00CCDD';
             ctx.lineWidth = 2;
-            ctx.strokeRect(sx(sel.x), sy(sel.y + 1), c, c);
+            ctx.strokeRect(sx(sel[0]), sy(sel[1] + 1), c, c);
         }
 
         // player marker + heading.
@@ -272,7 +275,7 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
         const bx = Math.floor(u), by = Math.floor(v);
         const [rangeX, rangeY] = loader.worldRange;
         if (bx < 1 || by < 1 || bx > rangeX || by > rangeY) { setSelected(null); return; }
-        setSelected(cache.current.get(`${bx}_${by}`) ?? { x: bx, y: by, occupied: false, count: 0, game: 0, elevation: 0, anchors: [] });
+        inspect(cache.current.get(`${bx}_${by}`) ?? { x: bx, y: by, occupied: false, count: 0, game: 0, elevation: 0, anchors: [] });
     }
     function onWheel(e: React.WheelEvent) {
         const rect = canvasRef.current!.getBoundingClientRect();
@@ -294,99 +297,37 @@ export function WorldMap2D({ loader, open, onClose }: Props) {
         center.current = { x: bx + 0.5, y: by + 0.5 };
     }
 
-    if (!open) return null;
-
-    // Bottom sheet, half the viewport — the world stays on screen above it, which
-    // is the point of a map. (It used to take the whole screen.)
     return (
-        // z-50, above the HUD rails: as a half-height sheet its top edge lands at
-        // mid-screen, which is exactly where the desktop shell's right-hand mode
-        // rail sits — at the old z-40 (a tie, and the rail renders later) the rail
-        // painted over the header and swallowed clicks on ✕. A scrimmed sheet is a
-        // modal surface anyway; the HUD belongs underneath it.
-        <div className="absolute inset-0 z-50 select-none" data-testid="map2d">
-            {/* Scrim over the visible world: dims it and dismisses on tap, so the
-                sheet can't be left open swallowing clicks meant for the 3D. */}
-            <div data-testid="map2d-scrim" onClick={onClose} className="absolute inset-0 bg-black/40" />
+        <div ref={wrapRef} data-testid="map2d" className="relative flex-1 min-h-0 overflow-hidden cursor-grab active:cursor-grabbing">
+            <canvas
+                ref={canvasRef}
+                data-testid="map2d-canvas"
+                className="absolute inset-0 w-full h-full touch-none"
+                onPointerDown={onPointerDown}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
+                onPointerLeave={() => { drag.current.on = false; }}
+                onWheel={onWheel}
+            />
 
-            <style>{`@keyframes map2d-rise{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
-            <div data-testid="map2d-sheet" data-settled={settled ? '1' : '0'}
-                onAnimationEnd={() => setSettled(true)}
-                style={{ animation: `map2d-rise ${SHEET_MS}ms cubic-bezier(0.16,1,0.3,1)` }}
-                className="absolute inset-x-0 bottom-0 h-1/2 min-h-[240px] flex flex-col rounded-t-2xl
-                border-t border-cyan-500/30 bg-[#0a0e14]/95 shadow-[0_-8px_40px_rgba(0,0,0,0.55)]">
-                {/* grab handle — the affordance that says "sheet", not "page" */}
-                <div className="flex justify-center pt-2 pb-0.5"><div className="w-10 h-1 rounded-full bg-white/25" /></div>
+            {/* Recentre floats over the canvas rather than sitting in the page
+                header: it belongs to the map's viewport, and keeping it here
+                leaves the map self-contained — the page shell needs no back
+                channel to reach into the component's imperative view state. */}
+            <button
+                data-testid="map2d-reset"
+                onClick={recenter}
+                className="absolute top-2 right-2 px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase whitespace-nowrap text-cyan-200 bg-cyan-500/20 border border-cyan-400/50 hover:bg-cyan-500/35 transition-all"
+            >定位</button>
 
-                {/* Header sized for the narrowest shell (390 px): short labels and
-                    nowrap, or the title and both buttons wrap onto two lines each. */}
-                <div className="flex items-center justify-between px-3 py-1.5 border-b border-cyan-500/25">
-                    <span className="text-[11px] font-black tracking-[0.2em] text-cyan-300/80 uppercase whitespace-nowrap">2D Map</span>
-                    <div className="flex items-center gap-2">
-                        <button
-                            data-testid="map2d-reset"
-                            onClick={recenter}
-                            className="px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase whitespace-nowrap text-cyan-200 bg-cyan-500/20 border border-cyan-400/50 hover:bg-cyan-500/35 transition-all"
-                        >定位</button>
-                        <button
-                            data-testid="map2d-close"
-                            onClick={onClose}
-                            aria-label="关闭地图"
-                            className="w-7 h-7 grid place-items-center rounded-lg text-xs font-black text-gray-300 bg-white/10 border border-white/20 hover:bg-white/20 transition-all"
-                        >✕</button>
-                    </div>
-                </div>
-
-                <div ref={wrapRef} className="relative flex-1 overflow-hidden cursor-grab active:cursor-grabbing">
-                    <canvas
-                        ref={canvasRef}
-                        data-testid="map2d-canvas"
-                        className="absolute inset-0 w-full h-full touch-none"
-                        onPointerDown={onPointerDown}
-                        onPointerMove={onPointerMove}
-                        onPointerUp={onPointerUp}
-                        onPointerLeave={() => { drag.current.on = false; }}
-                        onWheel={onWheel}
-                    />
-
-                    {/* legend — one wrapping row: half a screen is too little height
-                        to spend three stacked lines on a colour key */}
-                    <div className="absolute bottom-2 left-2 right-2 bg-black/55 border border-white/15 rounded-lg px-2.5 py-1 text-[10px] font-mono text-gray-300 flex flex-wrap items-center gap-x-3 gap-y-0.5 pointer-events-none">
-                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(50,220,120,0.6)' }} />可玩区</span>
-                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(0,200,255,0.6)' }} />有内容</span>
-                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#c084fc' }} />传送点</span>
-                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#ffd23f' }} />玩家</span>
-                        <span className="text-gray-500">拖拽平移 · 滚轮缩放</span>
-                    </div>
-
-                    {/* selected block inspect */}
-                    {selected && (
-                        <div data-testid="map2d-inspect" className="absolute top-3 right-3 bg-cyan-900/80 backdrop-blur-md border border-cyan-400/50 p-3 rounded-lg shadow-2xl text-white font-mono text-xs min-w-[170px]">
-                            <p className="text-[10px] text-cyan-300 font-bold uppercase mb-1">Block</p>
-                            <p>坐标 Coord: <span className="text-cyan-400">[{selected.x}, {selected.y}]</span></p>
-                            <p>内容 Adjuncts: <span className="text-cyan-400">{selected.count}</span></p>
-                            <p>可玩 Game: <span className={selected.game >= 1 ? 'text-green-400' : 'text-gray-400'}>{selected.game >= 1 ? 'yes' : 'no'}</span></p>
-                            <p>海拔 Elev: <span className="text-cyan-400">{selected.elevation}</span></p>
-                            {(selected.anchors?.length ?? 0) > 0 && (
-                                <div className="mt-2 pt-2 border-t border-cyan-400/30">
-                                    <p className="text-[10px] text-purple-300 font-bold uppercase mb-1">传送锚点 Anchors</p>
-                                    {selected.anchors.map((a) => (
-                                        <button
-                                            key={a.name}
-                                            data-testid={`map2d-travel-${a.name}`}
-                                            onClick={() => loader?.fastTravel(a.name, [selected.x, selected.y])}
-                                            className="mt-1 w-full py-1 text-[10px] bg-purple-500/20 text-purple-200 rounded border border-purple-400/40 hover:bg-purple-500/35"
-                                        >⟡ {a.name} · 传送 Travel</button>
-                                    ))}
-                                </div>
-                            )}
-                            <button
-                                onClick={() => setSelected(null)}
-                                className="mt-2 w-full py-1 text-[10px] bg-white/10 text-gray-300 rounded border border-white/20 hover:bg-white/20"
-                            >清除 Clear</button>
-                        </div>
-                    )}
-                </div>
+            {/* legend — one wrapping row: half a screen is too little height
+                to spend three stacked lines on a colour key */}
+            <div className="absolute bottom-2 left-2 right-2 bg-black/55 border border-white/15 rounded-lg px-2.5 py-1 text-[10px] font-mono text-gray-300 flex flex-wrap items-center gap-x-3 gap-y-0.5 pointer-events-none">
+                <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(50,220,120,0.6)' }} />可玩区</span>
+                <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(0,200,255,0.6)' }} />有内容</span>
+                <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#c084fc' }} />传送点</span>
+                <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#ffd23f' }} />玩家</span>
+                <span className="text-gray-500">拖拽平移 · 滚轮缩放 · 点击地块看详情</span>
             </div>
         </div>
     );

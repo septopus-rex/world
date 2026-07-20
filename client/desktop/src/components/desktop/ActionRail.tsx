@@ -1,5 +1,6 @@
 import { MAZE_BLOCK, MAZE_ENTRY } from '@core/scenes/mazeScene';
 import { DYN_BLOCK, DYN_VIEW } from '@core/scenes/dynamicAdjunctScene';
+import { usePages } from '@core/components/page';
 import type { WorldMode } from '@core/lib/useEngine';
 
 /**
@@ -17,6 +18,7 @@ export function ActionRail({ loader, view, setView, mode, setMode, onOpenMap, on
     onOpenMap: () => void;
     onEnterSandbox: () => void;
 }) {
+    const pages = usePages();
     return (
         <div className="absolute right-2 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 p-1.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
             {([
@@ -71,11 +73,22 @@ export function ActionRail({ loader, view, setView, mode, setMode, onOpenMap, on
 
             <div className="w-6 h-px bg-white/15 my-0.5" />
 
-            {/* Reset (destructive) — kept apart at the bottom. */}
+            {/* Reset (destructive) — kept apart at the bottom. The confirmation is
+                an in-page one: a native window.confirm is forbidden on any user
+                path (CLAUDE.md 红线), and it would also block the rAF loop and be
+                undrivable from e2e. */}
             <button
                 data-testid="reset-state"
                 title="Reset State · 重置本地存档（方块/位置/背包 → 种子）"
-                onClick={() => { if (confirm("Reset ALL local edits (blocks, position, inventory) to the pristine seed?")) loader?.resetWorld(); }}
+                onClick={async () => {
+                    const ok = await pages.confirm({
+                        title: '重置本地存档',
+                        message: '把所有本地修改（方块编辑、玩家位置、背包）丢弃，恢复到原始种子世界。此操作不可撤销。',
+                        confirmLabel: '重置',
+                        danger: true,
+                    });
+                    if (ok) loader?.resetWorld();
+                }}
                 className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 transition-all active:scale-95"
             >
                 ♻️

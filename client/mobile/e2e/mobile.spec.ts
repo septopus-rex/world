@@ -80,6 +80,8 @@ test('移动壳:出生渲染 → 摇杆走路 → 触屏拖拽转视角 → JUMP
     // ── map opens via the top-right MiniCompass (bottom-sheet buttons removed) ──
     await page.getByTestId('mini-compass').tap();
     await expect(page.getByTestId('map2d')).toBeVisible();
-    await page.getByTestId('map2d-close').tap();
+    // On this narrow shell the shared page surface resolves to a bottom sheet.
+    await expect(page.getByTestId('page-surface')).toHaveAttribute('data-variant', 'sheet');
+    await page.getByTestId('page-close').tap();
     await page.screenshot({ path: 'test-results/mobile-1-final.png' });
 });

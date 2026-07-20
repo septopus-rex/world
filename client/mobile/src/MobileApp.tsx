@@ -8,7 +8,8 @@ import { DialogueUI } from '@core/components/DialogueUI';
 import { BookReader } from '@core/components/BookReader';
 import { BoardPanel } from '@core/components/BoardPanel';
 import { LeaveGameDialog } from '@core/components/LeaveGameDialog';
-import { WorldMap2D } from '@core/components/WorldMap2D';
+import { mapPage } from '@core/components/WorldMap2D';
+import { PageHost, PageProvider, usePages } from '@core/components/page';
 import { AvatarPicker } from '@core/components/AvatarPicker';
 import { ParkourHUD } from '@core/components/ParkourHUD';
 import { ShootingHUD } from '@core/components/ShootingHUD';
@@ -35,9 +36,10 @@ import { BlockInspector } from '@core/components/BlockInspector';
  * Interaction surface (dialogue / book / HP / toasts / game HUDs / leave dialog)
  * is the SAME shared component set the desktop uses — shells only compose.
  */
-export default function MobileApp() {
+function MobileApp() {
     const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, view, setView } = useEngine('three_demo');
-    const [sheet, setSheet] = useState<'bag' | 'map' | 'avatar' | null>(null);
+    const pages = usePages();
+    const [sheet, setSheet] = useState<'bag' | 'avatar' | null>(null);
     const [inspecting, setInspecting] = useState(false);
 
     // Fade out the boot splash once the world is ready (same as the desktop shell).
@@ -58,7 +60,7 @@ export default function MobileApp() {
             {/* ── top-left: collapsible status (mode + version, collapsed by default);
                    top-right: mini compass + block coord / world id ── */}
             {ready && <StatusPanel loader={loader} version={__APP_VERSION__} onInspect={() => setInspecting(true)} />}
-            {ready && <MiniCompass loader={loader} onOpenMap={() => setSheet('map')} />}
+            {ready && <MiniCompass loader={loader} onOpenMap={() => pages.push(mapPage(loader))} />}
             {ready && <BlockInspector loader={loader} open={inspecting} onClose={() => setInspecting(false)} />}
 
             {/* ── shared interaction surface (identical components to desktop) ── */}
@@ -138,8 +140,21 @@ export default function MobileApp() {
                     <InventoryPanel loader={loader} />
                 </div>
             )}
-            <WorldMap2D loader={loader} open={sheet === 'map'} onClose={() => setSheet(null)} />
             {sheet === 'avatar' && <AvatarPicker loader={loader} ready={ready} />}
+
+            {/* The 2D page stack (map → block detail → …). On this narrow shell
+                the surface resolves to a bottom sheet; the desktop gets a centred
+                card from the SAME page definitions. */}
+            <PageHost />
         </div>
+    );
+}
+
+/** Provider wraps the shell so any panel can `usePages()`; it renders no DOM. */
+export default function MobileAppRoot() {
+    return (
+        <PageProvider>
+            <MobileApp />
+        </PageProvider>
     );
 }

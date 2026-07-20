@@ -73,6 +73,7 @@ cd engine && yarn build                            # tsc
 - `engine/src/core/World.ts` — ECS 世界、系统编排、主循环。
 - `client/core/src/lib/DesktopLoader.ts` — 客户端数据装载器（实现 `IDataSource`，喂纯数据文档：`levels/`/`blocks/`/`worlds/` + ContentResolver）。**client 三分（2026-07-08，specs/mobile-client.md）**：`client/core`（共享核：loader/useEngine/共享组件/纯数据内容，无 package.json，双端经 `@core` 源码别名引用）+ `client/desktop`（桌面 app，7777）+ `client/mobile`（移动 app，7778，独立 package.json/vite/playwright；摇杆/触屏视角/底部抽屉）。
 - `client/desktop/src/App.tsx` — 桌面壳入口;**双壳(2026-07-08)**:`main.tsx` 按 `?ui=mobile|desktop`/触屏自动检测路由到 `src/mobile/MobileApp.tsx`(移动壳:虚拟摇杆→setMoveIntent、画布拖拽=引擎原生触屏视角、底部抽屉),两壳共用 `lib/useEngine`+loader 核与全部交互组件(specs/mobile-client.md;e2e `mobile.spec.ts` 触屏视口)。
+- `client/core/src/components/page/` — **2D 页面栈(2026-07-20,规矩与 e2e 句柄见该目录 `README.md`)**:3D 世界之上的每个 2D 界面都是这个栈上的**一页**(地图/地块详情/配置/确认框),`PageProvider`(只给 context)+`PageHost`(surface,z-50)+`usePages()`。push 子页是在**同一 surface 内往里走**(iOS 式「‹」返回,容器不变形),**被埋的页保持挂载**(`visibility:hidden`)——返回地图时平移/缩放/已流式格子原样还在,不重拉;代价是跑循环的页要用 `usePageActive()` 自己 idle。形态由**栈底页**定,`variant:'auto'`(默认)= 宽屏(≥768px)居中卡片·窄屏底部抽屉,故双端共用一份页面定义;`padded:false` 换的是布局模式(满幅 flex 列、不滚动)而不只是内边距,画布页必须用它 + 固定高度档。定义一页 = 导出返回 `PageSpec` 的工厂(`mapPage(loader)`/`blockDetailPage(...)`),调用方不必知道它长什么样。**`pages.confirm()` 是 `window.confirm` 的唯一替代**(原生对话框是红线,还卡 rAF、e2e 驱动不了)。首个用例:2D 地图页 → 点地块 → 详情页 → 原始数据页(e2e `map2d.spec.ts` + 组件自身契约 `page-stack.spec.ts`)。
 
 ## 编辑 / Adjunct
 
