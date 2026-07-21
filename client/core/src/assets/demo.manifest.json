@@ -152,5 +152,35 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/loudspeaker.glb"
+  },
+  {
+    "id": 43,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/spanish-wall.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 44,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/spanish-roof.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 45,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/spanish-arch.png",
+    "size": [
+      2,
+      2
+    ]
   }
 ]
