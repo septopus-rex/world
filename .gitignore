@@ -42,6 +42,7 @@ test-ledger/
 # Client build artifacts (PWA frontends under client/)
 client/*/dist/
 client/*/dev-dist/
+client/*/tsconfig.tsbuildinfo
 
 # Playwright (e2e) artifacts
 **/test-results/

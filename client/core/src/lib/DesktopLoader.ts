@@ -571,6 +571,15 @@ export class DesktopLoader implements IDataSource {
         return this.engine?.setMode(mode as any) ?? false;
     }
 
+    /** May the player edit the block they are STANDING ON? This is the single
+     *  seam the shells gate their edit entry through. Ownership is not modelled
+     *  yet (standalone world = every block is editable), so it only checks that
+     *  a world is up — when ownership lands, this predicate changes, not the
+     *  shells. */
+    public canEditBlock(): boolean {
+        return this.engine != null;
+    }
+
     public setCameraView(mode: 'first' | 'third', immediate = false) {
         this.engine?.setCameraView(mode, immediate);
     }

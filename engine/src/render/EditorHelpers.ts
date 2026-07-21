@@ -4,11 +4,24 @@ import { MeshFactory } from './MeshFactory';
 
 /**
  * Editor-only helper visuals (render/EditorHelpers) — the selection wirebox,
- * the block-boundary highlight (4 tinted edge planes + wireframe volume) and
- * the ground grid. Pure construction: everything raycast-inert, built via
- * MeshFactory, parented to worldRoot (or the given parent) so the floating
- * origin applies. Positioning/lifetime stays with EditHelperManager.
+ * the block-boundary highlight (4 direction-coded edge slabs + 4 corner sky
+ * rays) and the ground grid. Pure construction: everything raycast-inert,
+ * built via MeshFactory, parented to worldRoot (or the given parent) so the
+ * floating origin applies. Positioning/lifetime stays with EditHelperManager.
  */
+
+/**
+ * Compass-direction colour convention, shared visual language with the
+ * client's MiniCompass (whose north-seeking needle is red): anything that
+ * paints a cardinal direction uses these. Septopus north = engine −Z.
+ */
+export const DIRECTION_COLORS = {
+    north: 0xef4444, // red    — matches the compass needle
+    east: 0x3b82f6,  // blue
+    south: 0xfacc15, // yellow
+    west: 0x22c55e,  // green
+} as const;
+
 export class EditorHelpers {
     private readonly _tmpBox3 = new THREE.Box3();
     private readonly _tmpSize = new THREE.Vector3();
@@ -33,49 +46,70 @@ export class EditorHelpers {
         return helper;
     }
 
-    /** Block-boundary highlight: 4 colour-coded edge planes + wireframe volume. */
+    /** Block-boundary highlight: 4 direction-coded edge slabs (50 cm, colours =
+     *  DIRECTION_COLORS so the boundary doubles as a compass) + 4 corner sky
+     *  rays (stacked fading segments, edit-accent cyan) that mark the block
+     *  from afar — the edit session stays locked while the creator walks into
+     *  neighbouring blocks to inspect the build. */
     public blockHighlight(parent: RenderHandle, bw: number, bl: number, bh: number): RenderHandle {
         const group = new THREE.Group();
+        group.name = 'edit-block-highlight';
         (parent as THREE.Object3D).add(group);
-        const planeHeight = 0.2;
+        const slabHeight = 0.5;
         const opacity = 0.3;
 
         // Position the group at the center of the block's floor volume
         group.position.set(bw / 2, 0, -bl / 2);
 
+        // Septopus north = engine −Z (Coords contract, world.md §5).
         const planeConfigs = [
-            { pos: [0, planeHeight / 2, -bl / 2], rot: [0, 0, 0], color: 0xffff00, size: bw },
-            { pos: [0, planeHeight / 2, bl / 2], rot: [0, Math.PI, 0], color: 0xff0000, size: bw },
-            { pos: [bw / 2, planeHeight / 2, 0], rot: [0, -Math.PI / 2, 0], color: 0x0000ff, size: bl },
-            { pos: [-bw / 2, planeHeight / 2, 0], rot: [0, Math.PI / 2, 0], color: 0x00ff00, size: bl }
+            { dir: 'north', pos: [0, slabHeight / 2, -bl / 2], rot: [0, 0, 0], color: DIRECTION_COLORS.north, size: bw },
+            { dir: 'south', pos: [0, slabHeight / 2, bl / 2], rot: [0, Math.PI, 0], color: DIRECTION_COLORS.south, size: bw },
+            { dir: 'east', pos: [bw / 2, slabHeight / 2, 0], rot: [0, -Math.PI / 2, 0], color: DIRECTION_COLORS.east, size: bl },
+            { dir: 'west', pos: [-bw / 2, slabHeight / 2, 0], rot: [0, Math.PI / 2, 0], color: DIRECTION_COLORS.west, size: bl }
         ];
 
         planeConfigs.forEach(p => {
             const mesh = MeshFactory.create({
                 type: 'plane',
                 params: {
-                    size: [p.size, planeHeight, 0],
+                    size: [p.size, slabHeight, 0],
                     position: p.pos as [number, number, number],
                     rotation: p.rot as [number, number, number]
                 },
                 material: { color: p.color, opacity: opacity }
             });
+            mesh.name = `boundary-${p.dir}`;
             mesh.raycast = () => { };
             group.add(mesh);
         });
 
-        // Add a Wireframe Volume Box
-        const helper = MeshFactory.create({
-            type: 'wirebox',
-            params: {
-                size: [bw, bh, bl],
-                position: [0, bh / 2, 0],
-                rotation: [0, 0, 0]
-            },
-            material: { color: 0xffffff, opacity: 0.5 }
-        });
-        helper.raycast = () => { };
-        group.add(helper);
+        // Corner sky rays: three stacked thin segments per corner with fading
+        // opacity — a beacon that reads from neighbouring blocks. Materials are
+        // cached by colour+opacity, so 12 meshes share 3 materials.
+        const raySegments = [
+            { y0: 0, opacity: 0.4 },
+            { y0: bh, opacity: 0.2 },
+            { y0: bh * 2, opacity: 0.08 },
+        ];
+        for (const cx of [-bw / 2, bw / 2]) {
+            for (const cz of [-bl / 2, bl / 2]) {
+                for (const seg of raySegments) {
+                    const ray = MeshFactory.create({
+                        type: 'box',
+                        params: {
+                            size: [0.12, bh, 0.12],
+                            position: [cx, seg.y0 + bh / 2, cz],
+                            rotation: [0, 0, 0]
+                        },
+                        material: { color: 0x00ffff, opacity: seg.opacity }
+                    });
+                    ray.name = 'corner-ray';
+                    ray.raycast = () => { };
+                    group.add(ray);
+                }
+            }
+        }
 
         return group;
     }

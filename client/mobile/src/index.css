@@ -10,3 +10,18 @@ html, body {
   user-select: none;
   background: #000;
 }
+
+/* Edit-mode engine DOM UI (DefaultUIProvider renders the palette / forms inside
+   #three_demo) compacted for a phone: smaller buttons, and the mid-left palette
+   column anchored below the status chip + height-capped so its wrapped columns
+   never reach the joystick thumb zone (bottom-left ~200px). Presentation-only
+   overrides of the engine's sept-ui classes — markup and behaviour stay
+   engine-owned. */
+#three_demo .sept-ui-btn { font-size: 12px; padding: 5px 9px; }
+#three_demo .sept-ui-group.mid-left {
+  top: 48px;
+  transform: none;
+  max-height: 52vh;
+  padding: 8px;
+  gap: 5px;
+}

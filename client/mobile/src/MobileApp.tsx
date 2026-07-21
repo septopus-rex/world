@@ -93,6 +93,25 @@ function MobileApp() {
                 </div>
             )}
 
+            {/* Block-scoped edit toggle — top of the right-thumb stack. The block
+                you STAND ON is the edit target: the engine locks it on entry
+                (EditSessionManager) and the session survives walking into
+                neighbouring blocks to inspect the build; DONE exits via
+                setMode('normal'), which saves the block draft. Gated through
+                loader.canEditBlock() — the ownership seam (always true until
+                ownership lands). Hidden in Game mode (HUDs own the screen).
+                onClick single-fire, same rationale as the view toggle below. */}
+            {ready && mode !== 'game' && (mode === 'edit' || loader?.canEditBlock()) && (
+                <div className="absolute bottom-44 right-7 z-20 pointer-events-auto">
+                    <button data-testid="m-edit-toggle"
+                        aria-label={mode === 'edit' ? '完成编辑' : '编辑此块'}
+                        onClick={() => setMode(mode === 'edit' ? 'normal' : 'edit')}
+                        className={`w-14 h-14 rounded-full border-2 backdrop-blur-md flex items-center justify-center active:scale-95 shadow-xl ${mode === 'edit' ? 'bg-yellow-500/25 border-yellow-400/60' : 'bg-white/10 border-white/25'}`}>
+                        <span className="font-extrabold text-white text-xs tracking-widest opacity-90">{mode === 'edit' ? 'DONE' : 'EDIT'}</span>
+                    </button>
+                </div>
+            )}
+
             {/* ── movement: virtual joystick (left thumb) + jump (right thumb) ── */}
             <div data-testid="m-joystick" className="absolute bottom-9 left-6 z-20 pointer-events-none">
                 <Joystick size={130}
