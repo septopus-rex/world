@@ -86,16 +86,71 @@ describe('ball stop — cylinder collider', () => {
         expect(E()).toBeLessThan(5.95);     // …but the tangent held (AABB face would sit at 5.7 too,
         expect(alt()).toBeLessThan(1.5);    // never climbed it
 
-        // Diagonal from the NE "corner": a 4×4 AABB would hold the player at
-        // per-axis ≥ 2.2 (chebyshev); the circle lets them reach ~1.6 per axis.
-        spp(11, 11, 0.95);
-        walkUntil(-1, -1, () => false, 300);
-        const dE = E() - 8, dN = N() - 8;
-        const radial = Math.hypot(dE, dN);
-        console.log(`[ball diagonal] dE=${dE.toFixed(2)} dN=${dN.toFixed(2)} radial=${radial.toFixed(2)}`);
-        expect(radial).toBeGreaterThan(2.15);            // outside the cylinder
-        expect(radial).toBeLessThan(2.75);               // pinned near the tangent
-        expect(Math.max(Math.abs(dE), Math.abs(dN))).toBeLessThan(2.1); // impossible with an AABB corner
+        // Diagonal from the NE "corner": with a circular footprint the player
+        // HUGS the circle and SLIDES AROUND the pillar (an AABB corner blocks
+        // both axes and pins the player at chebyshev ≥ 2.29 ⇒ radial ≥ 3.2;
+        // the old tangent-snap resolver froze the walk at the ring — the
+        // stuck-at-⑭ bug in its walk-in form).
+        const { engine: e2, spp: spp2, E: E2, N: N2 } = await bootWithStops([BALL_ROW]);
+        spp2(11, 11, 0.95);
+        (e2 as any).setMoveIntent(-1, -1);
+        let minRadial = Infinity;
+        for (let i = 0; i < 300; i++) {
+            e2.step(1 / 60);
+            minRadial = Math.min(minRadial, Math.hypot(E2() - 8, N2() - 8));
+        }
+        (e2 as any).setMoveIntent(0, 0);
+        console.log(`[ball diagonal] end E=${E2().toFixed(2)} N=${N2().toFixed(2)} minRadial=${minRadial.toFixed(2)}`);
+        expect(minRadial).toBeGreaterThan(2.0);   // never entered the cylinder…
+        expect(minRadial).toBeLessThan(2.9);      // …but hugged the circle (AABB corner ⇒ ≥ 3.2)
+        expect(Math.hypot(E2() - 11, N2() - 11), 'slid around the pillar, not frozen at the ring').toBeGreaterThan(5);
+    });
+});
+
+describe('ball stop — diagonal contact must not trap or yank (gallery ⑭ regression)', () => {
+    const BALL_ROW = [[4, 4, 2], [8, 8, 1], [0, 0, 0], 1, null, STOP_SHAPE.BALL];
+
+    it('resting at a diagonal corner contact, EVERY direction still walks free', async () => {
+        // The old resolver used a looser metric for the push (bounding circle)
+        // than for the overlap test (player rect): at a diagonal contact the
+        // rect kept overlapping while every axis move — retreat included — was
+        // snapped back to the tangent ring. All four directions froze.
+        for (const [ix, iy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+            const { spp, E, N, walkUntil } = await bootWithStops([BALL_ROW]);
+            spp(9.65, 9.65, 0.95);   // NE of the pillar, rect corner just clipping the circle
+            const e0 = E(), n0 = N();
+            walkUntil(ix, iy, () => false, 90);
+            const moved = Math.hypot(E() - e0, N() - n0);
+            expect(moved, `direction (${ix},${iy}) must escape the contact`).toBeGreaterThan(0.5);
+        }
+    });
+
+    it('a descending fall grazing the pillar slides down OUTSIDE — never yanked in, never popped on top', async () => {
+        const { engine, world, spp, E, N, alt } = await bootWithStops([BALL_ROW]);
+        const t = world.getComponent(playerOf(world), 'TransformComponent');
+        const b = world.getComponent(playerOf(world), 'RigidBodyComponent');
+
+        // Airborne NE of the pillar, feet just under the top rim, drifting
+        // inward — the S-shaped landing that reproduced the in-browser "hop".
+        spp(10.9, 10.9, 2.7);
+        b.velocity[0] = -2.4; b.velocity[2] = 2.4; b.velocity[1] = -1;  // toward SW (sept), falling
+        (engine as any).setMoveIntent(-1, -1);
+        let prevAlt = alt();
+        let maxRise = 0;
+        for (let i = 0; i < 240; i++) {
+            engine.step(1 / 60);
+            maxRise = Math.max(maxRise, alt() - prevAlt);
+            prevAlt = alt();
+        }
+        (engine as any).setMoveIntent(0, 0);
+        stepN(engine, 30);
+
+        // The deep-embed pop teleports the feet onto the top (alt jumps ~+1m in
+        // one frame) — a clean fall must never gain height.
+        expect(maxRise, 'no upward teleport (popOutIfEmbedded must not fire)').toBeLessThan(0.05);
+        // And the player ends on the ground BESIDE the pillar, not on it.
+        expect(alt()).toBeLessThan(1.5);
+        expect(Math.hypot(E() - 8, N() - 8), 'outside the cylinder footprint').toBeGreaterThan(2.0);
     });
 });
 

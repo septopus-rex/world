@@ -366,24 +366,39 @@ export class MovementCollider {
             // velocity direction instead would teleport the player to the far face
             // when they clip inside the solid from a corner or thin wall.
             if (w.shape === SHAPE_CYL) {
-                // Snap along the moving axis to the circle tangent point (player as
-                // a bounding circle) — sliding around the pillar falls out of the
-                // other axis running its own pass.
-                const pr = Math.max(phx, phz);
-                const rSum = w.hx + pr;
-                const cross = axis === 0 ? (cz - w.pz) : (cx - w.px);
-                const gap2 = rSum * rSum - cross * cross;
-                if (gap2 <= 0) continue; // grazing the silhouette edge — no real block
-                const gap = Math.sqrt(gap2);
-                if (axis === 0) {
-                    const side = (trans.position[0] + body.offset[0]) >= w.px ? 1 : -1;
-                    trans.position[0] = w.px + side * gap - body.offset[0];
-                    body.velocity[0] = 0;
+                // Minimum-translation push using THE SAME metric footprintOverlap
+                // tests (pillar circle vs the player's rect, via the clamped
+                // point). The old resolver snapped the player's BOUNDING CIRCLE
+                // to the tangent ring along the moving axis — a different,
+                // looser metric. At a diagonal corner contact the rect test
+                // kept reporting overlap while the ring snap reverted EVERY
+                // axis move (retreat included) back to the tangent: the player
+                // froze in all four directions. Worse, a descending jump
+                // grazing the pillar sat in "rect overlaps, ring distance
+                // exceeded" territory, so each snap yanked the player INWARD
+                // onto the ring until the deep-embed rescue popped them onto
+                // the pillar top — the reported "walked near the pillar,
+                // hopped, then stuck" at gallery stop ⑭ (2026-07-22).
+                const qx = Math.max(cx - phx, Math.min(w.px, cx + phx));
+                const qz = Math.max(cz - phz, Math.min(w.pz, cz + phz));
+                const ex = qx - w.px, ez = qz - w.pz;   // pillar centre → contact point
+                const d = Math.hypot(ex, ez);
+                if (d >= w.hx) continue;                // grazing — no real penetration
+                let pushX = 0, pushZ = 0;
+                if (d < 1e-6) {
+                    // Pillar centre inside the rect (deep clip): exit the nearest face.
+                    const escX = phx + w.hx - Math.abs(cx - w.px);
+                    const escZ = phz + w.hx - Math.abs(cz - w.pz);
+                    if (escX <= escZ) pushX = cx >= w.px ? escX : -escX;
+                    else pushZ = cz >= w.pz ? escZ : -escZ;
                 } else {
-                    const side = (trans.position[2] + body.offset[2]) >= w.pz ? 1 : -1;
-                    trans.position[2] = w.pz + side * gap - body.offset[2];
-                    body.velocity[2] = 0;
+                    const need = w.hx - d;              // outward along centre→contact
+                    pushX = (ex / d) * need;
+                    pushZ = (ez / d) * need;
                 }
+                trans.position[0] = nextX + pushX;
+                trans.position[2] = nextZ + pushZ;
+                body.velocity[axis] = 0;
             } else if (w.shape === SHAPE_SLOPE) {
                 // Too steep here (a side/back-face approach — walkable-grade
                 // contact already continued above): minimum-translation push of
