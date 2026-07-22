@@ -199,6 +199,33 @@ describe('camera view transition (first↔third dolly)', () => {
         expect(nullEngine.__counts.lastAnimState, 'settled back to idle').toBe('idle');
     });
 
+    it('travel heading: strafing turns the BODY; stopping keeps it (no pirouette); a look op re-aligns', async () => {
+        const { engine, nullEngine, world, player } = await bootOnGround();
+        const avatar = world.getComponent<any>(player, 'AvatarComponent');
+        const ip: any = (world.systems.findSystemByName('CharacterController') as any).inputProvider;
+        engine.step(1 / 60);
+        const facing = avatar.handle.rotation.y;   // visual yaw at camera yaw 0
+
+        // Strafe left (KeyA): camera yaw 0 ⇒ velocity −X ⇒ heading +π/2. The
+        // body swings to face the travel direction — not a forward moonwalk.
+        ip.keys.add('KeyA');
+        stepN(engine, 40);
+        expect(avatar.handle.rotation.y).toBeCloseTo(Math.PI / 2 + facing, 5);
+        expect(nullEngine.__counts.lastAnimState).toBe('walk');
+
+        // Release: velocity zeroes; the avatar KEEPS the travel heading.
+        ip.keys.delete('KeyA');
+        stepN(engine, 30);
+        expect(avatar.handle.rotation.y, 'no snap-back pirouette after a strafe').toBeCloseTo(Math.PI / 2 + facing, 5);
+        expect(nullEngine.__counts.lastAnimState).toBe('idle');
+
+        // Only a LOOK operation re-aligns: turn the camera → shuffle to it.
+        (nullEngine as any).getMainCameraRotation = (): [number, number, number] => [0, 0.6, 0];
+        stepN(engine, 60);
+        expect(avatar.handle.rotation.y).toBeCloseTo(0.6 + facing, 5);
+        expect(nullEngine.__counts.lastAnimState).toBe('idle');
+    });
+
     it('turn-in-place: hidden avatar (first person) snaps — no stale spin replay on return', async () => {
         const { engine, nullEngine, world, player } = await bootOnGround();
         const avatar = world.getComponent<any>(player, 'AvatarComponent');

@@ -86,6 +86,10 @@ export class CameraRig {
      *  Presentation only: the transform rotation (movement basis, minimap
      *  marker) follows input instantly and is never touched by the chase. */
     private static readonly TURN_RATE = 5.2;        // rad/s ≈ 300°/s
+    /** While MOVING the body swings toward the travel direction at this faster
+     *  rate — direction changes must feel snappy, but an instant snap on a
+     *  strafe reads as a glitch. */
+    private static readonly TURN_RATE_MOVING = 12;  // rad/s ≈ 690°/s
     /** Remaining yaw error that still reads as "turning" for the anim gate —
      *  while above it a standing avatar plays the walk clip as an in-place
      *  shuffle; below it, close enough to idle without visible sliding. */
@@ -95,6 +99,12 @@ export class CameraRig {
     private static readonly IDLE_MAX = 0.5;
     /** Pad right-stick deadzone that counts as "still looking". */
     private static readonly PAD_LOOK_DEADZONE = 0.2;
+    /** Camera yaw seen last frame — a change queues a standing re-align. */
+    private _lastCamYaw: number | null = null;
+    /** A look operation moved the camera: once it's released (and the body is
+     *  standing) the avatar chases the camera yaw. Movement CONSUMES it —
+     *  stopping a strafe must not pirouette the body back to the camera. */
+    private _alignPending = false;
     /** Avatar visual yaw (engine yaw; facing correction NOT included). null
      *  until the first sync seeds it — spawn/hydration must not shuffle-turn. */
     private _avatarYaw: number | null = null;
@@ -105,6 +115,18 @@ export class CameraRig {
         if (a > Math.PI) a -= 2 * Math.PI;
         else if (a < -Math.PI) a += 2 * Math.PI;
         return a;
+    }
+
+    /** Move the visual yaw toward `target` by at most `maxStep` (shortest arc).
+     *  Returns the REMAINING error after the move (0 once converged). */
+    private chaseYaw(target: number, maxStep: number): number {
+        const err = CameraRig.wrapPi(target - (this._avatarYaw as number));
+        if (Math.abs(err) <= maxStep) {
+            this._avatarYaw = target;
+            return 0;
+        }
+        this._avatarYaw = CameraRig.wrapPi((this._avatarYaw as number) + Math.sign(err) * maxStep);
+        return err - Math.sign(err) * maxStep;
     }
 
     constructor(inputProvider: InputProvider) {
@@ -258,38 +280,45 @@ export class CameraRig {
                 && world.mode !== SystemMode.Ghost;
             world.renderEngine.setObjectVisible(avatar.handle, show);
 
-            // Turn-in-place: while the look input is HELD and the body stands
-            // still, the visual yaw freezes (orbit to the avatar's face); on
-            // release it chases the authoritative yaw at a capped rate and the
-            // anim gate below steps the feet around. Moving bypasses the freeze
-            // (movement is camera-relative — the body must swing to the travel
-            // direction, still rate-capped). While HIDDEN (first-person, ghost,
-            // dolly not yet clear) it snaps into alignment, so switching back
-            // to third person never replays a stale spin.
+            // Avatar heading (visual only — the authoritative transform yaw
+            // stays camera-locked for the movement basis and minimap marker):
+            //   · MOVING → the body swings toward the horizontal velocity at a
+            //     fast cap (yaw 0 faces −Z ⇒ atan2(−vx,−vz)): strafing and
+            //     backpedalling turn the body instead of moonwalking.
+            //   · STANDING + look HELD → freeze (orbit to the avatar's face).
+            //   · STANDING after a look op released → chase the camera yaw at
+            //     the turn-in-place rate, feet shuffling via the anim gate.
+            //   · STANDING otherwise → hold the current heading: stopping a
+            //     strafe must NOT pirouette the body back to the camera, so
+            //     re-align is queued by CAMERA-YAW CHANGES, consumed by moving.
+            //   · HIDDEN (first-person, ghost, dolly not clear) → snap, so
+            //     switching back to third person never replays a stale spin.
             const hSpeedSq = body.velocity[0] * body.velocity[0] + body.velocity[2] * body.velocity[2];
-            const targetYaw = trans.rotation[1];
+            const camYaw = trans.rotation[1];
+            const isMoving = hSpeedSq > CameraRig.IDLE_MAX * CameraRig.IDLE_MAX;
+            const desiredYaw = isMoving ? Math.atan2(-body.velocity[0], -body.velocity[2]) : camYaw;
+            if (this._lastCamYaw !== null && Math.abs(CameraRig.wrapPi(camYaw - this._lastCamYaw)) > 1e-6) {
+                this._alignPending = true;
+            }
+            this._lastCamYaw = camYaw;
             let turning = false;
             if (this._avatarYaw === null || !show) {
-                this._avatarYaw = targetYaw;
-            } else {
+                this._avatarYaw = desiredYaw;
+                this._alignPending = false;
+            } else if (isMoving) {
+                this._alignPending = false;
+                this.chaseYaw(desiredYaw, CameraRig.TURN_RATE_MOVING * dt);
+            } else if (this._alignPending) {
                 const ip = this.inputProvider;
                 const pad = ip.getGamepadState();
                 const input = world.getComponent<InputStateComponent>(eid, 'InputStateComponent');
                 const lookHeld = ip.isMouseDown || ip.touchLookActive
                     || !!input?.lookLeft || !!input?.lookRight
                     || (pad.connected && Math.abs(pad.axes[2]) > CameraRig.PAD_LOOK_DEADZONE);
-                const standing = hSpeedSq <= CameraRig.IDLE_MAX * CameraRig.IDLE_MAX;
-                if (!(standing && lookHeld)) {
-                    let yawErr = CameraRig.wrapPi(targetYaw - this._avatarYaw);
-                    const maxTurn = CameraRig.TURN_RATE * dt;
-                    if (Math.abs(yawErr) <= maxTurn) {
-                        this._avatarYaw = targetYaw;
-                        yawErr = 0;
-                    } else {
-                        this._avatarYaw = CameraRig.wrapPi(this._avatarYaw + Math.sign(yawErr) * maxTurn);
-                        yawErr -= Math.sign(yawErr) * maxTurn;
-                    }
-                    turning = Math.abs(yawErr) > CameraRig.TURN_ANIM_MIN;
+                if (!lookHeld) {
+                    const rem = this.chaseYaw(desiredYaw, CameraRig.TURN_RATE * dt);
+                    turning = Math.abs(rem) > CameraRig.TURN_ANIM_MIN;
+                    if (rem === 0) this._alignPending = false;
                 }
             }
             // Per-model facing correction (external models disagree on forward);

@@ -83,6 +83,11 @@ rightUpperLeg rightLowerLeg rightFoot
   基、小地图标记）仍即时跟随输入**，不得被追赶延迟污染。隐藏中的 avatar（第一人称/
   ghost/推轨未拉开）直接对齐不追赶，避免切回第三人称时补播一段陈旧旋转。实现参考：
   `CameraRig._avatarYaw`。
+- **移动朝向（表现层）**：移动中（`hSpeed > IDLE_MAX`）视觉朝向以更快的限速（参考值
+  ≈ 690°/s）摆向**水平速度方向**——侧移/后退是转过身去走，不是脸朝前滑步。停下时
+  **保持行进朝向**不回摆：站立重对齐只由「视角操作」（相机 yaw 变化后松开）触发（上
+  条），不由停止移动触发——否则每次侧移结束角色都会原地转圈回来。权威 transform 朝向
+  同样不受影响。
 - **v1 核心**：`idle/walk/run/air`（与现有 `CharacterController` 一致）；`jump/land`
   为可选增强。
 - **缺失回退链**（动作集未提供该状态时）：`run→walk→idle`、`air→jump→idle`、

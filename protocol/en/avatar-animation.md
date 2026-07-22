@@ -96,6 +96,14 @@ interpreters agree):
   lag. A hidden avatar (first-person, ghost, dolly not yet clear) snaps into alignment
   instead of chasing, so switching back to third person never replays a stale spin.
   Reference implementation: `CameraRig._avatarYaw`.
+- **Travel heading (presentation layer)**: while moving (`hSpeed > IDLE_MAX`), the visual
+  heading swings toward the **horizontal velocity direction** at a faster cap (reference
+  ≈ 690°/s) — strafing/backpedalling turn the body and walk, not a forward-facing
+  moonwalk. On stopping the avatar **keeps its travel heading**: the standing re-align is
+  triggered only by a completed look operation (camera-yaw change then release — see the
+  bullet above), never by ceasing to move — otherwise every strafe would end in an
+  unrequested pirouette back to the camera. The authoritative transform heading is
+  likewise unaffected.
 - **v1 core**: `idle/walk/run/air` (matches current `CharacterController`); `jump/land`
   are optional enhancements.
 - **Fallback chain** (when the motion set lacks a state's clip): `run→walk→idle`,
