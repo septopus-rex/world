@@ -41,6 +41,25 @@ function MobileApp() {
     const pages = usePages();
     const [sheet, setSheet] = useState<'bag' | 'avatar' | null>(null);
     const [inspecting, setInspecting] = useState(false);
+    // Edit-bar palette gate: the engine's full palette (20+ type buttons)
+    // floods a phone screen, so it stays hidden (CSS in index.css keyed off
+    // .m-palette-open on the app root) until the bar's 添加 toggle opens it.
+    const [paletteOpen, setPaletteOpen] = useState(false);
+    useEffect(() => { if (mode !== 'edit') setPaletteOpen(false); }, [mode]);
+    // Auto-collapse once a type is picked: the engine's palette buttons stop
+    // propagation on bubble, but a CAPTURE-phase listener on the engine host
+    // still sees the tap first. Picking (or un-picking) a type is exactly the
+    // moment the creator needs the world back to tap a surface.
+    useEffect(() => {
+        if (!paletteOpen) return;
+        const host = document.getElementById('three_demo');
+        if (!host) return;
+        const collapse = (e: Event) => {
+            if ((e.target as HTMLElement).closest?.('.sept-ui-group.mid-left')) setPaletteOpen(false);
+        };
+        host.addEventListener('click', collapse, true);
+        return () => host.removeEventListener('click', collapse, true);
+    }, [paletteOpen]);
 
     // Fade out the boot splash once the world is ready (same as the desktop shell).
     useEffect(() => {
@@ -53,7 +72,7 @@ function MobileApp() {
     }, [ready]);
 
     return (
-        <div data-testid="mobile-app" className="relative w-screen h-screen overflow-hidden bg-black text-white select-none">
+        <div data-testid="mobile-app" className={`relative w-screen h-screen overflow-hidden bg-black text-white select-none${paletteOpen ? ' m-palette-open' : ''}`}>
             {/* The engine canvas host — drag = look (engine-native touch), tap = interact. */}
             <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
 
@@ -93,22 +112,45 @@ function MobileApp() {
                 </div>
             )}
 
-            {/* Block-scoped edit toggle — top of the right-thumb stack. The block
-                you STAND ON is the edit target: the engine locks it on entry
-                (EditSessionManager) and the session survives walking into
-                neighbouring blocks to inspect the build; DONE exits via
-                setMode('normal'), which saves the block draft. Gated through
-                loader.canEditBlock() — the ownership seam (always true until
-                ownership lands). Hidden in Game mode (HUDs own the screen).
-                onClick single-fire, same rationale as the view toggle below. */}
-            {ready && mode !== 'game' && (mode === 'edit' || loader?.canEditBlock()) && (
+            {/* Block-scoped edit ENTRY — top of the right-thumb stack, entry
+                only. The block you STAND ON is the edit target: the engine
+                locks it on entry (EditSessionManager) and the session survives
+                walking into neighbouring blocks to inspect the build. Gated
+                through loader.canEditBlock() — the ownership seam (always true
+                until ownership lands). Hidden in Game mode (HUDs own the
+                screen); while editing the bar below owns everything, exit
+                included. onClick single-fire, same rationale as the view
+                toggle below. */}
+            {ready && mode !== 'game' && mode !== 'edit' && loader?.canEditBlock() && (
                 <div className="absolute bottom-44 right-7 z-20 pointer-events-auto">
                     <button data-testid="m-edit-toggle"
-                        aria-label={mode === 'edit' ? '完成编辑' : '编辑此块'}
-                        onClick={() => setMode(mode === 'edit' ? 'normal' : 'edit')}
-                        className={`w-14 h-14 rounded-full border-2 backdrop-blur-md flex items-center justify-center active:scale-95 shadow-xl ${mode === 'edit' ? 'bg-yellow-500/25 border-yellow-400/60' : 'bg-white/10 border-white/25'}`}>
-                        <span className="font-extrabold text-white text-xs tracking-widest opacity-90">{mode === 'edit' ? 'DONE' : 'EDIT'}</span>
+                        aria-label="编辑此块"
+                        onClick={() => setMode('edit')}
+                        className="w-14 h-14 rounded-full border-2 bg-white/10 border-white/25 backdrop-blur-md flex items-center justify-center active:scale-95 shadow-xl">
+                        <span className="font-extrabold text-white text-xs tracking-widest opacity-90">EDIT</span>
                     </button>
+                </div>
+            )}
+
+            {/* ── edit bar: the ONE home for edit functions on this shell (they
+                   accumulate here as editing grows — the engine's own DOM UI
+                   stays collapsed so entering Edit doesn't flood the screen).
+                   退出编辑 = setMode('normal'), which persists the block draft;
+                   添加 toggles the engine palette (auto-collapses on pick). ── */}
+            {ready && mode === 'edit' && (
+                <div data-testid="m-edit-bar" className="absolute bottom-44 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+                    <div className="flex items-center gap-2 px-2 py-2 rounded-2xl bg-black/55 border border-yellow-400/40 backdrop-blur-md shadow-2xl">
+                        <button data-testid="m-edit-exit" aria-label="退出编辑"
+                            onClick={() => setMode('normal')}
+                            className="px-3.5 py-2 rounded-xl text-xs font-black tracking-wider text-yellow-200 bg-yellow-500/20 border border-yellow-400/50 active:scale-95">
+                            ✓ 退出编辑
+                        </button>
+                        <button data-testid="m-edit-add" aria-label="添加 adjunct"
+                            onClick={() => setPaletteOpen(o => !o)}
+                            className={`px-3.5 py-2 rounded-xl text-xs font-black tracking-wider border active:scale-95 ${paletteOpen ? 'text-cyan-100 bg-cyan-500/25 border-cyan-400/60' : 'text-white/90 bg-white/10 border-white/25'}`}>
+                            ＋ 添加
+                        </button>
+                    </div>
                 </div>
             )}
 

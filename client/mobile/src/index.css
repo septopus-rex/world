@@ -24,4 +24,8 @@ html, body {
   max-height: 52vh;
   padding: 8px;
   gap: 5px;
+  /* Hidden until the edit bar's 添加 toggle opens it (.m-palette-open on the
+     app root) — 20+ type buttons flood a phone screen if shown on entry. */
+  display: none;
 }
+.m-palette-open #three_demo .sept-ui-group.mid-left { display: flex; }

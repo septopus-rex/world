@@ -109,12 +109,26 @@ export class InputProvider {
         this.mouseButtons.delete(e.button);
     };
 
+    /** Touches that begin on DOM UI inside the container — the engine's own
+     *  overlay (palette buttons, forms) is a CHILD of the container, so its
+     *  touches bubble here — are NOT world touches. Leave them entirely to the
+     *  browser: preventDefault would suppress the synthesized click (buttons
+     *  dead on touch screens) and input focus. Touch events retarget to the
+     *  touchstart target for their whole lifetime, so this test is stable
+     *  across start/move/end. Only canvas touches drive look/tap-interact. */
+    private isUiTouch(e: TouchEvent): boolean {
+        const t = e.target as HTMLElement | null;
+        return !!t && t.tagName !== 'CANVAS';
+    }
+
     private onTouchStart = (e: TouchEvent) => {
+        if (this.isUiTouch(e)) return;
         if (e.cancelable) e.preventDefault();
-        // Any canvas touch drives the look: UI overlays (joystick/JUMP/drawer)
-        // sit ABOVE the canvas and capture their own touches, so what reaches
-        // here is a bare-world touch. (The old right-half-only guard made
-        // left-half swipes dead — reported as "左右滑不灵敏".)
+        // Any canvas touch drives the look: client UI (joystick/JUMP/drawer)
+        // sits ABOVE the canvas and captures its own touches, and engine DOM UI
+        // is filtered by isUiTouch — so what reaches here is a bare-world
+        // touch. (The old right-half-only guard made left-half swipes dead —
+        // reported as "左右滑不灵敏".)
         if (this.touchLookActive) return; // one look-finger at a time
         const touch = e.changedTouches[0];
         if (touch) {
@@ -129,6 +143,7 @@ export class InputProvider {
     };
 
     private onTouchMove = (e: TouchEvent) => {
+        if (this.isUiTouch(e)) return;
         if (e.cancelable) e.preventDefault();
         if (!this.touchLookActive || this.activeLookTouchId === null) return;
 
@@ -143,6 +158,7 @@ export class InputProvider {
     };
 
     private onTouchEnd = (e: TouchEvent) => {
+        if (this.isUiTouch(e)) return;
         if (e.cancelable) e.preventDefault();
         for (let i = 0; i < e.changedTouches.length; i++) {
             const t = e.changedTouches[i];
