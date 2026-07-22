@@ -75,6 +75,38 @@ export class CameraRig {
     /** Most GLTF characters face +Z; engine forward is -Z, so flip the avatar to face away. */
     private static readonly AVATAR_FACING = Math.PI;
 
+    // ── turn-in-place (protocol avatar-animation.md §2, turn-in-place note) ──
+    /** While the user actively HOLDS the look input (mouse drag / touch look /
+     *  look keys / pad right stick) and stands still, the avatar's visual yaw
+     *  FREEZES — you can orbit around to its face. On release it chases the
+     *  authoritative yaw at this capped rate (shortest arc), stepping around
+     *  with the walk clip. A per-frame rate limit alone does nothing: a normal
+     *  drag moves the target < the cap each frame, so the avatar tracked
+     *  rigidly and the shuffle never fired (verified in-browser, 2026-07-22).
+     *  Presentation only: the transform rotation (movement basis, minimap
+     *  marker) follows input instantly and is never touched by the chase. */
+    private static readonly TURN_RATE = 5.2;        // rad/s ≈ 300°/s
+    /** Remaining yaw error that still reads as "turning" for the anim gate —
+     *  while above it a standing avatar plays the walk clip as an in-place
+     *  shuffle; below it, close enough to idle without visible sliding. */
+    private static readonly TURN_ANIM_MIN = 0.12;   // rad ≈ 7°
+    /** §2 IDLE_MAX (m/s): also gates the look-held freeze — only a STANDING
+     *  avatar freezes; a moving body must swing toward the travel direction. */
+    private static readonly IDLE_MAX = 0.5;
+    /** Pad right-stick deadzone that counts as "still looking". */
+    private static readonly PAD_LOOK_DEADZONE = 0.2;
+    /** Avatar visual yaw (engine yaw; facing correction NOT included). null
+     *  until the first sync seeds it — spawn/hydration must not shuffle-turn. */
+    private _avatarYaw: number | null = null;
+
+    /** Wrap an angle to (−π, π] — shortest-arc error for the yaw chase. */
+    private static wrapPi(a: number): number {
+        a = a % (2 * Math.PI);
+        if (a > Math.PI) a -= 2 * Math.PI;
+        else if (a < -Math.PI) a += 2 * Math.PI;
+        return a;
+    }
+
     constructor(inputProvider: InputProvider) {
         this.inputProvider = inputProvider;
     }
@@ -217,10 +249,6 @@ export class CameraRig {
                 ? feetY(trans, body) - avatar.footOffset
                 : trans.position[1];
             world.renderEngine.setObjectPosition(avatar.handle, trans.position[0], avatarY, trans.position[2]);
-            // Per-model facing correction (external models disagree on forward);
-            // falls back to the legacy default when the avatar didn't declare one.
-            const facing = avatar.facing !== undefined ? avatar.facing : CameraRig.AVATAR_FACING;
-            world.renderEngine.setObjectRotation(avatar.handle, 0, trans.rotation[1] + facing, 0);
             // Visible once the dolly has CLEARED the body — not merely "in
             // third-person": mid-transition (and during a teleport pull from
             // first-person) the camera passes through the avatar's head, and
@@ -230,13 +258,50 @@ export class CameraRig {
                 && world.mode !== SystemMode.Ghost;
             world.renderEngine.setObjectVisible(avatar.handle, show);
 
+            // Turn-in-place: while the look input is HELD and the body stands
+            // still, the visual yaw freezes (orbit to the avatar's face); on
+            // release it chases the authoritative yaw at a capped rate and the
+            // anim gate below steps the feet around. Moving bypasses the freeze
+            // (movement is camera-relative — the body must swing to the travel
+            // direction, still rate-capped). While HIDDEN (first-person, ghost,
+            // dolly not yet clear) it snaps into alignment, so switching back
+            // to third person never replays a stale spin.
+            const hSpeedSq = body.velocity[0] * body.velocity[0] + body.velocity[2] * body.velocity[2];
+            const targetYaw = trans.rotation[1];
+            let turning = false;
+            if (this._avatarYaw === null || !show) {
+                this._avatarYaw = targetYaw;
+            } else {
+                const ip = this.inputProvider;
+                const pad = ip.getGamepadState();
+                const input = world.getComponent<InputStateComponent>(eid, 'InputStateComponent');
+                const lookHeld = ip.isMouseDown || ip.touchLookActive
+                    || !!input?.lookLeft || !!input?.lookRight
+                    || (pad.connected && Math.abs(pad.axes[2]) > CameraRig.PAD_LOOK_DEADZONE);
+                const standing = hSpeedSq <= CameraRig.IDLE_MAX * CameraRig.IDLE_MAX;
+                if (!(standing && lookHeld)) {
+                    let yawErr = CameraRig.wrapPi(targetYaw - this._avatarYaw);
+                    const maxTurn = CameraRig.TURN_RATE * dt;
+                    if (Math.abs(yawErr) <= maxTurn) {
+                        this._avatarYaw = targetYaw;
+                        yawErr = 0;
+                    } else {
+                        this._avatarYaw = CameraRig.wrapPi(this._avatarYaw + Math.sign(yawErr) * maxTurn);
+                        yawErr -= Math.sign(yawErr) * maxTurn;
+                    }
+                    turning = Math.abs(yawErr) > CameraRig.TURN_ANIM_MIN;
+                }
+            }
+            // Per-model facing correction (external models disagree on forward);
+            // falls back to the legacy default when the avatar didn't declare one.
+            const facing = avatar.facing !== undefined ? avatar.facing : CameraRig.AVATAR_FACING;
+            world.renderEngine.setObjectRotation(avatar.handle, 0, this._avatarYaw + facing, 0);
+
             // Movement state → animation. NORMATIVE derivation — protocol
             // avatar-animation.md §2: idle ≤ IDLE_MAX (0.5 m/s) < walk ≤
             // WALK_MAX (maxSpeedWalk × 1.2, linear) < run; !grounded → air.
             // Compared squared to avoid the sqrt on the hot path.
-            const hSpeedSq = body.velocity[0] * body.velocity[0] + body.velocity[2] * body.velocity[2];
             const walkMax = body.maxSpeedWalk * 1.2;   // WALK_MAX (§2)
-            const IDLE_MAX = 0.5;                       // m/s (§2)
             // Debounce 'air' with coyote time: the physics grounded flag flickers
             // one frame per two on flat ground, so require a SUSTAINED airborne
             // streak before animating 'air' — else walk/idle would reset every
@@ -245,7 +310,12 @@ export class CameraRig {
             let animState = 'idle';
             if (this._airborneSec > CameraRig.AIR_COYOTE) animState = 'air';
             else if (hSpeedSq > walkMax * walkMax) animState = 'run';
-            else if (hSpeedSq > IDLE_MAX * IDLE_MAX) animState = 'walk';
+            else if (hSpeedSq > CameraRig.IDLE_MAX * CameraRig.IDLE_MAX) animState = 'walk';
+            // Turn-in-place shuffle (§2 turn note): standing but still chasing
+            // the look yaw → the walk clip steps the feet around. The ONLY
+            // exception to the speed→state derivation, and visual only. Frozen
+            // (look held) is NOT turning — feet must not step under a held pose.
+            else if (turning) animState = 'walk';
             (world.renderEngine as any).setAnimationState?.(avatar.handle, animState);
             (world.renderEngine as any).updateAnimation(avatar.handle, dt);
         }

@@ -139,6 +139,84 @@ describe('camera view transition (first↔third dolly)', () => {
         expect(camPos()[1] - feet).toBeCloseTo(cam.offset[1] + 1.2, 5);
     });
 
+    it('turn-in-place: a standing 180° look flip steps the avatar around (walk), then settles (idle)', async () => {
+        const { engine, nullEngine, world, player } = await bootOnGround();
+        const avatar = world.getComponent<any>(player, 'AvatarComponent');
+        const angDist = (a: number, b: number) => {
+            let d = (a - b) % (2 * Math.PI);
+            if (d > Math.PI) d -= 2 * Math.PI;
+            if (d < -Math.PI) d += 2 * Math.PI;
+            return Math.abs(d);
+        };
+        engine.step(1 / 60);
+        const facing = avatar.handle.rotation.y;   // visual yaw at look yaw 0 = the facing correction
+
+        // Pin the camera yaw at π. The null engine's rotation getter is
+        // stateless, so overriding it reads as "the drag already happened" —
+        // processLook's writes go nowhere, exactly like a finished flick.
+        (nullEngine as any).getMainCameraRotation = (): [number, number, number] => [0, Math.PI, 0];
+        const target = Math.PI + facing;
+
+        const states = new Set<string>();
+        let prev = avatar.handle.rotation.y, maxFrameStep = 0, frames = 0;
+        while (angDist(avatar.handle.rotation.y, target) > 1e-9 && frames < 120) {
+            engine.step(1 / 60);
+            frames++;
+            states.add(nullEngine.__counts.lastAnimState);
+            maxFrameStep = Math.max(maxFrameStep, angDist(avatar.handle.rotation.y, prev));
+            prev = avatar.handle.rotation.y;
+        }
+        expect(frames, 'converges onto the new heading').toBeLessThan(120);
+        expect(frames, 'over many frames — not a rigid snap').toBeGreaterThan(20);   // π / TURN_RATE ≈ 0.6 s
+        expect(maxFrameStep, 'per-frame turn stays under TURN_RATE·dt').toBeLessThan(0.1);
+        expect(states.has('walk'), 'shuffles (walk clip) while turning').toBe(true);
+        engine.step(1 / 60);
+        expect(nullEngine.__counts.lastAnimState, 'settles back to idle').toBe('idle');
+    });
+
+    it('turn-in-place: look HELD freezes the pose (no shuffle); release starts the chase', async () => {
+        const { engine, nullEngine, world, player } = await bootOnGround();
+        const avatar = world.getComponent<any>(player, 'AvatarComponent');
+        const ip: any = (world.systems.findSystemByName('CharacterController') as any).inputProvider;
+        engine.step(1 / 60);
+        const facing = avatar.handle.rotation.y;
+
+        // Drag in progress: mouse held while the camera yaw swings to π.
+        ip.isMouseDown = true;
+        (nullEngine as any).getMainCameraRotation = (): [number, number, number] => [0, Math.PI, 0];
+        for (let i = 0; i < 40; i++) {
+            engine.step(1 / 60);
+            expect(nullEngine.__counts.lastAnimState, 'held: no shuffle under a frozen pose').toBe('idle');
+        }
+        expect(avatar.handle.rotation.y, 'held: the avatar holds its pose').toBeCloseTo(facing, 9);
+
+        // Release: now it steps around and catches up.
+        ip.isMouseDown = false;
+        const states = new Set<string>();
+        for (let i = 0; i < 60; i++) { engine.step(1 / 60); states.add(nullEngine.__counts.lastAnimState); }
+        expect(states.has('walk'), 'release: shuffles while catching up').toBe(true);
+        expect(avatar.handle.rotation.y).toBeCloseTo(Math.PI + facing, 9);
+        expect(nullEngine.__counts.lastAnimState, 'settled back to idle').toBe('idle');
+    });
+
+    it('turn-in-place: hidden avatar (first person) snaps — no stale spin replay on return', async () => {
+        const { engine, nullEngine, world, player } = await bootOnGround();
+        const avatar = world.getComponent<any>(player, 'AvatarComponent');
+        engine.step(1 / 60);
+        const facing = avatar.handle.rotation.y;
+
+        engine.setCameraView('first', true);
+        engine.step(1 / 60);
+        expect(avatar.handle.visible).toBe(false);
+
+        (nullEngine as any).getMainCameraRotation = (): [number, number, number] => [0, Math.PI / 2, 0];
+        engine.step(1 / 60);                       // hidden → aligned instantly
+        engine.setCameraView('third', true);
+        engine.step(1 / 60);
+        expect(Math.abs(avatar.handle.rotation.y - (Math.PI / 2 + facing)), 'already facing the look yaw').toBeLessThan(1e-9);
+        expect(nullEngine.__counts.lastAnimState, 'no shuffle on the way back').toBe('idle');
+    });
+
     it('hides the avatar until the dolly clears the body (no faceful of backfaces)', async () => {
         const { engine, world, player, camPos, trans } = await bootOnGround();
         const avatar = world.getComponent<any>(player, 'AvatarComponent');

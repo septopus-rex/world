@@ -79,7 +79,9 @@ export function createNullRenderEngine() {
 
     // Object transforms
     setObjectPosition: () => {},
-    setObjectRotation: () => {},
+    // Mirror the real engine: write the rotation onto the handle stub so tests
+    // can observe orientation (e.g. the avatar's turn-in-place yaw chase).
+    setObjectRotation: (h: Handle, x: number, y: number, z: number) => { h?.rotation?.set?.(x, y, z); },
     setObjectScale: () => {},
     worldToLocal: (_h: Handle, x: number, y: number, z: number): [number, number, number] => [x, y, z],
     setObjectVisible: (h: Handle, visible: boolean) => { if (h) h.visible = visible; },

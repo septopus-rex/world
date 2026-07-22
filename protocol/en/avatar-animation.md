@@ -81,6 +81,21 @@ interpreters agree):
   So `air` **must be debounced**: only a sustained airborne streak exceeding `AIR_COYOTE`
   counts as real `air`; a genuine jump/fall far exceeds the window, and a one-frame landing
   flicker is absorbed. Reference: `CameraRig` accumulates `_airborneSec`, cleared on landing.
+- **Turn-in-place (presentation layer)**: while standing (`hSpeed ≤ IDLE_MAX`) with the
+  look input actively **held** (mouse drag / touch look / look keys / pad right stick),
+  the avatar's **visual heading freezes** — you can orbit around to its face. On
+  **release**, the visual heading chases the authoritative heading at a capped angular
+  rate (reference ≈ 300°/s, shortest arc), playing the `walk` clip as an in-place shuffle
+  while the residual error exceeds ~7°. Moving bypasses the freeze (movement is
+  camera-relative — the body must swing toward the travel direction, still rate-capped).
+  **A per-frame rate cap alone is NOT sufficient**: a normal drag moves the target by far
+  less than the cap each frame, so the avatar tracks rigidly and the shuffle never fires
+  (verified in-browser, 2026-07-22). This is the **only exception** to the speed→state
+  derivation, and it is visual only: **the authoritative transform heading (movement
+  basis, minimap marker) follows input instantly** and must not be polluted by the chase
+  lag. A hidden avatar (first-person, ghost, dolly not yet clear) snaps into alignment
+  instead of chasing, so switching back to third person never replays a stale spin.
+  Reference implementation: `CameraRig._avatarYaw`.
 - **v1 core**: `idle/walk/run/air` (matches current `CharacterController`); `jump/land`
   are optional enhancements.
 - **Fallback chain** (when the motion set lacks a state's clip): `run→walk→idle`,
