@@ -11,6 +11,7 @@ import { isolateMaterial } from './MaterialUtils';
 import { MeshFactory } from './MeshFactory';
 import { ParticleFX } from './ParticleFX';
 import { EditorHelpers } from './EditorHelpers';
+import { TransformGizmo, GizmoHooks, GizmoInfo } from './TransformGizmo';
 import { FloatingOrigin } from './FloatingOrigin';
 import { SceneLighting } from './SceneLighting';
 import { Picking } from './Picking';
@@ -587,6 +588,31 @@ export class RenderEngine {
         return this.editorHelpers.gridHelper(size, divisions, color2);
     }
 
+    // ── Edit-mode translate gizmo — delegated to render/TransformGizmo ─────────
+    private gizmo: TransformGizmo | null = null;
+
+    /** Attach the 3DMax-style XYZ drag gizmo to a mesh handle (edit selection).
+     *  Lazily constructs the TransformControls wrapper on first use. */
+    public attachTransformGizmo(target: RenderHandle, hooks: GizmoHooks): void {
+        this.gizmo ??= new TransformGizmo(
+            this.scene, this.mainCamera, this.renderer.domElement, this.floatingOrigin.origin);
+        this.gizmo.attach(target, hooks);
+    }
+
+    public detachTransformGizmo(): void {
+        this.gizmo?.detach();
+    }
+
+    /** True while a gizmo axis is grabbed or hovered — the click belongs to the
+     *  gizmo, not to select/deselect raycasting (EditSystem gates on this). */
+    public isGizmoBusy(): boolean {
+        return this.gizmo?.busy ?? false;
+    }
+
+    public gizmoInfo(): GizmoInfo {
+        return this.gizmo?.info() ?? { attached: false, dragging: false, axis: null };
+    }
+
     /**
      * Helper API
      */
@@ -733,6 +759,8 @@ export class RenderEngine {
     }
 
     public dispose(): void {
+        this.gizmo?.dispose();
+        this.gizmo = null;
         if (this.container && this.renderer.domElement) {
             this.container.removeChild(this.renderer.domElement);
         }

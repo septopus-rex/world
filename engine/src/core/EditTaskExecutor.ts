@@ -3,11 +3,13 @@ import { AdjunctType } from './types/AdjunctType';
 import { AdjunctComponent } from './components/AdjunctComponents';
 import { TransformComponent } from './components/PlayerComponents';
 import { MeshComponent } from './components/VisualizationComponents';
+import { BlockComponent } from './components/BlockComponent';
 import { EditTask } from './types/EditTask';
 import { AdjunctFactory } from './factories/AdjunctFactory';
 import { STDObject } from './types/Adjunct';
 import { setByPath } from './edit/setByPath';
 import { normalizeSppFaces } from './spp/faceCodes';
+import { Coords } from './utils/Coords';
 
 /**
  * EditTaskExecutor
@@ -106,6 +108,10 @@ export class EditTaskExecutor {
         world.renderEngine.setRaycastable(result.handle, true);
         if (meshComp) meshComp.handle = result.handle;
 
+        // Re-derive the world transform from the restored stdData (undoing a
+        // gizmo move must snap the entity back, not just its serialized form).
+        this.syncTransformFromStd(world, entityId, adjComp);
+
         // Source adjunct (b6 spp / c2 motif): re-expand derived pieces to
         // match the restored data.
         const restoredType = (adjComp.stdData as any).typeId;
@@ -159,18 +165,8 @@ export class EditTaskExecutor {
             world.addComponent<MeshComponent>(entityId, "MeshComponent", { handle: result.handle });
         }
 
-        // Update TransformComponent position from stdData
-        const trans = world.getComponent<TransformComponent>(entityId, "TransformComponent");
-        if (trans) {
-            trans.position[0] = std.ox ?? trans.position[0];
-            trans.position[1] = std.oz ?? trans.position[1];
-            trans.position[2] = -(std.oy ?? -trans.position[2]);
-            // Keep rotation in sync too, so keyboard/gizmo rotation holds (and a
-            // later VisualSync pass doesn't overwrite the rebuilt mesh's rotation).
-            if (std.rx != null) trans.rotation[0] = std.rx;
-            if (std.ry != null) trans.rotation[1] = std.ry;
-            if (std.rz != null) trans.rotation[2] = std.rz;
-        }
+        // Update TransformComponent from stdData
+        this.syncTransformFromStd(world, entityId, adjComp);
 
         // Source adjunct (b6/c2): fold particle face-codes into cells, then
         // re-expand the derived pieces live (the source's own mesh is a hidden
@@ -183,6 +179,38 @@ export class EditTaskExecutor {
 
         console.log(`[EditTaskExecutor] Set ${adjComp.adjunctId} on entity ${entityId}`, param);
         return true;
+    }
+
+    /**
+     * Re-derive the ECS world transform from stdData after a set/restore.
+     * ox/oy/oz are BLOCK-RELATIVE septopus offsets (raw altitudes exclude the
+     * block elevation) — the same mapping BlockSystem.attachAdjunctComponents
+     * uses at spawn. (The previous inline version dropped the block offset and
+     * elevation — position edits on any block but (1,1) corrupted the transform
+     * — and never set `dirty`, so VisualSync left the rebuilt mesh group at its
+     * parent's origin.)
+     */
+    private syncTransformFromStd(world: World, entityId: EntityId, adjComp: AdjunctComponent): void {
+        const trans = world.getComponent<TransformComponent>(entityId, "TransformComponent");
+        if (!trans) return;
+        const std = adjComp.stdData as any;
+
+        const block = adjComp.parentBlockEntityId != null
+            ? world.getComponent<BlockComponent>(adjComp.parentBlockEntityId, "BlockComponent") : undefined;
+        if (block && std.ox != null) {
+            const enginePos = Coords.septopusToEngine(
+                [std.ox, std.oy ?? 0, std.oz ?? 0], [block.x, block.y]);
+            enginePos[1] += (block.elevation || 0);
+            trans.position[0] = enginePos[0];
+            trans.position[1] = enginePos[1];
+            trans.position[2] = enginePos[2];
+        }
+        if (std.rx != null) trans.rotation[0] = std.rx;
+        if (std.ry != null) trans.rotation[1] = std.ry;
+        if (std.rz != null) trans.rotation[2] = std.rz;
+        // Dirty so VisualSync repositions the REBUILT mesh group (it spawns at
+        // its parent's origin until the first sync).
+        trans.dirty = true;
     }
 
     private executeDelete(world: World, entityId: EntityId): boolean {

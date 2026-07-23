@@ -120,6 +120,13 @@ export function createNullRenderEngine() {
     createGridHelper: () => handle(),
     updateBlockHighlight: () => {},
 
+    // Edit-mode translate gizmo (render/TransformGizmo) — headless no-op; core
+    // drives the same callbacks directly in tests (edit-gizmo-move.test.ts).
+    attachTransformGizmo: () => {},
+    detachTransformGizmo: () => {},
+    isGizmoBusy: () => false,
+    gizmoInfo: () => ({ attached: false, dragging: false, axis: null }),
+
     // Raycasting / projection — queries return "nothing"
     castRayFromCamera: () => null,
     castRayFromMinimap: () => null,

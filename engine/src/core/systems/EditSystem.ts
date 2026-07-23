@@ -29,9 +29,16 @@ const PLACEMENT_FILTERED_KEYS = new Set(['ox', 'oy', 'oz', 'rx', 'ry', 'rz']);
 export class EditSystem implements ISystem {
     private activeBlockId: EntityId | null = null;
     private selectedEntityId: EntityId | null = null;
-    private movingEntityId: EntityId | null = null;
 
-    private gridPlane: 'XZ' | 'XY' | 'YZ' = 'XZ';
+    /** Grid snap for gizmo drags (step = CONTROL_CONSTANTS.GRID_SNAP_RESOLUTION);
+     *  toggled by the "Snap" button next to the selection. */
+    private snapEnabled: boolean = true;
+    /** True once a gizmo drag actually displaced the object — release without
+     *  movement must not push a no-op onto the undo history. */
+    private gizmoMoved: boolean = false;
+    /** Hooks handed to the render-layer gizmo (see render/TransformGizmo). Built
+     *  once — EditHelperManager re-attaches them whenever the target changes. */
+    private readonly gizmoHooks: import('../../render/TransformGizmo').GizmoHooks;
     private hasBeenCleared: boolean = false;
     /** Palette placement: the armed adjunct typeId (next click places it). */
     private placingTypeId: number | null = null;
@@ -44,12 +51,10 @@ export class EditSystem implements ISystem {
     private _prevTransformKeys: Set<string> = new Set();
     private _prevZ: boolean = false;
     private paletteDirty: boolean = false;
-    private lastClickTime: number = 0;
-    private readonly DOUBLE_CLICK_DELAY = 300;
 
     // UI state tracking to prevent redundant updates
     private lastUISelection: EntityId | null = null;
-    private lastUIPlane: string = '';
+    private lastUISnap: boolean | null = null;
     private lastUIActiveBlock: EntityId | null = null;
 
     private helpers: EditHelperManager;
@@ -71,6 +76,10 @@ export class EditSystem implements ISystem {
         this.primaryReader = world.events.reader('interact.primary');
         this.missReader = world.events.reader('interact.miss');
         this.contextReader = world.events.reader('interact.context');
+        this.gizmoHooks = {
+            onChange: (abs) => this.onGizmoChange(world, abs),
+            onDragState: (dragging) => this.onGizmoDragState(world, dragging),
+        };
     }
 
     public update(world: World, dt: number): void {
@@ -89,10 +98,16 @@ export class EditSystem implements ISystem {
         this.hasBeenCleared = false;
 
         // Drain this frame's clicks (same-frame: Raycast runs earlier in order).
+        // A click that grabs (or hovers) a gizmo axis belongs to the gizmo — the
+        // pick ray passes THROUGH the raycast-inert arrows and would otherwise
+        // reselect whatever sits behind them (or deselect on a miss) mid-drag.
+        const gizmoBusy = world.renderEngine.isGizmoBusy();
         for (const ev of this.primaryReader.read()) {
+            if (gizmoBusy) continue;
             this.onInteract(world, { entityId: ev.target ?? null, ...(ev.payload as any) });
         }
         for (const _ev of this.missReader.read()) {
+            if (gizmoBusy) continue;
             this.onInteract(world, { entityId: null, metadata: null, distance: Infinity, point: [0, 0, 0] });
         }
         for (const ev of this.contextReader.read()) {
@@ -124,13 +139,8 @@ export class EditSystem implements ISystem {
         // 2b. Keyboard transform of the selected object (rotate / scale).
         this.handleTransformKeys(world);
 
-        // 3. Handle Movement
-        if (this.movingEntityId !== null) {
-            this.handleMovement(world);
-        }
-
-        // 4. Sync Visuals/UI
-        this.helpers.sync(this.activeBlockId, this.selectedEntityId, this.gridPlane);
+        // 3. Sync Visuals/UI (translation is gizmo-driven — see onGizmoChange)
+        this.helpers.sync(this.activeBlockId, this.selectedEntityId, this.gizmoHooks);
         this.syncUI(world);
     }
 
@@ -166,12 +176,11 @@ export class EditSystem implements ISystem {
     }
 
     /**
-     * Keyboard transform of the selected adjunct (the rotate/scale "gizmo"):
+     * Keyboard transform of the selected adjunct:
      *   [ / ]   yaw -15° / +15°
      *   - / =   uniform scale ×0.9 / ×1.1
-     * Each nudge is a 'set' task — undoable + persisted like any edit. Plane-drag
-     * already handles translation (handleMovement); a visual drag-handle gizmo is
-     * a separate render feature.
+     * Each nudge is a 'set' task — undoable + persisted like any edit.
+     * Translation is the drag gizmo (onGizmoChange/commitGizmoMove).
      */
     private handleTransformKeys(world: World): void {
         const ip = (world.systems.findSystemByName("CharacterController") as any)?.inputProvider as InputProvider | null;
@@ -188,7 +197,7 @@ export class EditSystem implements ISystem {
         }
         this._prevTransformKeys = new Set(CODES.filter(c => ip.isKeyPressed(c)));
 
-        if (pressed === null || this.selectedEntityId === null || this.movingEntityId !== null) return;
+        if (pressed === null || this.selectedEntityId === null || world.isMovingObject) return;
         const adj = world.getComponent<AdjunctComponent>(this.selectedEntityId, "AdjunctComponent");
         if (!adj) return;
         const std = adj.stdData as any;
@@ -234,57 +243,89 @@ export class EditSystem implements ISystem {
         this.syncUI(world);
     }
 
-    private handleMovement(world: World) {
-        if (this.movingEntityId === null || this.activeBlockId === null) return;
+    /**
+     * Gizmo drag update (render layer → core). Receives the dragged object's
+     * ABSOLUTE world position, applies grid snap (if enabled) + block-bounds
+     * clamp, writes the result into the ECS transform and returns it so the
+     * gizmo can correct the visual. Core stays the single authority over where
+     * an adjunct may go; the gizmo is just the hand.
+     */
+    private onGizmoChange(world: World, abs: [number, number, number]): [number, number, number] | null {
+        if (this.selectedEntityId === null || this.activeBlockId === null) return null;
+        const trans = world.getComponent<TransformComponent>(this.selectedEntityId, "TransformComponent");
+        const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
+        if (!trans || !bComp) return null;
 
-        const playerEntities = world.getEntitiesWith(["InputStateComponent", "TransformComponent"]);
-        if (playerEntities.length === 0) return;
+        const [bw, bl, bh] = world.config.world.block;
+        const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
+        const elevation = bComp.elevation || 0;
 
-        const input = world.getComponent<InputStateComponent>(playerEntities[0], "InputStateComponent")!;
-        const trans = world.getComponent<TransformComponent>(this.movingEntityId, "TransformComponent")!;
-
-        let normal: [number, number, number] = [0, 1, 0];
-        let planePoint: [number, number, number] = [...trans.position];
-
-        if (this.gridPlane === 'XZ') {
-            normal = [0, 1, 0];
-            const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent")!;
-            planePoint[1] = bComp.elevation || 0;
-        } else if (this.gridPlane === 'XY') {
-            normal = [0, 0, 1];
-        } else if (this.gridPlane === 'YZ') {
-            normal = [1, 0, 0];
-        }
-
-        const hit = world.renderEngine.intersectRayWithPlane(input.mouseNDC[0], input.mouseNDC[1], normal, planePoint);
-
-        if (hit) {
-            const playerPos = world.getComponent<TransformComponent>(playerEntities[0], "TransformComponent")!.position;
-            const distSq = (hit[0] - playerPos[0]) ** 2 + (hit[1] - playerPos[1]) ** 2 + (hit[2] - playerPos[2]) ** 2;
-            if (distSq > 12 * 12) return;
-
+        let [newX, newY, newZ] = abs;
+        if (this.snapEnabled) {
             const res = CONTROL_CONSTANTS.GRID_SNAP_RESOLUTION;
-            const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent")!;
-            const [bw, bl, bh] = world.config.world.block;
-            const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
-            const elevation = bComp.elevation || 0;
+            newX = Coords.snapToGrid(newX, res);
+            newY = Coords.snapToGrid(newY, res);
+            newZ = Coords.snapToGrid(newZ, res);
+        }
+        newX = Math.max(bWorldPos[0], Math.min(bWorldPos[0] + bw, newX));
+        newZ = Math.min(bWorldPos[2], Math.max(bWorldPos[2] - bl, newZ));
+        newY = Math.max(elevation, Math.min(elevation + bh, newY));
 
-            let newX = Coords.snapToGrid(hit[0], res);
-            let newY = Coords.snapToGrid(hit[1], res);
-            let newZ = Coords.snapToGrid(hit[2], res);
-
-            newX = Math.max(bWorldPos[0], Math.min(bWorldPos[0] + bw, newX));
-            newZ = Math.min(bWorldPos[2], Math.max(bWorldPos[2] - bl, newZ));
-            newY = Math.max(elevation, Math.min(elevation + bh, newY));
-
-            if (this.gridPlane === 'XZ') newY = planePoint[1];
-            else if (this.gridPlane === 'XY') newZ = planePoint[2];
-            else if (this.gridPlane === 'YZ') newX = planePoint[0];
-
+        if (newX !== trans.position[0] || newY !== trans.position[1] || newZ !== trans.position[2]) {
             trans.position[0] = newX;
             trans.position[1] = newY;
             trans.position[2] = newZ;
             trans.dirty = true;
+            this.gizmoMoved = true;
+        }
+        return [newX, newY, newZ];
+    }
+
+    /**
+     * Gizmo drag lifecycle. While dragging, world.isMovingObject gates the
+     * camera (CameraRig.processLook) so the drag doesn't orbit the view. On
+     * release, the accumulated displacement is committed as ONE undoable 'set'
+     * task — this is also what persists the move (stdData → BlockSerializer →
+     * DraftStore); the live TransformComponent writes during the drag are
+     * visual-only.
+     */
+    private onGizmoDragState(world: World, dragging: boolean): void {
+        world.isMovingObject = dragging;
+        if (dragging) {
+            this.gizmoMoved = false;
+            return;
+        }
+        if (this.gizmoMoved && this.selectedEntityId !== null) {
+            this.commitGizmoMove(world);
+        }
+        this.gizmoMoved = false;
+    }
+
+    /** Commit the post-drag position as a 'set' task (ox/oy/oz are BLOCK-RELATIVE
+     *  septopus offsets; raw altitudes exclude the block elevation — same
+     *  convention as placeAt). */
+    private commitGizmoMove(world: World): void {
+        const eid = this.selectedEntityId!;
+        const adj = world.getComponent<AdjunctComponent>(eid, "AdjunctComponent");
+        const trans = world.getComponent<TransformComponent>(eid, "TransformComponent");
+        const bComp = this.activeBlockId !== null
+            ? world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent") : null;
+        if (!adj || !trans || !bComp) return;
+
+        const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
+        const r3 = (n: number) => Math.round(n * 1000) / 1000;
+        const param = {
+            ox: r3(trans.position[0] - bWorldPos[0]),
+            oy: r3(bWorldPos[2] - trans.position[2]),
+            oz: r3(trans.position[1] - (bComp.elevation || 0)),
+        };
+        if (param.ox === adj.stdData.ox && param.oy === adj.stdData.oy && param.oz === adj.stdData.oz) return;
+
+        const task: EditTask = { entityId: eid, adjunct: adj.adjunctId, action: 'set', param };
+        const result = this.executor.execute(world, task);
+        if (result.success && result.snapshot) {
+            this.history.push({ task, snapshot: result.snapshot });
+            this.dirty = true;
         }
     }
 
@@ -301,20 +342,8 @@ export class EditSystem implements ISystem {
             return;
         }
 
-        const now = Date.now();
-        const isDoubleClick = (now - this.lastClickTime) < this.DOUBLE_CLICK_DELAY;
-        this.lastClickTime = now;
-
-        if (isDoubleClick && this.selectedEntityId === data.entityId && this.selectedEntityId !== null) {
-            this.cycleGridPlane(world);
-            this.movingEntityId = this.movingEntityId ? null : this.selectedEntityId;
-            world.isMovingObject = !!this.movingEntityId;
-            return;
-        }
-
         if (data.entityId === null) {
             this.selectedEntityId = null;
-            this.movingEntityId = null;
             world.isMovingObject = false;
             this.syncUI(world);
             return;
@@ -326,7 +355,6 @@ export class EditSystem implements ISystem {
         if (isBlock) {
             if (data.entityId !== this.activeBlockId) {
                 this.selectedEntityId = null;
-                this.movingEntityId = null;
                 world.isMovingObject = false;
                 this.syncUI(world);
                 return;
@@ -337,26 +365,9 @@ export class EditSystem implements ISystem {
             return;
         }
 
-        if (this.selectedEntityId !== data.entityId) {
-            this.selectedEntityId = data.entityId;
-            this.movingEntityId = null;
-            world.isMovingObject = false;
-        } else {
-            this.movingEntityId = this.movingEntityId ? null : data.entityId;
-            world.isMovingObject = !!this.movingEntityId;
-        }
-
-        this.syncUI(world);
-    }
-
-    private cycleGridPlane(world: World, forcedPlane?: 'XZ' | 'XY' | 'YZ') {
-        if (forcedPlane) {
-            this.gridPlane = forcedPlane;
-        } else {
-            if (this.gridPlane === 'XZ') this.gridPlane = 'XY';
-            else if (this.gridPlane === 'XY') this.gridPlane = 'YZ';
-            else this.gridPlane = 'XZ';
-        }
+        // Select (idempotent on re-click). Translation is the gizmo's job: the
+        // XYZ arrows attach to the selection via EditHelperManager.sync.
+        this.selectedEntityId = data.entityId;
         this.syncUI(world);
     }
 
@@ -364,13 +375,13 @@ export class EditSystem implements ISystem {
         if (!world.ui) return;
 
         if (this.selectedEntityId === this.lastUISelection &&
-            this.gridPlane === this.lastUIPlane &&
+            this.snapEnabled === this.lastUISnap &&
             this.activeBlockId === this.lastUIActiveBlock) {
             return;
         }
 
         this.lastUISelection = this.selectedEntityId;
-        this.lastUIPlane = this.gridPlane;
+        this.lastUISnap = this.snapEnabled;
         this.lastUIActiveBlock = this.activeBlockId;
 
         if (this.selectedEntityId === null) {
@@ -385,13 +396,19 @@ export class EditSystem implements ISystem {
         }
 
         const buttons: UIButtonConfig[] = [
-            { label: "XZ", active: this.gridPlane === 'XZ', onClick: () => this.cycleGridPlane(world, 'XZ') },
-            { label: "XY", active: this.gridPlane === 'XY', onClick: () => this.cycleGridPlane(world, 'XY') },
-            { label: "YZ", active: this.gridPlane === 'YZ', onClick: () => this.cycleGridPlane(world, 'YZ') },
+            {
+                // Grid-snap toggle for the drag gizmo (active = snapping).
+                label: `Snap ${CONTROL_CONSTANTS.GRID_SNAP_RESOLUTION}m`,
+                active: this.snapEnabled,
+                onClick: () => {
+                    this.snapEnabled = !this.snapEnabled;
+                    this.lastUISelection = null;   // force re-render of the group
+                    this.syncUI(world);
+                }
+            },
             {
                 label: "Done", variant: 'primary', onClick: () => {
                     this.selectedEntityId = null;
-                    this.movingEntityId = null;
                     world.isMovingObject = false;
                     this.syncUI(world);
                 }
@@ -566,7 +583,7 @@ export class EditSystem implements ISystem {
         this.selectedEntityId = task.entityId;
         this.lastUISelection = null;
         this.syncUI(world);
-        world.ui?.showToast('Placed — double-click to move, right-click to edit');
+        world.ui?.showToast('Placed — drag the arrows to move, right-click to edit');
     }
 
     private clearHelpers(world: World) {
@@ -583,7 +600,6 @@ export class EditSystem implements ISystem {
         this.activeBlockId = null;
         world.activeEditBlockId = null;
         this.selectedEntityId = null;
-        this.movingEntityId = null;
         world.isMovingObject = false;
         this.dirty = false;
         this.lastUISelection = null;
@@ -614,7 +630,6 @@ export class EditSystem implements ISystem {
 
         // Select the entity for visual feedback
         this.selectedEntityId = data.entityId;
-        this.movingEntityId = null;
         world.isMovingObject = false;
 
         // Get menu items from the adjunct's plugin
