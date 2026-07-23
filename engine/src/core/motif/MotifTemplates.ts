@@ -193,8 +193,7 @@ registerMotifTemplate({
 
         // Stair geometry: two half-flights + the corner landing per storey gap.
         const half = fh / 2;
-        const nSteps = Math.max(3, Math.ceil(half / 0.4));
-        const rise = half / nSteps;                        // ≤ 0.4 by construction
+        const { n: nSteps, rise } = treadSplit(half, 3);   // rise ≤ 0.4 by construction
         const run = 0.5, runLen = nSteps * run;
         const yLane = d / 2 - T - LANE / 2;                // north-wall lane centre (flight A)
         const xLane = w / 2 - T - LANE / 2;                // east-wall lane centre (flight B)
@@ -257,8 +256,54 @@ registerMotifTemplate({
     },
 });
 
+/** stairs — a standalone straight flight, doorstep to grand staircase.
+ *  params: height (total rise 0.2..8) · width (0.6..6) · dir (0..3 quarter
+ *  turns: 0 ascends +N, 1 +E, 2 −N, 3 −E) · run (tread depth 0.3..1) ·
+ *  steps (optional: MORE treads than the auto split = shallower steps;
+ *  fewer is ignored so rise stays ≤ 0.4) · landing (0..4, a platform at
+ *  full height past the top tread) · color (palette index).
+ *
+ *  Treads are AXIS-ALIGNED on purpose: a2 collision is AABB-based, so the
+ *  direction is quantized to quadrants instead of a free yaw — a yawed
+ *  tread would render fine but collide as its bounding box and break
+ *  climbability. Origin = ground point at the centre of the first tread's
+ *  leading edge; ascent proven by tests/systems/stairs-walk.test.ts. */
+registerMotifTemplate({
+    id: 'stairs',
+    build(rng, params) {
+        const height = clamp(num(params?.height, 2), 0.2, 8);
+        const width = clamp(num(params?.width, 1.2), 0.6, 6);
+        const dir = Math.round(clamp(num(params?.dir, 0), 0, 3));
+        const run = clamp(num(params?.run, 0.5), 0.3, 1);
+        const landing = clamp(num(params?.landing, 0), 0, 4);
+        const color = typeof params?.color === 'number' ? params!.color : pick(rng, COLORS);
+        const T = 0.25;
+        const { n, rise } = treadSplit(height, Math.round(clamp(num(params?.steps, 1), 1, 40)));
+        // Local frame ascends +N; dir rotates the (e,n) offset by quarter turns.
+        const place = (nMid: number, depth: number, zTop: number): MotifBox => {
+            const [pe, pn] = dir === 1 ? [nMid, 0] : dir === 2 ? [0, -nMid] : dir === 3 ? [-nMid, 0] : [0, nMid];
+            const size: [number, number, number] = dir % 2 ? [depth, width, T] : [width, depth, T];
+            return { size, pos: [pe, pn, zTop - T / 2], rot: [0, 0, 0], resource: color };
+        };
+        const boxes: MotifBox[] = [];
+        for (let i = 1; i <= n; i++) boxes.push(place(run * (i - 1) + run / 2, run, rise * i));
+        if (landing > 0) boxes.push(place(n * run + landing / 2, landing, height));
+        return boxes;
+    },
+});
+
 function num(v: any, dflt: number): number { return typeof v === 'number' && Number.isFinite(v) ? v : dflt; }
 function clamp(v: number, lo: number, hi: number): number { return Math.min(hi, Math.max(lo, v)); }
+
+/** Tread split shared by every stair-emitting template: the fewest steps
+ *  (≥ minSteps) keeping each rise ≤ 0.4 m — safely under the collider's
+ *  0.5 m step-over cap, so thin-slab treads climb AND descend naturally
+ *  (pinned by building-stairs-walk / stairs-walk headless tests). */
+const MAX_RISE = 0.4;
+function treadSplit(height: number, minSteps = 1): { n: number; rise: number } {
+    const n = Math.max(minSteps, Math.ceil(height / MAX_RISE));
+    return { n, rise: height / n };
+}
 
 /** arch — two pillars + a lintel (a recognizable gateway, seed-varied). */
 registerMotifTemplate({

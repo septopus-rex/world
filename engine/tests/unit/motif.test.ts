@@ -54,6 +54,39 @@ describe('motif (c2) generative adjunct', () => {
         expect(rows.length).toBe(1);
     });
 
+    it('stairs: auto tread split keeps every rise ≤ 0.4 (step-over safe)', () => {
+        const rows = expandMotif([[0, 0, 0], 'stairs', 1, { height: 2 }]);
+        expect(rows.length).toBe(5); // ceil(2 / 0.4), no landing by default
+        const tops = rows.map(([, r]) => (r[1] as number[])[2] + (r[0] as number[])[2] / 2).sort((a, b) => a - b);
+        expect(tops[0]).toBeCloseTo(0.4);
+        expect(tops[4]).toBeCloseTo(2.0);
+        for (let i = 1; i < tops.length; i++) expect(tops[i] - tops[i - 1]).toBeLessThanOrEqual(0.4 + 1e-9);
+    });
+
+    it('stairs: a 0.4 m doorstep is a single tread', () => {
+        expect(expandMotif([[0, 0, 0], 'stairs', 1, { height: 0.4 }]).length).toBe(1);
+    });
+
+    it('stairs: dir quarter-turns stay axis-aligned and ascend the right way', () => {
+        const east = expandMotif([[0, 0, 0], 'stairs', 1, { height: 1.2, dir: 1 }]);
+        for (const [, r] of east) {
+            expect((r[2] as number[])).toEqual([0, 0, 0]);           // never yawed
+            expect((r[1] as number[])[1]).toBeCloseTo(0);            // no N drift
+        }
+        const xs = east.map(([, r]) => (r[1] as number[])[0]);
+        expect(Math.max(...xs)).toBeGreaterThan(Math.min(...xs));    // extends +E
+        expect(Math.min(...xs)).toBeGreaterThan(0);
+    });
+
+    it('stairs: landing adds a platform at full height past the top tread', () => {
+        const rows = expandMotif([[0, 0, 0], 'stairs', 1, { height: 2, landing: 1.2 }]);
+        expect(rows.length).toBe(6);
+        const landing = rows[rows.length - 1][1];
+        expect((landing[1] as number[])[2] + (landing[0] as number[])[2] / 2).toBeCloseTo(2.0);
+        expect((landing[0] as number[])[1]).toBeCloseTo(1.2);        // depth
+        expect((landing[1] as number[])[1]).toBeGreaterThan(5 * 0.5); // beyond tread 5
+    });
+
     it('unknown template → no rows (graceful)', () => {
         expect(expandMotif([[0, 0, 0], 'does-not-exist', 1, null])).toEqual([]);
     });
