@@ -104,6 +104,12 @@ export class TransformGizmo {
         return this.controls.dragging || this.controls.axis !== null;
     }
 
+    /** The hovered/dragged handle name ('X'|'Y'|'Z'|'XY'|'YZ'|'XZ'|'XYZ') or
+     *  null. Drives the edit grid's reference-plane switch. */
+    public get axis(): string | null {
+        return (this.controls.axis as string | null) ?? null;
+    }
+
     public info(): GizmoInfo {
         const obj = this.controls.object;
         const base: GizmoInfo = {

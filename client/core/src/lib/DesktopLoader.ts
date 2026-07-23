@@ -596,6 +596,12 @@ export class DesktopLoader implements IDataSource {
         return this.engine?.toggleCameraView();
     }
 
+    /** Current camera view — the engine may switch it itself (Edit forces
+     *  first-person), so UI state mirrors this after mode changes. */
+    public getCameraView(): 'first' | 'third' | undefined {
+        return this.engine?.getCameraView();
+    }
+
     public triggerPlayerJump() {
         this.engine?.jump();
     }

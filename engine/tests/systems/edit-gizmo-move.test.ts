@@ -3,6 +3,7 @@ import { makeHeadlessEngineWith, stepN } from '../helpers/make-world';
 import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 import { BlockSystem } from '../../src/core/systems/BlockSystem';
 import { EditSystem } from '../../src/core/systems/EditSystem';
+import { gridPlaneForAxis } from '../../src/core/systems/EditHelperManager';
 import { SystemMode } from '../../src/core/types/SystemMode';
 import { Coords } from '../../src/core/utils/Coords';
 
@@ -146,6 +147,33 @@ describe('edit-mode gizmo translation', () => {
 
         expect(world.getComponent(task.entityId, 'AdjunctComponent')).toBeUndefined();
         expect(edit.selectedEntityId).toBeNull();       // selection no longer dangles
+    });
+
+    it('Edit mode forces first-person and restores the previous view on exit', async () => {
+        const { engine, world } = await setup();   // setup already entered Edit
+        const cc = world.systems.findSystemByName('CharacterController') as any;
+        expect(cc.getViewMode()).toBe('first');    // auto-switched (default was third)
+
+        engine.setMode(SystemMode.Normal);
+        stepN(engine, 2);                          // clearHelpers restores the view
+        expect(cc.getViewMode()).toBe('third');
+    });
+
+    it('grid reference plane follows the hovered/dragged gizmo handle', () => {
+        // Horizontal moves (and idle) read against the ground plane.
+        expect(gridPlaneForAxis(null, 0)).toBe('XZ');
+        expect(gridPlaneForAxis('X', 0)).toBe('XZ');
+        expect(gridPlaneForAxis('Z', 0)).toBe('XZ');
+        expect(gridPlaneForAxis('XZ', 0)).toBe('XZ');
+        expect(gridPlaneForAxis('XYZ', 0)).toBe('XZ');
+        // Vertical drag needs an upright grid — the one facing the camera more.
+        expect(gridPlaneForAxis('Y', 0)).toBe('XY');            // looking north → east-west plane
+        expect(gridPlaneForAxis('Y', Math.PI)).toBe('XY');      // looking south
+        expect(gridPlaneForAxis('Y', Math.PI / 2)).toBe('YZ');  // looking west → north-south plane
+        expect(gridPlaneForAxis('Y', -Math.PI / 2)).toBe('YZ'); // looking east
+        // Plane handles read against their own plane.
+        expect(gridPlaneForAxis('XY', 0)).toBe('XY');
+        expect(gridPlaneForAxis('YZ', 0)).toBe('YZ');
     });
 
     it('snap toggle off = free positions (still block-clamped)', async () => {

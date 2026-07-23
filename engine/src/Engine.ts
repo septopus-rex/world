@@ -337,6 +337,14 @@ export class Engine {
         return cc?.toggleViewMode?.();
     }
 
+    /** Current camera view — the engine can switch it on its own (Edit mode
+     *  forces first-person), so UIs mirror this instead of assuming their
+     *  last request stuck. */
+    public getCameraView(): 'first' | 'third' | undefined {
+        const cc = this.world?.systems.findSystemByName('CharacterController') as any;
+        return cc?.getViewMode?.();
+    }
+
     public getWorld(): World | null {
         return this.world;
     }

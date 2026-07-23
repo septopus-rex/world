@@ -125,6 +125,7 @@ export function createNullRenderEngine() {
     attachTransformGizmo: () => {},
     detachTransformGizmo: () => {},
     isGizmoBusy: () => false,
+    gizmoAxis: () => null,
     gizmoInfo: () => ({ attached: false, dragging: false, axis: null }),
 
     // Raycasting / projection — queries return "nothing"

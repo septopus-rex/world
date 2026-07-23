@@ -613,6 +613,12 @@ export class RenderEngine {
         return this.gizmo?.info() ?? { attached: false, dragging: false, axis: null };
     }
 
+    /** Currently hovered/dragged gizmo handle name (cheap per-frame query —
+     *  no projection math, unlike gizmoInfo). */
+    public gizmoAxis(): string | null {
+        return this.gizmo?.axis ?? null;
+    }
+
     /**
      * Helper API
      */

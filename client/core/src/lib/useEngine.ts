@@ -46,6 +46,16 @@ export function useEngine(containerId: string) {
     useEffect(() => { loaderRef.current?.toggleMinimap(showMinimap); }, [showMinimap]);
     useEffect(() => { if (ready) loaderRef.current?.setCameraView(view); }, [view, ready]);
 
+    // The engine switches the view on its own around Edit mode (forces
+    // first-person on entry, restores on exit) — re-read it after every mode
+    // change so the 1ST/3RD toggle label reflects reality. The mode event is
+    // dispatched at step-end, AFTER the engine has settled the view.
+    useEffect(() => {
+        if (!ready) return;
+        const v = loaderRef.current?.getCameraView();
+        if (v) setView(v);
+    }, [mode, ready]);
+
     // Request a mode switch; the engine confirms (or refuses) via system.mode,
     // which flows back into `mode` above. Returns the engine's verdict.
     const setMode = (m: WorldMode): boolean => loaderRef.current?.setMode(m) ?? false;
