@@ -36,6 +36,12 @@ export class EditSystem implements ISystem {
     /** True once a gizmo drag actually displaced the object — release without
      *  movement must not push a no-op onto the undo history. */
     private gizmoMoved: boolean = false;
+    /** Latch: an axis was GRABBED since the last update. A quick click on an
+     *  arrow (down+up with no drag, both before the next step) leaves
+     *  isGizmoBusy() false by the time the interact events are consumed — the
+     *  click would fall through the gizmo and deselect / reselect whatever the
+     *  ray hits behind it. The latch keeps that frame suppressed. */
+    private gizmoGrabbedSinceUpdate: boolean = false;
     /** Hooks handed to the render-layer gizmo (see render/TransformGizmo). Built
      *  once — EditHelperManager re-attaches them whenever the target changes. */
     private readonly gizmoHooks: import('../../render/TransformGizmo').GizmoHooks;
@@ -52,8 +58,11 @@ export class EditSystem implements ISystem {
     private _prevZ: boolean = false;
     private paletteDirty: boolean = false;
 
-    // UI state tracking to prevent redundant updates
-    private lastUISelection: EntityId | null = null;
+    // UI state tracking to prevent redundant updates. The force-refresh
+    // sentinel is `undefined` (NOT null): a deselect sets selectedEntityId to
+    // null, and a null sentinel would compare equal to it and skip the very
+    // syncUI that hides the buttons (undo-of-add left Done lingering).
+    private lastUISelection: EntityId | null | undefined = undefined;
     private lastUISnap: boolean | null = null;
     private lastUIActiveBlock: EntityId | null = null;
 
@@ -101,7 +110,7 @@ export class EditSystem implements ISystem {
         // A click that grabs (or hovers) a gizmo axis belongs to the gizmo — the
         // pick ray passes THROUGH the raycast-inert arrows and would otherwise
         // reselect whatever sits behind them (or deselect on a miss) mid-drag.
-        const gizmoBusy = world.renderEngine.isGizmoBusy();
+        const gizmoBusy = world.renderEngine.isGizmoBusy() || this.gizmoGrabbedSinceUpdate;
         for (const ev of this.primaryReader.read()) {
             if (gizmoBusy) continue;
             this.onInteract(world, { entityId: ev.target ?? null, ...(ev.payload as any) });
@@ -113,6 +122,7 @@ export class EditSystem implements ISystem {
         for (const ev of this.contextReader.read()) {
             this.onContextInteract(world, { entityId: ev.target ?? null, ...(ev.payload as any) });
         }
+        this.gizmoGrabbedSinceUpdate = false;
 
         // 1. Maintain Session (Active Block locking)
         const prevBlockId = this.activeBlockId;
@@ -219,7 +229,7 @@ export class EditSystem implements ISystem {
         if (result.success && result.snapshot) {
             this.history.push({ task, snapshot: result.snapshot });
             this.dirty = true;
-            this.lastUISelection = null;
+            this.lastUISelection = undefined;
             this.syncUI(world);
         }
     }
@@ -228,8 +238,9 @@ export class EditSystem implements ISystem {
         const entry = this.history.popUndo();
         if (!entry) return;
         this.executor.restore(world, entry.task.entityId, entry.snapshot);
+        this.validateSelection(world);
         world.ui?.showToast(`Undo (${this.history.undoCount} remaining)`);
-        this.lastUISelection = null;
+        this.lastUISelection = undefined;
         this.syncUI(world);
     }
 
@@ -238,9 +249,21 @@ export class EditSystem implements ISystem {
         if (!entry) return;
         // Re-execute the task
         this.executor.execute(world, entry.task);
+        this.validateSelection(world);
         world.ui?.showToast(`Redo (${this.history.redoCount} remaining)`);
-        this.lastUISelection = null;
+        this.lastUISelection = undefined;
         this.syncUI(world);
+    }
+
+    /** Undoing an 'add' (or redoing a 'delete') DESTROYS the entity the selection
+     *  points at — clear it, or the Snap/Done buttons and the selection highlight
+     *  linger on a dangling id (found by the gizmo stress probe, 2026-07-23). */
+    private validateSelection(world: World): void {
+        if (this.selectedEntityId === null) return;
+        if (world.getComponent(this.selectedEntityId, "AdjunctComponent") !== undefined) return;
+        if (world.getComponent(this.selectedEntityId, "BlockComponent") !== undefined) return;
+        this.selectedEntityId = null;
+        world.isMovingObject = false;
     }
 
     /**
@@ -293,6 +316,7 @@ export class EditSystem implements ISystem {
         world.isMovingObject = dragging;
         if (dragging) {
             this.gizmoMoved = false;
+            this.gizmoGrabbedSinceUpdate = true;
             return;
         }
         if (this.gizmoMoved && this.selectedEntityId !== null) {
@@ -389,12 +413,6 @@ export class EditSystem implements ISystem {
             return;
         }
 
-        let position: any = 'bottom-right';
-        const transform = world.getComponent<TransformComponent>(this.selectedEntityId, 'TransformComponent');
-        if (transform) {
-            position = world.renderEngine.worldToScreen(transform.position[0], transform.position[1] + 1.5, transform.position[2]);
-        }
-
         const buttons: UIButtonConfig[] = [
             {
                 // Grid-snap toggle for the drag gizmo (active = snapping).
@@ -402,7 +420,7 @@ export class EditSystem implements ISystem {
                 active: this.snapEnabled,
                 onClick: () => {
                     this.snapEnabled = !this.snapEnabled;
-                    this.lastUISelection = null;   // force re-render of the group
+                    this.lastUISelection = undefined;   // force re-render of the group
                     this.syncUI(world);
                 }
             },
@@ -415,7 +433,12 @@ export class EditSystem implements ISystem {
             }
         ];
 
-        world.ui.showGroup("edit-controls", buttons, position);
+        // FIXED corner anchor, deliberately not worldToScreen-following: after a
+        // gizmo drag the re-anchored group landed on top of the arrows and ate
+        // the next grab's pointerdown (the buttons are container-level DOM — the
+        // event never reaches the canvas). A fixed corner can't occlude the
+        // object being dragged, and doesn't go stale when the camera moves.
+        world.ui.showGroup("edit-controls", buttons, 'bottom-right');
     }
 
     /** Render the placement palette (one button per placeable adjunct type). */
@@ -581,7 +604,7 @@ export class EditSystem implements ISystem {
         this.paletteDirty = true;
         world.ui?.hide("place-form");
         this.selectedEntityId = task.entityId;
-        this.lastUISelection = null;
+        this.lastUISelection = undefined;
         this.syncUI(world);
         world.ui?.showToast('Placed — drag the arrows to move, right-click to edit');
     }
@@ -602,7 +625,7 @@ export class EditSystem implements ISystem {
         this.selectedEntityId = null;
         world.isMovingObject = false;
         this.dirty = false;
-        this.lastUISelection = null;
+        this.lastUISelection = undefined;
         world.ui?.hide("context-menu");
         world.ui?.hide("edit-form");
         world.ui?.hide("edit-controls");
@@ -721,7 +744,7 @@ export class EditSystem implements ISystem {
                     this.dirty = true;
                     world.ui?.showToast(`Updated ${adjComp.adjunctId}`);
                     // Force UI refresh
-                    this.lastUISelection = null;
+                    this.lastUISelection = undefined;
                     this.syncUI(world);
                 }
             },

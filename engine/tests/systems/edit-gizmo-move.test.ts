@@ -109,6 +109,45 @@ describe('edit-mode gizmo translation', () => {
         expect(edit.history.undoCount).toBe(0);
     });
 
+    it('a quick click on an arrow (grab+release, no drag) does not fall through to deselect', async () => {
+        const { engine, world, edit, boxEid } = await setup();
+        // DOM-level: pointerdown grabs the axis, pointerup releases — both land
+        // BEFORE the next engine step, so isGizmoBusy() is already false when the
+        // interact events from that click get consumed. The latch must suppress.
+        edit.onGizmoDragState(world, true);
+        edit.onGizmoDragState(world, false);
+        world.events.emit('interact.miss', {});
+        engine.step(1 / 60);
+        expect(edit.selectedEntityId).toBe(boxEid);   // still selected
+
+        // Control: the SAME miss without a preceding grab does deselect.
+        world.events.emit('interact.miss', {});
+        engine.step(1 / 60);
+        expect(edit.selectedEntityId).toBeNull();
+    });
+
+    it('undoing an add clears the dangling selection (no lingering gizmo/UI)', async () => {
+        const { engine, world, edit } = await setup();
+        // Simulate a palette placement: an 'add' task pushed onto the history.
+        const task: any = {
+            entityId: -1, adjunct: '', action: 'add',
+            param: { typeId: 0x00a2, blockEntityId: edit.activeBlockId, raw: [[1, 1, 1], [4, 4, 0], [0, 0, 0], 0, [1, 1], 0, 0] },
+        };
+        const result = edit.executor.execute(world, task);
+        expect(result.success).toBe(true);
+        edit.history.push({ task, snapshot: result.snapshot });
+        edit.selectedEntityId = task.entityId;          // placement auto-selects
+
+        const ip = (world.systems.findSystemByName('CharacterController') as any).inputProvider;
+        const keys: Set<string> = ip.keys;
+        keys.add('ControlLeft'); keys.add('KeyZ');
+        engine.step(1 / 60);                            // Ctrl+Z → undo add = delete entity
+        keys.delete('KeyZ'); keys.delete('ControlLeft');
+
+        expect(world.getComponent(task.entityId, 'AdjunctComponent')).toBeUndefined();
+        expect(edit.selectedEntityId).toBeNull();       // selection no longer dangles
+    });
+
     it('snap toggle off = free positions (still block-clamped)', async () => {
         const { world, edit, boxEid } = await setup();
         edit.snapEnabled = false;

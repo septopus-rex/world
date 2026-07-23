@@ -124,15 +124,25 @@ export class TransformGizmo {
             * Math.min(1.9 * Math.tan(Math.PI * this.camera.fov / 360) / this.camera.zoom, 7);
         const arm = 0.45 * factor * (this.controls.size ?? 1) / 4;
 
+        // The translate arrows are BIDIRECTIONAL (a ± pair per axis). From an
+        // oblique view the far half of one axis overlaps the near half of
+        // another on screen, and the raycast always awards the pixel to the
+        // NEARER picker — so the reliable grab point is the camera-facing half:
+        // sign of the eye vector's component along each axis.
+        const eye = camPos.clone().sub(o);
+        const sx = eye.x >= 0 ? 1 : -1;
+        const sy = eye.y >= 0 ? 1 : -1;
+        const sz = eye.z >= 0 ? 1 : -1;
+
         const project = (p: THREE.Vector3): [number, number] => {
             const v = p.clone().project(this.camera);
             return [(v.x + 1) / 2, (1 - v.y) / 2];
         };
         base.screen = {
             o: project(o),
-            x: project(o.clone().add(new THREE.Vector3(arm, 0, 0))),
-            y: project(o.clone().add(new THREE.Vector3(0, arm, 0))),
-            z: project(o.clone().add(new THREE.Vector3(0, 0, arm))),
+            x: project(o.clone().add(new THREE.Vector3(sx * arm, 0, 0))),
+            y: project(o.clone().add(new THREE.Vector3(0, sy * arm, 0))),
+            z: project(o.clone().add(new THREE.Vector3(0, 0, sz * arm))),
         };
         return base;
     }
