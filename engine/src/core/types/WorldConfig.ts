@@ -102,7 +102,9 @@ export interface WorldConfig {
     // Debug options
     debug?: {
         stats?: boolean;     // Show Three.js Stats (FPS/MS/MB)
-        shadows?: boolean;   // Start with the sun's shadow map on (runtime: Engine.setShadows)
+        shadows?: boolean;   // Start with the sun's shadow map on (default true; runtime: Engine.setShadows)
+        ibl?: boolean;       // Sky image-based light (default true). Off = gradient sky only,
+                             // no PMREM: one fewer shader permutation for weak/software GL.
     };
 }
 

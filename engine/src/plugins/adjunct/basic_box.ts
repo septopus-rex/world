@@ -9,6 +9,7 @@ import {
 import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { Coords } from '../../core/utils/Coords';
+import { PALETTE, resolveSurface } from '../../core/utils/Palette';
 
 /**
  * Box Component Metadata
@@ -65,13 +66,9 @@ const menu = {
                     label: "Material",
                     type: "select" as const,
                     value: std.material?.resource ?? 0,
-                    options: [
-                        { label: "Default", value: 0 },
-                        { label: "Pillar (Dark)", value: 1 },
-                        { label: "Blue", value: 2 },
-                        { label: "Red", value: 3 },
-                        { label: "Ground", value: 10 },
-                    ]
+                    // Straight off the built-in palette so the editor can never drift
+                    // from what the renderer actually does with slot 3.
+                    options: PALETTE.map((e, i) => ({ label: e.label, value: i }))
                 }
             ]
         }
@@ -116,16 +113,11 @@ const attribute: AdjunctAttribute = {
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
         return stds.map((row, index) => {
-            // Color Mapping based on resource index. NON-NORMATIVE legacy/demo
-            // convenience — cross-engine content should author an explicit hex
-            // color instead of relying on this palette (protocol/adjunct.md §6).
-            const resId = (row.material?.resource as any) || 0;
-            let color = 0x888888; // Default Gray
-
-            if (resId === 10) color = 0xeeeeee; // Grey-White (Ground)
-            if (resId === 1) color = 0x555555; // Dark Gray (Pillar)
-            if (resId === 2) color = 0x3366ff; // Blue (Avatar/Float)
-            if (resId === 3) color = 0xff0000; // Red (Flash)
+            // Slot 3 → colour + PBR params (core/utils/Palette, adjunct-types.md §2):
+            // 0..255 index the built-in table, >=256 is a literal 0xRRGGBB. Box passes
+            // no family default because entry 0 (mid-grey) IS its historical default.
+            const surface = resolveSurface(row.material?.resource);
+            let color = surface.color;
 
             // A textured surface uses a white tint so the image shows true colours
             // (unless the author set an explicit colour).
@@ -141,7 +133,9 @@ const transform: AdjunctTransform = {
                 },
                 material: {
                     ...row.material,
-                    color: color
+                    color: color,
+                    roughness: surface.roughness,
+                    metalness: surface.metalness,
                 },
                 animate: row.animate,
                 stop: row.stop ? { opacity: 0.5, color: 0xffffff } : undefined

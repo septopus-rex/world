@@ -6,7 +6,10 @@ import {
     AdjunctTransform
 } from '../../core/types/Adjunct.js';
 import { AdjunctType } from '../../core/types/AdjunctType';
-import { standardAttribute, standardMenu } from './_shared.js';
+import { standardAttribute, standardMenu, standardSurface } from './_shared.js';
+
+/** Fallback colour when slot 3 is unset — MeshFactory's historical default. */
+const DEFAULT_COLOR = 0xcccccc;
 
 /**
  * Basic Cone/Cylinder Adjunct (Modernized)
@@ -37,7 +40,7 @@ export const BasicConeAdjunct: AdjunctDefinition = {
                     position: [row.ox, row.oy, row.oz + elevation],
                     rotation: [row.rx, row.ry, row.rz],
                 },
-                material: row.material,
+                material: standardSurface(row, DEFAULT_COLOR),
                 animate: row.animate,
             }));
         }

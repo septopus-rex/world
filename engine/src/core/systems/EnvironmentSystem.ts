@@ -63,7 +63,7 @@ export class EnvironmentSystem implements ISystem {
     // and decays. Deterministic (timer-driven, no RNG) so headless steps repeat.
     private flashLevel = 0;       // current [0..1] brightness pop
     private strikeTimer = 0;      // seconds since the last strike
-    private baseAmbient = 0.4;    // day/night ambient base, before the flash boost
+    private baseAmbient = 0.05;   // day/night ambient base, before the flash boost
     private static readonly LIGHTNING = {
         baseInterval: 8,   // seconds between strikes at grade 1 (scales 1/grade)
         decay: 0.35,       // seconds for a flash to fade to black
@@ -82,17 +82,23 @@ export class EnvironmentSystem implements ISystem {
     //    LOCAL sub-day clock (below), which already advances smoothly frame to
     //    frame — the chain calendar (year/month/day) can still jump on a new
     //    block, but it no longer drives hour/minute, so it no longer moves the
-    //    sun. (Shadows remain off in RenderEngine — grazing-angle moiré needs
-    //    bias tuning; independent of this cycle.)
+    //    sun. (Shadows are ON by default since 2026-07-25; the grazing-angle
+    //    moiré was cured by shadow-frustum density, not by this cycle.)
     private static readonly DAYLIGHT = {
         twilight: 0.12,               // half-width of the sunrise/sunset band
-        sunDay: 1.0, sunNight: 0.1,   // directional intensity range
-        ambDay: 0.4, ambNight: 0.1,   // ambient intensity range
+        sunDay: 1.9, sunNight: 0.1,   // directional intensity range
+        // Ambient is much lower than the pre-IBL 0.4/0.1: the sky's PMREM
+        // environment (render/SkyEnvironment) now supplies the bounce/fill term
+        // WITH direction to it. A flat ambient on top of that is pure wash — it
+        // was what erased every shading gradient and made surfaces read as paper
+        // cut-outs. Sun intensity goes up to compensate, so the lit/unlit contrast
+        // (i.e. the sense of a light source) is carried by the sun, not by fill.
+        ambDay: 0.05, ambNight: 0.02, // ambient intensity range
         chase: 2.5,                   // 1/s — visual catch-up rate on clock jumps
     };
     private visAngle: number | null = null; // smoothed sun angle (radians)
-    private visSun = 1.0;                   // smoothed directional intensity
-    private visAmb = 0.4;                   // smoothed ambient intensity
+    private visSun = 1.9;                   // smoothed directional intensity
+    private visAmb = 0.05;                  // smoothed ambient intensity
 
     constructor(world: World) {
         // Create singleton Environment Entity
@@ -107,8 +113,8 @@ export class EnvironmentSystem implements ISystem {
         });
 
         // Initialize lights and particles via RenderEngine
-        this.sunLight = world.renderEngine.setDirectionalLight(0xffffff, 1.0, 50, 100, 50);
-        this.ambientLight = world.renderEngine.setAmbientLight(0xffffff, 0.4);
+        this.sunLight = world.renderEngine.setDirectionalLight(0xfff6e8, 1.9, 50, 100, 50);
+        this.ambientLight = world.renderEngine.setAmbientLight(0xffffff, 0.05);
         this.particleSystem = world.renderEngine.createWeatherParticles();
 
         // Sky-matched distance fog sized to the block-streaming window: blocks load
@@ -213,10 +219,19 @@ export class EnvironmentSystem implements ISystem {
             // brightens the same frame.
             const flash = this.updateLightning(state, dt);
 
+            // Sun colour warms as it approaches the horizon — the atmosphere's
+            // longer path scatters the blue out. Cheap, and it is what sells a
+            // sunset as a sunset rather than "the same white sun, dimmer".
+            const sunColor = dayF > 0.85 ? 0xfff6e8 : lerpRgb(0xff9a4d, 0xfff6e8, Math.min(1, dayF / 0.85));
             world.renderEngine.updateDirectionalLight(
-                this.sunLight, 0xffffff, this.visSun + flash * EnvironmentSystem.LIGHTNING.sunBoost, sunX, sunY, sunZ);
+                this.sunLight, sunColor, this.visSun + flash * EnvironmentSystem.LIGHTNING.sunBoost, sunX, sunY, sunZ);
             world.renderEngine.updateAmbientLight(
                 this.ambientLight, 0xffffff, this.visAmb + flash * EnvironmentSystem.LIGHTNING.ambientBoost);
+
+            // Sky + IBL follow the SAME smoothstepped day factor as the lights, so
+            // the visible sky, the environment light and the sun all cross the
+            // twilight band together (a lit scene under a noon sky was the tell).
+            world.renderEngine.setSkyPhase?.(dayF);
         }
 
         // 2. Weather Visuals
@@ -267,4 +282,14 @@ export class EnvironmentSystem implements ISystem {
         state.lightning = this.flashLevel;
         return this.flashLevel;
     }
+}
+
+/** Blend two 0xRRGGBB colours (core-side, no Three import allowed here). */
+function lerpRgb(a: number, b: number, t: number): number {
+    const k = Math.min(1, Math.max(0, t));
+    const ar = (a >> 16) & 0xff, ag = (a >> 8) & 0xff, ab = a & 0xff;
+    const br = (b >> 16) & 0xff, bg = (b >> 8) & 0xff, bb = b & 0xff;
+    return ((Math.round(ar + (br - ar) * k) << 16)
+        | (Math.round(ag + (bg - ag) * k) << 8)
+        | Math.round(ab + (bb - ab) * k));
 }

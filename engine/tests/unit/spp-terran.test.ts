@@ -99,6 +99,8 @@ describe('terran StylePack:parts 路径产出贴图 a2 墙体', () => {
         const theme = getSppTheme('terran')!;
         expect(theme.thickness).toBeCloseTo(0.3);
         const keys = theme.closed.map((v: any) => v.key ?? v.name);
-        expect(keys).toEqual(['solid', 'doorway', 'window', 'roof', 'deck']);
+        // floor/stair_top 是多层建筑的通用面变体(2026-07-25 起四个包都有),
+        // 使 world.styleOverride 换包时楼板与楼梯不会整段消失。
+        expect(keys).toEqual(['solid', 'doorway', 'window', 'roof', 'deck', 'floor', 'stair_top']);
     });
 });

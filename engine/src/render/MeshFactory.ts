@@ -236,6 +236,14 @@ export class MeshFactory {
     private static getMaterial(config?: MaterialConfig): THREE.MeshStandardMaterial | THREE.MeshBasicMaterial {
         const color = config?.color ?? 0xcccccc;
         const opacity = config?.opacity ?? 1;
+        // PBR response. Three's own defaults are roughness=1 / metalness=0 — a
+        // perfectly matte Lambert-alike with NO specular response at all, which is
+        // why untextured scenes read as polystyrene: every surface returns the same
+        // flat diffuse regardless of view angle. 0.85 keeps a faint sheen that
+        // catches the sun and the sky IBL (SkyEnvironment) at grazing angles.
+        // Per-surface overrides come from the palette (core/utils/Palette).
+        const roughness = config?.roughness ?? 0.85;
+        const metalness = config?.metalness ?? 0;
 
         // Unlit (a8 sign / decals): MeshBasicMaterial — reads identically from any
         // angle at any time of day. Same lifecycle split as the lit path below:
@@ -270,6 +278,7 @@ export class MeshFactory {
         if (config?.texture) {
             return new THREE.MeshStandardMaterial({
                 color, transparent: opacity < 1, opacity, side: THREE.DoubleSide,
+                roughness, metalness,
                 // Cast shadows from BACK faces only. With side=DoubleSide, Three would
                 // otherwise default shadowSide=DoubleSide → a surface's own FRONT face
                 // lands in the shadow map and self-shadows it, producing grazing-angle
@@ -283,7 +292,7 @@ export class MeshFactory {
         // Colour-only materials are cached + shared by reference; tagged shared so
         // eviction goes through release() (refcount) — disposed + evicted when the
         // last user releases, never while another block still renders with it.
-        const key = `${color},${opacity}`;
+        const key = `${color},${opacity},${roughness},${metalness}`;
         let entry = this._matCache.get(key);
         if (!entry) {
             const mat = new THREE.MeshStandardMaterial({
@@ -291,6 +300,8 @@ export class MeshFactory {
                 transparent: opacity < 1,
                 opacity,
                 side: THREE.DoubleSide,
+                roughness,
+                metalness,
                 // Back-face-only shadow casting — see the textured branch above: kills
                 // the flat-surface self-shadow moiré that side=DoubleSide otherwise
                 // bakes into the shadow map.

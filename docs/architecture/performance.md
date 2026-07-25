@@ -16,8 +16,12 @@ Septopus World 引擎采用纯 Web 前端运行的架构，因此要在浏览器
     **仿真不受影响**——物理/触发器/物品照常运行，只裁渲染。0.25s 间隔评估，
     Edit 模式强制全显。流式驱逐管内存，LOD 管这两个半径之间的 draw call。
 *   **阴影成本控制**：单一投影太阳光、1024² PCF 软阴影、阴影视锥逐帧锚定玩家
-    （世界跨数万米，静止视锥永远照不到玩家）。默认关闭，`Engine.setShadows(on)`
-    运行时切换（`debug.shadows` 配开机态），`Engine.perfInfo()` 出 draw calls/triangles。
+    （世界跨数万米，静止视锥永远照不到玩家）。**2026-07-25 起默认开启**——两处
+    可用化坑（下面两条）已解，而关着阴影时任何物体都没有接触阴影、视觉上全在离地
+    漂浮，是成品感最大的单项缺口。`Engine.setShadows(on/off)` 仍可运行时切换
+    （`debug.shadows` 配开机态、`false` 可整世界关掉），`Engine.perfInfo()` 出
+    draw calls/triangles。画廊实测开启后 draw calls 未变（阴影是额外一趟深度 pass，
+    不增加可见物体），弱 GPU 上先关这一项再谈别的。
     **可用化时踩过的两处（2026-07-19，勿重蹈）**：
     *   加载模型（module + **玩家 avatar**）曾是唯一没有 cast/receive 标记的网格族
         ——`MeshFactory` 只给自己造的图元加，于是开了阴影角色也不投影；

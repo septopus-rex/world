@@ -333,7 +333,13 @@ export class World {
             containerId: config.world.containerId,
             clearColor: 0x87ceeb,
             stats: config.debug?.stats ?? false,
-            shadows: config.debug?.shadows ?? false
+            // Shadows + sky IBL default ON (2026-07-25). A world doc can opt out of
+            // either (`debug.shadows` / `debug.ibl`); the client exposes that as
+            // `?fx=low` for software GL / weak GPUs, which is also what the e2e
+            // harness uses — both features add SHADER PERMUTATIONS, and compiling
+            // those under SwiftShader costs seconds per program.
+            shadows: config.debug?.shadows ?? true,
+            ibl: config.debug?.ibl ?? true
         });
         this.pipeline = new RenderPipeline(this.renderEngine, this.resolveAsset.bind(this));
 

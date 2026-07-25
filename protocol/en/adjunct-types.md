@@ -69,7 +69,7 @@
 | 0 | `size` | `[E, N, Alt]`, default `[1,1,1]` | full-length bounding box (m). a7 reads `size[0]` as the diameter |
 | 1 | `pos` | `[x, y, z]`, default `[0,0,0]` | geometric centre relative to the block origin |
 | 2 | `rot` | `[rx, ry, rz]`, default `[0,0,0]` | engine-frame Euler (see §0) |
-| 3 | `resource` | number, default `0` | colour/material index (world resource catalog) |
+| 3 | `resource` | number, default `0` | **colour**, two channels: `0` = the type's own default colour · `1..255` = built-in palette index (see §2.3) · `>=256` = literal `0xRRGGBB`. **Never yields a texture** |
 | 4 | `repeat` | `[u, v]`, default `[1,1]` | texture tiling |
 | 5 | `animation` | animation object / `null` | Septopus animation timeline, see [animation.md](animation.md) |
 | 6 | `stop` | any/`null` | **truthy ⇒ solid** (`0`/`null`/`false`/empty string = not solid; a2 ignores this slot, always solid) |
@@ -97,6 +97,53 @@ An UNLIT textured plane — guide arrows, posters, decals, floating waypoint mar
 | 4 | opacity (optional, default 1; `<1` honours the texture's alpha — use 0.95 for transparent-background "floating glyph" signs) |
 
 **Orientation contract**: at rot=[0,0,0] the sign lies FLAT (normal = up) with the texture's V+ (image "up") pointing NORTH — an upright arrow drawn in the image points travel-north in the world. Positive `rx` tilts the top edge toward south (an overhead guide facing a north-bound walker); `rx = π/2` stands it fully vertical facing south.
+
+
+### 2.3 Built-in palette (normative, added 2026-07-25)
+
+Values `1..255` in the `resource` slot index an **engine built-in** colour + PBR table. It must match entry-for-entry across engines — otherwise the same block data renders in different colours.
+
+| Index | Colour | rough / metal | Name |
+|---|---|---|---|
+| 0 | the type's default (a2 = `#888888`) | 0.9 / 0 | default grey |
+| 1 | `#555555` | 0.85 / 0 | dark grey |
+| 2 | `#3d63a8` | 0.6 / 0 | blue |
+| 3 | `#c0392b` | 0.7 / 0 | red |
+| 4 | `#b9b3a7` | 0.95 / 0 | concrete |
+| 5 | `#8f8578` | 0.95 / 0 | weathered concrete |
+| 6 | `#9c5a3c` | 0.9 / 0 | brick |
+| 7 | `#6f4b2f` | 0.8 / 0 | timber |
+| 8 | `#d8cbb0` | 0.9 / 0 | sandstone |
+| 9 | `#3b3f46` | 0.7 / 0 | slate |
+| 10 | `#eeeeee` | 0.9 / 0 | off-white (ground) |
+| 11 | `#c8ccd0` | 0.35 / 0.9 | steel |
+| 12 | `#b08d57` | 0.4 / 0.85 | brass |
+| 13 | `#2a2d33` | 0.25 / 0.6 | dark metal |
+| 14 | `#dcecf2` | 0.08 / 0.1 | glass |
+| 15 | `#faf7f0` | 0.55 / 0 | plaster |
+| 16 | `#4a7c3f` | 0.95 / 0 | grass |
+| 17 | `#2f5233` | 0.95 / 0 | foliage (dark) |
+| 18 | `#7a8b3f` | 0.95 / 0 | foliage (light) |
+| 19 | `#6b5540` | 0.95 / 0 | earth |
+| 20 | `#c2a878` | 0.95 / 0 | sand |
+| 21 | `#2290cc` | 0.15 / 0 | water |
+| 22 | `#e8e8ee` | 0.8 / 0 | snow |
+| 23 | `#1d2733` | 0.9 / 0 | asphalt |
+| 24 | `#ffcc33` | 0.6 / 0 | yellow |
+| 25 | `#ff8800` | 0.6 / 0 | orange |
+| 26 | `#33aa55` | 0.6 / 0 | green |
+| 27 | `#22ccbb` | 0.5 / 0 | teal |
+| 28 | `#7744cc` | 0.6 / 0 | purple |
+| 29 | `#dd4488` | 0.6 / 0 | pink |
+| 30 | `#f5f0e6` | 0.75 / 0 | bone |
+| 31 | `#141418` | 0.8 / 0 | near-black |
+
+Rules:
+
+- **An index may be re-toned; it may not be re-assigned.** 2 and 3 were moved off the full-saturation primaries `#3366ff`/`#ff0000` on 2026-07-25 (same index, no data touched, every existing scene improved at once) — but pointing an index at a different material would silently rewrite every block referencing it. **Append only.**
+- **Index 0 means "unset"** and yields the type's own default colour (a1 `#f8f8f8` · a5 `#44aaff` · a6/a7 `#cccccc` · a2 `#888888`), so the overwhelming majority of existing rows (slot 3 = 0) are unaffected by the palette.
+- **`rough`/`metal` are rendering hints, not geometry**: an engine with no PBR may ignore them, but the colour must still match.
+- For a1/a5/a6/a7 an **explicit slot-7 colour outranks slot 3** (slot 3 is ignored when slot 7 is present). a2's slot 7 is the texture, so a2 takes its colour only from slot 3; with a texture present the colour is forced to white (the image supplies it) while `rough`/`metal` still come from the palette entry.
 
 ## 3. a3 light
 

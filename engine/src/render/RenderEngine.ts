@@ -14,6 +14,7 @@ import { EditorHelpers } from './EditorHelpers';
 import { TransformGizmo, GizmoHooks, GizmoInfo } from './TransformGizmo';
 import { FloatingOrigin } from './FloatingOrigin';
 import { SceneLighting } from './SceneLighting';
+import { SkyEnvironment } from './SkyEnvironment';
 import { Picking } from './Picking';
 import { disposeMeshResources, disposeMediaResources } from './HandleDisposal';
 
@@ -21,8 +22,10 @@ export interface RenderEngineConfig {
     containerId: string;
     clearColor?: number;
     stats?: boolean;
-    /** Start with the sun's shadow map on (default off — see the constructor). */
+    /** Start with the sun's shadow map on (default ON — see the constructor). */
     shadows?: boolean;
+    /** Derive an image-based light from the sky (default ON — see SkyEnvironment). */
+    ibl?: boolean;
 }
 
 export enum CameraType {
@@ -59,6 +62,8 @@ export class RenderEngine {
     // Scene-wide lighting (ambient/hemisphere/directional + fog + sun-shadow
     // anchor) — delegated to render/SceneLighting.
     private readonly lighting: SceneLighting;
+    /** Gradient sky + PMREM image-based light (render/SkyEnvironment). */
+    private readonly sky: SkyEnvironment;
     /** The shadow-casting sun (first directional light set via setDirectionalLight). */
     private get sunLight(): THREE.DirectionalLight | null { return this.lighting.sunLight; }
 
@@ -94,7 +99,9 @@ export class RenderEngine {
         }
         this.container = domElement;
 
-        // 1. Initialize Scene
+        // 1. Initialize Scene. The background/environment are installed later by
+        // SkyEnvironment (needs the renderer for PMREM); this flat colour is only
+        // what shows for the frames before the first setPhase().
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(config.clearColor ?? 0x87ceeb);
 
@@ -132,13 +139,24 @@ export class RenderEngine {
         // Color management: render in sRGB so albedo textures aren't gamma-wrong
         // (linear-treated-as-sRGB). Color textures are tagged SRGBColorSpace on load.
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        // Shadows: OFF by default pending bias tuning — the grazing-angle moiré
-        // made them unstable and distracting. Everything else is wired (the sun's
-        // castShadow + bias in SceneLighting, cast/receive flags on every mesh), so
-        // this is the single master switch — flip it live via setShadowsEnabled to
-        // A/B quality and cost. (The day/night cycle is live in EnvironmentSystem,
-        // so leaving it on through a sun arc is how you see the grazing-angle case.)
-        this.renderer.shadowMap.enabled = config.shadows ?? false;
+        // Tone mapping. Three's default is NONE: linear radiance is written straight
+        // to an sRGB buffer, so anything the sun over-lights clips to flat white
+        // while everything else sits in a washed mid-grey band — the scene reads as
+        // a screenshot of a viewport, not a photograph. ACES filmic compresses the
+        // highlight shoulder and adds the contrast curve every real camera has.
+        // Exposure stays at 1.0: measured on the gallery, sun 1.2 + a 0.5-scaled sky
+        // IBL already lands the off-white ground (#eee) just under clipping. Raising
+        // it to 1.15 blew the whole scene to paper white.
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.0;
+        // Shadows: ON by default since 2026-07-25. They were off pending bias tuning;
+        // that tuning landed (SceneLighting's frustum density + normalBias, see
+        // architecture/performance.md), and without them nothing has a contact
+        // shadow — every object visually floats a few centimetres off the ground,
+        // which was the single most "unfinished"-looking thing in built scenes.
+        // Still the one master switch: flip it live via setShadowsEnabled / the
+        // status panel to A/B cost on a weak GPU.
+        this.renderer.shadowMap.enabled = config.shadows ?? true;
         // Filter: PCF. Not a compromise — in three r183 `PCFSoftShadowMap` is
         // DEPRECATED (it silently falls back to this, with a console warning),
         // because the PCF path was rewritten to be both softer and cheaper than
@@ -190,8 +208,18 @@ export class RenderEngine {
         // directional lights, fog, and the sun-shadow anchor.
         this.lighting = new SceneLighting(this.scene);
 
-        // 5. Default Lighting (dim ambient so adjunct lights are visible)
-        this.lighting.setHemisphere(0xffffff, 0x444444, 0.3);
+        // Gradient sky + the image-based light derived from it (render/SkyEnvironment).
+        // Owns scene.background / scene.environment and keeps the fog at the horizon;
+        // EnvironmentSystem drives it once per frame with its day factor.
+        this.sky = new SkyEnvironment(this.scene, this.renderer,
+            config.clearColor != null && config.clearColor !== 0x87ceeb ? config.clearColor : null,
+            config.ibl ?? true);
+
+        // 5. Default Lighting. Deliberately weak: the sky IBL now supplies the
+        // ambient/bounce term, so a hemisphere light at the old 0.3 stacked on top
+        // of it flattened everything back out. Kept non-zero so adjunct lights
+        // still read against a floor that isn't pitch black.
+        this.lighting.setHemisphere(0xffffff, 0x444444, 0.06);
 
         // 6. Stats (optional performance monitor)
         if (config.stats) {
@@ -211,6 +239,16 @@ export class RenderEngine {
     public get mainCameraInstance(): THREE.PerspectiveCamera { return this.mainCamera; }
     public get minimapCameraInstance(): THREE.OrthographicCamera { return this.minimap.cameraInstance; }
     public get sceneInstance(): THREE.Scene { return this.scene; }
+
+    /**
+     * Current sky state — `horizon` is the colour the fog and the load-window
+     * boundary must match. Exposed because `scene.background` is a gradient
+     * TEXTURE now (not a Color), so there is no other way to read "what colour is
+     * the sky at the horizon right now" from outside the render layer.
+     */
+    public skyInfo(): { horizon: number; ibl: boolean } {
+        return { horizon: this.sky.horizonColor, ibl: this.scene.environment != null };
+    }
     public get domElement(): HTMLCanvasElement { return this.renderer.domElement; }
 
     /**
@@ -426,7 +464,17 @@ export class RenderEngine {
     }
 
     public setFog(near: number, far: number, color?: number): void {
-        this.lighting.setFog(near, far, color);
+        this.lighting.setFog(near, far, color ?? this.sky.horizonColor);
+    }
+
+    /**
+     * Advance the sky/IBL to a point in the day cycle (0 = night, 0.5 = sun on the
+     * horizon, 1 = full day). Called every frame by EnvironmentSystem with the same
+     * smoothstepped factor that drives the sun and ambient intensities; the sky
+     * itself throttles the expensive IBL re-bake internally.
+     */
+    public setSkyPhase(dayFactor: number): void {
+        this.sky.setPhase(dayFactor);
     }
 
     public setDirectionalLight(color: number, intensity: number, x: number, y: number, z: number): RenderHandle {
@@ -767,6 +815,7 @@ export class RenderEngine {
     public dispose(): void {
         this.gizmo?.dispose();
         this.gizmo = null;
+        this.sky.dispose();
         if (this.container && this.renderer.domElement) {
             this.container.removeChild(this.renderer.domElement);
         }

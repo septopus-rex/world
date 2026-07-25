@@ -83,6 +83,13 @@ export class WorldContent {
     /** `?level=<name>` selects an authored level instead of the demo court. */
     private level = typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('level') : null;
+    /** `?fx=low` (or a persisted `septopus_fx` preference) selects the cheap
+     *  render tier — see withRenderTier. localStorage is honoured too so the e2e
+     *  harness can set it once for every spec, whatever URL each one opens. */
+    private fx = typeof window !== 'undefined'
+        ? (new URLSearchParams(window.location.search).get('fx')
+            ?? (() => { try { return window.localStorage.getItem('septopus_fx'); } catch { return null; } })())
+        : null;
     public readonly isParkour = this.level === 'parkour';
     public readonly isCoaster = this.level === 'coaster';
     private isXianjian = this.level === 'xianjian';
@@ -249,6 +256,23 @@ export class WorldContent {
      *  (corridor for the bare entry, demo court for ?level=demo) — the config
      *  doc's own player.start is only the last-resort fallback. Persisted
      *  location still wins (hydrate overrides after boot). */
+    /**
+     * `?fx=low` — drop the two most expensive render features (sun shadow map +
+     * sky IBL) for this session.
+     *
+     * Why it exists: both add shader PERMUTATIONS, and compiling a PBR program is
+     * ~1–3 s under SwiftShader (the software GL the e2e suite runs on). With the
+     * full tier a single spp spec went 53 s → past its 90 s budget, purely in
+     * shader compilation. Real GPUs don't care (measured 0.94 vs 0.54 ms/frame
+     * steady-state), so the DEFAULT stays full quality and only the harness — and
+     * anyone on a weak GPU — asks for the cheap tier.
+     */
+    private withRenderTier(cfg: any): any {
+        if (this.fx !== 'low' || !cfg) return cfg;
+        cfg.debug = { ...(cfg.debug ?? {}), shadows: false, ibl: false };
+        return cfg;
+    }
+
     private withSoftStart(cfg: any): any {
         if (this.isDefaultWorld && this.activeLevel?.start && cfg?.player) {
             cfg.player.start = JSON.parse(JSON.stringify(this.activeLevel.start));
@@ -292,13 +316,13 @@ export class WorldContent {
         const injected = (globalThis as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__;
         if (injected) {
             const cfg = await injected;
-            if (cfg) { this._worldDoc = cfg; return this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(cfg))))); }
+            if (cfg) { this._worldDoc = cfg; return this.withRenderTier(this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(cfg)))))); }
         }
         // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
         // resource/facing are baked into the doc; a saved pick overrides after
         // hydrate. Swap the backing file (or a CID fetch) to change worlds.
         this._worldDoc = defaultWorldJson;
-        return this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson)))));
+        return this.withRenderTier(this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson))))));
     }
 
     public async view(x: number, y: number, ext: number): Promise<any> {

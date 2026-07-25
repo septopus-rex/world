@@ -1,5 +1,6 @@
-import { STDObject, AdjunctAttribute } from '../../core/types/Adjunct';
+import { STDObject, AdjunctAttribute, MaterialConfig } from '../../core/types/Adjunct';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
+import { resolveSurface } from '../../core/utils/Palette';
 
 /**
  * Standard Septopus adjunct (de)serialization, shared by the primitive adjuncts
@@ -38,6 +39,31 @@ export const standardAttribute: AdjunctAttribute = {
         ...(std.material?.color != null ? [std.material.color] : []),
     ],
 };
+
+/**
+ * Resolve a standard primitive's surface (colour + PBR params) from its STD row.
+ *
+ * Precedence, highest first (protocol/{cn,en}/adjunct-types.md §2):
+ *   1. slot 7 — an EXPLICIT colour (what SPP StylePacks write for derived walls)
+ *   2. slot 3 — literal 0xRRGGBB (>=256) or a palette index (1..255)
+ *   3. the family's own default colour (slot 3 = 0 / absent)
+ *
+ * Before this, a1/a5/a6/a7 dropped slot 3 on the floor entirely: their transforms
+ * passed `row.material` straight through, so a row with slot 3 = 2 rendered in
+ * MeshFactory's fallback grey and the plugins' own `config.color` never applied
+ * either. Content that had authored a colour there (gallery water at 0x2290CC)
+ * silently rendered as default.
+ */
+export function standardSurface(row: STDObject, familyDefault: number): MaterialConfig {
+    if (row.material?.color != null) return { ...row.material };
+    const surface = resolveSurface(row.material?.resource, familyDefault);
+    return {
+        ...row.material,
+        color: surface.color,
+        roughness: surface.roughness,
+        metalness: surface.metalness,
+    };
+}
 
 /**
  * Shared edit menu for the standard primitives (wall / cone / ball / water).

@@ -7,7 +7,7 @@ import {
 } from '../../core/types/Adjunct.js';
 import { AdjunctType } from '../../core/types/AdjunctType';
 import { Coords } from '../../core/utils/Coords.js';
-import { standardAttribute, standardMenu } from './_shared.js';
+import { standardAttribute, standardMenu, standardSurface } from './_shared.js';
 
 /**
  * Adjunct - Wall (Modernized)
@@ -45,7 +45,7 @@ const transform: AdjunctTransform = {
                     position: [row.ox, row.oy, row.oz + elevation],
                     rotation: [row.rx, row.ry, row.rz],
                 },
-                material: row.material || { color: config.color },
+                material: standardSurface(row, config.color),
                 animate: row.animate,
             };
 

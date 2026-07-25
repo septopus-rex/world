@@ -50,6 +50,26 @@ C -->|资源与材质系统| D[加入 Scene 并渲染]
 （画廊㉑有同一资源两处独立摆放的实证）。给整条管线加新格式时先确认它的实例化语义，
 别默认 `clone()` 可用。
 
+## 2.5 画面基线：天空 · IBL · 色调映射（2026-07-25）
+
+在这批改动之前，渲染层缺的不是特效而是**渲染方程里的项**：没有色调映射、没有环境光贴图、材质从不设 roughness/metalness、阴影默认关。结果是 `MeshStandardMaterial`（PBR 着色器）在**没有环境可反射**的场景里退化成纯漫反射，任何未贴图的几何体都长得像泡沫模型。
+
+三件事一起做才有效，单做一件会更糟（例）：只开 IBL 不降 ambient → 补光叠补光，明暗面等亮；只加 tone mapping 不加光 → 整体发灰。
+
+| 项 | 落点 | 值 |
+|---|---|---|
+| 色调映射 | `RenderEngine` 构造 | `ACESFilmicToneMapping`，exposure `1.0` |
+| 渐变天空 | `render/SkyEnvironment.ts` | 2:1 equirect canvas（zenith→horizon→ground），随昼夜 `dayF` 重绘 |
+| IBL | 同上，PMREM | 同一张图 → `scene.environment`，`environmentIntensity 0.32` |
+| 雾 | 由天空驱动 | 雾色恒等于**地平线色**（`RenderEngine.skyInfo().horizon`，e2e 断言它俩相等） |
+| 主光/补光比 | `EnvironmentSystem.DAYLIGHT` | sun `1.9`（日落偏暖）· ambient `0.05` · hemisphere `0.06` |
+| 材质默认 | `MeshFactory.getMaterial` | roughness `0.85` / metalness `0`，可被调色板项覆盖 |
+| 阴影 | `World` → `RenderEngine` | **默认开**（`debug.shadows:false` 可关） |
+
+成本：PMREM 只在 `dayF` 变化超过 3% 时重烘，且复用同一个 render target；画廊实测 draw calls 不变（38→39）。
+
+**改这组数之前先读 `CLAUDE.md` 的「画面基线」条**——它记着哪几个值试过、往哪个方向调会退回纸片感。
+
 ## 3. 编辑态与线框叠加 (Editor Overlay)
 
 相比纯浏览态，Edit Mode（编辑模式）在底层具有更高的刷新频率且需要在 `Scene` 里重叠第二套特殊元素库。

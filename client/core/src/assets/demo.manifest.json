@@ -182,5 +182,25 @@
       2,
       2
     ]
+  },
+  {
+    "id": 46,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/brick-wall.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 47,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/concrete-floor.png",
+    "size": [
+      2,
+      2
+    ]
   }
 ]

@@ -15,6 +15,16 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL: 'http://127.0.0.1:7777',
+    // Cheap render tier for the whole suite (WorldContent.withRenderTier): no sun
+    // shadow map, no sky IBL. NOT a quality opinion — both add shader
+    // PERMUTATIONS, and SwiftShader compiles each PBR program in seconds, which
+    // is already the suite's dominant cost (see waitForWorldReady's note on the
+    // ~30 s compile burst). Set here rather than per-spec because 18 specs open
+    // their own URLs. The DEFAULT (full) tier is asserted by render-tier.spec.ts.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: 'http://127.0.0.1:7777', localStorage: [{ name: 'septopus_fx', value: 'low' }] }],
+    },
     headless: true,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',

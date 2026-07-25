@@ -34,9 +34,14 @@ describe('SPP tower stairs — StylePack stair_top variant', () => {
         registerStylePack(PACK);
         const rows = expandSpp([[6, 6, 0], [COLUMN[0]] as any, 'brick']);
         const boxes = rows.filter(([t]) => t === AdjunctType.Box);
-        const tops = boxes.map(([, r]) => +((r[1] as number[])[2] + (r[0] as number[])[2] / 2).toFixed(4)).sort((a, b) => a - b);
+        // Horizontal pieces only. Since the brick pack became textured (a2 parts
+        // instead of legacy a1 pieces) the four full-height façade walls are boxes
+        // too; they all top out at the cell ceiling and would swamp the ladder.
+        const flat = boxes.filter(([, r]) => (r[0] as number[])[2] < 2);
+        const tops = flat.map(([, r]) => +((r[1] as number[])[2] + (r[0] as number[])[2] / 2).toFixed(4)).sort((a, b) => a - b);
         // bottom 'floor' plinth + 8 treads + landing + flight divider + 3 slabs at z4
         expect(tops).toEqual([0.25, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4, 2.8, 3.2, 3.6, 3.6, 4, 4, 4]);
+        expect(boxes.length - flat.length, 'four 4 m brick walls').toBe(4);
         for (const [, r] of boxes) expect(r[6]).toBe(1); // every piece solid
     });
 

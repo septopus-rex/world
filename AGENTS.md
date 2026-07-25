@@ -17,7 +17,7 @@ Septopus World：独立 3D 虚拟世界引擎（TypeScript ECS，`engine/src`）
    - 内容寻址 `<cid>.<ext>`（或 a4/e1 明确允许的 `http(s):` 等带 scheme 的 URL）。
    `"/assets/xxx.png"` 这类字符串写进 block/level/stylepack = 换个宿主（链上启动、第二引擎）就断，门禁会红。
 
-3. **槽位语义以协议为准，改格式先改协议。** 常见误区：标准 7 槽类型（a1 墙等）的 `raw[3]` 是**颜色/调色板索引（number）**，不是贴图；贴图只在 **a2 box 的 `raw[7]`**（数字 id 或 `<cid>.<ext>`）和 **a4 module 的 resourceId 三形态**。协议文件动了必须 **cn/en 双语同步**。
+3. **槽位语义以协议为准，改格式先改协议。** 常见误区：标准 7 槽类型（a1 墙等）的 `raw[3]` 是**颜色（number）**，不是贴图——`0`=该型默认色、`1..255`=内建调色板索引、`≥256`=字面 `0xRRGGBB`（表在 `protocol/*/adjunct-types.md §2.3`）；贴图只在 **a2 box 的 `raw[7]`**（数字 id 或 `<cid>.<ext>`）和 **a4 module 的 resourceId 三形态**。**要贴图的墙必须发 a2 + 槽 7，别把贴图 id 塞进 a1 槽 3**（那会被当成调色板索引，静默变成别的颜色）。协议文件动了必须 **cn/en 双语同步**。
 
 4. **门禁必须绿：`cd engine && yarn test:run`。** 其中两份测试专门看着上面几条：
    - `tests/unit/content-conformance.test.ts` — 校验你写的每一份内容 JSON（槽位类型、资源形态、trigger 动作集、manifest 引用完整性）；

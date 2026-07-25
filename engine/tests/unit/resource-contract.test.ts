@@ -66,6 +66,16 @@ describe('resource contract — a2 box texture slot', () => {
         expect(std.material?.texture).toBeUndefined();
         expect(std.material?.resource).toBe(2);
     });
+
+    it('a LITERAL colour in slot 3 is still a colour, never a resource lookup', () => {
+        // Since 2026-07-25 slot 3 also carries 0xRRGGBB when >=256 (Palette.ts).
+        // A big number there must not be mistaken for a catalog/texture id — that
+        // would send the renderer fetching asset #3368601 for a plain blue box.
+        const std = deser([[1, 1, 1], [0, 0, 0], [0, 0, 0], 0x336699, [1, 1], 0, 0]);
+        expect(std.material?.texture).toBeUndefined();
+        const out = AdjunctBox.transform.stdToRenderData([std], 0)[0];
+        expect(out.material?.color).toBe(0x336699);
+    });
 });
 
 describe('resource contract — ResourceManager locator whitelist', () => {

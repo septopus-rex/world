@@ -193,7 +193,12 @@ function partToBox(face: ParticleFace, part: VariantPart, s: number, thickness: 
  */
 function variantParts(variant: FaceVariant, theme: SppTheme): VariantPart[] {
     if (variant.parts) return variant.parts;
-    const wallProps: any[] = [theme.texture ?? 0, [1, 1], 0, 1, ...(theme.color != null ? [theme.color] : [])];
+    // Slot 3 stays 0. a1 has NO texture channel (texture.md §9 / resource-contract
+    // test), so routing `theme.texture` here never textured anything — and now that
+    // slot 3 is a palette index (core/utils/Palette), a texture id sitting there
+    // would resolve to an unrelated palette colour. A textured pack must author
+    // `parts` with a2 + slot 7 instead (the terran/spanish precedent).
+    const wallProps: any[] = [0, [1, 1], 0, 1, ...(theme.color != null ? [theme.color] : [])];
     return (variant.pieces ?? []).map(p => ({
         type: AdjunctType.Wall, u: p.du, v: p.dv, su: p.su, sv: p.sv, props: wallProps,
     }));

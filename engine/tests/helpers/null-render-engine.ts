@@ -52,6 +52,7 @@ export function createNullRenderEngine() {
     lastMorph: null as number[] | null,
     lastAmbient: null as number | null,
     lastSunIntensity: null as number | null,
+    lastSkyPhase: null as number | null,
     lastCameraPos: null as [number, number, number] | null,
     lastCameraLookAt: null as [number, number, number] | null,
   };
@@ -104,6 +105,9 @@ export function createNullRenderEngine() {
     setDirectionalLight: () => handle(),
     setHemisphereLight: () => handle(),
     setFog: () => {},
+    // Gradient sky + IBL phase (render/SkyEnvironment): recorded so the day/night
+    // tests can assert the sky crosses twilight with the lights.
+    setSkyPhase: (dayFactor: number) => { counts.lastSkyPhase = dayFactor; },
     updateAmbientLight: (_h: Handle, _c: number, intensity: number) => { counts.lastAmbient = intensity; },
     updateDirectionalLight: (_h: Handle, _c: number, intensity: number) => { counts.lastSunIntensity = intensity; },
 

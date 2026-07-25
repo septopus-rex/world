@@ -52,13 +52,18 @@ test('sky-matched fog hides the bounded-window chunk boundary', async ({ page })
   const fog = await page.evaluate(() => {
     const re: any = (window as any).loader.engine.getWorld().renderEngine;
     const f = re.sceneInstance.fog;
-    const bg = re.sceneInstance.background;
-    return f ? { near: f.near, far: f.far, color: f.color.getHex(), bg: bg.getHex() } : null;
+    const sky = re.skyInfo();
+    return f ? { near: f.near, far: f.far, color: f.color.getHex(), horizon: sky.horizon, ibl: sky.ibl } : null;
   });
   expect(fog).not.toBeNull();
-  // Fog colour must equal the sky so terrain dissolves into the horizon (no hard
-  // jagged void edge at the load boundary).
-  expect(fog!.color).toBe(fog!.bg);
+  // Fog colour must equal the sky AT THE HORIZON so terrain dissolves into it (no
+  // hard jagged void edge at the load boundary). Since 2026-07-25 the sky is a
+  // gradient texture rather than a flat colour, so the reference is the horizon
+  // band that SkyEnvironment keeps in step with the day cycle — not `background`,
+  // which is no longer a Color at all.
+  expect(fog!.color).toBe(fog!.horizon);
+  // (Whether the sky ALSO feeds scene.environment is tier-dependent — the suite
+  //  runs the cheap tier — so that assertion lives in render-tier.spec.ts.)
   // Opaque around the window radius (extend=2 → ~32 m) so the boundary is hidden.
   expect(fog!.far).toBeGreaterThan(0);
   expect(fog!.far).toBeLessThan(64);
