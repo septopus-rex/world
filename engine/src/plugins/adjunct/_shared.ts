@@ -1,6 +1,7 @@
-import { STDObject, AdjunctAttribute, MaterialConfig } from '../../core/types/Adjunct';
+import { STDObject, AdjunctAttribute, MaterialConfig, RenderObject } from '../../core/types/Adjunct';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { resolveSurface } from '../../core/utils/Palette';
+import { Coords } from '../../core/utils/Coords';
 
 /**
  * Standard Septopus adjunct (de)serialization, shared by the primitive adjuncts
@@ -63,6 +64,96 @@ export function standardSurface(row: STDObject, familyDefault: number): Material
         roughness: surface.roughness,
         metalness: surface.metalness,
     };
+}
+
+/**
+ * ─── Composite shapes for the FUNCTIONAL adjuncts ────────────────────────────
+ *
+ * e4 book, e5 board, e1 link, e3 video, e2 audio were each ONE box with a flat
+ * colour: a book was a brown box, a notice board a tan box. Recognition comes
+ * from silhouette + material breaks, so a handful of sub-boxes (cover / spine /
+ * pages / brass plate) reads as a book at a fraction of the cost of a model —
+ * and unlike a model it needs no asset, scales to whatever size the content
+ * authored, and stays pure code.
+ *
+ * The multi-part path already existed: `AdjunctFactory` feeds ONE std row to
+ * `stdToRenderData` and adds every returned item as a sub-mesh of the entity's
+ * single mesh group. Which is why this is visual-only:
+ *   · collision comes from the STD row, not the parts — `BlockSystem` builds one
+ *     SolidComponent from `data.x/y/z` (so an authored AABB is unchanged);
+ *   · picking walks UP to the nearest `userData.entityId` (`Picking.castRay`) and
+ *     `setRaycastable` traverses the whole group, so every part clicks through to
+ *     the same entity — readers/links/videos keep working;
+ *   · one entity per row → LOD, eviction, edit selection and drafts all unchanged.
+ *
+ * TWO RULES, both learned the hard way:
+ *   1. **Sub-parts carry NO rotation.** The row's rotation is applied to the mesh
+ *      GROUP by VisualSyncSystem; repeating it on the child would rotate the child
+ *      twice. (The old single-box transforms did pass it — harmless for a box
+ *      centred at the group origin, wrong for offset parts. Exactly one row in all
+ *      shipped content is rotated: a palace book at 90°, which now honours it.)
+ *   2. **Stay inside the authored AABB.** Parts are fractions of the row's own
+ *      size, so nothing pokes through the wall/floor the author placed it against.
+ *      The only exception is a face made a few percent proud of its frame to avoid
+ *      coplanar z-fighting.
+ */
+export interface AdjunctPart {
+    /** Centre offset as a fraction of the body, per Septopus axis [E, N, Alt].
+     *  0 = centred, ±0.5 = flush with that face. */
+    at?: [number, number, number];
+    /** Size as a fraction of the body, per Septopus axis. */
+    size: [number, number, number];
+    /** Slot-3 colour value: a palette index (1..255) or a literal 0xRRGGBB. */
+    color?: number;
+    /** Metre floor applied after scaling, so a thin trim never degenerates to 0. */
+    min?: number;
+    /** Texture id/CID for this part (the image tints the part white). */
+    texture?: string;
+    /** Unlit (MeshBasicMaterial) — screens/labels that must stay readable. */
+    unlit?: boolean;
+    /** Media directive (audio emitter / video screen) — put it on ONE part. */
+    media?: any;
+}
+
+/** Index of the row's thinnest axis in Septopus order [E, N, Alt] — the panel
+ *  normal for board/link/video, the cover normal for a book. Content authors
+ *  these upright OR flat, so deriving it beats assuming one convention. */
+export function thinAxis(row: STDObject): 0 | 1 | 2 {
+    const s = [Math.abs(row.x), Math.abs(row.y), Math.abs(row.z)];
+    if (s[0] <= s[1] && s[0] <= s[2]) return 0;
+    return s[1] <= s[2] ? 1 : 2;
+}
+
+/** Expand fractional parts into render objects (see the block comment above). */
+export function composeParts(row: STDObject, elevation: number, parts: AdjunctPart[]): RenderObject[] {
+    const body: [number, number, number] = [row.x, row.y, row.z];
+    return parts.map((p, index) => {
+        const at = p.at ?? [0, 0, 0];
+        const size: [number, number, number] = [0, 1, 2].map((a) =>
+            Math.max(p.min ?? 0.01, Math.abs(body[a]) * p.size[a])) as [number, number, number];
+        const surface = p.color != null ? resolveSurface(p.color) : undefined;
+        return {
+            type: 'box',
+            index,
+            params: {
+                size: Coords.getBoxDimensions(size),
+                position: [
+                    row.ox + body[0] * at[0],
+                    row.oy + body[1] * at[1],
+                    row.oz + elevation + body[2] * at[2],
+                ],
+                rotation: [0, 0, 0],   // rule 1 — the group carries the row's rotation
+            },
+            material: {
+                ...(p.texture != null ? { texture: p.texture, color: 0xffffff } : {}),
+                ...(surface ? { color: surface.color, roughness: surface.roughness, metalness: surface.metalness } : {}),
+                ...(p.texture != null ? { color: 0xffffff } : {}),
+                ...(p.unlit ? { unlit: true } : {}),
+            },
+            ...(p.media ? { media: p.media } : {}),
+            animate: row.animate,
+        } as RenderObject;
+    });
 }
 
 /**

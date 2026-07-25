@@ -8,7 +8,7 @@ import {
 } from '../../core/types/Adjunct.js';
 import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask.js';
-import { Coords } from '../../core/utils/Coords.js';
+import { composeParts, thinAxis } from './_shared.js';
 
 /**
  * Adjunct — Book / readable text panel (e4)
@@ -78,23 +78,51 @@ const attribute: AdjunctAttribute = {
 
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
-        return stds.map((row, i) => {
-            // A textured cover tints white so the image shows true; a plain book
-            // uses the leather colour.
-            const color = row.material?.texture ? 0xffffff : config.color;
-            return {
-                type: "box", // upright tome
-                index: i,
-                params: {
-                    size: Coords.getBoxDimensions([row.x, Math.max(row.y, 0.05), row.z]),
-                    position: [row.ox, row.oy, row.oz + elevation],
-                    rotation: [row.rx, row.ry, row.rz],
+        return stds.flatMap((row) => {
+            // A tome, not a brown box: two covers around a block of pages, a spine
+            // down one edge, and a brass title plate. Axes are DERIVED (see
+            // thinAxis) because content authors books upright on a lectern and flat
+            // on a table; `t` is the cover normal, the spine runs the long way of
+            // the remaining two and sits at the negative end of the short one.
+            const t = thinAxis(row);
+            const rest = [0, 1, 2].filter((a) => a !== t) as [number, number];
+            const body = [row.x, row.y, row.z];
+            const long = Math.abs(body[rest[0]]) >= Math.abs(body[rest[1]]) ? rest[0] : rest[1];
+            const edge = long === rest[0] ? rest[1] : rest[0];
+
+            /** Fractional size/offset triple addressed by axis, defaults 1 / 0. */
+            const v = (base: number, over: Partial<Record<number, number>>): [number, number, number] =>
+                [0, 1, 2].map((a) => over[a] ?? base) as [number, number, number];
+
+            const COVER = config.color;         // warm leather
+            const SPINE = 0x6b4420;             // the same leather in shadow
+            const tex = row.material?.texture ? String(row.material.texture) : undefined;
+            return composeParts(row, elevation, [
+                // Covers — the authored texture (if any) belongs here.
+                { size: v(1, { [t]: 0.14 }), at: v(0, { [t]: -0.43 }), color: COVER, texture: tex, min: 0.008 },
+                { size: v(1, { [t]: 0.14 }), at: v(0, { [t]: 0.43 }), color: COVER, texture: tex, min: 0.008 },
+                // Page block: inset on three sides, flush into the spine.
+                {
+                    size: v(0.9, { [t]: 0.62, [long]: 0.92 }),
+                    at: v(0, { [edge]: 0.03 }), color: 30, min: 0.01,     // 30 = bone
                 },
-                material: { ...row.material, color },
-                animate: row.animate,
-            };
+                // Spine down the negative edge, full height of the long axis.
+                { size: v(1, { [edge]: 0.1 }), at: v(0, { [edge]: -0.45 }), color: SPINE, min: 0.01 },
+                // Brass title plate on BOTH covers — a small specular break is what
+                // makes the whole thing read as an object rather than a prism. Both
+                // sides because a world object gets approached from either
+                // direction and the row carries no notion of a front.
+                {
+                    size: v(0.05, { [long]: 0.12, [edge]: 0.45, [t]: 0.05 }),
+                    at: v(0, { [t]: 0.5, [long]: 0.22 }), color: 12, min: 0.004,   // 12 = brass
+                },
+                {
+                    size: v(0.05, { [long]: 0.12, [edge]: 0.45, [t]: 0.05 }),
+                    at: v(0, { [t]: -0.5, [long]: 0.22 }), color: 12, min: 0.004,
+                },
+            ]);
         });
-    }
+    },
 };
 
 const menu = {

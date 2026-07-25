@@ -8,7 +8,7 @@ import {
 } from '../../core/types/Adjunct.js';
 import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask.js';
-import { Coords } from '../../core/utils/Coords.js';
+import { composeParts, thinAxis } from './_shared.js';
 
 /**
  * Adjunct — spatial audio emitter (e2)
@@ -59,16 +59,16 @@ const attribute: AdjunctAttribute = {
 
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
-        return stds.map((row, i) => ({
-            type: "box",                     // small visible marker (edit-visible; play-hide is P5)
-            index: i,
-            params: {
-                size: Coords.getBoxDimensions([row.x, row.y, row.z]),
-                position: [row.ox, row.oy, row.oz + elevation],
-                rotation: [row.rx, row.ry, row.rz],
-            },
-            material: { color: config.color },
-            media: row.source
+        return stds.flatMap((row) => {
+            // A small speaker instead of a green cube: cabinet + driver cone + a
+            // grille bar. e2 is usually paired with a proper loudspeaker MODEL in
+            // authored scenes (gallery ⑧), so this is the marker you see while
+            // building — it should still look like what it does.
+            const t = thinAxis(row);
+            const [a, b] = [0, 1, 2].filter((x) => x !== t) as [number, number];
+            const v = (base: number, over: Partial<Record<number, number>>): [number, number, number] =>
+                [0, 1, 2].map((x) => over[x] ?? base) as [number, number, number];
+            const media = row.source
                 ? {
                     kind: 'audio' as const,
                     source: String(row.source),
@@ -77,9 +77,13 @@ const transform: AdjunctTransform = {
                     volume: row.volume ?? 1,
                     refDistance: row.refDistance ?? 8,
                 }
-                : undefined,
-            animate: row.animate,
-        }));
+                : undefined;
+            return composeParts(row, elevation, [
+                { size: v(1, {}), color: 31, min: 0.02, media },                            // cabinet
+                { size: v(0.52, { [t]: 0.18 }), at: v(0, { [t]: 0.45, [b]: 0.12 }), color: config.color, min: 0.02 },
+                { size: v(0.7, { [t]: 0.1, [b]: 0.12 }), at: v(0, { [t]: 0.48, [b]: -0.3 }), color: 13, min: 0.01 },
+            ]);
+        });
     },
 };
 

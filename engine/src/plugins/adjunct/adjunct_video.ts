@@ -8,7 +8,7 @@ import {
 } from '../../core/types/Adjunct.js';
 import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask.js';
-import { Coords } from '../../core/utils/Coords.js';
+import { composeParts, thinAxis } from './_shared.js';
 
 /**
  * Adjunct — video screen (e3)
@@ -59,18 +59,15 @@ const attribute: AdjunctAttribute = {
 
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
-        return stds.map((row, i) => ({
-            type: "box",                              // thin upright panel
-            index: i,
-            params: {
-                size: Coords.getBoxDimensions([row.x, row.y, Math.max(row.z, 0.05)]),
-                position: [row.ox, row.oy, row.oz + elevation],
-                rotation: [row.rx, row.ry, row.rz],
-            },
-            // Neutral dark tint until the first video frame lands (screen-off look);
-            // the VideoTexture, once attached, overrides .map (white base shows it true).
-            material: { color: 0x111111 },
-            media: row.source
+        return stds.flatMap((row) => {
+            // Bezel + screen + power LED. The MEDIA rides on the screen part only —
+            // AdjunctFactory attaches the VideoTexture to the mesh whose render item
+            // declared it, so putting it on the bezel would play the film on the frame.
+            const t = thinAxis(row);
+            const [a, b] = [0, 1, 2].filter((x) => x !== t) as [number, number];
+            const v = (base: number, over: Partial<Record<number, number>>): [number, number, number] =>
+                [0, 1, 2].map((x) => over[x] ?? base) as [number, number, number];
+            const media = row.source
                 ? {
                     kind: 'video' as const,
                     source: String(row.source),
@@ -79,9 +76,15 @@ const transform: AdjunctTransform = {
                     muted: row.muted !== false,
                     volume: row.volume ?? 1,
                 }
-                : undefined,
-            animate: row.animate,
-        }));
+                : undefined;
+            return composeParts(row, elevation, [
+                // Part 0 is the SCREEN (dark until the first frame lands) — it carries
+                // the media, and it is what callers/tests mean by "the panel".
+                { size: v(1, { [a]: 0.92, [b]: 0.88, [t]: 1.06 }), color: 0x111111, min: 0.012, media },
+                { size: v(1, {}), color: 31, min: 0.01 },                                  // 31 = near-black bezel
+                { size: v(0.04, { [t]: 1.1 }), at: v(0, { [a]: 0.44, [b]: -0.45 }), color: 26, min: 0.01 },  // 26 = green LED
+            ]);
+        });
     },
 };
 

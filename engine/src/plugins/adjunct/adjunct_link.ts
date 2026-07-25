@@ -8,7 +8,7 @@ import {
 } from '../../core/types/Adjunct.js';
 import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask.js';
-import { Coords } from '../../core/utils/Coords.js';
+import { composeParts, thinAxis } from './_shared.js';
 
 /**
  * Adjunct - Link / QR panel (e1)
@@ -65,21 +65,25 @@ const attribute: AdjunctAttribute = {
 
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
-        return stds.map((row, i) => {
-            // A textured panel (QR/image) tints white so the image shows true; a
-            // plain panel uses the link colour.
-            const color = row.material?.texture ? 0xffffff : config.color;
-            return {
-                type: "box", // upright panel
-                index: i,
-                params: {
-                    size: Coords.getBoxDimensions([row.x, row.y, Math.max(row.z, 0.05)]),
-                    position: [row.ox, row.oy, row.oz + elevation],
-                    rotation: [row.rx, row.ry, row.rz],
+        return stds.flatMap((row) => {
+            // A framed plate: slate bezel with the link face standing PROUD of it
+            // (4% each side — coplanar faces z-fight), plus a brass tab so the
+            // thing reads as a fixture rather than a floating rectangle.
+            const t = thinAxis(row);
+            const [a, b] = [0, 1, 2].filter((x) => x !== t) as [number, number];
+            const v = (base: number, over: Partial<Record<number, number>>): [number, number, number] =>
+                [0, 1, 2].map((x) => over[x] ?? base) as [number, number, number];
+            const tex = row.material?.texture ? String(row.material.texture) : undefined;
+            return composeParts(row, elevation, [
+                // Part 0 is the FACE — the primary surface every caller (and test)
+                // means by "the panel"; the frame follows.
+                {
+                    size: v(1, { [a]: 0.86, [b]: 0.86, [t]: 1.08 }),
+                    color: config.color, texture: tex, min: 0.012,
                 },
-                material: { ...row.material, color },
-                animate: row.animate,
-            };
+                { size: v(1, {}), color: 9, min: 0.01 },                                  // 9 = slate bezel
+                { size: v(0.05, { [a]: 0.3, [b]: 0.05, [t]: 1.12 }), at: v(0, { [b]: -0.44 }), color: 12, min: 0.008 },
+            ]);
         });
     }
 };

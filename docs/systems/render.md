@@ -70,6 +70,32 @@ C -->|资源与材质系统| D[加入 Scene 并渲染]
 
 **改这组数之前先读 `CLAUDE.md` 的「画面基线」条**——它记着哪几个值试过、往哪个方向调会退回纸片感。
 
+## 2.6 功能类 adjunct 的组合造型（2026-07-25）
+
+e4 book 曾经就是一个棕色盒子,e5 board 一个土色盒子。识别度来自**轮廓 + 材质断面**,所以这批"家具型"adjunct 改为各发若干子盒:
+
+| 类型 | 部件 |
+|---|---|
+| e4 book | 两面封面(可带贴图) · 书页块 · 书脊 · 两面黄铜标签 |
+| e5 board | 软木面(凹进) · 四根木框 · 两枚黄铜图钉 |
+| e1 link | 主面(可带二维码贴图,凸出 4%) · 石板边框 · 黄铜标签条 |
+| e3 video | 屏幕(承载 media) · 近黑边框 · 绿色电源灯 |
+| e2 audio | 音箱 · 纸盆 · 格栅条 |
+
+**机制早就有**:`AdjunctFactory` 把**一行 std** 喂给 `stdToRenderData`,再把返回的**每一项**当子网格挂进该实体唯一的 mesh group（源码注释原文就写着 "for multi-part objects"）。所以这批改动是**纯视觉**的:
+
+- **碰撞不变**——`BlockSystem` 用 `data.x/y/z` 建**一个** SolidComponent,与部件数量无关;
+- **点击不变**——`Picking.castRay` 向上找最近的 `userData.entityId`,`setRaycastable` 整组打射线层,任何部件都点到同一实体(书还能翻页、链接还能点);
+- **一行一实体**——LOD / 驱逐 / 编辑选中 / 草稿全不受影响。
+
+三条铁律(实现在 `plugins/adjunct/_shared.ts` 的 `composeParts` / `thinAxis`):
+
+1. **子件不带旋转。** 行旋转由 `VisualSyncSystem` 施加在 **mesh group** 上,子件再带一次就转两倍。(旧的单盒写法确实把行旋转也传给了子网格——盒子居中时无害,偏移部件就错。全仓只有 palace 一本书带 90° 旋转,现在才真正生效。)
+2. **部件留在 authored AABB 内。** 尺寸/偏移都是行自身尺寸的分数,所以不会穿出作者贴着放的墙或地面;唯一例外是主面比边框凸出几个百分点以避开共面 z-fighting。
+3. **第 0 件是主面。** 贴图与 media 落在它身上,调用方/测试按这个约定读(`[0]` = "这块面板")。
+
+**要更精细走 a4 module 模型**,但那条路要资产、要进 CAS,且模型按 authored size 拉伸会变形——组合基元零资产、随尺寸自适应,是功能类物件的默认解。契约:`engine/tests/unit/adjunct-shape.test.ts`。
+
 ## 3. 编辑态与线框叠加 (Editor Overlay)
 
 相比纯浏览态，Edit Mode（编辑模式）在底层具有更高的刷新频率且需要在 `Scene` 里重叠第二套特殊元素库。

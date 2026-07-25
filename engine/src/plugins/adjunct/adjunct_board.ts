@@ -8,7 +8,7 @@ import {
 } from '../../core/types/Adjunct.js';
 import { AdjunctType } from '../../core/types/AdjunctType';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask.js';
-import { Coords } from '../../core/utils/Coords.js';
+import { composeParts, thinAxis } from './_shared.js';
 
 /**
  * Adjunct — Board / message board (e5)
@@ -71,19 +71,31 @@ const attribute: AdjunctAttribute = {
 
 const transform: AdjunctTransform = {
     stdToRenderData: (stds: STDObject[], elevation: number): RenderObject[] => {
-        return stds.map((row, i) => {
-            const color = row.material?.texture ? 0xffffff : config.color;
-            return {
-                type: "box", // upright notice board
-                index: i,
-                params: {
-                    size: Coords.getBoxDimensions([row.x, Math.max(row.y, 0.05), row.z]),
-                    position: [row.ox, row.oy, row.oz + elevation],
-                    rotation: [row.rx, row.ry, row.rz],
+        return stds.flatMap((row) => {
+            // A framed notice board: four timber rails around a recessed cork
+            // face, plus two brass pins. `t` = the panel normal (derived, so a
+            // board authored flat on a table works too); the rails run along the
+            // two in-plane axes.
+            const t = thinAxis(row);
+            const [a, b] = [0, 1, 2].filter((x) => x !== t) as [number, number];
+            const v = (base: number, over: Partial<Record<number, number>>): [number, number, number] =>
+                [0, 1, 2].map((x) => over[x] ?? base) as [number, number, number];
+            const RAIL = 0.07;                  // rail width, fraction of its axis
+            const tex = row.material?.texture ? String(row.material.texture) : undefined;
+            return composeParts(row, elevation, [
+                // Cork face first (recessed), then the frame over its edges.
+                {
+                    size: v(1, { [t]: 0.55, [a]: 1 - 2 * RAIL, [b]: 1 - 2 * RAIL }),
+                    at: v(0, { [t]: -0.1 }), color: config.color, texture: tex, min: 0.01,
                 },
-                material: { ...row.material, color },
-                animate: row.animate,
-            };
+                { size: v(1, { [t]: 0.9, [b]: RAIL }), at: v(0, { [t]: 0.05, [b]: -0.5 + RAIL / 2 }), color: 7, min: 0.012 },
+                { size: v(1, { [t]: 0.9, [b]: RAIL }), at: v(0, { [t]: 0.05, [b]: 0.5 - RAIL / 2 }), color: 7, min: 0.012 },
+                { size: v(1, { [t]: 0.9, [a]: RAIL }), at: v(0, { [t]: 0.05, [a]: -0.5 + RAIL / 2 }), color: 7, min: 0.012 },
+                { size: v(1, { [t]: 0.9, [a]: RAIL }), at: v(0, { [t]: 0.05, [a]: 0.5 - RAIL / 2 }), color: 7, min: 0.012 },
+                // Pins: tiny, but they are what says "things get posted here".
+                { size: v(0.03, { [t]: 0.35 }), at: v(0, { [t]: 0.22, [a]: -0.22, [b]: 0.3 }), color: 12, min: 0.02 },
+                { size: v(0.03, { [t]: 0.35 }), at: v(0, { [t]: 0.22, [a]: 0.26, [b]: 0.18 }), color: 12, min: 0.02 },
+            ]);
         });
     }
 };
