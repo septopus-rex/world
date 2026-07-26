@@ -17,6 +17,11 @@ export function isolateMaterial(child: THREE.Mesh): THREE.MeshStandardMaterial {
         // clone is a plain owned material (disposed with the mesh), not a
         // doppelgänger of the cached shared entry.
         cloned.userData = { ...cloned.userData, shared: false, cacheKey: undefined, cacheKind: undefined };
+        // Material.copy() carries `defines` but NOT onBeforeCompile /
+        // customProgramCacheKey (plain instance props) — re-hooking them keeps
+        // SurfaceDetail's macro variation + de-tiling alive through a recolour.
+        cloned.onBeforeCompile = cur.onBeforeCompile;
+        cloned.customProgramCacheKey = cur.customProgramCacheKey;
         child.material = cloned;
         if ((cur as any).userData?.shared) MeshFactory.release(cur);
     }

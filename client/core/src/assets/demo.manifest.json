@@ -5,8 +5,8 @@
     "format": "png",
     "path": "/assets/ground-forest.png",
     "size": [
-      0.25,
-      0.25
+      0.5,
+      0.5
     ]
   },
   {
@@ -15,8 +15,8 @@
     "format": "png",
     "path": "/assets/ground-moon.png",
     "size": [
-      0.25,
-      0.25
+      0.5,
+      0.5
     ]
   },
   {

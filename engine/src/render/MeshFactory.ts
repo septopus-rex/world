@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RenderObject, MaterialConfig } from '../core/types/Adjunct';
 import { applyBoxWorldUV } from './TextureScale';
+import { applySurfaceDetail } from './SurfaceDetail';
 
 /**
  * MeshFactory is the central unit for transforming protocol-agnostic RenderObjects
@@ -52,13 +53,13 @@ export class MeshFactory {
             case 'sphere':
                 object = new THREE.Mesh(
                     this.getGeometry('sphere', w, h, d),
-                    this.getMaterial(material)
+                    this.getMaterial(material, [w, h, d])
                 );
                 break;
             case 'plane':
                 object = new THREE.Mesh(
                     this.getGeometry('plane', w, h, d),
-                    this.getMaterial(material)
+                    this.getMaterial(material, [w, h, d])
                 );
                 break;
             case 'sign':
@@ -66,14 +67,14 @@ export class MeshFactory {
                 // texture V+ = north — see adjunct_sign.ts orientation contract).
                 object = new THREE.Mesh(
                     this.getGeometry('sign', w, h, d),
-                    this.getMaterial(material)
+                    this.getMaterial(material, [w, h, d])
                 );
                 break;
             case 'cylinder':
             case 'cone':
                 object = new THREE.Mesh(
                     this.getGeometry('cylinder', w, h, d),
-                    this.getMaterial(material)
+                    this.getMaterial(material, [w, h, d])
                 );
                 break;
             case 'wedge':
@@ -82,7 +83,7 @@ export class MeshFactory {
                 // MovementCollider.topYAt, which is the collision side of this plane.
                 object = new THREE.Mesh(
                     this.getGeometry('wedge', w, h, d),
-                    this.getMaterial(material)
+                    this.getMaterial(material, [w, h, d])
                 );
                 break;
             case 'tube':
@@ -91,7 +92,7 @@ export class MeshFactory {
                 // removeHandle disposes it). size[0]=radius, size[1]=radial segs.
                 object = new THREE.Mesh(
                     this.buildTube(params.path, w, params.size[1], params.closed),
-                    this.getMaterial(material)
+                    this.getMaterial(material, [w, h, d])
                 );
                 break;
             case 'light':
@@ -104,7 +105,7 @@ export class MeshFactory {
                     // label/decal: signs, mahjong tile faces) instead of size-derived
                     // tiling (which is for walls/floors and would crop a small face).
                     this.getGeometry('box', w, h, d, !!material?.fit),
-                    this.getMaterial(material)
+                    this.getMaterial(material, [w, h, d])
                 );
                 break;
         }
@@ -231,9 +232,39 @@ export class MeshFactory {
     }
 
     /**
-     * Get or create a cached material instance.
+     * Should this surface get macro variation at all? Gate: its LARGEST face is
+     * at least ~12 m² (roughly 3.5 m square). Big surfaces — ground slabs, long
+     * walls, plazas — are the ones that read as one flat colour and need it.
+     *
+     * Small props must be EXCLUDED, and not just to save a program variant: the
+     * noise is keyed to world position, so a 1 m crate sits entirely inside one
+     * lobe and gets tinted UNIFORMLY — a scene of randomly light-and-dark boxes,
+     * which is worse than the problem being fixed. Measured, not assumed: at
+     * strength 0.5 the diagnostic screenshot showed exactly that.
      */
-    private static getMaterial(config?: MaterialConfig): THREE.MeshStandardMaterial | THREE.MeshBasicMaterial {
+    private static wantsMacro(w: number, h: number, d: number): boolean {
+        const [, mid, max] = [w, h, d].sort((a, b) => a - b);
+        return mid * max >= 12;
+    }
+
+    /**
+     * Should this surface get the de-tiling pass (SurfaceDetail)? "Big and flat"
+     * = a floor/platform/plaza: its texture has no inherent direction, so mixing
+     * in a rotated second phase is free realism. A wall of the same length fails
+     * the test (its thin axis is the min span), which is deliberate — rotating a
+     * brick texture reads as broken, and a wall's regular repetition is CORRECT.
+     * Dims are Three [w(x), h(y=up), d(z)] in metres.
+     */
+    private static wantsDetile(w: number, h: number, d: number): boolean {
+        const span = Math.min(w, d);
+        return span >= 8 && h <= span * 0.25;
+    }
+
+    /**
+     * Get or create a cached material instance. `dims` (Three [w,h,d] metres) is
+     * used only to decide the de-tiling pass for textured surfaces.
+     */
+    private static getMaterial(config?: MaterialConfig, dims?: [number, number, number]): THREE.MeshStandardMaterial | THREE.MeshBasicMaterial {
         const color = config?.color ?? 0xcccccc;
         const opacity = config?.opacity ?? 1;
         // PBR response. Three's own defaults are roughness=1 / metalness=0 — a
@@ -276,7 +307,7 @@ export class MeshFactory {
         // disposed cleanly on eviction — unlike a process-wide cached material, which
         // would dangle (pointing at a freed texture) after its texture is released.
         if (config?.texture) {
-            return new THREE.MeshStandardMaterial({
+            const mat = new THREE.MeshStandardMaterial({
                 color, transparent: opacity < 1, opacity, side: THREE.DoubleSide,
                 roughness, metalness,
                 // Cast shadows from BACK faces only. With side=DoubleSide, Three would
@@ -287,6 +318,15 @@ export class MeshFactory {
                 // small without peter-panning.
                 shadowSide: THREE.BackSide,
             });
+            // Surface detail (SurfaceDetail.ts): macro variation on big textured
+            // surfaces, plus de-tiling on the big FLAT ones (a strict subset).
+            // Safe on the un-cached textured path — a per-surface onBeforeCompile
+            // on a SHARED material would leak its program variant to every other
+            // user of that colour.
+            if (dims && this.wantsMacro(dims[0], dims[1], dims[2])) {
+                applySurfaceDetail(mat, { detile: this.wantsDetile(dims[0], dims[1], dims[2]) });
+            }
+            return mat;
         }
 
         // Colour-only materials are cached + shared by reference; tagged shared so

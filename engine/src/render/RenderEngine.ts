@@ -13,6 +13,7 @@ import { ParticleFX } from './ParticleFX';
 import { EditorHelpers } from './EditorHelpers';
 import { TransformGizmo, GizmoHooks, GizmoInfo } from './TransformGizmo';
 import { FloatingOrigin } from './FloatingOrigin';
+import { setSurfaceDetailOrigin } from './SurfaceDetail';
 import { SceneLighting } from './SceneLighting';
 import { SkyEnvironment } from './SkyEnvironment';
 import { Picking } from './Picking';
@@ -503,6 +504,9 @@ export class RenderEngine {
         if (!this.floatingOrigin.maybeRebase(this._cameraAbs)) return;
         this.mainCamera.position.set(this._cameraAbs.x - this.renderOrigin.x, this._cameraAbs.y - this.renderOrigin.y, this._cameraAbs.z - this.renderOrigin.z);
         this.minimap.rebase(this.renderOrigin);
+        // SurfaceDetail's macro noise is keyed to ABSOLUTE world coords; without
+        // this the whole pattern would jump one rebase-width every 1024 m.
+        setSurfaceDetailOrigin(this.renderOrigin);
     }
 
     /**
