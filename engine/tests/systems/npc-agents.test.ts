@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngine, stepN } from '../helpers/make-world';
 import { AdjunctType } from '../../src/core/types/AdjunctType';
 import { serializeBlockToRaw } from '../../src/core/utils/BlockSerializer';
-import { Coords } from '../../src/core/utils/Coords';
 
 // F2 — NPC agents (spec docs/plan/specs/npc-agents.md): data state machine +
 // JSONLogic perception + deterministic seeded wander + movement primitives,
@@ -31,7 +30,7 @@ const beh = (world: any, eid: number) => world.getComponent(eid, 'BehaviorCompon
 function movePlayer(world: any, e: number, n: number, alt = 1) {
     const p = world.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0];
     const t = world.getComponent(p, 'TransformComponent');
-    const [x, y, z] = Coords.septopusToEngine([e, n, alt], [BX, BY]);
+    const [x, y, z] = world.metrics.septopusToEngine([e, n, alt], [BX, BY]);
     t.position[0] = x; t.position[1] = y; t.position[2] = z; t.dirty = true;
 }
 

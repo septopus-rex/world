@@ -5,7 +5,7 @@ import { BlockSystem } from '../../src/core/systems/BlockSystem';
 import { EditSystem } from '../../src/core/systems/EditSystem';
 import { gridPlaneForAxis } from '../../src/core/systems/EditHelperManager';
 import { SystemMode } from '../../src/core/types/SystemMode';
-import { Coords } from '../../src/core/utils/Coords';
+import { DEFAULT_METRICS } from '../../src/core/utils/WorldMetrics';
 
 // Gizmo-driven translation: the render-layer TransformControls wrapper feeds
 // EditSystem.onGizmoChange (live position, snapped+clamped by CORE) and
@@ -27,8 +27,10 @@ function api() {
 }
 
 const BX = 2048, BY = 2048, ELEV = 2;
-// Engine-absolute position of the block's septopus origin corner.
-const bWorld = Coords.septopusToEngine([0, 0, 0], [BX, BY]);
+// Engine-absolute position of the block's septopus origin corner. Module-level
+// constant, so it uses the PROTOCOL-default geometry — which is what
+// MockWorldNormal declares, hence identical to the booted world's metrics.
+const bWorld = DEFAULT_METRICS.blockOrigin(BX, BY);
 
 async function setup() {
     const { engine } = await makeHeadlessEngineWith({ api: api() });

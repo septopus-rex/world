@@ -60,7 +60,7 @@ cd engine && yarn build                            # tsc
 
 ## 核心概念
 
-- **Block**：世界的基本单元，4096×4096 网格，每个 Block 16×16 米。
+- **Block**：世界的基本单元。网格与块尺寸是**世界文档声明的数据**（`world.range`/`block`/`diff`，规范 `protocol/cn|en/world.md §1`），参考世界=4096×4096 网格 × 16×16×16 米——但那是**默认值不是常量**。引擎一律经 `world.metrics`（`core/utils/WorldMetrics.ts`，每 World 一份不可变实例）取值与做块偏移换算；**不得在别处硬编码 4096/16**（`unit/world-metrics.test.ts` 有 grep 闸）。`Coords` 只剩无状态轴序/旋转换算。**2026-07-27 推翻了基础数据审计 D6/D7 的「协议不变量、不可覆盖」裁定**——理由与踩过的坑（进程级可变静态被多 World 互相覆盖、bootWorld 出生点顺序 bug、两个横轴共用 `block[0]`）见 `docs/plan/specs/base-data-audit.md` D7 的修订块。
 - **Adjunct**：附属物，附着在 Block 上的 3D 对象（墙/水/灯光/触发器等）。
 - **ECS**：`World` 持有 registry + 系统；状态即数据（便于 headless 测试）。
 - **数据流**：`IDataSource`（纯数据文档/草稿，可换链/IPFS）→ Raw → STD（`CollapseCodec`）→ RenderData → Three.js。**默认入口=功能展厅(2026-07-09)**:裸地址(无 `?level`)进 gallery 走廊(①–⑳,尽头传送广场直达仙剑/过山车/跑酷);旧综合演示区(游戏桌等)= `?level=demo`——两者同属"默认世界族"(**软出生**:出生点取活动关卡 start,持久化位置仍然赢;authored 关卡才强制出生)。**默认世界也是数据（P7，2026-07-08）**：`default.level.json`（9 块 ref + `fallback` 回退地面模板）+ `default.world.json`（世界配置文档）+ `ContentResolver`（名字/CID→内容，本地=import JSON、联网=CAS/IPFS 同形状）；scene 注册表与 MockBlockData 客户端路径已退役，「内容从哪来」只有一个答案：关卡文档。
@@ -132,7 +132,7 @@ cd engine && yarn build                            # tsc
 - `STANDALONE_ENGINE_ROADMAP.md` — 路线图（链剥离 + 旧引擎退役 + 后续 P1–P5）。
 - `PLAYABLE_CHECKLIST.md` — 可玩化 gap 追踪（内容/产品视角）。
 - `GAME_SYSTEMS_BACKLOG.md` — 引擎原语缺口（F1 调度 · F2 NPC · F3 战斗 · F4 对话）。**F 系列统一设计模式**（authored 源→运行时派生 · 定义→实例不持久化 · 条件=JSONLogic/效果=actuator · 定时=仿真时间）见该文档同名节。
-- `specs/` — 逐特性规格：`scheduler-and-spawn`(F1) · `npc-agents`(F2) · `combat-damage`+`dialogue-quests`(F3/F4，**任务=flags 配方，有意不加原语**) · `spp-protocol-full` · `spp-recursive-refinement`（分层生成，状态见其 §9） · `coaster-via-spp` · `ai-authoring` · `2d-map` · `teleport-portal`（**动作只认锚点不认裸坐标**） · `palace-stress-level`（流式压力测试 + 全 adjunct 收纳架） · `native-in-world-games` · `inventory-local-first` · `mobile-client` · `event-bus-design` · `full-data-migration` + `bevy-reference-engine`（第二引擎差分裁判）。
+- `specs/` — 逐特性规格：`scheduler-and-spawn`(F1) · `npc-agents`(F2) · `combat-damage`+`dialogue-quests`(F3/F4，**任务=flags 配方，有意不加原语**) · `spp-protocol-full` · `spp-recursive-refinement`（分层生成，状态见其 §9） · `coaster-via-spp` · `ai-authoring` · `2d-map` · `teleport-portal`（**动作只认锚点不认裸坐标**） · `palace-stress-level`（流式压力测试 + 全 adjunct 收纳架） · `native-in-world-games` · `inventory-local-first` · `mobile-client` · `event-bus-design` · `world-schema-through`（**世界几何=文档数据**，推翻 D6/D7 的「不可覆盖」裁定） · `full-data-migration` + `bevy-reference-engine`（第二引擎差分裁判）。
 
 **参考实现 `docs/`**
 

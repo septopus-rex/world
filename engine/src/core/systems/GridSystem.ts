@@ -1,6 +1,5 @@
 import { World, ISystem } from '../World';
 import { TransformComponent } from '../components/PlayerComponents';
-import { Coords } from '../utils/Coords';
 
 /**
  * GridSystem monitors the player's physical location and calculates 
@@ -9,7 +8,6 @@ import { Coords } from '../utils/Coords';
  */
 export class GridSystem implements ISystem {
     private lastBlockKey: string = "";
-    private readonly BLOCK_SIZE = 16;
     private checkTimer: number = 0;
     private readonly CHECK_INTERVAL = 0.1; // 10Hz
 
@@ -24,7 +22,7 @@ export class GridSystem implements ISystem {
         const t = world.getComponent<TransformComponent>(players[0], "TransformComponent");
         if (!t) return;
 
-        const spp = Coords.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
+        const spp = world.metrics.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
         const blockX = spp.block[0];
         const blockY = spp.block[1];
 

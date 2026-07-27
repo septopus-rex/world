@@ -9,7 +9,6 @@ import { AdjunctFactory } from './factories/AdjunctFactory';
 import { STDObject } from './types/Adjunct';
 import { setByPath } from './edit/setByPath';
 import { normalizeSppFaces } from './spp/faceCodes';
-import { Coords } from './utils/Coords';
 
 /**
  * EditTaskExecutor
@@ -198,7 +197,7 @@ export class EditTaskExecutor {
         const block = adjComp.parentBlockEntityId != null
             ? world.getComponent<BlockComponent>(adjComp.parentBlockEntityId, "BlockComponent") : undefined;
         if (block && std.ox != null) {
-            const enginePos = Coords.septopusToEngine(
+            const enginePos = world.metrics.septopusToEngine(
                 [std.ox, std.oy ?? 0, std.oz ?? 0], [block.x, block.y]);
             enginePos[1] += (block.elevation || 0);
             trans.position[0] = enginePos[0];

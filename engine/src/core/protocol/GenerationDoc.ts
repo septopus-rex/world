@@ -16,6 +16,7 @@
  */
 import { AdjunctType } from '../types/AdjunctType';
 import { getMotifTemplate } from '../motif/MotifTemplates';
+import { PROTOCOL_DEFAULT_RANGE } from '../utils/WorldMetrics';
 
 export interface GenPieceGenerator {
     kind: 'generator';
@@ -68,10 +69,19 @@ export const GEN_LIMITS = {
 const isInt = (v: any) => typeof v === 'number' && Number.isInteger(v);
 const isFiniteNum = (v: any) => typeof v === 'number' && Number.isFinite(v);
 
-/** Validate an untrusted GenerationDoc. Returns error list (empty = valid).
- *  Error codes are STABLE — the gateway feeds them back to the LLM verbatim
- *  for the retry loop, and tests pin them. */
-export function validateGenerationDoc(doc: any): GenError[] {
+/**
+ * Validate an untrusted GenerationDoc. Returns error list (empty = valid).
+ * Error codes are STABLE — the gateway feeds them back to the LLM verbatim
+ * for the retry loop, and tests pin them.
+ *
+ * `range` = the target world's grid extent in blocks. Callers holding a World
+ * pass `world.metrics.range`; the gateway (no world in the process) gets the
+ * protocol default. The bound used to be a hardcoded 4096.
+ */
+export function validateGenerationDoc(
+    doc: any,
+    range: readonly [number, number] = PROTOCOL_DEFAULT_RANGE
+): GenError[] {
     const errs: GenError[] = [];
     const err = (code: string, path: string, msg: string) => errs.push({ code, path, msg });
 
@@ -79,8 +89,8 @@ export function validateGenerationDoc(doc: any): GenError[] {
     if (doc.version !== 0) err('version', '$.version', 'must be 0');
     const blk = doc.target?.block;
     if (!Array.isArray(blk) || blk.length !== 2 || !isInt(blk[0]) || !isInt(blk[1])
-        || blk[0] < 1 || blk[0] > 4096 || blk[1] < 1 || blk[1] > 4096) {
-        err('target', '$.target.block', 'must be [x,y] integers in 1..4096');
+        || blk[0] < 1 || blk[0] > range[0] || blk[1] < 1 || blk[1] > range[1]) {
+        err('target', '$.target.block', `must be [x,y] integers in 1..${range[0]} / 1..${range[1]}`);
     }
     if (!isInt(doc.seed) || doc.seed < 0) err('seed', '$.seed', 'must be a non-negative integer');
     if (doc.game !== undefined && doc.game !== 0 && doc.game !== 1) err('game', '$.game', 'must be 0 or 1');

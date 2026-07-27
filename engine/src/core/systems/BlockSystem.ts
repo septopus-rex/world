@@ -72,8 +72,8 @@ export class BlockSystem implements ISystem {
             block.isDraft = true;
         }
 
-        const [bw, bl] = world.config.world.block;
-        const worldPos = Coords.septopusToEngine([0, 0, 0], [block.x, block.y]);
+        const [bw, bl] = world.metrics.block;
+        const worldPos = world.metrics.septopusToEngine([0, 0, 0], [block.x, block.y]);
         const minX = worldPos[0];
         const minZ = worldPos[2];
 
@@ -216,7 +216,7 @@ export class BlockSystem implements ISystem {
         const hasGround = adjunctsToInit.some(a => a.id?.startsWith('ground') || (a.typeId === AdjunctType.Box && a.oz < 0));
 
         if (!hasGround) {
-            const [bw, bl] = world.config.world.block;
+            const [bw, bl] = world.metrics.block;
             const groundId = world.createEntity();
             // World baseline ground texture (WorldConfig block.texture). When set it
             // resolves through the resource pipeline → IPFS like any other texture;
@@ -370,7 +370,7 @@ export class BlockSystem implements ISystem {
 
         const septopusPos: [number, number, number] = [data.ox, data.oy, data.oz];
         const septopusBlock: [number, number] = [block.x, block.y];
-        const enginePos = Coords.septopusToEngine(septopusPos, septopusBlock);
+        const enginePos = world.metrics.septopusToEngine(septopusPos, septopusBlock);
 
         enginePos[1] += (block.elevation || 0);
 

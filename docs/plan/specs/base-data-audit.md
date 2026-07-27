@@ -98,6 +98,22 @@ world.md §1/§9)+ 历法缺省」;世界文档新增 `time` 段(epoch/speed),
 EnvironmentSystem **数据优先**(注入 config 赢,GlobalConfig 兜底);头注已改。
 Coords/Constants 引用的 BLOCK_SIZE 属协议不变量,合法保留。引擎 554/554。
 
+> **⚠️ 本条已被部分推翻(2026-07-27,world-schema-through)。** 「range/block/diff
+> 是不可覆盖的协议不变量、BLOCK_SIZE 合法保留」这半条**不再成立**:
+> - **几何三项(`range`/`block`/`diff`)改为世界文档声明的可变配置**,协议措辞见
+>   world.md §1「世界几何」+ §9(双语已同步)。`max`(96 世界)留在 GlobalConfig,
+>   因为它是元宇宙级、不属于任何单个世界。
+> - **`Coords.BLOCK_SIZE` / `ENGINE_CONSTANTS.BLOCK_SIZE` / `GlobalConfig` 的
+>   `export const BLOCK_SIZE` 已全部删除**。带块偏移的换算迁到 `core/utils/
+>   WorldMetrics.ts`,由 `world.metrics` 持有(每世界一份、不可变)。
+> - 理由有二:① 链上世界配置管理必须能定义一个世界的网格,钉死在引擎里就永远缺这块;
+>   ② 原方案把块尺寸存进**进程级可变静态**,多个 World 同时存在时(测试、地块预览、
+>   风格包编辑器)互相覆盖,后构造的赢——本条当时判定「合法保留」的正是这个缺陷。
+> - 顺带修掉两个潜伏 bug:`Engine.bootWorld` 曾在 `new World()` **之前**用残留的
+>   静态换算出生点;两个横向轴曾共用 `block[0]`,非正方形网格必然错位。
+> - 门禁:`tests/unit/world-metrics.test.ts`(含「4096 不得出现在协议默认值以外的
+>   引擎代码里」的 grep 闸)+ `content-conformance` 新增 world doc schema 校验。
+
 ### D8 · moduleCatalog 喂入路径(桶 A 半)✅ 随 D4 已修
 `Engine.setModuleCatalog(models)` 由客户端从 DEMO_ASSETS 推导喂入(palette 每模型
 一钮)。D4 资产清单数据化后此项自动理顺——目录=清单里 type=module 的投影。

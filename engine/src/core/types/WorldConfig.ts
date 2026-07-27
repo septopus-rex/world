@@ -5,16 +5,20 @@
  */
 
 // -----------------------------------------------------------------------------
-// Base Constants (Shared by the 96 worlds engine-wide)
+// Protocol DEFAULTS (what a world document that declares nothing inherits)
 // -----------------------------------------------------------------------------
 export interface SeptopusGlobalConstants {
     world: {
         name: string;
         desc: string;
-        range: [number, number];   // Dimensions limit per face, e.g., 4096x4096
-        block: [number, number, number]; // Standard [Width, Length, Height], e.g. [16, 16, 16]
-        diff: number;              // Terrain elevation diff baseline
-        max: number;               // 96 Worlds total (0-95)
+        // range/block/diff are per-world MUTABLE config (world.md §1, 2026-07-27) —
+        // these entries are only the fallback for a document that omits them. The
+        // engine reads them via `world.metrics` (core/utils/WorldMetrics), never
+        // from here directly; nothing may hardcode 4096 / 16 again.
+        range: [number, number];   // Block count per axis [East, North]
+        block: [number, number, number]; // Block size in metres, Septopus order [East, North, Alt]
+        diff: number;              // Height granularity in metres
+        max: number;               // 96 Worlds total (0-95) — METAVERSE-level, not per-world
     };
     time: {
         epoch: number;             // Genesis block height
@@ -36,6 +40,14 @@ export interface WorldConfig {
         accuracy: number;          // Typically 1000 (mm to meters conversion)
         index: number;             // World Index [0 - 95]
         containerId: string;       // Canvas HTML DOM mount ID
+
+        // GEOMETRY (world.md §1) — the world's own grid, declared as DATA so a
+        // chain-served configuration can define it. Omitted fields inherit the
+        // protocol defaults above. Consume through `world.metrics`, which
+        // validates these and is the ONLY place block offsets are computed.
+        range?: [number, number];        // Block count per axis [East, North]
+        block?: [number, number, number]; // Block size in metres [East, North, Alt]
+        diff?: number;                    // Height granularity in metres
     };
     assetBaseUrl: string;          // Global asset path
 

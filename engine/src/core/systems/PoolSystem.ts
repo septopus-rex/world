@@ -1,7 +1,6 @@
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctType } from '../types/AdjunctType';
 import { SystemMode } from '../types/SystemMode';
-import { Coords } from '../utils/Coords';
 import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent } from '../components/PlayerComponents';
 import { AdjunctComponent } from '../components/AdjunctComponents';
@@ -171,7 +170,7 @@ export class PoolSystem implements ISystem {
         const elevation = this.blockElevation(world, table.block);
         for (const { eid, b } of entries) {
             const z = b.potted ? table.ballZ - 1.4 : table.ballZ; // potted balls drop into the pocket
-            const e = Coords.septopusToEngine([b.x, b.y, z], table.block);
+            const e = world.metrics.septopusToEngine([b.x, b.y, z], table.block);
             e[1] += elevation;
             const t = world.getComponent<TransformComponent>(eid, 'TransformComponent');
             if (t) { t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true; }

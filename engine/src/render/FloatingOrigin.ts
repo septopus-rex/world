@@ -2,7 +2,8 @@ import * as THREE from 'three';
 
 /**
  * Floating origin — extracted from RenderEngine (intra-layer refactor, still
- * `render/`). The Septopus world spans tens of kilometres (4096 blocks × 16 m,
+ * `render/`). A Septopus world spans tens of kilometres (the reference world's
+ * grid is 4096 blocks of 16 m — see world.metrics, it is per-world data — with
  * spawn at the CENTRE ≈ 32 km from origin). At those magnitudes float32 — what
  * the GPU uses — resolves to ~4 mm, which wrecks shadow-coordinate maths and
  * produces distance-dependent shadow acne ("waves"). Fix: all WORLD content

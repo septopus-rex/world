@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Coords } from '@engine/core/utils/Coords';
+import { DEFAULT_METRICS } from '@engine/core/utils/WorldMetrics';
 import type { DesktopLoader, MapCell } from '../lib/DesktopLoader';
 import { usePageActive, usePages, type PageSpec } from './page';
 import { blockDetailPage } from './BlockDetailPage';
@@ -57,7 +58,13 @@ export function WorldMap2D({ loader }: Props) {
     const active = usePageActive();
 
     // Imperative view state (refs so pan/zoom don't thrash React).
-    const center = useRef({ x: 2048.5, y: 2048.5 }); // block-space coord at screen center
+    // Block-space coord at screen centre, seeded from the WORLD's own grid centre
+    // (geometry is data — never assume a 4096² grid). The effect below re-centres
+    // on the player as soon as the loader is up.
+    const center = useRef((() => {
+        const [gx, gy] = (loader?.worldMetrics ?? DEFAULT_METRICS).centreBlock();
+        return { x: gx + 0.5, y: gy + 0.5 };
+    })());
     const cell = useRef(DEFAULT_CELL);
     const cache = useRef(new Map<string, MapCell>());
     const pending = useRef(new Set<string>());
@@ -120,7 +127,8 @@ export function WorldMap2D({ loader }: Props) {
         if (!ctx) return;
 
         const c = cell.current, cx = center.current.x, cy = center.current.y;
-        const [rangeX, rangeY] = loader.worldRange;
+        const metrics = loader!.worldMetrics;
+        const [rangeX, rangeY] = metrics.range;
 
         // Visible block range (inclusive), clamped a little wider for smooth edges.
         const bx0 = Math.floor(cx - (W / 2) / c) - 1, bx1 = Math.floor(cx + (W / 2) / c) + 1;
@@ -162,7 +170,8 @@ export function WorldMap2D({ loader }: Props) {
 
     function draw(ctx: CanvasRenderingContext2D, W: number, H: number) {
         const c = cell.current, cx = center.current.x, cy = center.current.y;
-        const [rangeX, rangeY] = loader!.worldRange;
+        const metrics = loader!.worldMetrics;
+        const [rangeX, rangeY] = metrics.range;
         const sx = (u: number) => W / 2 + (u - cx) * c;   // block-x → screen px
         const sy = (v: number) => H / 2 - (v - cy) * c;   // block-y (north up) → screen px
 
@@ -203,7 +212,9 @@ export function WorldMap2D({ loader }: Props) {
                 if (mc?.anchors?.length && c >= 8) {
                     ctx.fillStyle = '#c084fc';
                     for (const a of mc.anchors) {
-                        const ax = sx(bx + a.e / 16), ay = sy(by + a.n / 16);
+                        // In-block metres → block fraction, via the world's own
+                        // block extent (per-axis: the grid need not be square).
+                        const ax = sx(bx + a.e / metrics.blockWidth), ay = sy(by + a.n / metrics.blockLength);
                         const r = Math.max(3, c * 0.16);
                         ctx.beginPath();
                         ctx.moveTo(ax, ay - r); ctx.lineTo(ax + r, ay); ctx.lineTo(ax, ay + r); ctx.lineTo(ax - r, ay);
@@ -225,8 +236,8 @@ export function WorldMap2D({ loader }: Props) {
         // player marker + heading.
         if (loader) {
             const [pbx, pby] = loader.playerState.block;
-            const [px, py] = loader.playerState.position; // rel metres in the 16m block
-            const ux = pbx + px / 16, uy = pby + py / 16;
+            const [px, py] = loader.playerState.position; // block-relative metres
+            const ux = pbx + px / metrics.blockWidth, uy = pby + py / metrics.blockLength;
             const mx = sx(ux), my = sy(uy);
             // Heading via the single Coords conversion (engine yaw → Septopus
             // heading, CW-from-North). North-up canvas: rotate the north-pointing
@@ -273,7 +284,8 @@ export function WorldMap2D({ loader }: Props) {
         const u = cx + (e.clientX - rect.left - W / 2) / c;
         const v = cy + (H / 2 - (e.clientY - rect.top)) / c;
         const bx = Math.floor(u), by = Math.floor(v);
-        const [rangeX, rangeY] = loader.worldRange;
+        const metrics = loader!.worldMetrics;
+        const [rangeX, rangeY] = metrics.range;
         if (bx < 1 || by < 1 || bx > rangeX || by > rangeY) { setSelected(null); return; }
         inspect(cache.current.get(`${bx}_${by}`) ?? { x: bx, y: by, occupied: false, count: 0, game: 0, elevation: 0, anchors: [] });
     }

@@ -2,7 +2,6 @@ import { World, ISystem, EntityId } from '../World';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { TransformComponent } from '../components/PlayerComponents';
 import { RaycastTargetComponent } from '../components/InteractionComponents';
-import { Coords } from '../utils/Coords';
 import { RenderHandle } from '../types/Adjunct';
 import { Color } from '../utils/Math';
 import { MeshComponent } from '../components/VisualizationComponents';

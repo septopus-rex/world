@@ -1,7 +1,6 @@
 import { World, ISystem, EntityId } from '../World';
 import { RenderHandle } from '../types/Adjunct';
 import { EnvironmentStateComponent } from '../components/EnvironmentComponents';
-import { Coords } from '../utils/Coords';
 
 import { GlobalConfig } from '../GlobalConfig';
 
@@ -122,7 +121,9 @@ export class EnvironmentSystem implements ISystem {
         // boundary against the sky. Fade it out (opaque ~ the window radius) so the
         // staircase silhouette dissolves instead of showing a jagged void edge.
         const ext = (world.config.player as any)?.extend ?? 2;
-        const radius = ext * Coords.BLOCK_SIZE;                 // nearest boundary ≈ this
+        // Window is (2·ext+1)² BLOCKS — take the LARGER horizontal block extent so a
+        // non-square grid still fogs past its farthest boundary, not short of it.
+        const radius = ext * Math.max(world.metrics.blockWidth, world.metrics.blockLength);
         world.renderEngine.setFog(radius * 0.5, radius * 1.2);
     }
 

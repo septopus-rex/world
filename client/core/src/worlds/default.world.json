@@ -8,7 +8,17 @@
     ],
     "accuracy": 1000,
     "index": 0,
-    "containerId": "render-canvas"
+    "containerId": "render-canvas",
+    "range": [
+      4096,
+      4096
+    ],
+    "block": [
+      16,
+      16,
+      16
+    ],
+    "diff": 0.1
   },
   "assetBaseUrl": "/assets",
   "block": {

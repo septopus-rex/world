@@ -4,7 +4,6 @@ import { BlockComponent } from '../components/BlockComponent';
 import { AdjunctComponent } from '../components/AdjunctComponents';
 import { MeshComponent } from '../components/VisualizationComponents';
 import { RenderHandle } from '../types/Adjunct';
-import { Coords } from '../utils/Coords';
 import type { GizmoHooks } from '../../render/TransformGizmo';
 
 /**
@@ -40,7 +39,7 @@ export class EditHelperManager {
         if (activeBlockId !== null && !this.blockHelper) {
             const meshComp = this.world.getComponent<MeshComponent>(activeBlockId, "MeshComponent");
             if (meshComp?.handle) {
-                const [bw, bl, bh] = this.world.config.world.block;
+                const [bw, bl, bh] = this.world.metrics.block;
                 this.blockHelper = this.world.renderEngine.createBlockHighlight(meshComp.handle, bw, bl, bh);
             }
         }
@@ -101,13 +100,13 @@ export class EditHelperManager {
     }
 
     private updateGrid(activeBlockId: EntityId, selectedEntityId: EntityId | null) {
-        const [bw, bl, bh] = this.world.config.world.block;
+        const [bw, bl, bh] = this.world.metrics.block;
         if (!this.gridHelper) {
             this.gridHelper = this.world.renderEngine.createGridHelper(bw, 8, 0x00ffff, 0x008888);
         }
 
         const bComp = this.world.getComponent<BlockComponent>(activeBlockId, "BlockComponent")!;
-        const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
+        const bWorldPos = this.world.metrics.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
         const elevation = bComp.elevation || 0;
         const offset = 0.01;
 

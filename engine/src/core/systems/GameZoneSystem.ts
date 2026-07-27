@@ -2,7 +2,6 @@ import { World, ISystem } from '../World';
 import { TransformComponent } from '../components/PlayerComponents';
 import { BlockComponent } from '../components/BlockComponent';
 import { SystemMode } from '../types/SystemMode';
-import { Coords } from '../utils/Coords';
 
 /**
  * GameZoneSystem — derives "is the player standing in a PLAYABLE block?" from the
@@ -40,7 +39,7 @@ export class GameZoneSystem implements ISystem {
         const t = world.getComponent<TransformComponent>(players[0], "TransformComponent");
         if (!t) return;
 
-        const spp = Coords.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
+        const spp = world.metrics.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
         const bx = spp.block[0], by = spp.block[1];
         const key = `${bx}_${by}`;
         const game = this.blockGame(world, bx, by);

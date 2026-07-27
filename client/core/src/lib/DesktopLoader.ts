@@ -33,7 +33,7 @@ import { TransformComponent } from '@engine/core/components/PlayerComponents';
 import { registerItemTemplate, type ItemTemplate } from '@engine/core/services/ItemRegistry';
 import demoItemsJson from '../items/demo.items.json';
 import { IDataSource } from '@engine/core/services/DataSource';
-import { Coords } from '@engine/core/utils/Coords';
+import type { WorldMetrics } from '@engine/core/utils/WorldMetrics';
 import type { GameSetting } from '@engine/core/types/GameSetting';
 import { gameById } from '../games/registry';
 import { ServiceHub } from '../net/ServiceHub';
@@ -137,6 +137,9 @@ export class DesktopLoader implements IDataSource {
     public get playerState(): SeptopusPlayerState { return this.content.playerState; }
 
     public worldInfo(): { id: number; nickname: string } { return this.content.worldInfo(); }
+    /** The live world's geometry (grid extent, block size, height granularity)
+     *  — read this instead of assuming 4096 / 16. See WorldContent.worldMetrics. */
+    public get worldMetrics(): WorldMetrics { return this.content.worldMetrics; }
     public get worldRange(): [number, number] { return this.content.worldRange; }
     public fetchMapCell(x: number, y: number): Promise<MapCell> { return this.content.fetchMapCell(x, y); }
     public getLoadedBlockCount(): number { return this.content.loadedCount; }
@@ -532,7 +535,7 @@ export class DesktopLoader implements IDataSource {
         const ids = w.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
         const t = w.getComponent(ids[0], 'TransformComponent') as any;
         if (!t) return;
-        const e = Coords.septopusToEngine(pos, block);
+        const e = w.metrics.septopusToEngine(pos, block);
         t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
         t.dirty = true;
     }
@@ -666,9 +669,10 @@ export class DesktopLoader implements IDataSource {
         // castRayFromMinimap returns { entityId, distance, point } where point is the
         // ABSOLUTE engine-space hit. Derive the BLOCK coords the inspect panel needs;
         // returning the raw hit (no .metadata) is what crashed App on click-to-inspect.
-        const hit = (this.engine.getWorld() as any)?.minimap.pickBlockFromMinimap(ndcX, ndcY);
-        if (!hit?.point) return null;
-        const { block } = Coords.engineToSeptopus(hit.point);
+        const world = this.engine.getWorld();
+        const hit = (world as any)?.minimap.pickBlockFromMinimap(ndcX, ndcY);
+        if (!hit?.point || !world) return null;
+        const { block } = world.metrics.engineToSeptopus(hit.point);
         return { metadata: { x: block[0], y: block[1] }, entityId: hit.entityId };
     }
 

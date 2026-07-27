@@ -4,7 +4,7 @@ import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataS
 // Authored levels are pure DATA (AuthoredLevel JSON) — content lives here with
 // the client, the engine only supplies the vocabulary (levelSceneProvider).
 import { AuthoredLevel, levelSceneProvider, type ContentResolver } from '@engine/core/services/AuthoredLevel';
-import { Coords } from '@engine/core/utils/Coords';
+import { WorldMetrics, DEFAULT_METRICS } from '@engine/core/utils/WorldMetrics';
 import type { StylePack } from '@engine/core/spp/Variants';
 import parkourLevelJson from '../../levels/parkour.level.json';
 import coasterLevelJson from '../../levels/coaster.level.json';
@@ -221,7 +221,7 @@ export class WorldContent {
             const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
             const t = pid !== undefined ? w.getComponent(pid, 'TransformComponent') : null;
             if (t) {
-                const e = Coords.septopusToEngine(loc.position, loc.block);
+                const e = w.metrics.septopusToEngine(loc.position, loc.block);
                 t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;
             }
         };
@@ -547,10 +547,23 @@ export class WorldContent {
 
     // ── 2D map (same data seam, no 3D entities) ───────────────────────────────
 
+    /**
+     * The live world's GEOMETRY — grid extent, block size, height granularity —
+     * straight off the engine (built from the world document, world.md §1). The
+     * 2D map, spawn defaults and any block↔metre maths in the client read it
+     * from here rather than assuming 4096 / 16.
+     *
+     * Before boot there is no world yet, so this falls back to the protocol
+     * defaults; every consumer re-reads it after boot.
+     */
+    public get worldMetrics(): WorldMetrics {
+        return this.engine()?.getWorld()?.metrics ?? DEFAULT_METRICS;
+    }
+
     /** World grid dimensions (block count per axis); cells outside are void. */
     public get worldRange(): [number, number] {
-        const r = (this.engine()?.getWorld() as any)?.config?.world?.range;
-        return Array.isArray(r) && r.length === 2 ? [r[0], r[1]] : [4096, 4096];
+        const r = this.worldMetrics.range;
+        return [r[0], r[1]];
     }
 
     /** Lightweight 2D summary of one block, derived from its raw — no meshes,

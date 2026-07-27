@@ -1,6 +1,6 @@
 import { RenderEngine } from '../render/RenderEngine';
 import { RenderPipeline } from '../render/RenderPipeline';
-import { Coords } from './utils/Coords';
+import { WorldMetrics } from './utils/WorldMetrics';
 import { ParticleCell, ParticleFace } from './types/ParticleCell';
 import { ECSRegistry } from './ECSRegistry';
 import { SystemManager } from './SystemManager';
@@ -196,6 +196,16 @@ export class World {
     public config: FullWorldConfig;
 
     /**
+     * World GEOMETRY from the world document — grid extent, block size, height
+     * granularity — plus every block-offset coordinate conversion (world.md §1,
+     * core/utils/WorldMetrics). Immutable and PER-WORLD: this replaced the
+     * `Coords.BLOCK_SIZE` class static, which was process-global and so let
+     * concurrent Worlds (tests, block preview, stylepack editor) clobber each
+     * other's geometry. Engine code must never hardcode 4096 / 16 — read here.
+     */
+    public readonly metrics: WorldMetrics;
+
+    /**
      * Local-first draft persistence (P1): ONE store shared by BlockSystem (sync
      * draft reads) and EditSystem (saves) — write-behind cache over the durable
      * backend. Hydrate once at boot via Engine.hydrateDrafts BEFORE injecting
@@ -309,7 +319,7 @@ export class World {
     constructor(config: FullWorldConfig, deps: WorldDeps = {}) {
         this.config = config;
         this.bridge = new WorldBridge(this);
-        Coords.BLOCK_SIZE = config.world.block[0];
+        this.metrics = WorldMetrics.from(config.world);
 
         // Route reported errors onto THIS world's event queue (revives
         // resource.failed + engine.error). ConsoleSink stays global; this sink
@@ -543,7 +553,7 @@ export class World {
         if (players.length === 0) return null;
         const t = this.getComponent<{ position: number[] }>(players[0], "TransformComponent");
         if (!t) return null;
-        return Coords.engineToSeptopus([t.position[0], t.position[1], t.position[2]]).block;
+        return this.metrics.engineToSeptopus([t.position[0], t.position[1], t.position[2]]).block;
     }
 
     public setEditMode(active: boolean): void {

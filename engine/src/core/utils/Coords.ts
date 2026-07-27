@@ -1,46 +1,20 @@
-import { GlobalConfig } from '../GlobalConfig';
-
+/**
+ * Coords — the STATELESS axis-order and rotation conversions between the
+ * Septopus data frame (X=East, Y=North, Z=Alt) and the engine frame (Three.js:
+ * X=right, Y=up, Z=forward, north = −Z).
+ *
+ * Everything here is a pure function of its arguments. Conversions that need
+ * the world's GEOMETRY (block offsets — i.e. anything taking a `[bx, by]`)
+ * live on `world.metrics` instead (core/utils/WorldMetrics), because block size
+ * comes from the world document and differs per world. This class used to carry
+ * a mutable `BLOCK_SIZE` static for that; it was process-global and silently
+ * shared between concurrent Worlds — see WorldMetrics for the full story.
+ */
 export class Coords {
-    public static BLOCK_SIZE = 16;
-
-    /**
-     * SPP Protocol (Z-Up) -> Engine (Y-Up Right-Handed)
-     * SPP:    [X=East, Y=North, Z=Alt]
-     * Engine: [X=East, Y=Alt,   Z=-North]
-     * 
-     * RATIONALE: 
-     * Three.js is Y-Up. Standard camera looks at -Z. 
-     * To map SPP North (+Y) to Engine Forward, we map SPP +Y to Engine -Z.
-     */
-    public static septopusToEngine(septopusPos: [number, number, number], septopusBlock: [number, number]): [number, number, number] {
-        return [
-            (septopusBlock[0] - 1) * this.BLOCK_SIZE + septopusPos[0], // Engine X (East)
-            septopusPos[2],                                      // Engine Y (Alt)
-            -((septopusBlock[1] - 1) * this.BLOCK_SIZE + septopusPos[1]) // Engine Z (North is -Z)
-        ];
-    }
-
-    /**
-     * Engine (Y-Up) -> SPP Protocol (Z-Up)
-     */
-    public static engineToSeptopus(enginePos: [number, number, number]): { block: [number, number], pos: [number, number, number] } {
-        const bx = Math.floor(enginePos[0] / this.BLOCK_SIZE) + 1;
-        const septopusYGlobal = -enginePos[2];
-        const by = Math.floor(septopusYGlobal / this.BLOCK_SIZE) + 1;
-
-        return {
-            block: [bx, by],
-            pos: [
-                enginePos[0] - (bx - 1) * this.BLOCK_SIZE,
-                septopusYGlobal - (by - 1) * this.BLOCK_SIZE,
-                enginePos[1]
-            ]
-        };
-    }
-
     /**
      * Local SPP (Z-Up) -> Local Engine (Y-Up)
-     * Identical mapping logic to septopusToEngine but without block offset.
+     * Identical axis mapping to WorldMetrics.septopusToEngine, without the
+     * block offset (so it needs no world geometry).
      */
     public static localSeptopusToEngine(localSpp: [number, number, number]): [number, number, number] {
         return [

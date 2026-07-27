@@ -108,13 +108,6 @@ export class Engine {
             }
         };
 
-        // 3. Coordinate conversion for player start
-        const start = playerStart || fullConfig.player.start;
-        const enginePos = Coords.septopusToEngine(start.position, start.block);
-        const engineRot = Coords.septopusRotationToEngine(start.rotation || [0, 0, 0]);
-
-        fullConfig.player.start = { ...start, position: enginePos, rotation: engineRot };
-
         this.world = new World(fullConfig, {
             renderEngine: this.services.renderer,
             dataSource: this.services.api,
@@ -124,6 +117,20 @@ export class Engine {
             gameApi: this.services.gameApi,
             liveSource: this.services.liveSource
         });
+
+        // 3. Coordinate conversion for player start — AFTER the World exists, so
+        //    the block offset uses THIS world's geometry (world.metrics, built
+        //    from the document above). This used to run BEFORE construction
+        //    against `Coords.BLOCK_SIZE`, a process-global static the world
+        //    constructor then wrote: the spawn of a world whose block size
+        //    differed from the previous one's landed at the wrong place.
+        //    Nothing reads config.player.start during construction (HealthSystem
+        //    reads it at respawn time), so writing it here is in time.
+        const start = playerStart || fullConfig.player.start;
+        const enginePos = this.world.metrics.septopusToEngine(start.position, start.block);
+        const engineRot = Coords.septopusRotationToEngine(start.rotation || [0, 0, 0]);
+
+        fullConfig.player.start = { ...start, position: enginePos, rotation: engineRot };
 
         // 3.5 UI Orchestration
         const uiMode = this.services.uiMode || 'default';
@@ -239,7 +246,7 @@ export class Engine {
             const trans = eid !== undefined ? world.getComponent<any>(eid, "TransformComponent") : null;
             const body = eid !== undefined ? world.getComponent<any>(eid, "RigidBodyComponent") : null;
             if (trans) {
-                const pos = Coords.septopusToEngine(savedLoc.position, savedLoc.block);
+                const pos = world.metrics.septopusToEngine(savedLoc.position, savedLoc.block);
                 const rot = Coords.septopusRotationToEngine(savedLoc.rotation || [0, 0, 0]);
                 trans.position[0] = pos[0]; trans.position[1] = pos[1]; trans.position[2] = pos[2];
                 trans.rotation[0] = rot[0]; trans.rotation[1] = rot[1]; trans.rotation[2] = rot[2];
@@ -274,7 +281,7 @@ export class Engine {
         if (eid === undefined) return null;
         const trans = world.getComponent<any>(eid, "TransformComponent");
         if (!trans) return null;
-        const spp = Coords.engineToSeptopus(trans.position);
+        const spp = world.metrics.engineToSeptopus(trans.position);
         return { block: spp.block, position: spp.pos, rotation: Coords.engineRotationToSeptopus(trans.rotation) };
     }
 

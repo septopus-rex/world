@@ -297,8 +297,8 @@ export class EditSystem implements ISystem {
         const bComp = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
         if (!trans || !bComp) return null;
 
-        const [bw, bl, bh] = world.config.world.block;
-        const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
+        const [bw, bl, bh] = world.metrics.block;
+        const bWorldPos = world.metrics.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
         const elevation = bComp.elevation || 0;
 
         let [newX, newY, newZ] = abs;
@@ -354,7 +354,7 @@ export class EditSystem implements ISystem {
             ? world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent") : null;
         if (!adj || !trans || !bComp) return;
 
-        const bWorldPos = Coords.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
+        const bWorldPos = world.metrics.septopusToEngine([0, 0, 0], [bComp.x, bComp.y]);
         const r3 = (n: number) => Math.round(n * 1000) / 1000;
         const param = {
             ox: r3(trans.position[0] - bWorldPos[0]),
@@ -568,7 +568,7 @@ export class EditSystem implements ISystem {
         const block = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
         if (!block) return;
 
-        const spp = Coords.engineToSeptopus([point[0], point[1], point[2]]);
+        const spp = world.metrics.engineToSeptopus([point[0], point[1], point[2]]);
         if (spp.block[0] !== block.x || spp.block[1] !== block.y) {
             world.ui?.showToast('Placement must stay inside the active edit block');
             return; // keep the type armed — let the creator click again

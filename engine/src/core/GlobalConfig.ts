@@ -1,9 +1,18 @@
 import { SeptopusGlobalConstants } from './types/WorldConfig';
 
 /**
- * Septopus PROTOCOL constants + engine defaults (base-data-audit D7 ruling):
- * · world.range/block/diff/max — protocol-wide invariants (world.md §1),
- *   shared by ALL worlds, NOT overridable per world.
+ * Septopus PROTOCOL DEFAULTS — the values a world document inherits when it
+ * declares none. NOT a place to read world parameters from.
+ *
+ * · world.range/block/diff — per-world geometry (world.md §1). A world document
+ *   declares its own; these are the fallback. Engine code reads them ONLY via
+ *   `world.metrics` (core/utils/WorldMetrics), which validates the document's
+ *   values. Superseded base-data-audit D7's "invariant, not overridable per
+ *   world" ruling (2026-07-27): the VALUES may be shared in practice, but the
+ *   MECHANISM must be data — otherwise chain-served world configuration has no
+ *   way to define a world's grid.
+ * · world.max — METAVERSE-level (96 worlds on the cube's 6 faces); a property of
+ *   the Septopus universe, not of any single world, so it stays here.
  * · time.* — the DEFAULT calendar; a world doc's `time` section overrides it
  *   (EnvironmentSystem reads the injected config first). Single worlds own
  *   their calendar as DATA; this is only the fallback.
@@ -12,9 +21,9 @@ export const GlobalConfig: SeptopusGlobalConstants = {
     world: {
         name: "Septopus World",
         desc: "A decentralized 3D spatial protocol.",
-        range: [4096, 4096],
-        block: [16, 16, 16], // [Width, Length, Height] in meters
-        diff: 0.1,           // Height granularity
+        range: [4096, 4096],  // blocks per axis [East, North]
+        block: [16, 16, 16],  // metres, Septopus order [East, North, Alt]
+        diff: 0.1,            // height granularity, metres
         max: 96
     },
     time: {
@@ -34,5 +43,7 @@ export const GlobalConfig: SeptopusGlobalConstants = {
     }
 };
 
-// Convenience shorthand
-export const BLOCK_SIZE = GlobalConfig.world.block[0];
+// NOTE: there is deliberately NO `export const BLOCK_SIZE` here. A module-level
+// snapshot is evaluated at import time, so a world document could never
+// influence it. Use `world.metrics.blockWidth` (or DEFAULT_METRICS in tooling
+// that has no World).

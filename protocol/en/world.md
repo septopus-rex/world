@@ -5,10 +5,24 @@ Within the **Septopus Engine**, a "World" (`world`) is the highest-level adminis
 ## 1. World Architecture & Layout
 
 The Septopus metaverse is composed of a fixed number of overarching Worlds.
-*   **Total Worlds**: 96 individual Worlds.
+*   **Total Worlds**: 96 individual Worlds. **This is a metaverse-level constant** (a property of the cosmic cube, not of any single world) and does not appear in a world document.
 *   **Macro Structure**: The 96 worlds are mathematically mapped onto the 6 faces of a massive cosmic cube (4x4 worlds per face).
-*   **World Dimensions**: A single World is a bounded grid of `4096 x 4096` Blocks.
-*   **Block Dimensions**: A single Block represents an area of `16m x 16m`.
+
+**World geometry (`range` / `block` / `diff`) is per-world configuration DATA (normative, revised 2026-07-27)** — declared by the **world document**, not an engine constant:
+
+| Field | Meaning | Protocol default (when the document omits it) |
+|---|---|---|
+| `world.range` | Block count per axis `[East, North]`; blocks are numbered from `[1,1]` | `[4096, 4096]` |
+| `world.block` | One block's size in metres, Septopus axis order `[East, North, Alt]` | `[16, 16, 16]` |
+| `world.diff` | Height granularity in metres | `0.1` |
+
+**An engine implementation MUST read these three from the world document and MUST NOT hardcode them.** The reference world (Genesis) declares exactly the defaults above — so "a 4096×4096 grid of 16 m blocks" remains the shape of virtually every world in practice; but that is the **value of the data**, not a constraint of the **mechanism**.
+
+> **Why this changed (superseding the 2026-07-09 base-data-audit D6 ruling of "protocol invariant, not overridable per world")**: on-chain world configuration management has to be able to define a world's grid, and pinning these three numbers inside the engine leaves that permanently incomplete. Moving them from constants into the document also removed a real defect in the reference implementation — block size had been stored in a **process-global mutable static**, so concurrent worlds (tests, block preview, stylepack editor) overwrote each other's geometry and whichever constructed last won.
+>
+> **Validity bounds (not semantics — a defence against corrupt/hostile documents)**: `range` is an integer in `1..1048576` per axis; `block` is `0.01..1024` metres per axis; `diff` is positive and no greater than the block height. An implementation MUST fall back to the defaults above and REPORT when a value falls outside — never accept it silently.
+
+*   **Each horizontal axis is computed independently**: the East/North components of `range` and `block` are independent, so neither the world grid nor a block need be square. Multiplying both axes by a single extent is a bug (the reference implementation once did exactly this).
 
 ## 2. Administration & The "Lord" (领主)
 
@@ -27,7 +41,9 @@ Worlds share a foundational set of physical laws (Immutable Data) but allow the 
 Set upon the genesis of the Septopus Engine and cannot be altered by individual Lords.
 - **Time Dilation**: E.g., The ratio of Septopus Time to Real-World Time (default 20x faster).
 - **Celestial Bodies**: Standardized skybox configurations (1 Sun, 3 Moons).
-- **Maximum Block Expansion**: The hard limit of `4096 x 4096`.
+- **Total Worlds**: 96 (6 cube faces × 4×4).
+
+> **The block grid is no longer listed here** (2026-07-27): `range`/`block`/`diff` moved to the "World geometry" table in §1 as **Lord-level mutable configuration**, declared by the world document. The `1..1048576` blocks / `0.01..1024` metres bounds stated there are **defensive implementation limits** (they stop a corrupt document producing NaN coordinates or an allocation-sized grid), not the semantics of a dial a Lord tunes.
 
 ### 3.1 Deterministic Calendar & Weather Derivation (Normative)
 
@@ -130,7 +146,10 @@ Stored in a smart contract and configurable by the World's Lord.
     "world": {     
         "nickname": "Neon Genesis",        
         "mode": ["ghost", "normal", "game"],     
-        "accuracy": 1000     
+        "accuracy": 1000,
+        "range": [4096, 4096],
+        "block": [16, 16, 16],
+        "diff": 0.1
     },
     "block": {     
         "elevation": 0,       
@@ -149,8 +168,8 @@ Stored in a smart contract and configurable by the World's Lord.
 ```
 
 ### Configuration Hierarchy
-1.  **Septopus Engine Core Config**: The immutable laws of the engine.
-2.  **World Config**: The Lord's customized environment.
+1.  **Septopus Engine Core Config**: The immutable laws of the engine, **plus the protocol defaults a world document may omit** (§1's geometry defaults, §9's bucket-B table). This tier is the FALLBACK, not the READ POINT — an engine must consult the world document first.
+2.  **World Config**: The Lord's customized environment, **including the world geometry of §1**.
 3.  **Avatar/Block Config**: Individual Player or Landowner localized data overrides.
 
 ## 5. Coordinate & Rotation Contract (Normative)
@@ -162,7 +181,11 @@ resolve into differently-posed worlds.
 
 - **Septopus (data) axis order**: `X east · Y north · Z up`, metres; in-block
   coordinates are relative to the block's **south-west corner**; block ids
-  `[bx, by]` start at `[1,1]` (a 4096×4096 world grid).
+  `[bx, by]` start at `[1,1]` and run to the world's declared `world.range`
+  (§1; 4096×4096 in the reference world).
+- **Block offsets are computed per axis**: engine-absolute =
+  `(bx−1) × block[0] + east` / `(by−1) × block[1] + north`. Each horizontal
+  axis uses **its own** block extent — neither the grid nor a block need be square.
 - Engines choose their internal frames freely (the reference uses Three.js
   X-right/Y-up/Z-forward with north = −Z), but **data is always written and
   stored in the Septopus axis order**; implementations convert on load/persist.
@@ -191,10 +214,20 @@ diameter semantics) are listed in [adjunct-types.md](adjunct-types.md).
 
 ## 9. Engine-constant binning (normative, 2026-07-09)
 
-Implementation constants are binned three ways (base-data audit P9/D6):
+Implementation constants are binned three ways (base-data audit P9/D6,
+**revised 2026-07-27**):
 
-**Protocol invariants** (§1; shared by all worlds, never overridable): the
-4096×4096 block grid, 16×16×16 m blocks, 0.1 m height granularity, 96 worlds.
+**Protocol invariants** (shared by all worlds, never overridable): **96 worlds**.
+That is the whole list — it is a property of the cosmic cube, not of any single
+world.
+
+> **The block grid and block size left this bin** (it used to read "the 4096×4096
+> block grid, 16×16×16 m blocks, 0.1 m height granularity, never overridable").
+> They are now **mutable configuration declared by the world document** — see the
+> "World geometry" table in §1. Their VALUES still default to 4096×4096 / 16 m /
+> 0.1 m, but **an engine must read them from the document and must not hardcode
+> them.** Driver: on-chain world configuration management must be able to define
+> a world's grid.
 
 **Protocol defaults (bin B)** — every engine must use the same value when the
 data omits it:
@@ -204,6 +237,9 @@ data omits it:
 | gravity | **−19.62 m/s²** (a deliberate 2× standard-gravity feel value, pinned as such) | `player.capacity.gravityMultiplier` (scale) |
 | player health | 100/100 | `player.capacity.maxHp` |
 | interaction reach | **3.5 m** (player→hit point, not camera; Edit mode exempt) | `player.capacity.reach` |
+| world grid | `[4096, 4096]` blocks | `world.range` (§1) |
+| block size | `[16, 16, 16]` m, Septopus axis order | `world.block` (§1) |
+| height granularity | 0.1 m | `world.diff` (§1) |
 | simulation tick | 0.1 s (10 Hz grid/state sync) | — |
 | block streaming radius | 2 (a 5×5 neighbourhood) | — |
 | LOD near bound | 40 m | `world.performance.lodNear` |

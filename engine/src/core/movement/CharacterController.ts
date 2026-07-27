@@ -373,7 +373,7 @@ export class CharacterController implements ISystem {
         const distSq = this._lastPos.distanceToSquared(new Vector3(trans.position[0], trans.position[1], trans.position[2]));
         const rotDist = Math.abs(trans.rotation[1] - this._lastRot[1]);
         if (distSq > CONTROL_CONSTANTS.STATE_EMIT_THRESHOLD ** 2 || rotDist > CONTROL_CONSTANTS.ROT_EMIT_THRESHOLD) {
-            const spp = Coords.engineToSeptopus(trans.position);
+            const spp = world.metrics.engineToSeptopus(trans.position);
             const septopusRot = Coords.engineRotationToSeptopus(trans.rotation);
             world.events.emit('player.state', {
                 block: spp.block, position: spp.pos, rotation: septopusRot,

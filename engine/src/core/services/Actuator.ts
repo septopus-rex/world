@@ -11,7 +11,6 @@ import { feetY } from '../utils/Body';
 import { damageNpc } from '../utils/Combat';
 import { setEntityColor } from '../utils/Appearance';
 import { AdjunctType } from '../types/AdjunctType';
-import { Coords } from '../utils/Coords';
 import type { ProjectileComponent } from '../components/NpcComponents';
 
 /**
@@ -454,7 +453,7 @@ export class LocalActuator implements IActuator {
                 const a = row?.[6];
                 if (!a || typeof a !== 'object' || a.name !== name) continue;
                 const off = Array.isArray(row[1]) ? row[1] : [8, 8, 0];
-                const pos = Coords.septopusToEngine([off[0] ?? 8, off[1] ?? 8, off[2] ?? 0], [bx, by]);
+                const pos = world.metrics.septopusToEngine([off[0] ?? 8, off[1] ?? 8, off[2] ?? 0], [bx, by]);
                 pos[1] += elevation;
                 return { pos: pos as [number, number, number], block: [bx, by], when: a.when ?? null };
             }

@@ -1,7 +1,7 @@
-import { GlobalConfig } from './GlobalConfig';
-
+// NOTE: block size deliberately does NOT live here. It is per-world DATA read
+// through `world.metrics` (core/utils/WorldMetrics); a constant in this file is
+// evaluated at import time and could never reflect a world document.
 export const ENGINE_CONSTANTS = {
-    BLOCK_SIZE: GlobalConfig.world.block[0],
     GRAVITY: -9.81 * 2, // Doubled for game feel
     TICK_RATE: 0.1,    // 10Hz for grid/state sync
     DEFAULT_EXTEND: 2, // 5x5 block loading radius

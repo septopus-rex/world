@@ -134,9 +134,9 @@ export class SppStudio {
         const dirE = [hit.point[0] - cam[0], hit.point[1] - cam[1], hit.point[2] - cam[2]];
         // Engine(abs) → SPP-local of the sandbox block. A point maps as
         // (x-bxoff, -z-byoff, y); a direction drops the offset: (dx, -dz, dy).
-        const B = Coords.BLOCK_SIZE;
+        const { blockWidth: bw, blockLength: bl } = w.metrics;
         return {
-            origin: [cam[0] - (SANDBOX_BLOCK[0] - 1) * B, -cam[2] - (SANDBOX_BLOCK[1] - 1) * B, cam[1]],
+            origin: [cam[0] - (SANDBOX_BLOCK[0] - 1) * bw, -cam[2] - (SANDBOX_BLOCK[1] - 1) * bl, cam[1]],
             dir: [dirE[0], -dirE[2], dirE[1]],
         };
     }

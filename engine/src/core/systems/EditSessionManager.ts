@@ -1,7 +1,6 @@
 import { World, EntityId } from '../World';
 import { TransformComponent } from '../components/PlayerComponents';
 import { BlockComponent } from '../components/BlockComponent';
-import { Coords } from '../utils/Coords';
 
 /**
  * Manages session-level state for Edit Mode, specifically the "Active Block" lock.
@@ -19,7 +18,7 @@ export class EditSessionManager {
         if (playerEntities.length === 0) return null;
 
         const playerPos = this.world.getComponent<TransformComponent>(playerEntities[0], "TransformComponent")!.position;
-        const { block } = Coords.engineToSeptopus(playerPos);
+        const { block } = this.world.metrics.engineToSeptopus(playerPos);
 
         const blockEntities = this.world.queryEntities("BlockComponent");
         for (const eid of blockEntities) {

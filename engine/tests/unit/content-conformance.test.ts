@@ -173,6 +173,83 @@ describe('content gate — blocks', () => {
     }
 });
 
+// ─── worlds/*.world.json ─────────────────────────────────────────────────────
+//
+// The world document is the ROOT of the content tree: it declares the world's
+// GEOMETRY (world.md §1 — grid extent, block size, height granularity), which
+// every block coordinate below is interpreted against. Until 2026-07-27 those
+// numbers were engine constants and this gate had nothing to check; now they
+// are data, so a malformed one would silently reshape the world.
+
+/** Grid geometry of the default world — levels/blocks are checked against it. */
+const worldGeometry = (() => {
+    const w = readJson(path.join(CONTENT, 'worlds', 'default.world.json'))?.world ?? {};
+    const range: [number, number] = Array.isArray(w.range) && w.range.length === 2 ? [w.range[0], w.range[1]] : [4096, 4096];
+    const block: [number, number, number] = Array.isArray(w.block) && w.block.length === 3
+        ? [w.block[0], w.block[1], w.block[2]] : [16, 16, 16];
+    return { range, block };
+})();
+
+describe('content gate — worlds', () => {
+    for (const f of listFiles('worlds', '.world.json')) {
+        it(`${f} conforms`, () => {
+            const errs: Err[] = [];
+            const doc = readJson(path.join(CONTENT, 'worlds', f));
+            const w = doc?.world;
+            if (!w || typeof w !== 'object') { expect([`${f}: missing world section`]).toEqual([]); return; }
+
+            if (typeof w.nickname !== 'string') errs.push(`${f}: world.nickname must be a string`);
+            if (!Number.isInteger(w.index) || w.index < 0 || w.index > 95) errs.push(`${f}: world.index must be an integer 0..95`);
+            if (!Array.isArray(w.mode) || w.mode.length === 0) errs.push(`${f}: world.mode must be a non-empty array`);
+            for (const m of w.mode ?? []) {
+                if (!['ghost', 'normal', 'game'].includes(m)) errs.push(`${f}: unknown world.mode "${m}"`);
+            }
+
+            // GEOMETRY — optional (protocol defaults apply when absent), but a
+            // declared value must be usable: WorldMetrics rejects and falls back
+            // otherwise, which would silently ignore what the document asked for.
+            if (w.range !== undefined) {
+                const ok = Array.isArray(w.range) && w.range.length === 2
+                    && w.range.every((n: any) => Number.isInteger(n) && n >= 1 && n <= (1 << 20));
+                if (!ok) errs.push(`${f}: world.range must be two integers in 1..1048576 (blocks per axis)`);
+            }
+            if (w.block !== undefined) {
+                const ok = Array.isArray(w.block) && w.block.length === 3
+                    && w.block.every((n: any) => Number.isFinite(n) && n >= 0.01 && n <= 1024);
+                if (!ok) errs.push(`${f}: world.block must be three metre extents in 0.01..1024 [East, North, Alt]`);
+            }
+            if (w.diff !== undefined) {
+                const blockH = Array.isArray(w.block) ? w.block[2] : 16;
+                if (!Number.isFinite(w.diff) || w.diff <= 0 || w.diff > blockH) {
+                    errs.push(`${f}: world.diff must be > 0 and no taller than the block (${blockH} m)`);
+                }
+            }
+
+            // The spawn must exist in the grid this same document declares.
+            const range: [number, number] = Array.isArray(w.range) ? [w.range[0], w.range[1]] : [4096, 4096];
+            const block: [number, number, number] = Array.isArray(w.block) ? [w.block[0], w.block[1], w.block[2]] : [16, 16, 16];
+            const start = doc?.player?.start;
+            if (start) {
+                const [bx, by] = start.block ?? [];
+                if (!Number.isInteger(bx) || !Number.isInteger(by) || bx < 1 || by < 1 || bx > range[0] || by > range[1]) {
+                    errs.push(`${f}: player.start.block [${bx},${by}] outside this world's 1..${range[0]} / 1..${range[1]} grid`);
+                }
+                const [px, py] = start.position ?? [];
+                if (typeof px === 'number' && (px < 0 || px > block[0])) errs.push(`${f}: player.start.position east ${px} outside the ${block[0]}m block`);
+                if (typeof py === 'number' && (py < 0 || py > block[1])) errs.push(`${f}: player.start.position north ${py} outside the ${block[1]}m block`);
+            }
+
+            if (doc.block?.max !== undefined && (!Number.isInteger(doc.block.max) || doc.block.max < 1)) {
+                errs.push(`${f}: block.max must be a positive integer (per-block adjunct cap)`);
+            }
+            if (doc.block?.color !== undefined && typeof doc.block.color !== 'number') {
+                errs.push(`${f}: block.color must be a number (palette index or literal 0xRRGGBB)`);
+            }
+            expect(errs).toEqual([]);
+        });
+    }
+});
+
 // ─── levels/*.level.json ─────────────────────────────────────────────────────
 
 describe('content gate — levels', () => {
@@ -182,9 +259,15 @@ describe('content gate — levels', () => {
             const level = readJson(path.join(CONTENT, 'levels', f));
             if (typeof level.name !== 'string') errs.push(`${f}: missing name`);
             if (!Array.isArray(level.blocks)) errs.push(`${f}: missing blocks[]`);
+            const [rangeX, rangeY] = worldGeometry.range;
             for (const [i, b] of (level.blocks ?? []).entries()) {
                 const at = `${f}.blocks[${i}]`;
                 if (typeof b?.x !== 'number' || typeof b?.y !== 'number') errs.push(`${at}: needs numeric x/y`);
+                // A level coordinate outside the world grid can never stream in.
+                else if (!Number.isInteger(b.x) || !Number.isInteger(b.y)
+                    || b.x < 1 || b.y < 1 || b.x > rangeX || b.y > rangeY) {
+                    errs.push(`${at}: block [${b.x},${b.y}] outside the world grid 1..${rangeX} / 1..${rangeY}`);
+                }
                 if (Array.isArray(b?.raw)) checkBlockRaw(b.raw, at, errs);
                 else if (typeof b?.ref !== 'string') errs.push(`${at}: needs raw[] or ref`);
             }

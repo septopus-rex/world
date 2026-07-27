@@ -1,6 +1,5 @@
 import type { Engine } from '@engine/Engine';
 import { validateGenerationDoc, compileGenerationDoc } from '@engine/core/protocol/GenerationDoc';
-import { Coords } from '@engine/core/utils/Coords';
 import type { WorldContent } from './WorldContent';
 
 /**
@@ -25,7 +24,7 @@ export class AiAuthoring {
         if (!w) return null;
         const ids = w.getEntitiesWith(['TransformComponent', 'InputStateComponent']);
         const t = w.getComponent(ids[0], 'TransformComponent') as any;
-        const { block } = Coords.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
+        const { block } = w.metrics.engineToSeptopus([t.position[0], t.position[1], t.position[2]]);
         for (let r = 0; r <= 3; r++) {
             for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) {
                 if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
@@ -44,7 +43,8 @@ export class AiAuthoring {
     public aiPreview(doc: any): boolean {
         const engine = this.engine();
         if (!engine) return false;
-        const errors = validateGenerationDoc(doc);
+        // Bound the target block against THIS world's grid, not a hardcoded 4096.
+        const errors = validateGenerationDoc(doc, engine.getWorld()?.metrics.range);
         if (errors.length) {                                                  // never trust the wire
             console.warn('[Loader] aiPreview rejected:', errors);
             return false;

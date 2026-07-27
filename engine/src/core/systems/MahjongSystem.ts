@@ -1,7 +1,6 @@
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctType } from '../types/AdjunctType';
 import { SystemMode } from '../types/SystemMode';
-import { Coords } from '../utils/Coords';
 import { makeRng } from '../motif/Rng';
 import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent } from '../components/PlayerComponents';
@@ -180,7 +179,7 @@ export class MahjongSystem implements ISystem {
             const tc = world.getComponent<MahjongTileComponent>(eid, 'MahjongTileComponent')!;
             const t = world.getComponent<TransformComponent>(eid, 'TransformComponent')!;
             const spp = this.layoutPos(table, tc);
-            const e = Coords.septopusToEngine(spp, table.block);
+            const e = world.metrics.septopusToEngine(spp, table.block);
             e[1] += elevation;
             if (Math.abs(e[0] - t.position[0]) > 1e-4 || Math.abs(e[1] - t.position[1]) > 1e-4 || Math.abs(e[2] - t.position[2]) > 1e-4) {
                 t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2]; t.dirty = true;

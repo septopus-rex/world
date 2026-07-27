@@ -2,7 +2,6 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { World, ISystem, EntityId } from '../World';
 import { AdjunctType } from '../types/AdjunctType';
 import { SystemMode } from '../types/SystemMode';
-import { Coords } from '../utils/Coords';
 import { BlockComponent } from '../components/BlockComponent';
 import { TransformComponent } from '../components/PlayerComponents';
 import { setEntityColor } from '../utils/Appearance';
@@ -130,7 +129,7 @@ export class TumbleSystem implements ISystem {
 
         // Tower centre anchored in engine/Three space (Y = up). Mirror PoolSystem:
         // septopusToEngine does NOT include block elevation, so add it onto Y.
-        const base = Coords.septopusToEngine([c.origin[0], c.origin[1], surfaceZ], c.block);
+        const base = world.metrics.septopusToEngine([c.origin[0], c.origin[1], surfaceZ], c.block);
         const elevation = this.blockElevation(world, c.block);
         base[1] += elevation;
 

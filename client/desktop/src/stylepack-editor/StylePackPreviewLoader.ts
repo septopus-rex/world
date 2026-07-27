@@ -4,7 +4,7 @@ import type { IDataSource } from '@engine/core/services/DataSource';
 import type { StylePack } from '@engine/core/spp/Variants';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
-import { Coords } from '@engine/core/utils/Coords';
+
 
 /**
  * StylePackPreviewLoader — a LEAN engine harness for the SPP粒子 editor's 3D
@@ -111,16 +111,18 @@ export class StylePackPreviewLoader implements IDataSource {
         const av = pid != null ? w.getComponent(pid, 'AvatarComponent') : null;
         if (av) av.visible = false;
         this.engine.setMode('observe' as any);
-        // Face centres + normals in engine space (for labels + highlight).
-        this.faceCentersEng = FACE_CENTERS_SEP.map(c => new THREE.Vector3(...Coords.septopusToEngine(c, PREVIEW_BLOCK)));
+        // Face centres + normals in engine space (for labels + highlight). Block
+        // offsets come from the preview world's own geometry, not a global.
+        const m = this.engine.getWorld()!.metrics;
+        this.faceCentersEng = FACE_CENTERS_SEP.map(c => new THREE.Vector3(...m.septopusToEngine(c, PREVIEW_BLOCK)));
         this.faceNormalsEng = FACE_CENTERS_SEP.map((c, i) => {
-            const a = Coords.septopusToEngine(c, PREVIEW_BLOCK);
+            const a = m.septopusToEngine(c, PREVIEW_BLOCK);
             const nS = FACE_NORMALS_SEP[i];
-            const b = Coords.septopusToEngine([c[0] + nS[0], c[1] + nS[1], c[2] + nS[2]], PREVIEW_BLOCK);
+            const b = m.septopusToEngine([c[0] + nS[0], c[1] + nS[1], c[2] + nS[2]], PREVIEW_BLOCK);
             return new THREE.Vector3(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize();
         });
         this.faceCornersEng = FACE_CORNER_OFF.map(corners => corners.map(off =>
-            new THREE.Vector3(...Coords.septopusToEngine([O[0] + off[0] * S, O[1] + off[1] * S, O[2] + off[2] * S], PREVIEW_BLOCK))));
+            new THREE.Vector3(...m.septopusToEngine([O[0] + off[0] * S, O[1] + off[1] * S, O[2] + off[2] * S], PREVIEW_BLOCK))));
         // Six semi-transparent face panels as REAL scene meshes (the engine renders
         // this.scene) → they track the box exactly during orbit, zero overlay lag.
         const scene = (this.engine.getWorld() as any)?.renderEngine?.sceneInstance;

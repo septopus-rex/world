@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { makeHeadlessEngineWith, stepN } from '../helpers/make-world';
 import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 import { levelSceneProvider, AuthoredLevel } from '../../src/core/services/AuthoredLevel';
-import { Coords } from '../../src/core/utils/Coords';
 import parkourLevel from '../fixtures/levels/parkour.level.json';
 
 // The multi-block parkour gameplay loop, headlessly + deterministically: a
@@ -34,7 +33,7 @@ function player(world: any) {
 /** Teleport the player to SPP (e,n,alt) in block (bx,by). */
 function tp(world: any, bx: number, by: number, e: number, n: number, alt: number) {
     const t = world.getComponent(player(world), 'TransformComponent');
-    const [x, y, z] = Coords.septopusToEngine([e, n, alt], [bx, by]);
+    const [x, y, z] = world.metrics.septopusToEngine([e, n, alt], [bx, by]);
     t.position[0] = x; t.position[1] = y; t.position[2] = z; t.dirty = true;
 }
 

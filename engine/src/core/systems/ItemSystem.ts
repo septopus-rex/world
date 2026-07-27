@@ -8,7 +8,6 @@ import { InventoryComponent } from '../components/InventoryComponent';
 import { getItemTemplate, itemIdFor } from '../services/ItemRegistry';
 import { AdjunctFactory } from '../factories/AdjunctFactory';
 import { saveBlockDraft } from '../utils/BlockSerializer';
-import { Coords } from '../utils/Coords';
 import { SystemMode } from '../types/SystemMode';
 
 /** Clicks further than this never pick up (matches interaction feel, not physics). */
@@ -124,7 +123,7 @@ export class ItemSystem implements ISystem {
 
         const trans = world.getComponent<TransformComponent>(playerId, "TransformComponent");
         if (!trans) return false;
-        const spp = Coords.engineToSeptopus(trans.position);
+        const spp = world.metrics.engineToSeptopus(trans.position);
 
         // The player's current block must be live to receive the item.
         let blockEid: EntityId | null = null;
