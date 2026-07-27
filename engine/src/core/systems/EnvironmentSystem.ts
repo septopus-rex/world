@@ -241,23 +241,29 @@ export class EnvironmentSystem implements ISystem {
             world.renderEngine.setSkyPhase?.(dayF);
         }
 
-        // 2. Weather Visuals
+        // 2. Weather Visuals — BOTH precipitating categories drive the volume.
+        // 'snow' used to fall through to hidden (only `isRaining` was checked), so
+        // a quarter of the weather cycle rendered nothing at all. Grade rides along
+        // too: it scales particle count and fall speed, so a grade-0 drizzle and a
+        // grade-3 downpour no longer look identical. Density/appearance are
+        // renderer-defined (protocol/{cn,en}/world.md §3.2) — only the CATEGORY and
+        // GRADE derivation above is the cross-engine contract.
         if (this.particleSystem) {
-            const isRaining = state.weatherCategory === 'rain';
+            const kind = state.weatherCategory === 'rain' ? 'rain'
+                : state.weatherCategory === 'snow' ? 'snow'
+                    : null;
             const playerEntities = world.queryEntities("CameraComponent");
-            if (playerEntities.length > 0) {
-                const trans = world.getComponent<any>(playerEntities[0], "TransformComponent");
-                if (trans) {
-                    world.renderEngine.updateWeatherParticles(
-                        this.particleSystem,
-                        trans.position[0],
-                        trans.position[1],
-                        trans.position[2],
-                        isRaining
-                    );
-                }
+            const trans = playerEntities.length > 0
+                ? world.getComponent<any>(playerEntities[0], "TransformComponent")
+                : null;
+            if (trans) {
+                world.renderEngine.updateWeatherParticles(
+                    this.particleSystem,
+                    trans.position[0], trans.position[1], trans.position[2],
+                    kind, state.weatherGrade, dt,
+                );
             } else {
-                world.renderEngine.updateWeatherParticles(this.particleSystem, 0, 0, 0, false);
+                world.renderEngine.updateWeatherParticles(this.particleSystem, 0, 0, 0, null, 0, dt);
             }
         }
     }

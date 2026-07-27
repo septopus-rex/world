@@ -9,7 +9,7 @@ import { MinimapPass } from './MinimapPass';
 import { MediaScreens } from './MediaScreens';
 import { isolateMaterial } from './MaterialUtils';
 import { MeshFactory } from './MeshFactory';
-import { ParticleFX } from './ParticleFX';
+import { ParticleFX, WeatherKind } from './ParticleFX';
 import { EditorHelpers } from './EditorHelpers';
 import { TransformGizmo, GizmoHooks, GizmoInfo } from './TransformGizmo';
 import { FloatingOrigin } from './FloatingOrigin';
@@ -710,11 +710,22 @@ export class RenderEngine {
         return this.picking.worldToScreen(this.mainCamera, x, y, z);
     }
 
-    // ── Particle effects (weather sheet + bursts) — delegated to render/ParticleFX ─
+    // ── Particle effects (weather volume + bursts) — delegated to render/ParticleFX ─
     public createWeatherParticles(): RenderHandle { return this.particles.createWeather(); }
 
-    public updateWeatherParticles(points: RenderHandle, x: number, y: number, z: number, visible: boolean): void {
-        this.particles.updateWeather(points, x, y, z, visible);
+    /**
+     * Drive the precipitation volume. (x,y,z) is the anchor (the player) in
+     * ABSOLUTE world coords; `kind` null hides it. The near-fade centre is the
+     * CAMERA, not the anchor — in third person the lens sits metres behind the
+     * player, and that is where a streak would otherwise be glued to the screen.
+     * Absolute camera position = render-space position + the floating origin.
+     */
+    public updateWeatherParticles(
+        points: RenderHandle, x: number, y: number, z: number,
+        kind: WeatherKind = null, grade = 0, dt = 0,
+    ): void {
+        const c = this.mainCamera.position, o = this.renderOrigin;
+        this.particles.updateWeather(points, x, y, z, kind, grade, dt, c.x + o.x, c.y + o.y, c.z + o.z);
     }
 
     public createParticleBurst(particleCount: number, color: number): { handle: RenderHandle, velocities: Float32Array } {
