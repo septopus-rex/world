@@ -120,10 +120,16 @@ export class EnvironmentSystem implements ISystem {
         // in a bounded (2*extend+1)² square, so the region's far edge is a hard chunk
         // boundary against the sky. Fade it out (opaque ~ the window radius) so the
         // staircase silhouette dissolves instead of showing a jagged void edge.
+        //
+        // The radius MUST be the window's DIAGONAL reach, not its orthogonal one:
+        // the farthest loaded content sits on the diagonal, where a corner block's
+        // centre is ext·√(bw²+bl²) away — √2× the orthogonal edge (45.3 m vs 32 m at
+        // the default extent). Sizing by the orthogonal distance put the four corner
+        // blocks BEYOND `far`, so they were painted pure sky colour: loaded,
+        // simulated, and invisible. From above the window read as an "井" with its
+        // corners missing. (hypot also covers a non-square grid per-axis.)
         const ext = (world.config.player as any)?.extend ?? 2;
-        // Window is (2·ext+1)² BLOCKS — take the LARGER horizontal block extent so a
-        // non-square grid still fogs past its farthest boundary, not short of it.
-        const radius = ext * Math.max(world.metrics.blockWidth, world.metrics.blockLength);
+        const radius = ext * Math.hypot(world.metrics.blockWidth, world.metrics.blockLength);
         world.renderEngine.setFog(radius * 0.5, radius * 1.2);
     }
 

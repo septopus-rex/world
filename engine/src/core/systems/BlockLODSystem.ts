@@ -52,9 +52,18 @@ export class BlockLODSystem implements ISystem {
             if (!block || !block.isInitialized) continue;
             live.add(blockEid);
 
-            const center = world.metrics.blockCentre(block.x, block.y);
-            const dx = player.position[0] - center[0];
-            const dz = player.position[2] - center[2];
+            // Distance to the block's NEAREST POINT, not its centre. A block is a
+            // 16 m-wide volume: judging by the centre calls a block "far" while its
+            // near edge is plainly in view (centre 32 m ⇒ edge 24 m). Worse, with a
+            // SQUARE streaming window the centre metric is anisotropic — corner
+            // centres sit √2× further than orthogonal ones (45.3 m vs 32 m), so
+            // lodNear=40 hid exactly the four corners and nothing else, carving an
+            // "井"-shaped hole in the window. Clamping per axis to the block's AABB
+            // makes the tier depend on visible proximity, and the boundary it draws
+            // follows the window's shape instead of cutting across it.
+            const centre = world.metrics.blockCentre(block.x, block.y);
+            const dx = Math.max(0, Math.abs(player.position[0] - centre[0]) - world.metrics.blockWidth / 2);
+            const dz = Math.max(0, Math.abs(player.position[2] - centre[2]) - world.metrics.blockLength / 2);
             const tier: 'near' | 'far' = (forceNear || dx * dx + dz * dz <= nearSq) ? 'near' : 'far';
 
             // 'far' is re-applied every check (idempotent): adjunct meshes are

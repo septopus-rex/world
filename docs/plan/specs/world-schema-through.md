@@ -3,7 +3,7 @@
 > 状态:**spec + 实现同日完成(2026-07-27)**。
 > 落点:`core/utils/WorldMetrics.ts`(每 World 一份不可变几何)+ 世界文档
 > `world.range`/`block`/`diff` + 协议 `world.md §1/§3/§9` 双语改口。
-> 测试:`unit/world-metrics.test.ts`(25 例,含 grep 闸)+ `content-conformance`
+> 测试:`unit/world-metrics.test.ts`(25 例,含 grep 闸)+ `systems/block-window-coverage.test.ts`(5 例,§8)+ `content-conformance`
 > 新增 world doc 门禁;e2e 11 个相关 spec 回归通过。
 > 预决策(与用户确认,2026-07-27):**真正允许世界间不同尺寸**(不是"机制数据化但
 > 值仍校验为协议值");范围**P0–P4 全做**。
@@ -96,8 +96,8 @@ World 并存时(vitest 用例、`BlockPreviewLoader`、`StylePackPreviewLoader`)
 
 - **引擎**:31 处换算调用点 → `world.metrics`;5 处 `config.world.block` 直读
   → `metrics.block`;`BlockLODSystem` 的 `[8,8,0]` 硬编码块中心 →
-  `blockCentre()`;`EnvironmentSystem` 雾半径 → `max(blockWidth, blockLength)`
-  (非正方形网格要覆盖到**最远**边界);`GenerationDoc` 校验的 `1..4096` →
+  `blockCentre()`;`EnvironmentSystem` 雾半径 → 见 §8(当时改成 `max(bw, bl)`,
+  **仍是错的**,同日修正为对角);`GenerationDoc` 校验的 `1..4096` →
   接 `range` 参数(客户端传 `world.metrics.range`,无 world 的网关取默认)。
 - **客户端**:loader 暴露 `worldMetrics`(`worldRange` 保留为其投影);
   `WorldMap2D` 初始中心 → `centreBlock()`、两处 `/16` → 分轴块尺寸;
@@ -128,7 +128,7 @@ World 并存时(vitest 用例、`BlockPreviewLoader`、`StylePackPreviewLoader`)
 
 ## 6. 验收
 
-- 引擎单测 **735 passed**(新增 25)· `tsc` 干净 · Three.js 层级边界 grep 无输出
+- 引擎单测 **740 passed**(新增 25 + 窗口覆盖 5)· `tsc` 干净 · Three.js 层级边界 grep 无输出
 - desktop + mobile 构建通过
 - e2e 11 个相关 spec 全过:`map2d` · `persistence`×3 · `portal-travel` ·
   `boot-and-render` · `block-streaming`×2(含雾半径)· `floating-origin`×2 ·
@@ -142,7 +142,37 @@ World 并存时(vitest 用例、`BlockPreviewLoader`、`StylePackPreviewLoader`)
 - **下一个自然的接口**:世界文档从 CID 拉取时,几何随文档一起来——本次改动后
   这条路径**不需要再动引擎代码**,这正是做它的理由。
 
-## 8. 关联
+## 8. 后续发现:流式窗口的「井」字缺角(2026-07-27 同日)
+
+贯穿改完后用户实测报告:鸟瞰下窗口像**「井」字缺了四个角**,而不是完整的「田」。
+
+**核实结果:数据层无辜。** 25 个 block 实体全在(`missingCoords: []`),角块加载了、
+仿真在跑——**只是看不见**。缺角出在渲染层,两个消费者同时踩了同一个几何错误:
+
+| 位置 | 阈值 | 角块实际 | 后果 |
+|---|---|---|---|
+| 雾 `far` | 38.4 m(= ext·块宽·1.2) | 45.3 m | 整块刷成天空色(**含地面**) |
+| `lodNear` | 40 m(量到**块中心**) | 45.3 m | adjunct 网格组隐藏 |
+
+**根因**:流式窗口是 `(2·ext+1)²` 的**方形**,它最远的内容在**对角线**上——角块中心
+`ext·√(块宽²+块长²)` = 正交边的 **√2 倍**(ext=2 时 45.3 m vs 32 m)。两处都按正交
+距离定阈值,于是**恰好只切掉四个角**。一句话:**方形窗口的半径不是边长的一半。**
+
+> 这个 bug **早于本次贯穿**(原代码 `ext · Coords.BLOCK_SIZE` 同样是正交距离);
+> 贯穿时我把它改成 `max(bw, bl)`,数值未变(16=16),所以既没引入也没修掉它。
+
+**修复**:① 雾半径 `ext · hypot(bw, bl)`;② LOD 距离量到**块 AABB 最近点**而非中心
+(顺带修掉"近边就在眼前却被判远"——中心 32 m ⇒ 近边 24 m;且 LOD 在小窗口下自然
+不生效,窗口大时照常生效,已用「远块仍被裁」的用例钉住,证明不是把 LOD 改死了)。
+
+**为什么以前没抓到**:`block-streaming.spec.ts` 断言的是 `loadedBlocks <= 25`——
+**缺了角的 21 也满足**。计数看不见形状。现已收紧为「坐标集合是完整方形 + 窗口内
+没有任何一块的 adjunct 被全裁 + 角块在雾内」,并加 headless 孪生测试
+`systems/block-window-coverage.test.ts`(回退修复实测 3 红,修复后 5 绿)。
+
+协议侧在 §9 桶 B 表后加了「距离怎么量」的规范注,免得第二引擎重蹈。
+
+## 9. 关联
 
 - `protocol/cn|en/world.md` §1(世界几何表)· §3(不可变配置移除网格)·
   §5.1(块偏移按轴分别算)· §9(常量分桶修订)

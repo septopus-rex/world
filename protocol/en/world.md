@@ -242,9 +242,21 @@ data omits it:
 | height granularity | 0.1 m | `world.diff` (§1) |
 | simulation tick | 0.1 s (10 Hz grid/state sync) | — |
 | block streaming radius | 2 (a 5×5 neighbourhood) | — |
-| LOD near bound | 40 m | `world.performance.lodNear` |
+| LOD near bound | 40 m (measured to the block's **AABB nearest point**, not its centre — see the note below) | `world.performance.lodNear` |
 | time calendar | epoch 0 · speed 1.0 · localDaySeconds 600 | the world doc's `time` section (`{epoch, speed, localDaySeconds}`) |
 | void-recovery depth | 20 m | `player.capacity.voidRecover` |
+
+> **How distances are measured (added 2026-07-27, learned the hard way)**: every
+> "distance to a block" above is measured to the block's **AABB nearest point**,
+> not its centre. The same applies to the **block streaming radius**: the window
+> is a `(2·radius+1)²` **square**, so its farthest content lies on the
+> **diagonal** — a corner block's centre sits at `radius·√(bw²+bl²)`, **√2×** the
+> orthogonal edge. Anything that clips by the orthogonal distance (LOD, fog,
+> culling) therefore removes **exactly the four corners**, turning the bird's-eye
+> window from a filled square into a corner-punched one. The reference
+> implementation hit this in BOTH its LOD and its distance fog — in each case the
+> blocks were loaded and simulating, merely invisible. Second-engine
+> implementations should measure by nearest point / diagonal.
 
 **Client presentation (bin C, non-normative)** — implementation-defined, never
 constrained by the protocol: mouse/touch sensitivity, stick deadzones, camera
