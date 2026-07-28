@@ -247,8 +247,13 @@ export class RenderEngine {
      * TEXTURE now (not a Color), so there is no other way to read "what colour is
      * the sky at the horizon right now" from outside the render layer.
      */
-    public skyInfo(): { horizon: number; ibl: boolean } {
-        return { horizon: this.sky.horizonColor, ibl: this.scene.environment != null };
+    public skyInfo(): { horizon: number; ibl: boolean; epoch: number; iblIntensity: number } {
+        return {
+            horizon: this.sky.horizonColor,
+            ibl: this.scene.environment != null,
+            epoch: this.sky.epoch,
+            iblIntensity: this.scene.environmentIntensity,
+        };
     }
     public get domElement(): HTMLCanvasElement { return this.renderer.domElement; }
 
@@ -468,14 +473,20 @@ export class RenderEngine {
         this.lighting.setFog(near, far, color ?? this.sky.horizonColor);
     }
 
+    /** Per-frame fog range update (weather thickens the haze) — mutates the live
+     *  fog rather than replacing it; see SceneLighting.setFogRange. */
+    public setFogRange(near: number, far: number): void {
+        this.lighting.setFogRange(near, far);
+    }
+
     /**
      * Advance the sky/IBL to a point in the day cycle (0 = night, 0.5 = sun on the
      * horizon, 1 = full day). Called every frame by EnvironmentSystem with the same
      * smoothstepped factor that drives the sun and ambient intensities; the sky
      * itself throttles the expensive IBL re-bake internally.
      */
-    public setSkyPhase(dayFactor: number): void {
-        this.sky.setPhase(dayFactor);
+    public setSkyPhase(dayFactor: number, overcast = 0): void {
+        this.sky.setPhase(dayFactor, overcast);
     }
 
     public setDirectionalLight(color: number, intensity: number, x: number, y: number, z: number): RenderHandle {

@@ -53,7 +53,11 @@ export function createNullRenderEngine() {
     lastAmbient: null as number | null,
     lastSunIntensity: null as number | null,
     lastSkyPhase: null as number | null,
+    /** Weather→light coupling: the overcast scalar the sky was last driven with. */
+    lastOvercast: null as number | null,
+    /** setFog (construction). Weather moves the range via setFogRange → lastFogRange. */
     lastFog: null as { near: number; far: number } | null,
+    lastFogRange: null as { near: number; far: number } | null,
     lastCameraPos: null as [number, number, number] | null,
     lastCameraLookAt: null as [number, number, number] | null,
   };
@@ -109,9 +113,13 @@ export function createNullRenderEngine() {
     // the window's farthest (diagonal) content — sizing it by the orthogonal
     // distance used to paint the four corner blocks pure sky colour.
     setFog: (near: number, far: number) => { counts.lastFog = { near, far }; },
+    setFogRange: (near: number, far: number) => { counts.lastFogRange = { near, far }; },
     // Gradient sky + IBL phase (render/SkyEnvironment): recorded so the day/night
     // tests can assert the sky crosses twilight with the lights.
-    setSkyPhase: (dayFactor: number) => { counts.lastSkyPhase = dayFactor; },
+    setSkyPhase: (dayFactor: number, overcast = 0) => {
+      counts.lastSkyPhase = dayFactor;
+      counts.lastOvercast = overcast;
+    },
     updateAmbientLight: (_h: Handle, _c: number, intensity: number) => { counts.lastAmbient = intensity; },
     updateDirectionalLight: (_h: Handle, _c: number, intensity: number) => { counts.lastSunIntensity = intensity; },
 

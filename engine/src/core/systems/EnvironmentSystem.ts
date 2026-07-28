@@ -95,9 +95,46 @@ export class EnvironmentSystem implements ISystem {
         ambDay: 0.05, ambNight: 0.02, // ambient intensity range
         chase: 2.5,                   // 1/s — visual catch-up rate on clock jumps
     };
+
+    /**
+     * OVERCAST — one scalar [0..1] derived from (category, grade), and the ONLY
+     * channel by which weather touches light. `clear` must map to exactly 0, so
+     * the tuned clear-day baseline (画面基线, sun 1.9 / amb 0.05 / IBL 0.32)
+     * survives bit-for-bit and this whole feature is inert in fair weather.
+     *
+     * WHY ONE SCALAR ISN'T ENOUGH ON ITS OWN — it must drive FOUR targets, not
+     * just scale the sun. Dimming only the sun gives a dark scene that still has
+     * a blue sky and hard sun shadows, which reads as "sunset", not "storm".
+     * What actually says overcast:
+     *   · sun DOWN hard (under heavy cloud the direct beam is nearly gone), which
+     *     also makes the shadows fade out on their own — no shadow code needed;
+     *   · sky/IBL UP and GREY — the light becomes omnidirectional, and the blue
+     *     has to go, or you get a downpour under a summer sky (the bug report);
+     *   · fog IN — rain cuts visibility. Only `near` moves; `far` stays pinned to
+     *     metrics.streamingReach or the streaming-window boundary shows again.
+     *
+     * Values are RENDERER-DEFINED (protocol/{cn,en}/world.md §3.2 — only the
+     * category/grade derivation is the cross-engine contract), so tune freely;
+     * `clear → 0` is the one line that isn't free.
+     */
+    private static readonly OVERCAST: Record<string, { base: number; perGrade: number }> = {
+        clear: { base: 0, perGrade: 0 },
+        cloud: { base: 0.18, perGrade: 0.09 },  // 0.18 … 0.45
+        rain: { base: 0.55, perGrade: 0.12 },   // 0.55 … 0.91
+        snow: { base: 0.45, perGrade: 0.10 },   // 0.45 … 0.75
+    };
+    /** How far each target moves at overcast = 1. */
+    private static readonly OVERCAST_GAIN = {
+        sunCut: 0.92,    // sun × (1 − this·oc) → 8 % of the direct beam left
+        ambAdd: 0.06,    // ambient 0.05 → 0.11 (fill rises as the beam dies)
+        fogNear: 0.45,   // fog near pulled in by this fraction (far NEVER moves)
+    };
     private visAngle: number | null = null; // smoothed sun angle (radians)
     private visSun = 1.9;                   // smoothed directional intensity
     private visAmb = 0.05;                  // smoothed ambient intensity
+    private visOvercast = 0;                // smoothed overcast [0..1]
+    /** Fog far plane = the streaming reach; fixed at construction, never weathered. */
+    private fogFar = 0;
 
     constructor(world: World) {
         // Create singleton Environment Entity
@@ -138,6 +175,7 @@ export class EnvironmentSystem implements ISystem {
         // mirror image. Neither radius was ever going to work.
         const ext = (world.config.player as any)?.extend ?? 2;
         const reach = world.metrics.streamingReach(ext);
+        this.fogFar = reach;
         world.renderEngine.setFog(reach * 0.5, reach);
     }
 
@@ -224,11 +262,29 @@ export class EnvironmentSystem implements ISystem {
             const s = Math.sin(this.visAngle);
             const t = Math.min(1, Math.max(0, (s + D.twilight) / (2 * D.twilight)));
             const dayF = t * t * (3 - 2 * t);
-            const targetSun = D.sunNight + (D.sunDay - D.sunNight) * dayF;
-            const targetAmb = D.ambNight + (D.ambDay - D.ambNight) * dayF;
+
+            // Weather → light, through ONE scalar (see OVERCAST). Chased on the
+            // same envelope as everything else here: weather flips on a block
+            // tick, which is a step change, and an un-chased one would snap the
+            // whole scene's exposure in a single frame.
+            const G = EnvironmentSystem.OVERCAST_GAIN;
+            this.visOvercast += (this.overcastTarget(state) - this.visOvercast) * blend;
+            const oc = this.visOvercast;
+
+            const targetSun = (D.sunNight + (D.sunDay - D.sunNight) * dayF) * (1 - G.sunCut * oc);
+            const targetAmb = D.ambNight + (D.ambDay - D.ambNight) * dayF + G.ambAdd * oc;
             this.visSun += (targetSun - this.visSun) * blend;
             this.visAmb += (targetAmb - this.visAmb) * blend;
             this.baseAmbient = this.visAmb;
+
+            // Rain/snow cuts visibility: pull the haze IN. `far` is deliberately
+            // re-sent unchanged — it is metrics.streamingReach, and the moment it
+            // drifts the streaming window's own boundary becomes visible again
+            // (docs/architecture/performance.md). Weather may fog you in; it may
+            // never fog you out past the loaded world.
+            if (this.fogFar > 0) {
+                world.renderEngine.setFogRange?.(this.fogFar * 0.5 * (1 - G.fogNear * oc), this.fogFar);
+            }
 
             // Advance the lightning envelope BEFORE applying lights so a strike
             // brightens the same frame.
@@ -246,7 +302,9 @@ export class EnvironmentSystem implements ISystem {
             // Sky + IBL follow the SAME smoothstepped day factor as the lights, so
             // the visible sky, the environment light and the sun all cross the
             // twilight band together (a lit scene under a noon sky was the tell).
-            world.renderEngine.setSkyPhase?.(dayF);
+            // `oc` rides along for the same reason one level up: a downpour under
+            // a clear blue sky was the bug that started this.
+            world.renderEngine.setSkyPhase?.(dayF, oc);
         }
 
         // 2. Weather Visuals — BOTH precipitating categories drive the volume.
@@ -274,6 +332,18 @@ export class EnvironmentSystem implements ISystem {
                 world.renderEngine.updateWeatherParticles(this.particleSystem, 0, 0, 0, null, 0, dt);
             }
         }
+    }
+
+    /**
+     * Overcast [0..1] for the current weather — the single scalar that couples
+     * weather to light. Unknown categories fall back to clear (0), so a future
+     * category added to the protocol darkens nothing until it is tuned here
+     * rather than crashing or guessing.
+     */
+    private overcastTarget(state: EnvironmentStateComponent): number {
+        const e = EnvironmentSystem.OVERCAST[state.weatherCategory] ?? EnvironmentSystem.OVERCAST.clear;
+        const grade = Math.min(3, Math.max(0, Math.round(state.weatherGrade || 0)));
+        return Math.min(1, Math.max(0, e.base + e.perGrade * grade));
     }
 
     /**

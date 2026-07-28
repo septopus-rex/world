@@ -44,8 +44,34 @@ const NIGHT: SkyStop = { zenith: 0x05070f, horizon: 0x131e38, ground: 0x090b13 }
 const TWILIGHT: SkyStop = { zenith: 0x2f4370, horizon: 0xe0813c, ground: 0x2b2119 };
 const DAY: SkyStop = { zenith: 0x3f74b8, horizon: 0xa9c9e6, ground: 0x7f8577 };
 
-/** Minimum day-factor movement before the IBL is re-baked (see COST above). */
+/** Minimum phase movement before the IBL is re-baked (see COST above). Applies
+ *  to the day factor AND the overcast factor — gating on the day factor alone
+ *  would freeze the sky grey/blue whenever weather changed at a constant hour,
+ *  which is most of the time. */
 const PHASE_EPSILON = 0.03;
+
+/**
+ * Overcast: desaturate the whole gradient toward its own luma and darken it.
+ *
+ * Deliberately DERIVED from the current sky rather than lerped toward a fixed
+ * grey — a fixed grey would light up the night. Pulling each band to its own
+ * luminance keeps the day/night structure (and therefore the IBL's) intact and
+ * only removes the blue, which is what a stormy sky actually does.
+ */
+const OVERCAST_DESAT = 0.85;   // how far toward luma at oc = 1
+const OVERCAST_DARKEN = 0.35;  // how much dimmer at oc = 1
+
+function overcastStop(stop: SkyStop, oc: number): SkyStop {
+    if (oc <= 0) return stop;
+    const f = (hex: number): number => {
+        const r = (hex >> 16) & 0xff, g = (hex >> 8) & 0xff, b = hex & 0xff;
+        const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+        const k = OVERCAST_DESAT * oc, dim = 1 - OVERCAST_DARKEN * oc;
+        const mix = (c: number) => Math.max(0, Math.min(255, Math.round((c + (luma - c) * k) * dim)));
+        return (mix(r) << 16) | (mix(g) << 8) | mix(b);
+    };
+    return { zenith: f(stop.zenith), horizon: f(stop.horizon), ground: f(stop.ground) };
+}
 
 /** Canvas size for the equirect gradient. Only V varies, so U can stay tiny. */
 const TEX_W = 64;
@@ -77,6 +103,12 @@ export class SkyEnvironment {
     private pmrem: THREE.PMREMGenerator | null;
     private envTarget: THREE.WebGLRenderTarget | null = null;
     private lastPhase = Number.NaN;
+    private lastOvercast = Number.NaN;
+
+    /** Clear-day IBL contribution — the tuned 画面基线 value; see the constructor. */
+    static readonly IBL_CLEAR = 0.32;
+    /** Extra IBL at full overcast: the sky takes over as the light source. */
+    static readonly IBL_OVERCAST_GAIN = 0.8;
     /** Current horizon colour — what fog and any sky-matched UI should use. */
     private horizon = DAY.horizon;
 
@@ -112,7 +144,8 @@ export class SkyEnvironment {
         // out-filled the sun, leaving lit and shaded faces nearly equal — the flat
         // look again, just bluer. 0.32 leaves the sun as the dominant light and the
         // sky as the shadow fill, which is the ratio a clear day actually has.
-        this.scene.environmentIntensity = 0.32;
+        // (setPhase re-derives this every phase change, scaling it by overcast.)
+        this.scene.environmentIntensity = SkyEnvironment.IBL_CLEAR;
 
         try {
             if (!this.full) throw new Error('cheap tier: no IBL');
@@ -131,18 +164,36 @@ export class SkyEnvironment {
     /** Horizon colour of the current sky (fog / distance haze should match it). */
     get horizonColor(): number { return this.horizon; }
 
+    /** Bumped every time the sky texture is actually re-published to the GPU.
+     *  Observable proof that a phase/weather change reached the visible sky and
+     *  not just the lights — see the dispose() note in setPhase. */
+    get epoch(): number { return this.skyEpoch; }
+    private skyEpoch = 0;
+
     /**
-     * Re-tint the sky for a point in the day cycle.
+     * Re-tint the sky for a point in the day cycle, under the current weather.
      * @param dayFactor 0 = night, 0.5 = sun on the horizon, 1 = full day. This is
      *   EnvironmentSystem's already-smoothstepped twilight factor, so the sky
      *   crossfades on exactly the same curve as the sun and ambient intensities.
+     * @param overcast 0 = clear … 1 = heavy storm. Greys and darkens the gradient,
+     *   AND raises `environmentIntensity`: as the direct beam dies the sky becomes
+     *   the light source, so the IBL has to take over or an overcast scene just
+     *   goes uniformly dark instead of going flat-and-shadowless. `0` reproduces
+     *   the tuned clear-day look exactly (see EnvironmentSystem.OVERCAST).
      */
-    setPhase(dayFactor: number): void {
+    setPhase(dayFactor: number, overcast = 0): void {
         const f = Math.min(1, Math.max(0, dayFactor));
-        if (Number.isFinite(this.lastPhase) && Math.abs(f - this.lastPhase) < PHASE_EPSILON) return;
+        const oc = Math.min(1, Math.max(0, overcast));
+        if (Number.isFinite(this.lastPhase) && Math.abs(f - this.lastPhase) < PHASE_EPSILON
+            && Number.isFinite(this.lastOvercast) && Math.abs(oc - this.lastOvercast) < PHASE_EPSILON) return;
         this.lastPhase = f;
+        this.lastOvercast = oc;
+        // IBL gain. The clear-day 0.32 is a tuned number (画面基线) — the multiplier
+        // is 1 at oc=0 so that value is reproduced exactly, never approached.
+        this.scene.environmentIntensity = SkyEnvironment.IBL_CLEAR * (1 + SkyEnvironment.IBL_OVERCAST_GAIN * oc);
 
         let stop = f < 0.5 ? lerpStop(NIGHT, TWILIGHT, f * 2) : lerpStop(TWILIGHT, DAY, (f - 0.5) * 2);
+        stop = overcastStop(stop, oc);
         if (this.tint != null) {
             // A themed sky pulls the whole gradient a third of the way to the
             // world's clear colour — enough to read as "not Earth" while keeping
@@ -156,7 +207,30 @@ export class SkyEnvironment {
         this.horizon = stop.horizon;
         if (this.full) {
             this.paint(stop);
+            // `dispose()` on a texture we keep using looks wrong — it is load-bearing.
+            //
+            // An EQUIRECT texture used as `scene.background` is not sampled directly:
+            // three converts it to a cube render target ONCE and caches that in
+            // WebGLEnvironments' WeakMap, keyed by the texture. That cache has NO
+            // version check — it is invalidated only by the texture's `dispose`
+            // EVENT (see three/src/renderers/webgl/WebGLEnvironments.js,
+            // onCubemapDispose). So repainting the canvas and setting needsUpdate
+            // updates the 2D upload and nothing else: the visible sky keeps
+            // rendering the very first conversion, forever.
+            //
+            // That is not hypothetical — it is what shipped from 2026-07-25 until
+            // this was found (2026-07-28): the lights, the fog colour and the IBL
+            // all tracked the day cycle while the SKY was a still image, which only
+            // became obvious once weather was supposed to grey it out. Verified by
+            // pixel readback: calling dispose() here is the difference between a
+            // frozen blue sky and a grey one.
+            //
+            // Cost is one 128² cube re-render per phase change (~30 per day cycle,
+            // gated by PHASE_EPSILON) and the old target is freed by the same
+            // dispose event, so nothing leaks.
+            this.texture.dispose();
             this.texture.needsUpdate = true;
+            this.skyEpoch++;
             this.bakeIbl();
         } else if (this.scene.background instanceof THREE.Color) {
             this.scene.background.setHex(stop.horizon);   // flat sky, still day/night-aware

@@ -50,6 +50,17 @@ export class SceneLighting {
         this.scene.fog = new THREE.Fog(c, near, far);
     }
 
+    /**
+     * Move an EXISTING fog's range in place — the per-frame path (weather pulls
+     * `near` in as it clouds over). Deliberately not `setFog`: that allocates a
+     * new THREE.Fog, and a fresh instance every frame both churns and drops the
+     * colour SkyEnvironment keeps writing into the live one. No fog yet → no-op.
+     */
+    setFogRange(near: number, far: number): void {
+        const fog = this.scene.fog as THREE.Fog | null;
+        if (fog && (fog as any).isFog) { fog.near = near; fog.far = far; }
+    }
+
     setDirectional(color: number, intensity: number, x: number, y: number, z: number): RenderHandle {
         const light = new THREE.DirectionalLight(color, intensity);
         light.position.set(x, y, z);
