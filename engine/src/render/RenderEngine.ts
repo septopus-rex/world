@@ -529,7 +529,9 @@ export class RenderEngine {
         this.maybeRebaseOrigin();
         this.lighting.anchorSunShadow(this.mainCamera.position);
         // Label proximity gate (view-only): re-evaluate every 10 frames — walking
-        // speed vs a 3 m fade band makes per-frame checks pointless.
+        // speed vs a 3 m fade band makes per-frame checks pointless. Safe at this
+        // rate precisely because labels have a FIXED world size (MediaScreens):
+        // only the fade is throttled, and nothing here can make one visibly jump.
         if ((this._frameCount++ % 10) === 0) {
             this.media.updateLabels(this.mainCamera.position, this.scene);
         }

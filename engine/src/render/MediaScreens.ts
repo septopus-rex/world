@@ -2,6 +2,19 @@ import * as THREE from 'three';
 import { RenderHandle } from '../core/types/Adjunct';
 import { isolateMaterial } from './MaterialUtils';
 
+/** Per-sprite label geometry, stashed on the sprite as observable metadata: what
+ *  the sizing decision was made of. Read by e2e (label-proximity.spec) to check
+ *  the on-screen text size; nothing at runtime depends on it. */
+interface LabelInfo {
+    /** width / height of the canvas. */
+    aspect: number;
+    /** Fraction of the sprite's height that is GLYPH (the rest is padding) — the
+     *  20 px target is a target for TEXT, which is what a reader perceives. */
+    textFrac: number;
+    /** The label's fixed world height in metres (see MediaScreens.worldHeightFor). */
+    worldH: number;
+}
+
 /**
  * MediaScreens — the render layer's on-mesh visual media: the e3 VIDEO screen
  * and the floating billboard LABEL (e4 book / e5 board / e1 link titles).
@@ -18,13 +31,60 @@ export class MediaScreens {
     // RenderEngine.render() on a frame throttle.
     private static readonly LABEL_FULL = 6;
     private static readonly LABEL_MAX = 9;
+
+    // ── Label size ─────────────────────────────────────────────────────────────
+    // A label is a physical sign hanging in the world: ONE fixed world size, set
+    // once at creation, never touched again. It gets bigger as you walk up to it
+    // and smaller as you leave, exactly like the object it names.
+    //
+    // The size is not picked by eye — it is solved so that at a typical reading
+    // distance the TEXT lands on LABEL_TEXT_PX. The 0.34 m it used to be was
+    // solved for nothing, and up close came out at ~90 px of text: on a phone
+    // viewport a caption saying "which object is this?" was the loudest thing in
+    // frame, louder than the world it annotates.
+    //
+    // Why the size is FIXED rather than re-solved per frame against the live
+    // camera: a per-frame solve holds the pixel size constant, which is a HUD,
+    // not a sign — and updateLabels runs on a 10-frame throttle, so what you
+    // actually see while walking is the label stepping between sizes. A sign that
+    // never resizes cannot stutter, at any throttle. If you want a different
+    // apparent size, move LABEL_TEXT_PX; leave the mechanism alone.
+    /** Target height of the GLYPHS, in CSS px, at the reference viewing setup. */
+    private static readonly LABEL_TEXT_PX = 20;
+    /** Reference viewing setup the size is solved against.
+     *  · depth 4.75 m — measured third-person camera depth with the player right
+     *    up against the object (label-proximity.spec); the closest you normally
+     *    read one from. First person can get nearer, and the sign will get
+     *    bigger; that is what a sign does.
+     *  · viewport 900 CSS px tall — a portrait phone, and close to a maximised
+     *    desktop canvas. Halving the viewport halves the apparent px, as with
+     *    every other thing in the scene. */
+    private static readonly REF_DEPTH_M = 4.75;
+    private static readonly REF_VIEWPORT_PX = 900;
+    /** Main camera vertical FOV (RenderEngine's PerspectiveCamera), degrees. */
+    private static readonly REF_FOV_DEG = 45;
+
+    /**
+     * World height of the whole sprite (glyphs + padding), solved from the above.
+     * A sprite of world height H at view depth d covers
+     *     px = viewportPx · H / (2 · d · tan(fov/2))
+     * pixels vertically; invert for H, and divide by the glyph fraction so that
+     * LABEL_TEXT_PX describes the TEXT rather than the padded plate. ≈ 0.163 m.
+     */
+    private static worldHeightFor(textFrac: number): number {
+        const tanHalfFov = Math.tan(MediaScreens.REF_FOV_DEG * Math.PI / 360);
+        const metresPerPx = (2 * MediaScreens.REF_DEPTH_M * tanHalfFov) / MediaScreens.REF_VIEWPORT_PX;
+        return (MediaScreens.LABEL_TEXT_PX * metresPerPx) / textFrac;
+    }
+
     private readonly labels = new Set<THREE.Sprite>();
     private readonly _tmpPos = new THREE.Vector3();
 
     /**
      * Re-evaluate every registered label against the camera (render-space on
-     * both sides, so the floating origin cancels). Sprites whose handle was
-     * evicted (detached from the scene) self-unregister here.
+     * both sides, so the floating origin cancels). Visibility and fade ONLY —
+     * the sprite's size is fixed at creation and deliberately not touched here.
+     * Sprites whose handle was evicted (detached from the scene) self-unregister.
      */
     updateLabels(camPos: THREE.Vector3, scene: THREE.Object3D): void {
         for (const sprite of this.labels) {
@@ -107,10 +167,17 @@ export class MediaScreens {
         ctx.fillStyle = '#cfe9ff'; ctx.fillText(text, w / 2, h / 2 + 2);
 
         const tex = new THREE.CanvasTexture(canvas);
-        tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+        // Mipmapped minification (three's CanvasTexture default) is load-bearing
+        // now that the 46 px glyphs are rasterised well ABOVE the ~20 CSS px they
+        // are drawn at (headroom for walking closer, and for retina). A plain
+        // LinearFilter skips texels under 2× minification and the text shimmers.
+        tex.magFilter = THREE.LinearFilter;
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
-        const worldH = 0.34;                        // readable height in metres
+        // Fixed physical size, solved once — see the LABEL_TEXT_PX block.
+        const textFrac = FONT / h;
+        const worldH = MediaScreens.worldHeightFor(textFrac);
         sprite.scale.set(worldH * (w / h), worldH, 1);
+        sprite.userData.__label = { aspect: w / h, textFrac, worldH } satisfies LabelInfo;
         sprite.position.set(0, heightOffset, 0);
         sprite.renderOrder = 999;
         sprite.raycast = () => { /* labels never intercept interaction rays */ };
