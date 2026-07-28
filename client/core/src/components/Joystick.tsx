@@ -91,13 +91,24 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove, onStop, size = 120 }
         };
     }, [isDragging]);
 
+    // Material notes (shared language with the mobile shell's corner badges and
+    // action pad): a flat translucent disc with a hairline border looks fine on a
+    // mock-up and washes out completely over bright ground. What holds up is a
+    // top-lit radial fill plus a light inset edge above and a dark one below —
+    // the well reads as recessed, the knob as domed, and the whole control keeps
+    // its shape over grass, snow or night.
     return (
         <div
             ref={containerRef}
             onMouseDown={handleStart}
             onTouchStart={handleStart}
-            style={{ width: size, height: size }}
-            className="relative rounded-full bg-black/20 border-2 border-white/30 backdrop-blur-md shadow-lg touch-none flex items-center justify-center pointer-events-auto"
+            style={{
+                width: size, height: size,
+                background: 'radial-gradient(115% 115% at 50% 0%, rgba(255,255,255,0.13) 0%, rgba(6,12,20,0.30) 55%, rgba(4,8,14,0.42) 100%)',
+                boxShadow: 'inset 0 2px 3px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(255,255,255,0.16), 0 8px 22px rgba(0,0,0,0.40)',
+                borderColor: 'rgba(255,255,255,0.26)',
+            }}
+            className="relative rounded-full border backdrop-blur-md touch-none flex items-center justify-center pointer-events-auto"
         >
             <div
                 style={{
@@ -105,8 +116,13 @@ export const Joystick: React.FC<JoystickProps> = ({ onMove, onStop, size = 120 }
                     height: stickRadius * 2,
                     transform: `translate(${position.x}px, ${position.y}px)`,
                     transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    background: 'radial-gradient(100% 100% at 50% 22%, rgba(255,255,255,0.95) 0%, rgba(226,236,247,0.72) 55%, rgba(150,168,190,0.62) 100%)',
+                    boxShadow: isDragging
+                        ? '0 1px 3px rgba(0,0,0,0.45), inset 0 -2px 3px rgba(0,0,0,0.18)'
+                        : '0 4px 10px rgba(0,0,0,0.40), inset 0 -2px 3px rgba(0,0,0,0.15)',
+                    borderColor: 'rgba(255,255,255,0.85)',
                 }}
-                className="absolute rounded-full bg-white/50 border border-white/80 shadow-md"
+                className="absolute rounded-full border"
             />
         </div>
     );
