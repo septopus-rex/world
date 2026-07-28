@@ -77,6 +77,18 @@ test('移动壳:出生渲染 → 摇杆走路 → 触屏拖拽转视角 → JUMP
     expect(air[1] - g[1], 'jump lifted the player (engine Y)').toBeGreaterThan(0.1);
     await stepEngine(page, 90); // land again
 
+    // ── torch: the thumb button above the joystick drives the engine ──────────
+    // Placed on the LEFT, over the stick, because it is a thing you reach for
+    // while already walking. The engine owns the state — assert THAT, not the
+    // button's own styling, or the control could look on while nothing is lit.
+    const torchOn = () => page.evaluate(() => (window as any).loader.flashlightOn());
+    expect(await torchOn(), 'torch starts off').toBe(false);
+    await page.getByTestId('m-flashlight').tap();
+    expect(await torchOn(), 'tap lit the torch in the engine').toBe(true);
+    await expect(page.getByTestId('m-flashlight')).toHaveAttribute('aria-pressed', 'true');
+    await page.getByTestId('m-flashlight').tap();
+    expect(await torchOn(), 'tapping again put it out').toBe(false);
+
     // ── map opens via the top-right MiniCompass (bottom-sheet buttons removed) ──
     await page.getByTestId('mini-compass').tap();
     await expect(page.getByTestId('map2d')).toBeVisible();

@@ -609,6 +609,15 @@ export class DesktopLoader implements IDataSource {
         this.engine?.jump();
     }
 
+    /** Hand torch (render/PlayerLighting) — pure view state, both shells expose a
+     *  button for it. Toggle returns the new state so the UI mirrors the engine
+     *  rather than tracking its own copy. */
+    public toggleFlashlight(): boolean {
+        return !!this.engine?.toggleFlashlight();
+    }
+    public setFlashlight(on: boolean) { this.engine?.setFlashlight(on); }
+    public flashlightOn(): boolean { return !!this.engine?.isFlashlightOn(); }
+
     /** Would tapping this entity DO something if in reach? True for the things a
      *  player taps to use: e4 book(pages) / e5 board(channel) / e1 link(url),
      *  b5 items, ba NPCs (dialogue or a click interact verb). Used to hint

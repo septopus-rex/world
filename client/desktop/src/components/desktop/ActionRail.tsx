@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { MAZE_BLOCK, MAZE_ENTRY } from '@core/scenes/mazeScene';
 import { DYN_BLOCK, DYN_VIEW } from '@core/scenes/dynamicAdjunctScene';
 import { usePages } from '@core/components/page';
@@ -19,6 +20,8 @@ export function ActionRail({ loader, view, setView, mode, setMode, onOpenMap, on
     onEnterSandbox: () => void;
 }) {
     const pages = usePages();
+    /** Torch state mirrored from the engine (see the button below). */
+    const [torch, setTorch] = useState(false);
     return (
         <div className="absolute right-2 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 p-1.5 rounded-2xl bg-black/30 backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
             {([
@@ -46,6 +49,21 @@ export function ActionRail({ loader, view, setView, mode, setMode, onOpenMap, on
                 className="w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 transition-all active:scale-95"
             >
                 {view === 'third' ? '🎥' : '👁️'}
+            </button>
+
+            {/* Hand torch. Same engine seam as the mobile shell's thumb button
+                (loader.toggleFlashlight → render/PlayerLighting); the returned
+                state is the engine's, not a local guess. */}
+            <button
+                data-testid="flashlight-toggle"
+                title={torch ? '手电筒 · 开 → 关' : '手电筒 · 关 → 开'}
+                aria-pressed={torch}
+                onClick={() => setTorch(!!loader?.toggleFlashlight())}
+                className={`w-10 h-10 flex items-center justify-center rounded-xl text-lg leading-none border transition-all active:scale-95 ${
+                    torch ? 'bg-amber-400/25 border-amber-300/60' : 'bg-white/5 border-white/10 hover:bg-white/15'
+                }`}
+            >
+                🔦
             </button>
 
             <div className="w-6 h-px bg-white/15 my-0.5" />

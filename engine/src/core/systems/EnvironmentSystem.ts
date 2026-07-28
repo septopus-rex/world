@@ -135,6 +135,8 @@ export class EnvironmentSystem implements ISystem {
     private visOvercast = 0;                // smoothed overcast [0..1]
     /** Fog far plane = the streaming reach; fixed at construction, never weathered. */
     private fogFar = 0;
+    /** Cached player entity for the fill light's anchor (see updatePlayerLight). */
+    private playerEntity: number | null = null;
 
     constructor(world: World) {
         // Create singleton Environment Entity
@@ -305,6 +307,14 @@ export class EnvironmentSystem implements ISystem {
             // `oc` rides along for the same reason one level up: a downpour under
             // a clear blue sky was the bug that started this.
             world.renderEngine.setSkyPhase?.(dayF, oc);
+
+            // The player's own lights (render/PlayerLighting): an avatar fill that
+            // makes the night navigable, plus the hand torch. Driven from HERE
+            // because this is where the day factor lives — `1 − dayF` is the same
+            // curve the sun sets on, so the fill rises exactly as the sun leaves.
+            // A heavy overcast is dark too, so it counts toward "night" at a
+            // fraction of its weight (a storm at noon is dim, not nocturnal).
+            this.updatePlayerLight(world, Math.min(1, (1 - dayF) + 0.35 * oc));
         }
 
         // 2. Weather Visuals — BOTH precipitating categories drive the volume.
@@ -332,6 +342,23 @@ export class EnvironmentSystem implements ISystem {
                 world.renderEngine.updateWeatherParticles(this.particleSystem, 0, 0, 0, null, 0, dt);
             }
         }
+    }
+
+    /**
+     * Point the player's fill light at the player and tell it how dark it is.
+     * The entity lookup is cached: it is a per-frame call, and the player is the
+     * one entity that never churns. A world without a player (headless block
+     * tests, the minimap-only rigs) simply never anchors — the lights sit at the
+     * origin at zero intensity, which costs nothing.
+     */
+    private updatePlayerLight(world: World, night: number): void {
+        if (this.playerEntity == null) {
+            this.playerEntity = world.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0] ?? null;
+            if (this.playerEntity == null) return;
+        }
+        const t = world.getComponent<any>(this.playerEntity, 'TransformComponent');
+        if (!t) { this.playerEntity = null; return; }   // entity went away — re-look-up next frame
+        world.renderEngine.setPlayerLightAnchor?.(t.position[0], t.position[1], t.position[2], night);
     }
 
     /**

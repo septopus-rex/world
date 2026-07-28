@@ -60,6 +60,10 @@ export function createNullRenderEngine() {
     lastFogRange: null as { near: number; far: number } | null,
     lastCameraPos: null as [number, number, number] | null,
     lastCameraLookAt: null as [number, number, number] | null,
+    /** Player fill light (render/PlayerLighting): where it was anchored and how
+     *  dark EnvironmentSystem said it was (0 = day → the lights are off). */
+    lastPlayerLight: null as { pos: [number, number, number]; night: number } | null,
+    flashlight: false,
   };
 
   return {
@@ -122,6 +126,12 @@ export function createNullRenderEngine() {
     },
     updateAmbientLight: (_h: Handle, _c: number, intensity: number) => { counts.lastAmbient = intensity; },
     updateDirectionalLight: (_h: Handle, _c: number, intensity: number) => { counts.lastSunIntensity = intensity; },
+    // Player-attached lights (avatar fill + hand torch).
+    setPlayerLightAnchor: (x: number, y: number, z: number, night: number) => {
+      counts.lastPlayerLight = { pos: [x, y, z], night };
+    },
+    setFlashlight: (on: boolean) => { counts.flashlight = on; },
+    flashlightOn: () => counts.flashlight,
 
     // Frame
     render: () => {},

@@ -41,6 +41,9 @@ function MobileApp() {
     const pages = usePages();
     const [sheet, setSheet] = useState<'bag' | 'avatar' | null>(null);
     const [inspecting, setInspecting] = useState(false);
+    /** Hand torch — mirrors the engine's own state (loader.toggleFlashlight
+     *  returns it), so the button never claims a state the renderer doesn't have. */
+    const [torchOn, setTorchOn] = useState(false);
     // Edit-bar palette gate: the engine's full palette (20+ type buttons)
     // floods a phone screen, so it stays hidden (CSS in index.css keyed off
     // .m-palette-open on the app root) until the bar's 添加 toggle opens it.
@@ -151,6 +154,24 @@ function MobileApp() {
                             ＋ 添加
                         </button>
                     </div>
+                </div>
+            )}
+
+            {/* Hand torch — directly ABOVE the joystick, i.e. under the left thumb
+                rather than in the right-hand action stack: at night you reach for
+                it while already moving, and the right thumb is busy with jump /
+                view. The engine owns the state (loader.flashlightOn()); this is
+                only a mirror, so an engine-side change can't desync the button. */}
+            {ready && (
+                <div className="absolute bottom-52 left-12 z-20 pointer-events-auto">
+                    <button data-testid="m-flashlight"
+                        aria-label={torchOn ? '关闭手电筒' : '打开手电筒'}
+                        aria-pressed={torchOn}
+                        onClick={() => setTorchOn(!!loader?.toggleFlashlight())}
+                        className={`w-14 h-14 rounded-full border-2 backdrop-blur-md flex items-center justify-center active:scale-95 shadow-xl transition-colors ${
+                            torchOn ? 'bg-amber-300/30 border-amber-200/70' : 'bg-white/10 border-white/25'}`}>
+                        <span className="text-2xl leading-none">🔦</span>
+                    </button>
                 </div>
             )}
 

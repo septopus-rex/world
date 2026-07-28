@@ -15,6 +15,7 @@ import { TransformGizmo, GizmoHooks, GizmoInfo } from './TransformGizmo';
 import { FloatingOrigin } from './FloatingOrigin';
 import { setSurfaceDetailOrigin } from './SurfaceDetail';
 import { SceneLighting } from './SceneLighting';
+import { PlayerLighting } from './PlayerLighting';
 import { SkyEnvironment } from './SkyEnvironment';
 import { Picking } from './Picking';
 import { disposeMeshResources, disposeMediaResources } from './HandleDisposal';
@@ -65,6 +66,14 @@ export class RenderEngine {
     private readonly lighting: SceneLighting;
     /** Gradient sky + PMREM image-based light (render/SkyEnvironment). */
     private readonly sky: SkyEnvironment;
+    /** Avatar fill + hand torch — the lights that travel with the player
+     *  (render/PlayerLighting). Anchored every frame in render(). */
+    private readonly playerLights: PlayerLighting;
+    /** Player position in ABSOLUTE world space, fed by setPlayerLightAnchor.
+     *  Stored absolute (converted at anchor time, not at set time) so a
+     *  floating-origin rebase between the two can't leave it 1024 m out. */
+    private readonly _playerAbs = new THREE.Vector3();
+    private readonly _playerAnchor = new THREE.Vector3();
     /** The shadow-casting sun (first directional light set via setDirectionalLight). */
     private get sunLight(): THREE.DirectionalLight | null { return this.lighting.sunLight; }
 
@@ -208,6 +217,11 @@ export class RenderEngine {
         // Scene-wide lighting (render/SceneLighting) — ambient/hemisphere/
         // directional lights, fog, and the sun-shadow anchor.
         this.lighting = new SceneLighting(this.scene);
+
+        // Lights that travel with the PLAYER (render/PlayerLighting): the avatar
+        // fill that makes a night navigable, and the torch. Both idle at zero
+        // until EnvironmentSystem reports a night factor / the torch is switched on.
+        this.playerLights = new PlayerLighting(this.scene);
 
         // Gradient sky + the image-based light derived from it (render/SkyEnvironment).
         // Owns scene.background / scene.environment and keeps the fog at the horizon;
@@ -479,6 +493,24 @@ export class RenderEngine {
         this.lighting.setFogRange(near, far);
     }
 
+    // ── Player-attached lights (render/PlayerLighting) ─────────────────────────
+
+    /**
+     * Where the player is standing (ABSOLUTE world coords) and how dark it is
+     * (`night`: 0 = full day → both player lights off, 1 = night). Driven once
+     * per frame by EnvironmentSystem, which already owns the day factor. The
+     * conversion to render space happens here so callers never see the floating
+     * origin.
+     */
+    public setPlayerLightAnchor(x: number, y: number, z: number, night: number): void {
+        this._playerAbs.set(x, y, z);
+        this.playerLights.setNightFactor(night);
+    }
+
+    /** Hand torch on/off (view state — nothing in the simulation reads it). */
+    public setFlashlight(on: boolean): void { this.playerLights.setTorch(on); }
+    public flashlightOn(): boolean { return this.playerLights.torchOn; }
+
     /**
      * Advance the sky/IBL to a point in the day cycle (0 = night, 0.5 = sun on the
      * horizon, 1 = full day). Called every frame by EnvironmentSystem with the same
@@ -528,6 +560,11 @@ export class RenderEngine {
         this.stats?.begin();
         this.maybeRebaseOrigin();
         this.lighting.anchorSunShadow(this.mainCamera.position);
+        // Player fill + torch follow the player and the view every frame (both are
+        // no-ops while dark-inactive and switched off). Converted here, AFTER
+        // maybeRebaseOrigin, so the anchor uses the origin in force this frame.
+        this.playerLights.anchor(
+            this._playerAnchor.copy(this._playerAbs).sub(this.renderOrigin), this.mainCamera);
         // Label proximity gate (view-only): re-evaluate every 10 frames — walking
         // speed vs a 3 m fade band makes per-frame checks pointless. Safe at this
         // rate precisely because labels have a FIXED world size (MediaScreens):
@@ -844,6 +881,7 @@ export class RenderEngine {
         this.gizmo?.dispose();
         this.gizmo = null;
         this.sky.dispose();
+        this.playerLights.dispose();
         if (this.container && this.renderer.domElement) {
             this.container.removeChild(this.renderer.domElement);
         }

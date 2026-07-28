@@ -352,6 +352,26 @@ export class Engine {
         return cc?.getViewMode?.();
     }
 
+    // ── hand torch ────────────────────────────────────────────────────────────
+    // Pure VIEW state (render/PlayerLighting): a light on the camera, no entity,
+    // no component, nothing persisted and nothing the simulation can observe. It
+    // is here rather than as an adjunct/item because it is an accessibility
+    // affordance for the night — the player must never be unable to find it.
+
+    /** Switch the hand torch on/off. */
+    public setFlashlight(on: boolean): void {
+        (this.world?.renderEngine as any)?.setFlashlight?.(on);
+    }
+    /** Toggle the hand torch; returns the new state. */
+    public toggleFlashlight(): boolean {
+        const next = !this.isFlashlightOn();
+        this.setFlashlight(next);
+        return next;
+    }
+    public isFlashlightOn(): boolean {
+        return !!(this.world?.renderEngine as any)?.flashlightOn?.();
+    }
+
     public getWorld(): World | null {
         return this.world;
     }
