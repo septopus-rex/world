@@ -116,21 +116,29 @@ export class EnvironmentSystem implements ISystem {
         this.ambientLight = world.renderEngine.setAmbientLight(0xffffff, 0.05);
         this.particleSystem = world.renderEngine.createWeatherParticles();
 
-        // Sky-matched distance fog sized to the block-streaming window: blocks load
-        // in a bounded (2*extend+1)² square, so the region's far edge is a hard chunk
-        // boundary against the sky. Fade it out (opaque ~ the window radius) so the
-        // staircase silhouette dissolves instead of showing a jagged void edge.
+        // Sky-matched distance fog, sized so it CLOSES BEFORE the streaming window
+        // does. Blocks load in a bounded (2·extend+1)² square, so the region ends at
+        // a hard chunk boundary against the sky; the fog's job is to be already
+        // opaque there, whichever direction you look.
         //
-        // The radius MUST be the window's DIAGONAL reach, not its orthogonal one:
-        // the farthest loaded content sits on the diagonal, where a corner block's
-        // centre is ext·√(bw²+bl²) away — √2× the orthogonal edge (45.3 m vs 32 m at
-        // the default extent). Sizing by the orthogonal distance put the four corner
-        // blocks BEYOND `far`, so they were painted pure sky colour: loaded,
-        // simulated, and invisible. From above the window read as an "井" with its
-        // corners missing. (hypot also covers a non-square grid per-axis.)
+        // `far` = world.metrics.streamingReach(ext) — the guaranteed radius, and the
+        // SINGLE definition BlockLODSystem derives from too. Read that method before
+        // touching this: it is the whole argument for why a square window and a
+        // radial mask can never be made to coincide, and why the answer is to fog
+        // out inside the window rather than to keep enlarging the radius to chase
+        // the corners.
+        //
+        // History, so it is not re-litigated a third time: `far` was first
+        // ext·blockWidth·1.2 (38.4 m), which left the corner blocks (45.3 m) past it
+        // — painted pure sky, so the window read as an "井" from above. The fix
+        // (2026-07-27) enlarged it to ext·hypot(bw,bl)·1.2 = 54.3 m, which reached
+        // the corner CENTRES but not the corner tips (60.5 m), AND pushed the fog
+        // well past the nearest window face (32 m) — so the ground now visibly
+        // ENDED at 36 % haze in the orthogonal directions. One bug traded for its
+        // mirror image. Neither radius was ever going to work.
         const ext = (world.config.player as any)?.extend ?? 2;
-        const radius = ext * Math.hypot(world.metrics.blockWidth, world.metrics.blockLength);
-        world.renderEngine.setFog(radius * 0.5, radius * 1.2);
+        const reach = world.metrics.streamingReach(ext);
+        world.renderEngine.setFog(reach * 0.5, reach);
     }
 
     public onNewBlock(world: World, height: number, hash: string, intervalSeconds: number): void {

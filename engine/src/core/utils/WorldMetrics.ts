@@ -132,6 +132,37 @@ export class WorldMetrics {
     centreBlock(): [number, number] {
         return [Math.floor(this.range[0] / 2), Math.floor(this.range[1] / 2)];
     }
+
+    /**
+     * GUARANTEED streaming radius: the largest R for which "everything within R
+     * metres of the player is loaded" holds in EVERY horizontal direction and at
+     * EVERY position the player can stand.
+     *
+     * THE ONE DEFINITION OF THE VISIBLE BOUNDARY — fog and block LOD must both
+     * derive from this and nothing else. Sizing them independently is what
+     * produced the 2026-07-27/28 corner artefacts twice over: the streaming
+     * window is a SQUARE of blocks under the Chebyshev metric, everything that
+     * masks it (fog, LOD radius) is a CIRCLE under the Euclidean one, and no
+     * single radius makes a circle coincide with a square. Pick the inradius and
+     * the four corners poke out past the mask; pick the circumradius and the
+     * edge midpoints end before the mask closes, showing a hard cut where the
+     * ground simply stops. Both read to the player as "缺角".
+     *
+     * The resolution is not a better radius — it is to stop treating the window
+     * as the visible region. The window is a PREFETCH region; the visible region
+     * is the disc of radius `streamingReach` inside it, and everything past that
+     * disc must already be 100 % fogged, whatever shape it happens to have.
+     *
+     * Why `ext · min(width, length)` and not the diagonal: the window is centred
+     * on the player's BLOCK, not on the player. Standing at the far edge of your
+     * own block leaves only `ext` whole blocks between you and the window's face
+     * on that side — so `ext · blockWidth` is the worst case, and `min` covers
+     * the shorter axis of a non-square grid.
+     */
+    streamingReach(extend: number): number {
+        const ext = Math.max(0, Math.floor(Number(extend) || 0));
+        return ext * Math.min(this.blockWidth, this.blockLength);
+    }
 }
 
 /** The protocol-default geometry — for tooling with no world in hand. */

@@ -176,13 +176,51 @@ export class WorldContent {
         rotation: [...this.activeLevel.start.rotation] as [number, number, number],
     };
 
+    /** Client floor on the streaming window — below this the world is too small
+     *  to stand in without seeing its own edge. */
+    private static readonly MIN_EXTEND = 2;
+
+    /**
+     * A level may pin its own streaming window, overriding the world document's
+     * `player.extend` (AuthoredLevel.extend — read its comment for why).
+     * Applied to the SERVED config, so the engine's fog/LOD see the same number.
+     */
+    private withLevelExtend(cfg: any): any {
+        const n = Math.floor(Number((this.activeLevel as any)?.extend));
+        if (Number.isFinite(n) && n >= 1 && cfg?.player) cfg.player.extend = n;
+        return cfg;
+    }
+
+    /**
+     * Adopt the SERVED config's `player.extend` as this loader's streaming radius.
+     *
+     * WHY THIS EXISTS: `extend` had TWO disconnected sources — this loader
+     * streamed by the hardcoded `DEFAULT_PLAYER_STATE.extend`, while the engine
+     * sized the fog and the block LOD from `config.player.extend` in the served
+     * doc. Both happened to read 2, so nothing broke; but raising the doc's value
+     * (the documented way to push the draw distance out) would have opened the
+     * fog to 48 m while the loader kept streaming a 32 m window — i.e. the exact
+     * "the ground just ends in mid-air" artefact that sizing the fog by hand
+     * caused twice already. Same root cause, third location: one quantity, two
+     * definitions.
+     *
+     * It reads the SERVED doc, not the raw one, so a level override
+     * (withLevelExtend) can never desynchronise the two either.
+     */
+    private adoptServedExtend(cfg: any): void {
+        const n = Math.floor(Number(cfg?.player?.extend));
+        if (Number.isFinite(n)) {
+            this.playerState.extend = Math.max(WorldContent.MIN_EXTEND, n);
+        }
+    }
+
     // Live mirror of the player's location for the minimap/HUD/extend bookkeeping.
     // Durable persistence is engine-owned (DraftStore meta 'player', restored by
     // Engine.hydrateDrafts) — this never writes to localStorage.
     public mirrorState(partial: Partial<SeptopusPlayerState>): void {
         this.playerState = { ...this.playerState, ...partial };
-        if (!this.playerState.extend || this.playerState.extend < 2) {
-            this.playerState.extend = 2;
+        if (!this.playerState.extend || this.playerState.extend < WorldContent.MIN_EXTEND) {
+            this.playerState.extend = WorldContent.MIN_EXTEND;
         }
     }
 
@@ -267,6 +305,17 @@ export class WorldContent {
      * steady-state), so the DEFAULT stays full quality and only the harness — and
      * anyone on a weak GPU — asks for the cheap tier.
      */
+    /** The served world config: a deep copy of the doc with every host/level
+     *  override applied, and the ONE place the loader's streaming radius is
+     *  taken from — whatever the engine is handed is what we stream. */
+    private async serve(doc: any): Promise<any> {
+        const cfg = this.withRenderTier(this.withAvatarPhysique(
+            await this.withSavedAvatar(this.withSoftStart(
+                this.withLevelExtend(JSON.parse(JSON.stringify(doc)))))));
+        this.adoptServedExtend(cfg);
+        return cfg;
+    }
+
     private withRenderTier(cfg: any): any {
         if (this.fx !== 'low' || !cfg) return cfg;
         cfg.debug = { ...(cfg.debug ?? {}), shadows: false, ibl: false };
@@ -316,13 +365,16 @@ export class WorldContent {
         const injected = (globalThis as any).__SEPTOPUS_WORLD_CONFIG_PROMISE__;
         if (injected) {
             const cfg = await injected;
-            if (cfg) { this._worldDoc = cfg; return this.withRenderTier(this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(cfg)))))); }
+            if (cfg) {
+                this._worldDoc = cfg;
+                return this.serve(cfg);
+            }
         }
         // World CONFIG is DATA (src/worlds/default.world.json, P7) — avatar
         // resource/facing are baked into the doc; a saved pick overrides after
         // hydrate. Swap the backing file (or a CID fetch) to change worlds.
         this._worldDoc = defaultWorldJson;
-        return this.withRenderTier(this.withAvatarPhysique(await this.withSavedAvatar(this.withSoftStart(JSON.parse(JSON.stringify(defaultWorldJson))))));
+        return this.serve(defaultWorldJson);
     }
 
     public async view(x: number, y: number, ext: number): Promise<any> {

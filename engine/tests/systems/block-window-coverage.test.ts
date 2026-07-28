@@ -4,24 +4,31 @@ import { MockWorldNormal } from '../../src/core/mocks/WorldConfigs';
 import { BlockLODSystem } from '../../src/core/systems/BlockLODSystem';
 import { AdjunctComponent } from '../../src/core/components/AdjunctComponents';
 import { MeshComponent } from '../../src/core/components/VisualizationComponents';
+import { WorldMetrics } from '../../src/core/utils/WorldMetrics';
 
 /**
- * The streaming window must be a FILLED SQUARE — a "田", not a "井" with its
- * corners punched out (bug found 2026-07-27).
+ * The visible boundary must be ISOTROPIC — the same in every direction, at every
+ * position the player can stand. Corner artefacts ("缺角") shipped twice because
+ * it was not:
  *
- * What went wrong: the window is a (2·ext+1)² square of blocks, so its farthest
- * content lies on the DIAGONAL — a corner block's centre is ext·√(bw²+bl²) away,
- * √2× the orthogonal edge (45.3 m vs 32 m at ext=2). Two consumers sized
- * themselves by the ORTHOGONAL distance and so clipped exactly the four corners:
+ *   · 2026-07-27: fog far = ext·bw·1.2 = 38.4 m, lodNear = 40 m — both sized by
+ *     the window's ORTHOGONAL edge, while corner blocks sit √2× further. Exactly
+ *     the four corners got clipped: an "井" from above.
+ *   · 2026-07-28: the fix enlarged fog far to ext·hypot(bw,bl)·1.2 = 54.3 m. That
+ *     covered the corner CENTRES but not the corner tips (60.5 m), and pushed the
+ *     fog 22 m PAST the nearest window face — so the ground now ended in mid-air
+ *     at 36 % haze in the orthogonal directions. The mirror-image bug.
  *
- *   · fog far = ext·blockWidth·1.2 = 38.4 m  → corners (45.3 m) painted pure sky
- *   · lodNear = 40 m vs corner CENTRE 45.3 m → corner adjunct meshes hidden
+ * The lesson these tests exist to keep: a SQUARE window (Chebyshev, centred on
+ * the player's BLOCK) and a RADIAL mask (Euclidean, centred on the player) can
+ * never coincide, so no choice of radius fixes it. The window is a PREFETCH
+ * region; the VISIBLE region is the disc of `metrics.streamingReach(ext)` inside
+ * it. Both masks derive from that one number, and what falls outside the disc is
+ * already 100 % fogged regardless of shape.
  *
- * Data streaming was never at fault (all 25 blocks loaded and simulated); they
- * were merely invisible. That is why the pre-existing e2e missed it — it asserted
- * `loadedBlocks <= 25`, which a corner-less 21 also satisfies.
- *
- * These tests pin the VISIBLE window, not just the loaded one.
+ * Data streaming was never at fault in either bug (all 25 blocks always loaded
+ * and simulated) — which is why the pre-existing e2e missed it: `loadedBlocks
+ * <= 25` is satisfied by a corner-less 21 too.
  */
 
 function api() {
@@ -76,49 +83,78 @@ function visibilityByOffset(world: any): Record<string, { total: number; visible
     return out;
 }
 
-describe('streaming window is a filled square (田, not 井)', () => {
-    it('every block in the default window keeps its adjuncts VISIBLE — corners included', async () => {
-        const { world } = await setupWindow(2);
-        const vis = visibilityByOffset(world);
+describe('the visible boundary is a disc inside the window, not the window itself', () => {
+    it('fog closes at or before the NEAREST window face — never past it', async () => {
+        const { world, nullEngine } = await setupWindow(2);
+        const fog = nullEngine.__counts.lastFog as { near: number; far: number };
+        const m = world.metrics;
+        const ext = (world.config.player as any)?.extend ?? 2;
+        expect(fog).not.toBeNull();
 
-        // All 25 cells present…
-        expect(Object.keys(vis).length).toBe(25);
-        // …and not one of them had its adjuncts clipped. The four corners are the
-        // regression: they used to come back visible 0 of 1.
-        const clipped = Object.entries(vis)
-            .filter(([, v]) => v.total > 0 && v.visible === 0)
-            .map(([k]) => k);
-        expect(clipped).toEqual([]);
+        // The window is centred on the player's BLOCK, so standing at your own
+        // block's far edge leaves only `ext` whole blocks on that side. Anything
+        // beyond this and the ground can end while still partly transparent.
+        const guaranteed = ext * Math.min(m.blockWidth, m.blockLength);   // 32 m
+        expect(m.streamingReach(ext)).toBe(guaranteed);
+        expect(fog.far).toBeLessThanOrEqual(guaranteed);
 
-        for (const corner of ['-2,-2', '-2,2', '2,-2', '2,2']) {
-            expect(vis[corner].total).toBeGreaterThan(0);
-            expect(vis[corner].visible).toBe(vis[corner].total);
-        }
+        // Both historical values are now regressions, in both directions.
+        expect(fog.far).not.toBeCloseTo(ext * m.blockWidth * 1.2, 1);              // 38.4 m
+        expect(fog.far).not.toBeCloseTo(ext * Math.hypot(m.blockWidth, m.blockLength) * 1.2, 1); // 54.3 m
+
+        // Still a haze with depth, not an opaque wall in your face.
+        expect(fog.near).toBeGreaterThan(0);
+        expect(fog.near).toBeLessThan(fog.far);
     });
 
-    it('LOD is judged on a block\'s NEAREST point, so tiers cannot be anisotropic', async () => {
+    it('nothing is LOD-hidden while it is still visible through the fog', async () => {
+        const { world, nullEngine } = await setupWindow(2);
+        const fog = nullEngine.__counts.lastFog as { near: number; far: number };
+        const ext = (world.config.player as any)?.extend ?? 2;
+        const lodNear = world.metrics.streamingReach(ext);
+
+        // THE coupling. LOD hides a block once its NEAREST point passes lodNear;
+        // the fog is total at `far`. lodNear < far would wink adjuncts out while
+        // they were still on screen — the same anisotropy bug, second location.
+        expect(lodNear).toBeGreaterThanOrEqual(fog.far);
+        expect(world.systems.findSystem(BlockLODSystem)).toBeTruthy();
+    });
+
+    it('the disc is isotropic: hidden-ness depends on distance alone, not direction', async () => {
         const { world } = await setupWindow(2);
+        const vis = visibilityByOffset(world);
         const m = world.metrics;
-        const lod = world.systems.findSystem(BlockLODSystem)!;
         const player = world.getComponent<any>(
             world.queryEntities('TransformComponent', 'InputStateComponent')[0], 'TransformComponent');
+        const lodNear = m.streamingReach((world.config.player as any)?.extend ?? 2);
 
-        // The old metric was the block CENTRE: at ext=2 the corner centre (45.3 m)
-        // exceeded lodNear=40 while the orthogonal centre (32 m) did not — the
-        // window got an "井" hole. The AABB metric keeps the whole window near.
         const nearest = (bx: number, by: number) => {
             const c = m.blockCentre(bx, by);
             const dx = Math.max(0, Math.abs(player.position[0] - c[0]) - m.blockWidth / 2);
             const dz = Math.max(0, Math.abs(player.position[2] - c[2]) - m.blockLength / 2);
             return Math.hypot(dx, dz);
         };
-        const cornerCentre = Math.hypot(
-            player.position[0] - m.blockCentre(BX + 2, BY + 2)[0],
-            player.position[2] - m.blockCentre(BX + 2, BY + 2)[2]);
 
-        expect(cornerCentre).toBeGreaterThan(40);      // the old metric DID exceed lodNear…
-        expect(nearest(BX + 2, BY + 2)).toBeLessThan(40); // …the new one does not.
-        expect(lod).toBeTruthy();
+        // Data layer is untouched by any of this: all 25 cells are resident.
+        expect(Object.keys(vis).length).toBe(25);
+
+        // The disc must actually CUT the square, or this test proves nothing: the
+        // outer diagonal cells fall outside `reach` while the orthogonal ones do
+        // not. (If a future radius change makes every cell one tier, this fails
+        // loudly instead of passing vacuously.)
+        const tiers = new Set(Object.values(vis).filter((v) => v.total > 0).map((v) => v.visible === v.total));
+        expect(tiers.size, 'vacuous — every cell landed in the same tier').toBe(2);
+
+        // Every cell's visibility must agree with its DISTANCE. The 井 bug was
+        // precisely a cell being hidden at a distance where another cell, in a
+        // different direction, stayed lit.
+        for (const [key, v] of Object.entries(vis)) {
+            if (v.total === 0) continue;
+            const [dx, dy] = key.split(',').map(Number);
+            const d = nearest(BX + dx, BY + dy);
+            const shouldBeNear = d <= lodNear;
+            expect(v.visible === v.total, `${key} @ ${d.toFixed(1)}m (lodNear ${lodNear})`).toBe(shouldBeNear);
+        }
     });
 
     it('LOD still clips genuinely distant blocks (the fix is not a disable)', async () => {
@@ -129,35 +165,19 @@ describe('streaming window is a filled square (田, not 井)', () => {
 
         const vis = visibilityByOffset(world);
         expect(vis['8,0'].total).toBeGreaterThan(0);
-        expect(vis['8,0'].visible).toBe(0);            // far tier → adjuncts hidden
-        expect(vis['2,2'].visible).toBe(vis['2,2'].total); // window corner still near
-    });
-});
-
-describe('fog reaches the window\'s diagonal, not just its edge', () => {
-    it('the far plane sits beyond the farthest CORNER block centre', async () => {
-        const { world, nullEngine } = await setupWindow(2);
-        const fog = nullEngine.__counts.lastFog as { near: number; far: number };
-        const m = world.metrics;
-        const ext = (world.config.player as any)?.extend ?? 2;
-
-        expect(fog).not.toBeNull();
-
-        const cornerCentre = ext * Math.hypot(m.blockWidth, m.blockLength); // 45.25 m
-        const orthoEdge = ext * m.blockWidth;                               // 32 m
-        expect(cornerCentre).toBeGreaterThan(orthoEdge);                    // the √2 the bug ignored
-
-        // THE regression: corner content must be inside the fog, not past it.
-        expect(fog.far).toBeGreaterThan(cornerCentre);
-        // Still a local haze, not a disabled fog — the boundary must stay hidden.
-        expect(fog.near).toBeLessThan(cornerCentre);
-        expect(fog.far).toBeLessThan(cornerCentre * 2);
+        expect(vis['8,0'].visible).toBe(0);              // far tier → adjuncts hidden
+        expect(vis['0,0'].visible).toBe(vis['0,0'].total); // the block you stand in, always
     });
 
-    it('scales with a non-square grid per axis', async () => {
-        // hypot uses BOTH horizontal extents, so an oblong block is handled too.
-        const m = { blockWidth: 32, blockLength: 8 };
-        expect(2 * Math.hypot(m.blockWidth, m.blockLength)).toBeCloseTo(65.97, 1);
-        // (vs the old max()-based radius of 64 — which again fell short of the corner.)
+    it('takes the SHORTER axis on a non-square grid', () => {
+        // The guarantee is per-direction, so an oblong block is bounded by its
+        // short side — hypot (the 2026-07-27 answer) overshoots it 4×.
+        const oblong = new WorldMetrics({ block: [32, 8, 16] });
+        expect(oblong.streamingReach(2)).toBe(16);
+        expect(2 * Math.hypot(32, 8)).toBeCloseTo(65.97, 1);
+        // Degenerate extends must not produce a negative or fractional radius.
+        expect(oblong.streamingReach(0)).toBe(0);
+        expect(oblong.streamingReach(-3)).toBe(0);
+        expect(oblong.streamingReach(2.7)).toBe(16);
     });
 });

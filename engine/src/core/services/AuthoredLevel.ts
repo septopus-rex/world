@@ -29,6 +29,20 @@ export interface AuthoredLevel {
     };
     /** Optional: the globalFlags key the level's finish trigger sets. */
     completeFlag?: string;
+    /**
+     * Optional: pin this level's streaming window radius, overriding the world
+     * document's `player.extend`. Everything visible derives from it — the
+     * resident (2·extend+1)² block window, the fog's far plane and the block LOD
+     * radius are all `metrics.streamingReach(extend)` (see WorldMetrics).
+     *
+     * Exists because a level can legitimately need a window SMALLER than the
+     * world's comfortable draw distance: the palace stress level
+     * (docs/plan/specs/palace-stress-level.md) is 6×6 blocks and its whole point
+     * is exercising evict/re-materialise, which a window large enough to hold the
+     * entire building would silently stop testing. Raising the world default
+     * without this escape hatch turns that spec into a no-op that still passes.
+     */
+    extend?: number;
     /** Authored blocks (absolute coords): inline `raw` OR a content reference
      *  `ref` (name/CID, resolved by the host's ContentResolver — P7). Anything
      *  off-list serves `fallback` (when declared) else the empty block. */

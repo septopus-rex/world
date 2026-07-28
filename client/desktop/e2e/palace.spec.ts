@@ -4,7 +4,7 @@ import { waitForWorldReady, stepEngine, playerPosition, walkUntil } from './help
 // 宫殿关卡 (docs/plan/specs/palace-stress-level.md) — the 6×6 contiguous palace
 // through the REAL client streaming loop (WorldContent.handleGridRequest):
 // walk in through the gate, teleport-circle the corridor ring, and assert the
-// resident window stays hard-bounded at 5×5=25 while every wing streams in and
+// resident window stays hard-bounded at (2·extend+1)² while every wing streams in and
 // evicted wings re-materialize on return. Correctness only — SwiftShader is not
 // a performance environment (renderer.info baselines are a manual real-browser
 // pass, spec §6/§8).
@@ -23,7 +23,7 @@ const adjunctCountAt = (page: any, bx: number, by: number) =>
             String(w.getComponent(e, 'AdjunctComponent')?.adjunctId ?? '').startsWith(`adj_${x}_${y}_`)).length;
     }, [bx, by]);
 
-test('宫殿: 大门步入 → 环廊巡回流式(常驻≤25) → 驱逐重返重建 → 截图', async ({ page }) => {
+test('宫殿: 大门步入 → 环廊巡回流式(常驻≤窗口) → 驱逐重返重建 → 截图', async ({ page }) => {
     // 600s, not the usual 300s: 36 blocks × 392 adjuncts under SwiftShader is the
     // heaviest spec in the suite (~3.5 min alone), and inside the full serial run
     // it crossed the 5-minute budget mid-ring — a wall-clock loss, not a logic
@@ -51,16 +51,21 @@ test('宫殿: 大门步入 → 环廊巡回流式(常驻≤25) → 驱逐重返�
     expect(alt).toBeLessThan(2.5);
 
     // Teleport-circle the corridor ring: after each hop the CLIENT streamer
-    // (5×5 window, evict-outside-immediately) must hold the bound.
+    // ((2·extend+1)² window, evict-outside-immediately) must hold the bound.
+    // The bound is DERIVED from the live extend — `player.extend` in the world
+    // doc is the one draw-distance knob (it drives streaming + fog + LOD since
+    // 2026-07-28), so a hardcoded 25 would turn tuning it into a red build.
+    const windowSize = await page.evaluate(
+        () => ((2 * (window as any).loader.playerState.extend + 1) ** 2));
     for (const [bx, by] of ringBlocks) {
         await page.evaluate(([b]: any[]) => (window as any).loader.teleportSeptopus(b, [8, 8, 1.2]), [[bx, by]]);
         await stepEngine(page, 24); // GridSystem polls at 10 Hz → block.need → window sync
-        await page.waitForFunction(([x, y]: number[]) => {
+        await page.waitForFunction((n: number) => {
             const l = (window as any).loader;
-            return l.getLoadedBlockCount() <= 25 && l.getLoadedBlockCount() > 0;
-        }, [bx, by], { polling: 100, timeout: 30_000 });
+            return l.getLoadedBlockCount() <= n && l.getLoadedBlockCount() > 0;
+        }, windowSize, { polling: 100, timeout: 30_000 });
         const count = await page.evaluate(() => (window as any).loader.getLoadedBlockCount());
-        expect(count, `resident window at [${bx},${by}]`).toBeLessThanOrEqual(25);
+        expect(count, `resident window at [${bx},${by}]`).toBeLessThanOrEqual(windowSize);
     }
 
     // West arm: the NW terran guest house (b6) expanded into derived adjuncts
@@ -85,7 +90,7 @@ test('宫殿: 大门步入 → 环廊巡回流式(常驻≤25) → 驱逐重返�
         return w.getEntitiesWith(['AdjunctComponent']).filter((e: number) =>
             String(w.getComponent(e, 'AdjunctComponent')?.adjunctId ?? '').startsWith('adj_2102_1100_')).length > 5;
     }, undefined, { polling: 100, timeout: 30_000 });
-    expect(await page.evaluate(() => (window as any).loader.getLoadedBlockCount())).toBeLessThanOrEqual(25);
+    expect(await page.evaluate(() => (window as any).loader.getLoadedBlockCount())).toBeLessThanOrEqual(windowSize);
 
     // Courtyard finale: seam-straddling pond + pagoda in frame.
     await page.evaluate(() => (window as any).loader.teleportSeptopus([2102, 1102], [8, 8, 1.2]));

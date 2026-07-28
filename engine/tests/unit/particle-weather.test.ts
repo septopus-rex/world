@@ -64,6 +64,13 @@ describe('weather particles — they actually fall', () => {
         const f = fx();
         const h = f.createWeather();
         f.updateWeather(h, 0, 0, 0, 'rain', 3, 1 / 60);   // frame 1 anchors the box
+
+        // Park particle 0 dead centre. The pool is seeded with Math.random(), so a
+        // particle that starts near a box face legitimately WRAPS during the 5 m
+        // step below — its absolute position jumps by one span, which is correct
+        // recycling but makes a "did it stay put?" assertion a coin flip.
+        const p0 = pos(h);
+        p0[0] = W.span / 2; p0[1] = W.height / 2; p0[2] = W.span / 2;
         const before = abs(h, 0);
 
         // Walk 5 m east over one frame. The box moves with us; the rain must NOT —

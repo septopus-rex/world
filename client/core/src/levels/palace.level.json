@@ -1,6 +1,7 @@
 {
  "format": "septopus.world.level",
  "version": 1,
+ "extend": 2,
  "name": "palace",
  "start": {
   "block": [
