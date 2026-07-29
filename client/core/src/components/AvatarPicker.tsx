@@ -16,7 +16,11 @@ export function AvatarPicker({ loader, ready }: { loader: any; ready: boolean })
     const active = current ?? loader.currentAvatar?.() ?? catalog[0].id;
 
     return (
-        <div className="absolute top-14 right-3 z-40 flex flex-col items-end gap-1">
+        // top-36 clears the desktop compass dial (p-4 + mt-2 + h-28 ≈ 136 px tall).
+        // At top-14 this button sat ON the dial's face — it has always overlapped,
+        // and it hid the coordinate readout inside it outright once the in-world
+        // clock joined it there.
+        <div className="absolute top-36 right-3 z-40 flex flex-col items-end gap-1">
             <button
                 data-testid="avatar-picker-toggle"
                 onClick={() => setOpen(!open)}

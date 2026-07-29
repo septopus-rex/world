@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Coords } from '@engine/core/utils/Coords';
 import { useEngine } from '@core/lib/useEngine';
 import { Compass } from './components/HUD';
+import { formatClockLine, isDark } from '@core/components/WorldClock';
 import { InventoryPanel } from '@core/components/InventoryPanel';
 import { HealthBar } from '@core/components/HealthBar';
 import { Toaster } from '@core/components/Toaster';
@@ -40,6 +41,7 @@ function App() {
   // Refs for high-performance direct DOM updates
   const compassNeedleRef = useRef<HTMLDivElement>(null);
   const compassCoordRef = useRef<HTMLSpanElement>(null);
+  const compassClockRef = useRef<HTMLSpanElement>(null);
   const minimapBlockDisplayRef = useRef<HTMLSpanElement>(null);
 
   // Fade out the boot splash once the world is ready.
@@ -77,6 +79,20 @@ function App() {
           if (minimapBlockDisplayRef.current) {
             const text = `BLOCK [${bx}, ${by}] | world: ${state.world}`;
             if (minimapBlockDisplayRef.current.textContent !== text) minimapBlockDisplayRef.current.textContent = text;
+          }
+        }
+        // In-world clock + weather, in the dial with the coord. Dimmed at night so
+        // the readout itself says whether the cycle is running, without reading it.
+        if (compassClockRef.current) {
+          const env = loader.environmentInfo?.();
+          if (env) {
+            const line = formatClockLine(env);
+            if (compassClockRef.current.textContent !== line) compassClockRef.current.textContent = line;
+            const tone = isDark(env) ? 'text-indigo-300/60' : 'text-cyan-300/55';
+            if (!compassClockRef.current.classList.contains(tone)) {
+              compassClockRef.current.classList.remove('text-indigo-300/60', 'text-cyan-300/55');
+              compassClockRef.current.classList.add(tone);
+            }
           }
         }
         // SPP craft: mirror the open-cell selection into the bar (two-level edit).
@@ -143,7 +159,12 @@ function App() {
         </div>
       )}
 
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-start pointer-events-none">
+      {/* pr-16 reserves the right-edge ActionRail's lane. The rail is centred
+          (top-1/2), so on a short viewport its top reaches up into the compass and
+          clips the dial's readout — which only became visible once the readout got
+          a second, wider line (the clock). Reserving the lane keeps the layout the
+          same at every window height instead of only breaking at small ones. */}
+      <div className="absolute top-0 left-0 right-0 z-10 p-4 pr-16 flex justify-between items-start pointer-events-none">
         {/* Pure label — must NOT intercept clicks meant for engine UI beneath. */}
         <div className="pointer-events-none select-none">
           <span className="text-[10px] font-black tracking-[0.3em] text-cyan-400/70 uppercase">Septopus · Desktop</span>
@@ -154,6 +175,7 @@ function App() {
         <Compass
           ref={compassNeedleRef}
           coordRef={compassCoordRef}
+          clockRef={compassClockRef}
           onClick={() => setShowMinimap(true)}
         />
       </div>

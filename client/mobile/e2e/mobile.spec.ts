@@ -183,6 +183,12 @@ test('移动壳:出生渲染 → 摇杆走路 → 触屏拖拽转视角 → JUMP
     await expect(page.getByTestId('m-view-toggle')).toHaveAttribute('aria-label', /第一人称/);
     await page.getByTestId('m-view-toggle').tap();
 
+    // Where AND when: the compass block carries the in-world clock + weather next
+    // to the block coord (MiniCompass → loader.environmentInfo). Format is pinned
+    // because it is the readout a player checks to see whether the day/night cycle
+    // is running at all.
+    await expect(page.getByTestId('mini-clock')).toHaveText(/^\d{2}:\d{2} [晴阴雨雪]\d?$/);
+
     // The map is still reachable from the compass too (glance up, tap, look).
     await page.getByTestId('mini-compass').tap();
     await expect(page.getByTestId('map2d')).toBeVisible();

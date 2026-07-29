@@ -133,6 +133,12 @@ export class EnvironmentSystem implements ISystem {
     private visSun = 1.9;                   // smoothed directional intensity
     private visAmb = 0.05;                  // smoothed ambient intensity
     private visOvercast = 0;                // smoothed overcast [0..1]
+    /** Last smoothstepped day factor (0 = night … 1 = full day) — the same value the
+     *  sun, sky and IBL ride on. Read-only observation surface for Engine
+     *  .environmentInfo() and the HUD clock; nothing here consumes it. */
+    private visDayF = 1;
+    /** @see visDayF */
+    public get dayFactor(): number { return this.visDayF; }
     /** Fog far plane = the streaming reach; fixed at construction, never weathered. */
     private fogFar = 0;
     /** Cached player entity for the fill light's anchor (see updatePlayerLight). */
@@ -264,6 +270,7 @@ export class EnvironmentSystem implements ISystem {
             const s = Math.sin(this.visAngle);
             const t = Math.min(1, Math.max(0, (s + D.twilight) / (2 * D.twilight)));
             const dayF = t * t * (3 - 2 * t);
+            this.visDayF = dayF;
 
             // Weather → light, through ONE scalar (see OVERCAST). Chased on the
             // same envelope as everything else here: weather flips on a block

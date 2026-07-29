@@ -137,6 +137,9 @@ export class DesktopLoader implements IDataSource {
     public get playerState(): SeptopusPlayerState { return this.content.playerState; }
 
     public worldInfo(): { id: number; nickname: string } { return this.content.worldInfo(); }
+    /** In-world clock + weather for the HUD (engine门面, not an ECS walk). Null
+     *  before the world boots. @see Engine.environmentInfo */
+    public environmentInfo() { return this.engine?.environmentInfo?.() ?? null; }
     /** The live world's geometry (grid extent, block size, height granularity)
      *  — read this instead of assuming 4096 / 16. See WorldContent.worldMetrics. */
     public get worldMetrics(): WorldMetrics { return this.content.worldMetrics; }

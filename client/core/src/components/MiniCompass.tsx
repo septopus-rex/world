@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { Coords } from '@engine/core/utils/Coords';
+import { formatClockLine, isDark } from './WorldClock';
 
 /**
- * MiniCompass — top-right compact compass + a readout of the current block
- * coordinate and world id. A clean two-tone needle points to true NORTH (it
- * rotates opposite the player heading); a fixed tick at the top marks the way
- * you face. Self-contained: its own rAF spins the needle (loader.getPlayerRotationY
- * → Coords.engineYawToHeading) and refreshes the coord (loader.playerState.block)
- * / world (loader.worldInfo()). Tapping opens the 2D map when `onOpenMap` is set.
+ * MiniCompass — top-right compact compass + a readout of WHERE and WHEN: the
+ * current block coordinate, the world id, and the in-world clock + weather. A
+ * clean two-tone needle points to true NORTH (it rotates opposite the player
+ * heading); a fixed tick at the top marks the way you face. Self-contained: its
+ * own rAF spins the needle (loader.getPlayerRotationY → Coords.engineYawToHeading)
+ * and refreshes the coord (loader.playerState.block) / world (loader.worldInfo())
+ * / clock (loader.environmentInfo()). Tapping opens the 2D map when `onOpenMap`
+ * is set.
+ *
+ * The clock is in this block rather than its own corner because it answers the
+ * same question the coordinate does — "where and when am I" — and because a
+ * player who thinks the world is stuck at night needs the two side by side to
+ * see that the hour is in fact moving.
  */
 export function MiniCompass({ loader, onOpenMap }: { loader: any; onOpenMap?: () => void }) {
     const needle = useRef<HTMLDivElement>(null);
     const [coord, setCoord] = useState('--, --');
     const [world, setWorld] = useState<{ id: number; nickname: string }>({ id: 0, nickname: '' });
+    const [clock, setClock] = useState<{ line: string; dark: boolean }>({ line: '--:--', dark: false });
     const raf = useRef<number>(0);
 
     useEffect(() => {
@@ -27,6 +36,12 @@ export function MiniCompass({ loader, onOpenMap }: { loader: any; onOpenMap?: ()
                 if (b) { const c = `${b[0]}, ${b[1]}`; setCoord((p) => (p === c ? p : c)); }
                 const wi = loader.worldInfo?.();
                 if (wi) setWorld((p) => (p.id === wi.id && p.nickname === wi.nickname ? p : wi));
+                const env = loader.environmentInfo?.();
+                if (env) {
+                    const line = formatClockLine(env);
+                    const dark = isDark(env);
+                    setClock((p) => (p.line === line && p.dark === dark ? p : { line, dark }));
+                }
             }
             raf.current = requestAnimationFrame(tick);
         };
@@ -57,6 +72,10 @@ export function MiniCompass({ loader, onOpenMap }: { loader: any; onOpenMap?: ()
             </button>
             <div data-testid="mini-coord" className="px-2 py-0.5 rounded-lg bg-black/45 border border-white/10 backdrop-blur text-right leading-tight pointer-events-none">
                 <div className="text-[11px] font-mono font-black text-cyan-200 tracking-tight">{coord}</div>
+                <div
+                    data-testid="mini-clock"
+                    className={`text-[10px] font-mono font-bold tracking-tight ${clock.dark ? 'text-indigo-300/70' : 'text-amber-200/70'}`}
+                >{clock.line}</div>
                 <div className="text-[8px] font-mono text-cyan-400/45">
                     world {world.id}{world.nickname ? ` · ${world.nickname}` : ''}
                 </div>

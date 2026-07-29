@@ -330,6 +330,40 @@ export class Engine {
         if (env?.onNewBlock) env.onNewBlock(this.world, height, hash, intervalSeconds);
     }
 
+    /**
+     * Current in-world time + weather — the read side of the environment, for HUDs
+     * and probes. The client must not walk the ECS for this (same reason
+     * perfInfo/avatarInfo exist): the component layout is engine-internal.
+     *
+     * `dayFactor` is the SMOOTHSTEPPED twilight factor the sun, sky and IBL all
+     * ride on (0 = night, 1 = full day) — not a function of `hour` you could
+     * recompute outside, since it follows the visual sun angle which CHASES the
+     * clock. It is what answers "is it actually dark right now", which neither the
+     * hour (dark can also be weather) nor the weather (dark can also be night)
+     * answers on its own.
+     */
+    public environmentInfo(): {
+        hour: number; minute: number; second: number;
+        year: number; month: number; day: number;
+        weather: string; weatherGrade: number;
+        dayFactor: number; height: number;
+    } | null {
+        const world = this.world;
+        if (!world) return null;
+        const eid = world.getEntitiesWith(['EnvironmentStateComponent'])[0];
+        if (eid === undefined) return null;
+        const s = world.getComponent<any>(eid, 'EnvironmentStateComponent');
+        if (!s) return null;
+        const env = world.systems.findSystemByName('EnvironmentSystem') as any;
+        return {
+            hour: s.hour, minute: s.minute, second: s.second,
+            year: s.year, month: s.month, day: s.day,
+            weather: s.weatherCategory, weatherGrade: s.weatherGrade,
+            dayFactor: env?.dayFactor ?? 1,
+            height: s.currentHeight,
+        };
+    }
+
     /** Switch the camera between first-person and third-person (slight top-down).
      *  The dolly eases over ~0.3 s; pass `immediate` to snap it (screenshot rigs
      *  and pixel probes that sample the very next frame). */
