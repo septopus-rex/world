@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RenderHandle } from '../core/types/Adjunct';
 import { isolateMaterial } from './MaterialUtils';
+import { paintPlate } from './TextPlate';
 
 /** Per-sprite label geometry, stashed on the sprite as observable metadata: what
  *  the sizing decision was made of. Read by e2e (label-proximity.spec) to check
@@ -136,6 +137,56 @@ export class MediaScreens {
         if (opts.autoplay !== false) {
             video.play().catch(() => { /* autoplay may need a gesture — click-to-play is P1 */ });
         }
+    }
+
+    /** Canvas height for a plate texture, px. The plate is ~0.25 m tall on a
+     *  reference book, so this is ~750 px/m — above the 512 px/m texture baseline,
+     *  and above the ~140 px the plate covers on screen even pressed up against it.
+     *  Higher buys nothing and every book carries two of these. */
+    private static readonly PLATE_TEX_H = 192;
+
+    /**
+     * Engrave text onto a mesh's face — the e4 book's cover title (see
+     * core/types/Adjunct PlateConfig for why the title lives on the cover rather
+     * than on a billboard over it).
+     *
+     * The canvas aspect is derived from the mesh's own box dimensions so the
+     * letters are never stretched: the plate is a thin box, its thinnest axis is
+     * the face normal, and the remaining two give the face. Painted on a
+     * clone-on-write material (the plaque's colour material is shared by every
+     * other brass part in the world) and recorded on userData so removeHandle
+     * frees the texture — Material.dispose does NOT free its map.
+     * Headless has no canvas → no-op, like the rest of this class.
+     */
+    attachTextPlate(handle: RenderHandle, text: string): void {
+        const mesh = handle as THREE.Mesh;
+        if (!mesh || !(mesh as any).isMesh || !text || typeof document === 'undefined') return;
+        const p = (mesh.geometry as THREE.BoxGeometry)?.parameters as
+            { width: number; height: number; depth: number } | undefined;
+        if (!p) return;
+        // Face = the two axes that are not the thinnest. BoxGeometry's ±Z and ±Y
+        // faces both run U along X; the ±X faces run U along Z.
+        const { width: bw, height: bh, depth: bd } = p;
+        const aspect = bw <= bh && bw <= bd ? bd / bh      // thin along X → face is Z×Y
+            : bh <= bd ? bw / bd                           // thin along Y → face is X×Z
+                : bw / bh;                                 // thin along Z → face is X×Y
+        if (!Number.isFinite(aspect) || aspect <= 0) return;
+
+        const h = MediaScreens.PLATE_TEX_H;
+        const w = Math.max(8, Math.round(h * aspect));
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const layout = paintPlate(ctx, w, h, text);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        (tex as any).colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 4;                 // read at a glancing angle more often than head-on
+        const mat = isolateMaterial(mesh);
+        mat.map = tex;
+        mat.needsUpdate = true;
+        (mesh.userData ??= {}).__plate = { texture: tex, text, fontPx: layout.fontPx, lines: layout.lines };
     }
 
     /**

@@ -1,4 +1,4 @@
-import { STDObject, AdjunctAttribute, MaterialConfig, RenderObject } from '../../core/types/Adjunct';
+import { STDObject, AdjunctAttribute, MaterialConfig, RenderObject, PlateConfig } from '../../core/types/Adjunct';
 import { ContextMenuItem, FormGroup } from '../../core/types/EditTask';
 import { resolveSurface } from '../../core/utils/Palette';
 import { Coords } from '../../core/utils/Coords';
@@ -113,6 +113,8 @@ export interface AdjunctPart {
     unlit?: boolean;
     /** Media directive (audio emitter / video screen) — put it on ONE part. */
     media?: any;
+    /** Engrave text on this part's face (render layer rasterises it — book title). */
+    plate?: PlateConfig;
 }
 
 /** Index of the row's thinnest axis in Septopus order [E, N, Alt] — the panel
@@ -148,9 +150,20 @@ export function composeParts(row: STDObject, elevation: number, parts: AdjunctPa
                 ...(p.texture != null ? { texture: p.texture, color: 0xffffff } : {}),
                 ...(surface ? { color: surface.color, roughness: surface.roughness, metalness: surface.metalness } : {}),
                 ...(p.texture != null ? { color: 0xffffff } : {}),
+                // An engraved plate brings its OWN rasterised image, so the palette
+                // entry only decides the FEEL: drop the tint (a brass base colour
+                // would stain the whole canvas gold) and pull metalness well down —
+                // at brass's 0.85 a standard material keeps almost no diffuse term,
+                // so the engraved letters would show only where something happens to
+                // reflect and go black at night. Glossy-but-diffuse reads as a
+                // lacquered label and stays legible in every lighting state.
+                // `fit` maps the image 0..1 onto each face; size-derived tiling
+                // would repeat the title across the plate.
+                ...(p.plate ? { color: 0xffffff, fit: true, roughness: 0.45, metalness: 0.2 } : {}),
                 ...(p.unlit ? { unlit: true } : {}),
             },
             ...(p.media ? { media: p.media } : {}),
+            ...(p.plate ? { plate: p.plate } : {}),
             animate: row.animate,
         } as RenderObject;
     });

@@ -109,6 +109,42 @@ describe('functional adjuncts — the authored texture lands on the face', () =>
             'the frame must not be wallpapered with the QR code').toBe(true);
     });
 
+    it('e4 book: an authored title is engraved on BOTH cover plates', () => {
+        // The title used to hang over the book on a billboard sprite; it now rides
+        // on the plate as a `plate` directive that AdjunctFactory hands to the
+        // render layer. Both covers, because a world object gets approached from
+        // either side and the row carries no notion of a front.
+        const def = getBuiltinAdjunct(AdjunctType.Book)! as any;
+        const std = def.attribute.deserialize(
+            [[0.7, 0.2, 0.9], [8, 8, 1], [0, 0, 0], 0, [1, 1], 0, 0, ['p'], '  ⑪ 水 · 光  ']);
+        const parts: RenderObject[] = def.transform.stdToRenderData([std], 0);
+        const plates = parts.filter((p) => (p as any).plate);
+        expect(plates.length).toBe(2);
+        for (const p of plates) {
+            expect((p as any).plate.text).toBe('⑪ 水 · 光');       // trimmed
+            // `fit` is load-bearing: without it MeshFactory tiles by size and the
+            // title repeats across the plate. The white tint keeps the brass base
+            // colour from staining the canvas, and metalness stays low so the
+            // letters survive on the diffuse term at night (see _shared.ts).
+            expect(p.material?.fit).toBe(true);
+            expect(p.material?.color).toBe(0xffffff);
+            expect(p.material?.metalness).toBeLessThan(0.5);
+        }
+    });
+
+    it('e4 book: an untitled book keeps the small blank plaque and engraves nothing', () => {
+        const def = getBuiltinAdjunct(AdjunctType.Book)! as any;
+        const mk = (title: any) => def.transform.stdToRenderData(
+            [def.attribute.deserialize([[0.7, 0.2, 0.9], [8, 8, 1], [0, 0, 0], 0, [1, 1], 0, 0, ['p'], title])], 0);
+        const blank: RenderObject[] = mk('   ');
+        expect(blank.some((p) => (p as any).plate)).toBe(false);
+        expect(blank.length).toBe(6);                                // same part count either way
+        // The titled plate is the bigger one — it has to carry text.
+        const titled = mk('⑪ 水 · 光');
+        const area = (ps: RenderObject[]) => ps[4].params.size[0] * ps[4].params.size[1] * ps[4].params.size[2];
+        expect(area(titled)).toBeGreaterThan(area(blank));
+    });
+
     it('e4 book: a cover texture lands on both covers only', () => {
         const def = getBuiltinAdjunct(AdjunctType.Book)! as any;
         const std = def.attribute.deserialize([[0.7, 0.2, 0.9], [8, 8, 1], [0, 0, 0], 0, [1, 1], 0, 0, ['p'], 'T']);

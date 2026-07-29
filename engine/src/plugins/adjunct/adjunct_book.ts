@@ -97,6 +97,20 @@ const transform: AdjunctTransform = {
             const COVER = config.color;         // warm leather
             const SPINE = 0x6b4420;             // the same leather in shadow
             const tex = row.material?.texture ? String(row.material.texture) : undefined;
+
+            // The title plate. With a title authored it IS the title — the render
+            // layer engraves the text onto it — so it grows to a size a reader can
+            // actually read from arm's length, and the book stops needing a floating
+            // caption over its head. Untitled books keep the small blank plaque,
+            // which is there for the specular break, not for information.
+            const title = typeof row.title === 'string' ? row.title.trim() : '';
+            const PLATE = title
+                ? { long: 0.28, edge: 0.72, at: 0.18, off: 0.06 }
+                : { long: 0.12, edge: 0.45, at: 0.22, off: 0 };
+            // Offset off the spine side: a cover label that runs into the spine
+            // reads as a misprint. (The blank plaque is centred, as before.)
+            const plate = title ? { text: title, style: 'label' as const } : undefined;
+
             return composeParts(row, elevation, [
                 // Covers — the authored texture (if any) belongs here.
                 { size: v(1, { [t]: 0.14 }), at: v(0, { [t]: -0.43 }), color: COVER, texture: tex, min: 0.008 },
@@ -113,12 +127,14 @@ const transform: AdjunctTransform = {
                 // sides because a world object gets approached from either
                 // direction and the row carries no notion of a front.
                 {
-                    size: v(0.05, { [long]: 0.12, [edge]: 0.45, [t]: 0.05 }),
-                    at: v(0, { [t]: 0.5, [long]: 0.22 }), color: 12, min: 0.004,   // 12 = brass
+                    size: v(0.05, { [long]: PLATE.long, [edge]: PLATE.edge, [t]: 0.05 }),
+                    at: v(0, { [t]: 0.5, [long]: PLATE.at, [edge]: PLATE.off }),
+                    color: 12, min: 0.004, plate,                                  // 12 = brass
                 },
                 {
-                    size: v(0.05, { [long]: 0.12, [edge]: 0.45, [t]: 0.05 }),
-                    at: v(0, { [t]: -0.5, [long]: 0.22 }), color: 12, min: 0.004,
+                    size: v(0.05, { [long]: PLATE.long, [edge]: PLATE.edge, [t]: 0.05 }),
+                    at: v(0, { [t]: -0.5, [long]: PLATE.at, [edge]: PLATE.off }),
+                    color: 12, min: 0.004, plate,
                 },
             ]);
         });

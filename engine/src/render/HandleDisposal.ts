@@ -48,6 +48,19 @@ export function disposeMeshResources(child: any): void {
     if (Array.isArray(mat)) mat.forEach(one); else one(mat);
 }
 
+/**
+ * Free the canvas texture of an engraved title plate (MediaScreens.attachTextPlate).
+ * Needs its own pass because `Material.dispose()` does NOT free `material.map` —
+ * the plate's canvas is per-instance (one per title string), so nothing else
+ * will ever release it.
+ */
+export function disposePlateResources(child: any): void {
+    const plate = child?.userData?.__plate;
+    if (!plate) return;
+    plate.texture?.dispose?.();
+    child.userData.__plate = undefined;
+}
+
 /** Stop + free any A/V media attached to a mesh (audio emitter / video screen). */
 export function disposeMediaResources(child: any): void {
     const m = child?.userData?.__media;

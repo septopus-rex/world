@@ -18,7 +18,7 @@ import { SceneLighting } from './SceneLighting';
 import { PlayerLighting } from './PlayerLighting';
 import { SkyEnvironment } from './SkyEnvironment';
 import { Picking } from './Picking';
-import { disposeMeshResources, disposeMediaResources } from './HandleDisposal';
+import { disposeMeshResources, disposeMediaResources, disposePlateResources } from './HandleDisposal';
 
 export interface RenderEngineConfig {
     containerId: string;
@@ -472,6 +472,7 @@ export class RenderEngine {
         for (const child of toRemove) {
             this.worldRoot.remove(child);
             // Same shared-resource guard as removeHandle (don't dispose cached/shared).
+            child.traverse?.(disposePlateResources);
             disposeMeshResources(child);
         }
     }
@@ -864,6 +865,7 @@ export class RenderEngine {
         // Recursive disposal, guarded against shared resources (see render/HandleDisposal).
         obj.traverse((child) => {
             disposeMediaResources(child);   // stop <video>/PositionalAudio first
+            disposePlateResources(child);   // free an engraved title's canvas texture
             disposeMeshResources(child);
             if ((child as any).isSprite) {               // floating label (attachLabel)
                 const m = (child as THREE.Sprite).material as THREE.SpriteMaterial;
@@ -875,6 +877,11 @@ export class RenderEngine {
     /** Floating billboard title label for interactive panel adjuncts (render/MediaScreens). */
     public attachLabel(handle: RenderHandle, text: string, heightOffset = 1.0): void {
         this.media.attachLabel(handle, text, heightOffset);
+    }
+
+    /** Engrave a title onto a part's face — the e4 book cover plate (render/MediaScreens). */
+    public attachTextPlate(handle: RenderHandle, text: string): void {
+        this.media.attachTextPlate(handle, text);
     }
 
     public dispose(): void {

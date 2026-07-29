@@ -98,6 +98,12 @@ export class AdjunctFactory {
                 if (renderItem.media?.source) {
                     this.scheduleMediaAttach(world, meshGroup, mesh, renderItem.media);
                 }
+
+                // Engraved text (book cover title): no resource to resolve, so it is
+                // painted synchronously right here — nothing to be evicted mid-load.
+                if (renderItem.plate?.text) {
+                    (world.renderEngine as any).attachTextPlate?.(mesh, renderItem.plate.text);
+                }
             }
         } catch (error) {
             console.error(`[AdjunctFactory] Failed to assemble mesh for adjunct.`, error);

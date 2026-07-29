@@ -76,6 +76,24 @@ export interface MediaConfig {
     refDistance?: number;
 }
 
+/**
+ * Text ENGRAVED on a render part's face (the e4 book's cover title plate).
+ * The plugin declares the string purely; the render layer rasterises it to a
+ * canvas texture and assigns it as that part's map — same shape as MediaConfig,
+ * and for the same reason: no Three/DOM in core.
+ *
+ * Why a part and not the floating billboard label: a caption hovering over a
+ * book is a HUD annotation, not an object — it reads as a game marker parked in
+ * front of the scene. A real book carries its title on its cover, so the title
+ * goes where the eye already expects it and the object stops needing a caption.
+ */
+export interface PlateConfig {
+    /** The line to engrave. Wrapped and size-fitted by the render layer. */
+    text: string;
+    /** Plate treatment. 'label' = a bookbinder's paper label, ink on ivory. */
+    style?: 'label';
+}
+
 export interface RenderObject {
     type: string; // Keep as string for now to support custom types, but MeshType is preferred
     index?: number;
@@ -87,6 +105,8 @@ export interface RenderObject {
     material?: MaterialConfig;
     /** A/V media to attach to this part's mesh (audio emitter / video screen). */
     media?: MediaConfig;
+    /** Text to engrave on this part's face (book title plate). */
+    plate?: PlateConfig;
     stop?: any; // ColliderMaterial
     animate?: any; // AnimateRef
     event?: any;

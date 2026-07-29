@@ -59,10 +59,15 @@ export class AdjunctSystem implements ISystem {
         world.renderEngine.setObjectUserData(result.handle, "entityId", entityId);
         world.renderEngine.setRaycastable(result.handle, true);
 
-        // Floating title label for interactive panel adjuncts (e4 book / e5 board
-        // / e1 link) — makes them identifiable in-world ("which one is the book?").
-        // Only when a title is authored, so dense worlds can opt out by omitting it.
-        const LABELED = new Set<number>([AdjunctType.Book, AdjunctType.Board, AdjunctType.Link]);
+        // Floating title label for interactive panel adjuncts (e5 board / e1 link)
+        // — makes them identifiable in-world ("which one is the board?"). Only when
+        // a title is authored, so dense worlds can opt out by omitting it.
+        //
+        // e4 book is NOT in this set: a book carries its title where a book carries
+        // its title, engraved on the cover plate (adjunct_book → PlateConfig →
+        // MediaScreens.attachTextPlate). A caption floating over a tome reads as a
+        // quest marker parked in front of the world; on the cover it reads as a book.
+        const LABELED = new Set<number>([AdjunctType.Board, AdjunctType.Link]);
         if (LABELED.has(std.typeId) && typeof std.title === 'string' && std.title.trim()) {
             const top = (Number(std.z) || 0.9) / 2 + 0.45;   // clear the panel's top
             (world.renderEngine as any).attachLabel?.(result.handle, std.title.trim(), top);

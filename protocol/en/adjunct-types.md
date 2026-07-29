@@ -359,12 +359,21 @@ text, but a book is a **linear reader on an object** whereas dialogue is a
 | 5 | `animation` | `null` | Septopus animation |
 | 6 | `stop` | `null` | non-null ⇒ solid |
 | 7 | `pages` | `[]` | **the pages**: an inline `string[]` (dev plaintext) **or** a resource id / **IPFS CID** that resolves to a `string[]` (production; large text stays off-block, same as e2/e3 `source`). An empty book is inert (not an error) |
-| 8 | `title` | `''` | text shown in the reader chrome |
+| 8 | `title` | `''` | text shown in the reader chrome, **and engraved on the cover plate** (see below) |
 
 Paging is a **pure view action** (the page index is client state, same discipline
 that keeps e1's `window.open` in the client); the engine only renders the tome +
 carries the text and emits the generic `interact.primary` on click. The page
 index is clamped to `[0, M-1]` (no wrap).
+
+**Where the title sits (revised 2026-07-29)**: when `title` is non-empty the
+render layer typesets it onto the **title plate on both covers** (which grows to
+hold the text); when empty the plate stays a small blank plaque. The title no
+longer floats above the tome — billboards are left to e5/e1, which are
+wall-mounted panels with no cover to print on. The size is solved from the plate's
+dimensions and the string, so a book reads the same at any authored `size`; lines
+break **at whitespace by preference**, and inside a word only when one word is
+wider than a whole line.
 
 **Example row** (a three-page book, `e4`, inline plaintext):
 
