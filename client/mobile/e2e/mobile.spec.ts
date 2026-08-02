@@ -153,11 +153,11 @@ test('移动壳:出生渲染 → 摇杆走路 → 触屏拖拽转视角 → JUMP
     // silently collapsed to a column when one slot was empty) would break this
     // while every individual button still "worked".
     const padBoxes = Object.fromEntries(await Promise.all(
-        (['m-edit-toggle', 'm-view-toggle', 'm-flashlight', 'm-jump'] as const)
+        (['m-create-toggle', 'm-view-toggle', 'm-flashlight', 'm-jump'] as const)
             .map(async (id) => [id, (await page.getByTestId(id).boundingBox())!] as const)));
     const midX = (b: { x: number; width: number }) => b.x + b.width / 2;
     const midY = (b: { y: number; height: number }) => b.y + b.height / 2;
-    const [top, left, right, bottom] = [padBoxes['m-edit-toggle'], padBoxes['m-view-toggle'],
+    const [top, left, right, bottom] = [padBoxes['m-create-toggle'], padBoxes['m-view-toggle'],
         padBoxes['m-flashlight'], padBoxes['m-jump']];
     expect(Math.abs(midX(top) - midX(bottom)), 'top/bottom share a vertical axis').toBeLessThan(2);
     expect(Math.abs(midY(left) - midY(right)), 'left/right share a horizontal axis').toBeLessThan(2);

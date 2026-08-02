@@ -225,6 +225,10 @@ const GLASS_ON_FILL = 'radial-gradient(125% 125% at 50% 0%, rgba(255,231,168,0.4
  * what makes the lit torch key legible: the glyph turns amber with its key.
  */
 const ICON = {
+    /** Create — a plus: the entry that OPENS the creation menu (block edit now,
+     *  more tools later). Not a pencil: the pencil means "edit this block" and
+     *  now lives on the menu item itself. */
+    create: 'M12 5v14 M5 12h14',
     edit: 'M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z M14.5 6.5l3 3',
     /** Third person: a figure seen from outside. */
     third: 'M12 8.2a2.7 2.7 0 1 0 0-5.4 2.7 2.7 0 0 0 0 5.4z M5.6 20.5a6.4 6.4 0 0 1 12.8 0',
@@ -250,23 +254,25 @@ const PAD_SLOT = {
     right: { left: PAD_SPAN - PAD_BTN, top: (PAD_SPAN - PAD_BTN) / 2 },
 } as const;
 
-function PadButton({ slot, testId, label, children, onClick, onPointerDown, active, pressed, primary }: {
+function PadButton({ slot, testId, label, children, onClick, onPointerDown, active, pressed, expanded, primary }: {
     slot: keyof typeof PAD_SLOT;
     testId: string;
     label: string;
     children: React.ReactNode;
     onClick?: () => void;
     onPointerDown?: (e: React.PointerEvent) => void;
-    /** Lit (torch on). */
+    /** Lit (torch on / menu open). */
     active?: boolean;
     /** Reported as aria-pressed — only for real toggles. */
     pressed?: boolean;
+    /** Reported as aria-expanded — only for keys that open a menu. */
+    expanded?: boolean;
     /** The one you press most; slightly stronger border. */
     primary?: boolean;
 }) {
     const pos = PAD_SLOT[slot];
     return (
-        <button data-testid={testId} aria-label={label} aria-pressed={pressed}
+        <button data-testid={testId} aria-label={label} aria-pressed={pressed} aria-expanded={expanded}
             onClick={onClick} onPointerDown={onPointerDown}
             style={{
                 left: pos.left, top: pos.top, width: PAD_BTN, height: PAD_BTN,
@@ -293,8 +299,9 @@ function PadButton({ slot, testId, label, children, onClick, onPointerDown, acti
  *   · tap                   → browser-synthesized click → the raycast interact path
  *   · three CornerBadges framing the joystick = things you OPEN — map (top-left),
  *     bag (top-right), avatar (bottom-right); they grey out while steering
- *   · right-hand action cross = things you DO — edit (top), camera view (left),
- *     torch (right), JUMP (bottom, loader.triggerPlayerJump)
+ *   · right-hand action cross = things you DO — 创作 menu (top; block edit today,
+ *     every future creation tool joins it), camera view (left), torch (right),
+ *     JUMP (bottom, loader.triggerPlayerJump)
  *
  * Interaction surface (dialogue / book / HP / toasts / game HUDs / leave dialog)
  * is the SAME shared component set the desktop uses — shells only compose.
@@ -309,6 +316,12 @@ function MobileApp() {
     const [torchOn, setTorchOn] = useState(false);
     /** True while the joystick is being dragged — greys the corner badges out. */
     const [steering, setSteering] = useState(false);
+    // 创作 menu (pad top slot). One item today — block edit — but it is the
+    // designated single entry every future creation tool joins (SPP sandbox if
+    // it ever gets touch-ready, AI authoring, …), instead of hunting for a free
+    // slot on a cross whose shape says "exactly four".
+    const [createOpen, setCreateOpen] = useState(false);
+    useEffect(() => { setCreateOpen(false); }, [mode]);
     // Edit-bar palette gate: the engine's full palette (20+ type buttons)
     // floods a phone screen, so it stays hidden (CSS in index.css keyed off
     // .m-palette-open on the app root) until the bar's 添加 toggle opens it.
@@ -380,12 +393,12 @@ function MobileApp() {
                 </div>
             )}
 
-            {/* (Edit entry moved into the action pad's top slot — see below. The
-                block you STAND ON is the edit target: the engine locks it on
-                entry (EditSessionManager) and the session survives walking into
-                neighbouring blocks to inspect the build. Gated through
-                loader.canEditBlock() — the ownership seam, always true until
-                ownership lands.) */}
+            {/* (Edit entry lives in the 创作 menu opened from the action pad's
+                top slot — see below. The block you STAND ON is the edit target:
+                the engine locks it on entry (EditSessionManager) and the session
+                survives walking into neighbouring blocks to inspect the build.
+                Gated through loader.canEditBlock() — the ownership seam, always
+                true until ownership lands.) */}
 
             {/* ── edit bar: the ONE home for edit functions on this shell (they
                    accumulate here as editing grows — the engine's own DOM UI
@@ -499,9 +512,13 @@ function MobileApp() {
                         style={{ left: -PLATE_PAD, top: -PLATE_PAD, filter: `drop-shadow(${PLATE_SHADOW})` }}>
                         <path d={PAD_PLATE} fill={PLATE_FILL} stroke={PLATE_STROKE} strokeWidth="1" />
                     </svg>
+                    {/* 创作 — not an action itself but the door to all of them:
+                        tapping it opens the creation menu above the pad. Amber
+                        while open, same "this is ON" glass the torch uses. */}
                     {mode !== 'game' && mode !== 'edit' && loader?.canEditBlock() && (
-                        <PadButton slot="top" testId="m-edit-toggle" label="编辑此块"
-                            onClick={() => setMode('edit')}><LineIcon d={ICON.edit} /></PadButton>
+                        <PadButton slot="top" testId="m-create-toggle" label="创作"
+                            active={createOpen} expanded={createOpen}
+                            onClick={() => setCreateOpen(o => !o)}><LineIcon d={ICON.create} /></PadButton>
                     )}
                     <PadButton slot="left" testId="m-view-toggle"
                         label={view === 'third' ? '第三人称视角' : '第一人称视角'}
@@ -522,6 +539,25 @@ function MobileApp() {
                         onPointerDown={(e) => { e.preventDefault(); loader?.triggerPlayerJump(); }}>
                         <LineIcon d={ICON.jump} />
                     </PadButton>
+                </div>
+            )}
+
+            {/* ── 创作 menu: what the pad's top key opens. Stacked right above the
+                   pad and sharing the plate's right edge, so the menu visibly
+                   belongs to the key that summoned it. Items reuse the pad's line
+                   icons (menu buttons carry text, so the icon is a prefix, not
+                   the whole label). Selecting an item changes mode, and the
+                   mode-change effect closes the menu — no manual bookkeeping. ── */}
+            {ready && createOpen && mode !== 'game' && mode !== 'edit' && (
+                <div data-testid="m-create-menu" className="absolute z-30 pointer-events-auto"
+                    style={{ right: PAD_RIGHT - PLATE_PAD, bottom: PAD_BOTTOM + PAD_SPAN + PLATE_PAD + 10 }}>
+                    <div className="flex flex-col gap-1.5 px-2 py-2 rounded-2xl bg-black/55 border border-white/20 backdrop-blur-md shadow-2xl">
+                        <button data-testid="m-create-edit" aria-label="编辑此块"
+                            onClick={() => setMode('edit')}
+                            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-black tracking-wider text-white/90 bg-white/10 border border-white/25 active:scale-95">
+                            <LineIcon d={ICON.edit} /> 编辑此块
+                        </button>
+                    </div>
                 </div>
             )}
 

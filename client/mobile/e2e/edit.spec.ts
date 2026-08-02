@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { waitForWorldReady, stepEngine } from './helpers';
 
-// Block-scoped editing on the MOBILE shell (design 2026-07-21, edit bar 07-22):
-//   · the EDIT button (right-thumb stack) enters Edit for the block you STAND ON
-//     — the engine locks it as the session target (EditSessionManager) — and
-//     hands the screen over to the EDIT BAR (bottom-centre), the one home for
-//     edit functions on this shell: 退出编辑 + 添加 for now, more later
+// Block-scoped editing on the MOBILE shell (design 2026-07-21, edit bar 07-22,
+// 创作 menu 08-02):
+//   · the pad's top key is 创作 — it opens the creation MENU (the one entry all
+//     creation tools share); its 编辑此块 item enters Edit for the block you
+//     STAND ON — the engine locks it as the session target (EditSessionManager)
+//     — and hands the screen over to the EDIT BAR (bottom-centre), the one home
+//     for edit functions on this shell: 退出编辑 + 添加 for now, more later
 //   · the engine's own DOM palette stays COLLAPSED until 添加 opens it (20+
 //     type buttons flood a phone screen); picking a type arms it and
 //     auto-collapses the palette so the world is back for the surface tap
@@ -23,13 +25,18 @@ test('移动壳编辑:EDIT 锁定脚下块 → edit bar 开合 palette 摆放 �
     await page.evaluate(() => (window as any).loader.engine.stop());
     await stepEngine(page, 90); // settle: land on the ground
 
-    // ── enter Edit through the block-scoped entry button ──────────────────────
-    await expect(page.getByTestId('m-edit-toggle')).toHaveAttribute('aria-label', '编辑此块');
-    await page.getByTestId('m-edit-toggle').tap();
+    // ── enter Edit through the 创作 menu (pad top key → 编辑此块 item) ────────
+    await expect(page.getByTestId('m-create-toggle')).toHaveAttribute('aria-label', '创作');
+    await expect(page.getByTestId('m-create-menu')).toHaveCount(0);
+    await page.getByTestId('m-create-toggle').tap();
+    await expect(page.getByTestId('m-create-toggle')).toHaveAttribute('aria-expanded', 'true');
+    await page.getByTestId('m-create-edit').tap();
     await stepEngine(page, 10); // EditSystem locks the session on the next frames
     await expect(page.getByTestId('status-toggle')).toHaveAttribute('aria-label', /edit/i);
-    // The entry button hands over to the edit bar — the one home for edit tools.
-    await expect(page.getByTestId('m-edit-toggle')).toHaveCount(0);
+    // Entering Edit hands over to the edit bar — the one home for edit tools —
+    // and closes the menu with the key that opened it.
+    await expect(page.getByTestId('m-create-toggle')).toHaveCount(0);
+    await expect(page.getByTestId('m-create-menu')).toHaveCount(0);
     await expect(page.getByTestId('m-edit-bar')).toBeVisible();
 
     // The engine locked the block under the player…
@@ -124,7 +131,7 @@ test('移动壳编辑:EDIT 锁定脚下块 → edit bar 开合 palette 摆放 �
     await stepEngine(page, 10);
     await expect(page.getByTestId('status-toggle')).toHaveAttribute('aria-label', /normal/i);
     await expect(page.getByTestId('m-edit-bar')).toHaveCount(0);
-    await expect(page.getByTestId('m-edit-toggle')).toHaveAttribute('aria-label', '编辑此块');
+    await expect(page.getByTestId('m-create-toggle')).toHaveAttribute('aria-label', '创作');
 
     const survived = await page.evaluate(async ([bx, by]: number[]) => {
         const w = (window as any).loader.engine.getWorld();
