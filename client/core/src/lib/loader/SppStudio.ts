@@ -1,7 +1,7 @@
 import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { Coords } from '@engine/core/utils/Coords';
 import { saveBlockDraft } from '@engine/core/utils/BlockSerializer';
-import { SANDBOX_BLOCK, SANDBOX_CENTER, pickFace, pickFaceInCell, cellOfPoint, nextFace } from '../../scenes/sandboxScene';
+import { SANDBOX_BLOCK, SANDBOX_CENTER, GRID, pickFace, pickFaceInCell, cellAabb, cellOfPoint, nextFace } from '../../scenes/sandboxScene';
 
 /**
  * The minimal seam SppStudio needs from its host (DesktopLoader) — kept tiny so
@@ -26,12 +26,31 @@ export interface SppHost {
  * the camera ray + focus/opacity bookkeeping + the durable save.
  */
 export class SppStudio {
+    /** Overview orbit: frames the whole 12 m grid (3/4 diorama view). */
+    private static readonly ORBIT_OVERVIEW = 17;
+    /** Cell close-up orbit. Solved, not guessed: a 4 m cell's bounding sphere
+     *  (r≈3.46) at fov 45° fills the frame height at d = r/sin(22.5°) ≈ 9 —
+     *  at 8 the cell CLIPS (you're inside its face, can't read "this box is
+     *  selected"); 10.5 frames it at ~86% height with context around it. */
+    private static readonly ORBIT_CELL = 10.5;
+    /** Per-rAF-tick exponential approach factor for the camera ease. */
+    private static readonly CAM_EASE = 0.14;
+
     private _sandboxActive = false;
     private _sandboxDetach: (() => void) | null = null;
     private _sandboxDown: { x: number; y: number; t: number } | null = null;
     /** Two-level select: null = pick a cell; a number = that cell is open and
      *  only ITS faces are editable. The other cells dim while one is open. */
     private _sandboxCell: number | null = null;
+    /** The face of the open cell whose config panel is showing (null = none).
+     *  A tap on a face SELECTS it; the panel then writes [state, key] via
+     *  sandboxSetFace — the two-level choice of spp-editors.md §2.2, replacing
+     *  the old blind 4-step cycle on click (nextFace stays for the API/tests). */
+    private _sandboxFace: number | null = null;
+    /** Where the orbit is easing to: the frozen player is the orbit anchor, so
+     *  "zoom into the selected cell" = glide the anchor to the cell centre while
+     *  the radius shrinks. null = converged (user zoom keys work again). */
+    private _camGoal: { pos: [number, number, number]; radius: number } | null = null;
     private _focusRaf = 0;
 
     constructor(private host: SppHost) {}
@@ -39,6 +58,8 @@ export class SppStudio {
     public get sandboxActive(): boolean { return this._sandboxActive; }
     /** The cell currently open for face-editing, or null in cell-picking mode. */
     public get sandboxSelectedCell(): number | null { return this._sandboxCell; }
+    /** The face of the open cell selected for configuring, or null. */
+    public get sandboxSelectedFace(): number | null { return this._sandboxFace; }
 
     // ── SPP style packs (Workstream B) ───────────────────────────────────────
     /** Registered SPP style ids (built-in + external) for the style switcher. */
@@ -65,12 +86,19 @@ export class SppStudio {
         const av = pid != null ? w.getComponent(pid, 'AvatarComponent') : null;
         if (av) av.visible = false;
         this.host.setMode('observe');
-        // A 3/4 orbit framing the 12 m grid.
+        // A 3/4 orbit framing the 12 m grid — via the real API (the old
+        // `cc._obs*` field writes were a silent no-op; the state lives in
+        // CameraRig, reachable only through setObserveOrbit).
         const cc = w.systems.findSystemByName('CharacterController') as any;
-        if (cc) { cc._obsAzimuth = 0.7; cc._obsElevation = 0.7; cc._obsRadius = 22; }
+        cc?.setObserveOrbit?.(0.7, 0.7, SppStudio.ORBIT_OVERVIEW);
         // Tap (not drag) on the canvas → select a cell, or edit the open cell's face.
         const canvas = document.querySelector('canvas[data-engine]') as HTMLCanvasElement | null;
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') this.sandboxDeselect(); };
+        // Esc backs out one level at a time: face panel → cell → (stay in sandbox).
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape') return;
+            if (this._sandboxFace != null) this.sandboxSelectFace(null);
+            else this.sandboxDeselect();
+        };
         window.addEventListener('keydown', onKey);
         if (canvas) {
             const onDown = (e: MouseEvent) => { this._sandboxDown = { x: e.clientX, y: e.clientY, t: Date.now() }; };
@@ -95,8 +123,10 @@ export class SppStudio {
         // Re-assert per-cell dimming every frame: derived pieces are destroyed and
         // rebuilt on each face edit, so the opacity has to be re-applied once the
         // new meshes exist (AdjunctSystem builds them a frame after re-expand).
+        // The same tick glides the orbit toward its goal (cell zoom / overview).
         const focusTick = () => {
             if (!this._sandboxActive) return;
+            this.easeCamera();
             if (this._sandboxCell != null) this.applyCellFocus();
             this._focusRaf = requestAnimationFrame(focusTick);
         };
@@ -109,6 +139,7 @@ export class SppStudio {
         this._sandboxActive = false;
         if (this._focusRaf) { cancelAnimationFrame(this._focusRaf); this._focusRaf = 0; }
         this.sandboxDeselect();
+        this._camGoal = null; // after deselect — its refocus is moot once we leave
         this._sandboxDetach?.(); this._sandboxDetach = null;
         const w = this.host.world();
         const pid = w?.queryEntities('TransformComponent', 'InputStateComponent')[0];
@@ -143,13 +174,15 @@ export class SppStudio {
 
     /**
      * One tap on the diorama, dispatched by the two-level edit state:
-     *   - No cell open → SELECT the cell under the ray (the others dim).
-     *   - A cell open  → cycle the face of THAT cell the ray enters; a tap that
-     *     misses the open cell is ignored (it never edits a neighbour).
+     *   - No cell open → SELECT the cell under the ray; the others dim and the
+     *     orbit glides in on it.
+     *   - A cell open  → SELECT the face of THAT cell the ray enters (its config
+     *     panel opens); a tap that misses the open cell is ignored (it never
+     *     touches a neighbour). Face writes go through sandboxSetFace.
      * Returns what happened so the UI can reflect it. Pure picking lives in
      * scenes/sandboxScene.ts; here we only supply the camera ray.
      */
-    public sandboxClick(ndcX: number, ndcY: number): { kind: 'select' | 'cycle' | 'none'; cell?: number } {
+    public sandboxClick(ndcX: number, ndcY: number): { kind: 'select' | 'face' | 'none'; cell?: number; face?: number } {
         const w = this.host.world();
         if (!w) return { kind: 'none' };
         const ray = this.sandboxRay(w, ndcX, ndcY);
@@ -158,23 +191,71 @@ export class SppStudio {
         if (this._sandboxCell == null) {
             const pick = pickFace(ray.origin, ray.dir);
             if (!pick) return { kind: 'none' };
-            this._sandboxCell = pick.cellIndex;
-            this.applyCellFocus();
+            this.sandboxSelectCell(pick.cellIndex);
             return { kind: 'select', cell: pick.cellIndex };
         }
 
         const face = pickFaceInCell(ray.origin, ray.dir, this._sandboxCell);
         if (face == null) return { kind: 'none' }; // tap outside the open cell → keep it open
-        return this.sandboxCycleFace(this._sandboxCell, face)
-            ? { kind: 'cycle', cell: this._sandboxCell }
-            : { kind: 'none' };
+        this._sandboxFace = face;
+        return { kind: 'face', cell: this._sandboxCell, face };
     }
 
     /** Open a cell for face-editing without a ray (UI / tests). Pass null to close. */
     public sandboxSelectCell(cell: number | null): void {
         this._sandboxCell = cell;
+        this._sandboxFace = null;
+        this.focusCamera(cell);
         if (cell == null) this.restoreCellFocus();
         else this.applyCellFocus();
+    }
+
+    /** Select (or clear) a face of the open cell for configuring — the ray-free
+     *  seam behind the panel and the tests. No-op without an open cell. */
+    public sandboxSelectFace(face: number | null): void {
+        if (this._sandboxCell == null) { this._sandboxFace = null; return; }
+        this._sandboxFace = face;
+    }
+
+    /**
+     * The live library for the selected face: its current [state, ref] plus BOTH
+     * pools of the EFFECTIVE theme — the world style override when set (that is
+     * what's rendering), else the source's own theme. The panel lists exactly
+     * this; it never hard-codes options (spp-editors.md §2.2 "read the library").
+     * `variantKey` is the current ref resolved to a stable key (legacy numeric
+     * refs → the pool entry they index), so the UI highlights the active option.
+     */
+    public sandboxFaceOptions(): {
+        cell: number; face: number; theme: string; state: number; variantKey: string | null;
+        open: Array<{ key: string; name: string }>; closed: Array<{ key: string; name: string }>;
+    } | null {
+        const w = this.host.world();
+        if (!w || this._sandboxCell == null || this._sandboxFace == null) return null;
+        const src = this.findSandboxSource(w);
+        const cell = src?.std.cells?.[this._sandboxCell];
+        if (!cell?.faces) return null;
+        const eng = this.host.engine() as any;
+        const theme: string = eng?.getStyleOverride?.() ?? src!.std.theme ?? 'basic';
+        const open = eng?.listVariants?.(theme, 'open') ?? [];
+        const closed = eng?.listVariants?.(theme, 'closed') ?? [];
+        const cur = cell.faces[this._sandboxFace] ?? [1, 0];
+        const pool = cur[0] === 1 ? closed : open;
+        const variantKey = typeof cur[1] === 'string' ? cur[1] : (pool[cur[1]]?.key ?? null);
+        return { cell: this._sandboxCell, face: this._sandboxFace, theme, state: cur[0], variantKey, open, closed };
+    }
+
+    /** Write the selected face as [state, key] and re-expand live — the panel's
+     *  apply. Writes the STABLE key (P4), never a positional index. */
+    public sandboxSetFace(state: number, ref: number | string): boolean {
+        const w = this.host.world();
+        if (!w || this._sandboxCell == null || this._sandboxFace == null) return false;
+        const src = this.findSandboxSource(w);
+        const cell = src?.std.cells?.[this._sandboxCell];
+        if (!src || !cell?.faces) return false;
+        cell.faces[this._sandboxFace] = [state, ref];
+        w.systems.findSystemByName('BlockSystem')?.reexpandSource?.(w, src.eid);
+        this.applyCellFocus(); // re-assert dim; the focus rAF keeps it as meshes rebuild
+        return true;
     }
 
     /** Cycle one face of one cell (实→门→窗→空) on the shared b6 source and
@@ -191,11 +272,61 @@ export class SppStudio {
         return true;
     }
 
-    /** Close the open cell: stop face-editing, restore every cell to full opacity. */
+    /** Close the open cell: stop face-editing, restore every cell to full
+     *  opacity, glide the orbit back out to the overview. */
     public sandboxDeselect(): void {
         if (this._sandboxCell == null) return;
-        this._sandboxCell = null;
-        this.restoreCellFocus();
+        this.sandboxSelectCell(null);
+    }
+
+    // ── orbit focus (select = zoom in, deselect = zoom out) ─────────────────
+
+    /** Aim the orbit at a cell (or back at the grid centre for null). The frozen
+     *  player IS the orbit anchor, so framing = glide the player + shrink the
+     *  radius; easeCamera moves both a step per rAF tick. Azimuth/elevation are
+     *  left alone — the camera pushes straight in from wherever the user
+     *  orbited to, instead of snapping to a canned angle. */
+    private focusCamera(cell: number | null): void {
+        const w = this.host.world();
+        if (!w) return;
+        // Anchor (SPP-local): cell centre at mid-height, or the grid overview
+        // point. The -1 offsets the rig's +1 eye lift (see sandboxRay).
+        const spp = cell == null
+            ? SANDBOX_CENTER
+            : (() => {
+                const { min } = cellAabb(cell);
+                return [min[0] + GRID.cell / 2, min[1] + GRID.cell / 2, GRID.cell / 2 - 1] as const;
+            })();
+        const { blockWidth: bw, blockLength: bl } = w.metrics;
+        this._camGoal = {
+            // SPP-local → engine(abs): (x, y, z) ↦ (x + bxoff, z, -(y + byoff)).
+            pos: [(SANDBOX_BLOCK[0] - 1) * bw + spp[0], spp[2], -((SANDBOX_BLOCK[1] - 1) * bl + spp[1])],
+            radius: cell == null ? SppStudio.ORBIT_OVERVIEW : SppStudio.ORBIT_CELL,
+        };
+    }
+
+    /** One exponential step of the orbit glide (called from the focus rAF).
+     *  Clears the goal once converged so the user's W/S zoom works again. */
+    private easeCamera(): void {
+        const g = this._camGoal;
+        const w = this.host.world();
+        if (!g || !w) return;
+        const pid = w.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const t = pid != null ? w.getComponent(pid, 'TransformComponent') : null;
+        const cc = w.systems.findSystemByName('CharacterController') as any;
+        const obs = cc?.getObserveState?.();
+        if (!t || !obs) return;
+        const k = SppStudio.CAM_EASE;
+        let done = true;
+        for (let i = 0; i < 3; i++) {
+            const d = g.pos[i] - t.position[i];
+            if (Math.abs(d) > 0.02) { t.position[i] += d * k; done = false; }
+            else t.position[i] = g.pos[i];
+        }
+        const dr = g.radius - obs.radius;
+        if (Math.abs(dr) > 0.05) { cc.setObserveOrbit(obs.azimuth, obs.elevation, obs.radius + dr * k); done = false; }
+        else cc.setObserveOrbit(obs.azimuth, obs.elevation, g.radius);
+        if (done) this._camGoal = null;
     }
 
     /** Dim every derived piece NOT in the open cell to read as background; the

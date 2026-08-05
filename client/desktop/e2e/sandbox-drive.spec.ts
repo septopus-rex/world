@@ -29,9 +29,11 @@ async function faceTally(page: any) {
       const a = w.getComponent(eid, 'AdjunctComponent');
       if (a?.stdData?.typeId === 0x00b6 && String(a.adjunctId ?? '').includes(tag)) {
         const all = a.stdData.cells.flatMap((c: any) => c.faces);
+        // Refs are legacy indices OR stable keys (P4 dual-read) — count both.
         return {
-          nonSolid: all.filter((f: any) => !(f[0] === 1 && f[1] === 0)).length,
-          doorsWindows: all.filter((f: any) => f[0] === 1 && (f[1] === 1 || f[1] === 2)).length,
+          nonSolid: all.filter((f: any) => !(f[0] === 1 && (f[1] === 0 || f[1] === 'solid'))).length,
+          doorsWindows: all.filter((f: any) =>
+            f[0] === 1 && (f[1] === 1 || f[1] === 2 || f[1] === 'doorway' || f[1] === 'window')).length,
         };
       }
     }
@@ -70,19 +72,38 @@ test('drive the SPP sandbox through the real UI and capture each stage', async (
   await expect(page.getByTestId('close-cell'), 'first tap opened a cell for editing').toBeVisible();
   expect(await page.evaluate(() => (window as any).loader.sandboxSelectedCell), 'a cell is open').not.toBeNull();
   expect((await faceTally(page)).nonSolid, 'opening a cell does not edit it').toBe(before.nonSolid);
+  // The orbit glides in on the opened cell (zoom is the CAMERA moving, never the
+  // geometry) — wait for it so the next centre-tap aims at this cell.
+  await page.waitForFunction(() => {
+    const cc = (window as any).loader.engine.getWorld().systems.findSystemByName('CharacterController');
+    return cc.getObserveState().radius < 10.55; // ORBIT_CELL converged
+  }, undefined, { timeout: 20_000 });
+  await stepEngine(page, 3); // sync the render camera to the eased orbit before aiming taps
   await page.screenshot({ path: 'test-results/drive-2a-selected.png' });
 
-  // (3b) Tap the open cell's camera-facing faces (a tight cluster around centre,
-  // since only THIS cell is editable now) → carve doorways/windows.
-  const cluster: Array<[number, number]> = [[-26, 18], [24, 16], [0, 30], [-22, 18], [22, 18]];
-  for (const [dx, dy] of cluster) { await page.mouse.click(cx + dx, cy + dy); await stepEngine(page, 2); }
+  // (3b) Tap a face of the open cell → its config panel opens, listing the LIVE
+  // basic library (挡 solid/doorway/window · 通 empty). Nothing edited yet.
+  await page.mouse.click(cx, cy); await stepEngine(page, 2);
+  await expect(page.getByTestId('face-panel'), 'tapping a face opened its config panel').toBeVisible();
+  expect((await faceTally(page)).nonSolid, 'selecting a face does not edit it').toBe(before.nonSolid);
+  await expect(page.getByTestId('face-opt-closed-doorway')).toBeVisible();
+  await expect(page.getByTestId('face-panel-theme')).toContainText('basic');
+  await page.screenshot({ path: 'test-results/drive-2b-face-panel.png' });
+
+  // (3c) Pick 造型 from the library → the wall morphs in place; the panel
+  // highlights what the face now IS (state+key round-trip through the source).
+  await page.getByTestId('face-opt-closed-doorway').click();
   await stepEngine(page, 6);
   const carved = await faceTally(page);
-  expect(carved.nonSolid, 'taps on the open cell carved its faces').toBeGreaterThan(before.nonSolid);
-  expect(carved.doorsWindows, 'at least one doorway/window appeared').toBeGreaterThanOrEqual(1);
+  expect(carved.doorsWindows, 'the doorway landed on the tapped face').toBeGreaterThanOrEqual(1);
+  const fi = await page.evaluate(() => (window as any).loader.sandboxFaceOptions());
+  expect(fi.state).toBe(1);
+  expect(fi.variantKey).toBe('doorway');
   await page.screenshot({ path: 'test-results/drive-2-carved.png' });
 
-  // (3c) Close the cell (bar button) → back to cell-picking; the editing button goes.
+  // (3d) Close the panel, then the cell (bar buttons) → back to cell-picking.
+  await page.getByTestId('face-panel-close').click();
+  await expect(page.getByTestId('face-panel')).toBeHidden();
   await page.getByTestId('close-cell').click();
   await expect(page.getByTestId('close-cell')).toBeHidden();
   expect(await page.evaluate(() => (window as any).loader.sandboxSelectedCell), 'no cell open').toBeNull();

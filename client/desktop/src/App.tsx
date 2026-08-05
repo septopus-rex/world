@@ -20,6 +20,7 @@ import { DialogueUI } from '@core/components/DialogueUI';
 import { BookReader } from '@core/components/BookReader';
 import { BoardPanel } from '@core/components/BoardPanel';
 import { AvatarPicker } from '@core/components/AvatarPicker';
+import { SppFacePanel, type SppFaceInfo } from '@core/components/SppFacePanel';
 import { ActionRail } from './components/desktop/ActionRail';
 
 function App() {
@@ -31,6 +32,8 @@ function App() {
   const [sandbox, setSandbox] = useState(false);
   const [sandboxSaved, setSandboxSaved] = useState(false);
   const [sandboxCell, setSandboxCell] = useState<number | null>(null);
+  const [faceInfo, setFaceInfo] = useState<SppFaceInfo | null>(null);
+  const faceInfoKey = useRef<string | null>(null);
   const [sppStyles, setSppStyles] = useState<string[]>([]);
   const [sppStyle, setSppStyle] = useState<string | null>(null);
 
@@ -95,9 +98,15 @@ function App() {
             }
           }
         }
-        // SPP craft: mirror the open-cell selection into the bar (two-level edit).
+        // SPP craft: mirror the open-cell selection into the bar (two-level edit)
+        // and the selected face's live-library snapshot into the config panel.
+        // The snapshot is tiny; keying on its JSON keeps re-renders to actual
+        // changes (apply / style switch / re-select) instead of every frame.
         const sel = loader.sandboxActive ? loader.sandboxSelectedCell : null;
         setSandboxCell((prev) => (prev === sel ? prev : sel));
+        const fi = loader.sandboxActive ? loader.sandboxFaceOptions() : null;
+        const fiKey = fi ? JSON.stringify(fi) : null;
+        if (fiKey !== faceInfoKey.current) { faceInfoKey.current = fiKey; setFaceInfo(fi); }
       }
       animationId = requestAnimationFrame(updateHUD);
     };
@@ -116,16 +125,18 @@ function App() {
           open it, then tap its faces to cycle 实/门/窗/空; Esc closes the cell. */}
       {sandbox && (
         <div data-testid="sandbox-bar" className="absolute top-4 left-1/2 -translate-x-1/2 z-40 pointer-events-auto flex items-center gap-4 px-5 py-2.5 rounded-2xl bg-amber-950/80 border border-amber-400/30 backdrop-blur-md shadow-2xl">
-          <span className="text-amber-200 text-sm font-bold tracking-wide">🪄 SPP 魔法球</span>
+          {/* whitespace-nowrap on every text span: flex 挤压下 CJK 会逐字竖排，
+              整条栏塌成一块竖幅（e2e 截图抓到过）。 */}
+          <span className="text-amber-200 text-sm font-bold tracking-wide whitespace-nowrap">🪄 SPP 魔法球</span>
           {sandboxCell == null ? (
-            <span data-testid="sandbox-hint" className="text-amber-100/70 text-[11px]">点一个格子 → 选中编辑 · 拖拽旋转 · W/S 缩放</span>
+            <span data-testid="sandbox-hint" className="text-amber-100/70 text-[11px] whitespace-nowrap">点一个格子 → 选中编辑 · 拖拽旋转 · W/S 缩放</span>
           ) : (
             <>
-              <span data-testid="sandbox-hint" className="text-cyan-200 text-[11px] font-semibold">编辑 cell {sandboxCell} · 点面切换 实/门/窗/空</span>
+              <span data-testid="sandbox-hint" className="text-cyan-200 text-[11px] font-semibold whitespace-nowrap">编辑 cell {sandboxCell} · 点一个面 → 从库里选造型</span>
               <button
                 data-testid="close-cell"
                 onClick={() => loader?.sandboxDeselect()}
-                className="px-3 py-1 rounded-lg bg-cyan-400/20 hover:bg-cyan-400/30 border border-cyan-300/40 text-cyan-100 text-xs font-bold"
+                className="px-3 py-1 rounded-lg bg-cyan-400/20 hover:bg-cyan-400/30 border border-cyan-300/40 text-cyan-100 text-xs font-bold whitespace-nowrap"
               >↩︎ 退出该格 (Esc)</button>
             </>
           )}
@@ -157,6 +168,18 @@ function App() {
             className="px-3 py-1 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 border border-amber-300/40 text-amber-100 text-xs font-bold"
           >退出 Exit</button>
         </div>
+      )}
+
+      {/* SPP craft: the selected face's config card — lists the ACTIVE library's
+          two pools (挡/通), one click applies [state, key] and the structure
+          re-expands in place. Lives right of the diorama so the morph stays
+          visible while picking. */}
+      {sandbox && faceInfo && (
+        <SppFacePanel
+          info={faceInfo}
+          onApply={(state, key) => loader?.sandboxSetFace(state, key)}
+          onClose={() => loader?.sandboxSelectFace(null)}
+        />
       )}
 
       {/* pr-16 reserves the right-edge ActionRail's lane. The rail is centred

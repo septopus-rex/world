@@ -553,13 +553,17 @@ export class DesktopLoader implements IDataSource {
 
     public get sandboxActive(): boolean { return this.spp.sandboxActive; }
     public get sandboxSelectedCell(): number | null { return this.spp.sandboxSelectedCell; }
+    public get sandboxSelectedFace(): number | null { return this.spp.sandboxSelectedFace; }
     public listSppStyles(): string[] { return this.spp.listSppStyles(); }
     public get sppStyle(): string | null { return this.spp.sppStyle; }
     public setSppStyle(id: string | null): void { this.spp.setSppStyle(id); }
     public enterSandbox(): void { this.spp.enterSandbox(); }
     public exitSandbox(): void { this.spp.exitSandbox(); }
-    public sandboxClick(ndcX: number, ndcY: number): { kind: 'select' | 'cycle' | 'none'; cell?: number } { return this.spp.sandboxClick(ndcX, ndcY); }
+    public sandboxClick(ndcX: number, ndcY: number): { kind: 'select' | 'face' | 'none'; cell?: number; face?: number } { return this.spp.sandboxClick(ndcX, ndcY); }
     public sandboxSelectCell(cell: number | null): void { this.spp.sandboxSelectCell(cell); }
+    public sandboxSelectFace(face: number | null): void { this.spp.sandboxSelectFace(face); }
+    public sandboxFaceOptions(): ReturnType<SppStudio['sandboxFaceOptions']> { return this.spp.sandboxFaceOptions(); }
+    public sandboxSetFace(state: number, ref: number | string): boolean { return this.spp.sandboxSetFace(state, ref); }
     public sandboxCycleFace(cell: number, face: number): boolean { return this.spp.sandboxCycleFace(cell, face); }
     public sandboxDeselect(): void { this.spp.sandboxDeselect(); }
     public saveSandbox(): Promise<boolean> { return this.spp.saveSandbox(); }

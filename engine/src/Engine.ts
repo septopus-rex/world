@@ -11,7 +11,8 @@ import { descriptorToDefinition } from './core/services/DynamicAdjunct';
 import { registerDynamicAdjunct, clearDynamicAdjuncts } from './core/services/AdjunctRegistry';
 import { Coords } from './core/utils/Coords';
 import { AdjunctType } from './core/types/AdjunctType';
-import { registerStylePack, listSppThemes, setStyleOverride, getStyleOverride, type StylePack } from './core/spp/Variants';
+import { registerStylePack, listSppThemes, setStyleOverride, getStyleOverride, listVariants, type StylePack, type VariantInfo } from './core/spp/Variants';
+import { FaceState } from './core/types/ParticleCell';
 import { GlobalConfig } from './core/GlobalConfig';
 import { EntityFactory } from './core/EntityFactory';
 import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
@@ -520,6 +521,13 @@ export class Engine {
     /** Every registered SPP style id (built-in + external) — feeds a style picker. */
     public listStyles(): string[] {
         return listSppThemes();
+    }
+
+    /** The live option list of a style's open/closed pool — what a cell face CAN
+     *  become. Editors list from here (never hard-code variants); the returned
+     *  `key` is the stable reference to write into the face (P4). */
+    public listVariants(themeId: string, state: 'open' | 'closed'): VariantInfo[] {
+        return listVariants(themeId, state === 'closed' ? FaceState.Closed : FaceState.Open);
     }
 
     public getStyleOverride(): string | null {

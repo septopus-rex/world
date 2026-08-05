@@ -248,7 +248,14 @@ Editor 1(源)  ──选"这面第几号 option"── 读 ──▶  Editor 2 �
 - **P4 面 `[state,number]`→`[state,key]`** + `getVariant` 按 key 解析 — ✅ **已实现(双读)**:string=稳定 key、
   number=legacy 下标都解析(`getVariant`,key 回退 name);面/faceOptions/collapse 类型放宽到 `number|string`;
   L2 保持 index 形(string 降级 solid)。测试 `spp-key.test.ts`(5)。**CID 冻结/版本**待补。
-- **P5 调整 Editor 1(沙盘)**:state/variant 拆两级 + 读活库列 option + 选 theme(CID) — 🔲 待做(§2.2 + 迁移债)。
+- **P5 调整 Editor 1(沙盘)** — ⏳ **两级选择 v1 已落地(2026-08-05,场景内演示形态)**:点 cell → Observe 轨道
+  缓动推近该格(锚点=冻结玩家滑向格心+半径收缩,退出选中缓回全景;`SppStudio.focusCamera/easeCamera`);点面=
+  **选中面**(不再盲循环),面板(`client/core/src/components/SppFacePanel.tsx`,共享核)列出**当前生效库**
+  (styleOverride 优先)的 open/closed 两池——经 **`Engine.listVariants(theme, state)`** 读活库
+  (`unit/spp-list-variants.test.ts`),点选即写 **`[state, key]`**(稳定 key,P4;legacy 数字引用解析为 key 做
+  高亮)并 reexpand。e2e:`sandbox.spec.ts`(活库跟随风格包切换 · 相机推近/回退)+ `sandbox-drive.spec.ts`
+  (真 UI 面板点选)。旧 实→门→窗→空 循环保留为 `sandboxCycleFace` API 缝(ray-free 快速雕刻/测试)。
+  **仍待做**:源级选 theme(CID 指针,现只有世界级 override)、option 预览缩略图。
 - **P6(可选)AI 生成 StylePack** — 🔲 待做。
 - **规范抽取**:P1/P4 稳定后,变体身份(key)、unit frame、CID 冻结、契约语义抽进 `protocol/`(SPP 规范,双语)。
 

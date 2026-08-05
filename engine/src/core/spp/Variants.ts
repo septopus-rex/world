@@ -160,6 +160,25 @@ export function getVariant(theme: SppTheme, state: FaceState, ref: number | stri
     return pool[ref];
 }
 
+/** One entry of a theme pool as an editor lists it: the stable reference to
+ *  WRITE into a face, plus the human name to show. */
+export interface VariantInfo {
+    key: string;
+    name: string;
+}
+
+/** The live option list of a theme's pool — what a face CAN become. This is
+ *  Editor 1's "read the library" seam (spp-editors.md §2.2): pickers list what
+ *  the ACTIVE theme actually provides instead of hard-coding a cycle. Keys are
+ *  the same stable references getVariant resolves (key, falling back to name).
+ *  Unknown theme → []. */
+export function listVariants(themeId: string, state: FaceState): VariantInfo[] {
+    const theme = themes.get(themeId);
+    if (!theme) return [];
+    const pool = state === FaceState.Closed ? theme.closed : theme.open;
+    return pool.map(v => ({ key: v.key ?? v.name, name: v.name }));
+}
+
 /** Built-in starter theme: solid / doorway / window walls, open = passage. */
 export const BASIC_THEME: SppTheme = {
     thickness: 0.2,

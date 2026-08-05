@@ -36,6 +36,11 @@ export const SANDBOX_CENTER: [number, number, number] = [
     2,
 ];
 
+/** ParticleFace index → 中文方位名, for the face config panel/hints.
+ *  Order: 0 Top(Z+) · 1 Bottom(Z−) · 2 Front(Y−=南) · 3 Back(Y+=北) ·
+ *  4 Left(X−=西) · 5 Right(X+=东) — Septopus axes (X东 Y北 Z上). */
+export const FACE_NAMES = ['顶', '底', '南', '北', '西', '东'] as const;
+
 /** Face cycle order (a click advances one step). [state, variant]. */
 const FACE_CYCLE: Array<[number, number]> = [
     [1, 0], // solid
