@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # Septopus World · unified dev launcher (chain-free).
 #
-# The client is a three-way split (client/core shared + desktop + mobile,
-# specs/mobile-client.md), so dev now runs TWO frontends over one engine source.
+# The client is a FOUR-way split (client/core shared + desktop + mobile + editor,
+# specs/mobile-client.md · spp-editors.md §3), so dev runs THREE frontends over
+# one engine source: two world shells (desktop/mobile) + the standalone SPP粒子
+# library editor (7779), which has no world runtime at all.
 # Default = a solo-style DASHBOARD: all services in the background, with live
 # [ON]/[OFF] port-probe lights inline on the UI 入口 / API 服务 rows (no separate
 # status table — each entry IS its own status line). Ctrl+C stops everything.
 #
 # Usage:
-#   bash deploy/dev.sh                # dashboard: desktop(7777)+mobile(7778)+ai-gw(7788)+ipfs(7789)
+#   bash deploy/dev.sh                # dashboard: desktop(7777)+mobile(7778)+editor(7779)+ai-gw(7788)+ipfs(7789)
 #   bash deploy/dev.sh desktop        # single service, foreground (old behavior)
-#   bash deploy/dev.sh mobile|ai-gw   # single service, foreground
+#   bash deploy/dev.sh mobile|editor|ai-gw   # single service, foreground
 #   bash deploy/dev.sh lan            # dashboard bound to 0.0.0.0 (真机联调,
 #                                     # 手机访问 http://<内网IP>:7778)
 #   bash deploy/dev.sh --chain        # 链上启动模式:只起 IPFS 网关 → 构建链包并
@@ -40,7 +42,7 @@ command -v npm  &>/dev/null || error "npm 未安装"
 ONLY=""; HOST="127.0.0.1"; CHAIN=""
 for arg in "$@"; do
     case "$arg" in
-        desktop|mobile|ai-gw|aigw|ai-build|aibuild|ipfs|mahjong|pool|holdem|board|worldlabs) ONLY="${arg/aigw/ai-gw}"; ONLY="${ONLY/aibuild/ai-build}" ;;
+        desktop|mobile|editor|ai-gw|aigw|ai-build|aibuild|ipfs|mahjong|pool|holdem|board|worldlabs) ONLY="${arg/aigw/ai-gw}"; ONLY="${ONLY/aibuild/ai-build}" ;;
         lan) HOST="0.0.0.0" ;;
         --chain|chain) CHAIN=1 ;;   # 链上启动模式(boot-chain.md dev 彩排)
         *) warn "未知参数 '$arg'(可用:desktop | mobile | ai-gw | ai-build | ipfs | worldlabs | lan | --chain)" ;;
@@ -58,6 +60,7 @@ done
 FE_SERVICES=(
     "Desktop  |client/desktop|7777|npm run dev -- --host \$HOST"
     "Mobile   |client/mobile|7778|npm run dev -- --host \$HOST"
+    "Editor   |client/editor|7779|npm run dev -- --host \$HOST"
     "Board    |services/board|7786|npm start"
     "Holdem   |services/holdem|7784|npm start"
     "Pool     |services/pool|7785|npm start"
@@ -85,6 +88,7 @@ npm_deps() { # $1 = app dir (repo-relative), $2 = marker (install completeness t
 }
 if [ -z "$CHAIN" ]; then
     npm_deps client/desktop vite
+    npm_deps client/editor vite         # SPP粒子编辑器(独立 app,7779)
     npm_deps services ws/package.json   # shared services/lib deps (game-host imports 'ws' → walk-up)
     npm_deps services/ai-gateway tsx
     npm_deps services/ai-builder tsx
@@ -206,7 +210,7 @@ while true; do
     [ "$HOST" = "0.0.0.0" ] && [ -n "$LAN_IP" ] && printf -- "   ${CYAN}真机 → http://$LAN_IP:7778/${NC}"
     printf -- "\n"
     printf -- "  综合演示区     $(st 7777) ${GREEN}http://127.0.0.1:7777/?level=demo${NC}(游戏桌/编辑器素材,旧默认场景)\n"
-    printf -- "  SPP粒子编辑器  $(st 7777) ${GREEN}http://127.0.0.1:7777/?tool=stylepack${NC}\n"
+    printf -- "  SPP粒子编辑器  $(st 7779) ${GREEN}http://127.0.0.1:7779/${NC}(独立 app:编粒子库/StylePack,不进世界)\n"
     printf -- "  链上启动页     $(st 7789) ${GREEN}http://127.0.0.1:7789/boot?name=septopus${NC}(先发版,见下)\n"
     printf -- "\n${BOLD}API 服务${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"

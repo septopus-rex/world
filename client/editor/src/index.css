@@ -1,0 +1,16 @@
+@import "tailwindcss";
+/* Shared client core lives OUTSIDE this app root — scan it for classes
+   (the editor uses core's ErrorBoundary and may reuse core UI pieces). */
+@source "../../core/src";
+
+html, body {
+  margin: 0;
+  background: #0a0a0a;
+  color-scheme: dark;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: rgba(255, 255, 255, 0.87);
+}
+
+/* The preview canvas is a TOOL viewport, not a world view: it must never grab
+   page gestures or show a text cursor while orbiting the cell. */
+canvas { display: block; touch-action: none; user-select: none; }

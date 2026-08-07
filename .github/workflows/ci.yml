@@ -59,7 +59,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: client/desktop/package-lock.json
+          cache-dependency-path: |
+            client/desktop/package-lock.json
+            client/editor/package-lock.json
       - name: Install engine deps (source-alias imports resolve there)
         run: yarn install --frozen-lockfile
         working-directory: engine
@@ -67,6 +69,13 @@ jobs:
         working-directory: client/desktop
       - run: npm run build
         working-directory: client/desktop
+      # The SPP粒子 library editor is its own app (client/editor, spp-editors.md
+      # §3) — it must build here too, or a break in it stays invisible until
+      # someone opens the tool.
+      - run: npm ci
+        working-directory: client/editor
+      - run: npm run build
+        working-directory: client/editor
 
   e2e:
     name: E2E — full Playwright suite (nightly / manual)
@@ -79,7 +88,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: client/desktop/package-lock.json
+          cache-dependency-path: |
+            client/desktop/package-lock.json
+            client/editor/package-lock.json
       - name: Install engine deps (source-alias imports resolve there)
         run: yarn install --frozen-lockfile
         working-directory: engine
@@ -87,7 +98,16 @@ jobs:
         working-directory: client/desktop
       - run: npx playwright install --with-deps chromium
         working-directory: client/desktop
+      # Editor suite FIRST: it is its own app with no world services and runs in
+      # ~10s, so a break in it reports immediately instead of after the ~1.5h
+      # world suite. `if: always()` on the world suite keeps one failure from
+      # hiding the other.
+      - run: npm ci
+        working-directory: client/editor
       - run: npm run test:e2e
+        working-directory: client/editor
+      - run: npm run test:e2e
+        if: always()
         working-directory: client/desktop
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -96,4 +116,5 @@ jobs:
           path: |
             client/desktop/playwright-report
             client/desktop/test-results
+            client/editor/test-results
           retention-days: 7

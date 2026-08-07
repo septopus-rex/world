@@ -22,9 +22,12 @@ client/
 │   ├── components/        全部共享交互组件(对话/书/HP/背包/地图/游戏HUD/摇杆/换装/Toaster/ErrorBoundary)
 │   ├── games/ scenes/     游戏胶水 + 常量清单/组合胶水
 │   └── levels|blocks|worlds|stylepacks/  纯数据内容(两端同一个世界)
-├── desktop/             桌面 app(7777,PWA):App + ActionRail/AuthorChat/HUD/UpdateNotifier(PWA 专属)+ stylepack-editor + 37 e2e
-└── mobile/              移动 app(7778,独立 package.json/vite/tsconfig/playwright):
-                           MobileApp(摇杆/JUMP/底部抽屉)+ 自己的 e2e(mobile.spec)
+├── desktop/             桌面 app(7777,PWA):App + ActionRail/AuthorChat/HUD/UpdateNotifier(PWA 专属)+ e2e 主套
+├── mobile/              移动 app(7778,独立 package.json/vite/tsconfig/playwright):
+│                          MobileApp(摇杆/JUMP/底部抽屉)+ 自己的 e2e(mobile.spec)
+└── editor/              SPP 粒子库编辑器 app(7779,2026-08-05 从 desktop 的 ?tool=stylepack 剥离):
+                           StylePackEditor + 精简 Engine harness,**零 world 运行时**(不 import loader);
+                           只吃 @engine(当库)+ @core 的 bundled stylepacks。spp-editors.md §3
 ```
 
 - **物理拆分的意义**:mobile 无法 import desktop 的任何文件(不在其编译面)——共享核边界由

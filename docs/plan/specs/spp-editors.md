@@ -22,7 +22,7 @@ Status: **设计（未实现）** · 2026-07-06 · 过程文档(非规范)
 | | Editor 1 · 源编辑器 | Editor 2 · 粒子库编辑器 |
 |---|---|---|
 | 编的数据 | b6 `[origin, cells, theme]`(块上,每实例) | StylePack JSON(库,可复用/寻址) |
-| 在哪 | **world 里**(空间放置本就是空间的事) | **独立工具**(2D 或单胞小预览,不进 world) |
+| 在哪 | **world 里**(空间放置本就是空间的事)<br>= `client/desktop` 的魔法球沙盘 | **独立工具**(2D 或单胞小预览,不进 world)<br>= `client/editor` 独立 app,7779(2026-08-05 起) |
 | 干什么 | grid 定位 · 每面 open/close · 选第几号 option · 选 theme(指针) | 按 open/closed 两池 CRUD option;每 option = adjunct 组合 |
 | 输出 | 更新块草稿(DraftStore) | StylePack JSON → **publish → CID** |
 | 现状 | 沙盘 v0(`sandboxScene.ts`),但 state/variant 揉在一起 | **不存在**(现手改 `stylepacks/*.json`) |
@@ -238,7 +238,12 @@ Editor 1(源)  ──选"这面第几号 option"── 读 ──▶  Editor 2 �
 - **P1 数据模型:`FaceVariant.pieces` → `parts: VariantPart[]`**(option=组合)+ 变体加 `key` — ✅ **已实现**。
   `partToBox` 泛化 `pieceToBox`(加内向深度 w/sw);legacy `pieces` 自动 lift 成 a1 parts;emitLeaf 出任意 type。
   测试 `spp-parts.test.ts`(5:花瓶 a4+b4、双柱 a4×2 无 stop、depth、props、确定性)。
-- **P2/P3 Editor 2** — ✅ **v1 已实现(空间化重构 2026-07-06)**(`?tool=stylepack`,`StylePackEditor.tsx`):
+- **P2/P3 Editor 2** — ✅ **v1 已实现(空间化重构 2026-07-06)**;**2026-08-05 剥离成独立 app `client/editor`
+  (7779,自己的 package.json/vite/playwright)**,此前是 desktop 壳的 `?tool=stylepack` 分支。剥离理由不是减包
+  (它只 825 行,desktop 主 chunk 7.4MB 的大头是引擎+世界内容),而是**这个工具还要长期长**(§6 剩余项:2D 面网格
+  编辑、契约守卫、CID 冻结),没道理继续挂在玩家 app 的路由上;顺带兑现 §3.1「独立于 World 运行时」——它现在
+  只 import `@engine`(当库)+ `@core` 的 bundled stylepacks,零 world loader。**副产品:它的 e2e 从背着整个
+  世界启动变成 ~10s 独立跑。**入口 `StylePackEditor.tsx`(现 `client/editor/src/`):
   按用户模型——**建粒子(名字/尺寸)→ 主界面=粒子 cell → 选面(6 按钮)→ 面的 [通 open/挡 close] 双 tab →
   状态下加 adjunct/几何体(墙/盒/球/模型/stop,结构化 parts 编辑非裸 JSON)→ 坍缩控制盘(6 面 state+变体)
   驱动活体 3D 预览 → 导出/publish CID**。预览走 `StylePackPreviewLoader`(路径 b),新增

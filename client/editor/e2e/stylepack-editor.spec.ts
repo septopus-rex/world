@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-// The standalone SPP粒子 editor (?tool=stylepack), spatial model: a cell whose
-// faces are driven by a collapse dial; pick a face → open/close tabs → add
-// adjuncts/geometry into that state's option → the preview re-expands live.
-// Spec: spp-editors.md §3. Independent of the world app (own lean Engine).
+// The standalone SPP粒子 editor — its OWN app (client/editor, port 7779; it was
+// a ?tool=stylepack branch of the desktop shell until 2026-08-05). Spatial
+// model: a cell whose faces are driven by a collapse dial; pick a face →
+// open/close tabs → add adjuncts/geometry into that state's option → the
+// preview re-expands live. Spec: spp-editors.md §3. Independent of the WORLD
+// runtime (own lean Engine harness), not of the engine library.
 
 const A1 = 0x00a1, A4 = 0x00a4, B4 = 0x00b4;
 
@@ -26,7 +28,7 @@ async function pump(page: any, cond: () => Promise<boolean>, rounds = 80): Promi
 
 test('SPP粒子 editor: cell preview, add a composition to a face state, drive the collapse dial', async ({ page }) => {
     test.setTimeout(120_000);
-    await page.goto('/?tool=stylepack');
+    await page.goto('/');   // the editor IS this app's root — no route param
     await expect(page.getByTestId('sp-editor')).toBeVisible();
     await expect(page.getByTestId('sp-preview')).toBeVisible();
 
