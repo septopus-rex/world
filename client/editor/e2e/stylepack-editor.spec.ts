@@ -40,7 +40,17 @@ test('SPP粒子 editor: cell preview, add a composition to a face state, drive t
     // option (composition, P1). Every face using `solid` now shows the model.
     await page.getByTestId('sp-face-0').click();
     await page.getByTestId('sp-tab-closed').click();
-    await page.getByTestId('sp-add-model').click();
+    // The palette is the engine's placement-shaped type set, not a hand-kept 5:
+    // types that cannot live in a unit frame (b6 SPP source, c2 motif, a3 light)
+    // must NOT appear, and ones that can (a8 sign, e5 board) must.
+    await expect(page.getByTestId('sp-add-sign')).toBeVisible();
+    await expect(page.getByTestId('sp-add-board')).toBeVisible();
+    await expect(page.getByTestId('sp-add-spp')).toHaveCount(0);
+    await expect(page.getByTestId('sp-add-motif')).toHaveCount(0);
+    await expect(page.getByTestId('sp-add-light')).toHaveCount(0);
+    // Part kinds are enumerated from the ENGINE (listOptionPartKinds) — the
+    // handle suffix is the lower-cased engine type name, so a4 is 'module'.
+    await page.getByTestId('sp-add-module').click();
     await page.getByTestId('sp-add-stop').click();
     expect(await pump(page, async () => (await derived(page, A4)) >= 6), 'the a4 model composed into the option').toBe(true);
     expect(await derived(page, B4), 'the b4 stop too').toBeGreaterThanOrEqual(6);

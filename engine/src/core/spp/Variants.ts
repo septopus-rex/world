@@ -10,6 +10,8 @@
  * Spec: docs/plan/specs/spp-integration.md · design: docs/features/spp.md.
  */
 import { FaceState } from '../types/ParticleCell';
+import { adjunctTypeName } from '../types/AdjunctType';
+import { defaultTailFor, placementTypes } from '../edit/AdjunctDefaults';
 
 /** One face-local slab: offset+size in normalized face coords (a1-wall shorthand). */
 export interface VariantPiece {
@@ -165,6 +167,39 @@ export function getVariant(theme: SppTheme, state: FaceState, ref: number | stri
 export interface VariantInfo {
     key: string;
     name: string;
+}
+
+/** An adjunct type a library editor may drop into an option, with the starter
+ *  raw tail to seed the new part with. */
+export interface OptionPartKind {
+    typeId: number;
+    /** Engine type name (`adjunctTypeName`) — 'Wall', 'Box', … */
+    name: string;
+    /** Starter `props` for the new VariantPart (raw slots 3+). */
+    props: any[];
+}
+
+/**
+ * Which adjunct types can be a PART of an option, and what to seed them with.
+ *
+ * The test is not a hand-kept whitelist: a `VariantPart`'s unit frame
+ * (u/v/su/sv/w/sw) fills exactly the `[size, pos, rot]` triple of a raw row, so
+ * a type belongs here **iff** its raw has that shape — which is precisely the
+ * types `defaultTailFor` answers for. Sources and logic (b6 SPP, c2 motif,
+ * b7 spawner, f1 npc, b5 item) and the size-less a3 light are therefore excluded
+ * mechanically, not by opinion, and a new adjunct type shows up in the library
+ * editor the moment it gets placement defaults.
+ *
+ * Spec: spp-editors.md §3.2/§3.4 (option = adjunct composition).
+ */
+export function listOptionPartKinds(): OptionPartKind[] {
+    const out: OptionPartKind[] = [];
+    for (const typeId of placementTypes()) {
+        const props = defaultTailFor(typeId);
+        if (!props) continue;
+        out.push({ typeId, name: adjunctTypeName(typeId), props });
+    }
+    return out;
 }
 
 /** The live option list of a theme's pool — what a face CAN become. This is
