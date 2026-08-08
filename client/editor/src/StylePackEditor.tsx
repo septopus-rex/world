@@ -125,6 +125,26 @@ export default function StylePackEditor() {
         applyPack(n);
         applyDial(dialWith(selFace, selState, k)); // point the selected face at (and edit) the new variant
     };
+    /**
+     * Delete an option from the current pool. Two invariants make this safe:
+     *   · the pool never empties — a state with no option is a face that cannot
+     *     collapse to anything, i.e. dead data (the button is disabled at 1);
+     *   · no dangling reference — any face whose dial entry pointed at the
+     *     deleted option is re-pointed at the pool's first one. Without this the
+     *     face keeps a key that resolves to nothing and silently renders empty,
+     *     which reads as "the editor lost my wall" rather than as a broken ref.
+     */
+    const removeVariant = (i: number) => {
+        if (pool.length <= 1) return;
+        pushUndo();
+        const gone = variantRef(pool[i], i);
+        const n: StylePack = JSON.parse(JSON.stringify(pack));
+        n[tab].splice(i, 1);
+        applyPack(n);
+        const fallback = variantRef(n[tab][0], 0);
+        applyDial(dial.map(([s, r]) =>
+            (s === selState && String(r) === gone ? [s, fallback] : [s, r]) as [number, string]));
+    };
 
     const exportPack = () => {
         const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
@@ -142,7 +162,7 @@ export default function StylePackEditor() {
             <FaceStateEditor pack={pack} packs={packs} selFace={selFace} selState={selState} pool={pool} vi={vi} variant={variant} cid={cid}
                 canUndo={past.length > 0} canRedo={future.length > 0} onUndo={undo} onRedo={redo}
                 onEditPack={editPack} onSelectPack={selectPack} onNewPack={newPack} onSetFaceState={(state) => setFaceState(selFace, state)}
-                onSetVariant={setVariant} onAddVariant={addVariant} onAddPart={addPart} onRemovePart={removePart}
+                onSetVariant={setVariant} onAddVariant={addVariant} onRemoveVariant={removeVariant} onAddPart={addPart} onRemovePart={removePart}
                 onSetPartField={setPartField} onExport={exportPack} onPublish={publish} />
         </div>
     );

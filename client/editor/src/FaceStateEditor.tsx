@@ -17,7 +17,9 @@ function Section({ id, title, hint, open, onToggle, children }: {
                 <span className="text-[11px] font-bold text-neutral-200">{title}</span>
                 {hint && <span className="text-[10px] text-neutral-600 ml-auto truncate">{hint}</span>}
             </button>
-            {isOpen && <div>{children}</div>}
+            {/* The body carries a handle so callers (and e2e) can tell "is this
+                section open?" without reading class names. */}
+            {isOpen && <div data-testid={`sp-sec-${id}`}>{children}</div>}
         </div>
     );
 }
@@ -32,7 +34,7 @@ function Section({ id, title, hint, open, onToggle, children }: {
  */
 export function FaceStateEditor({
     pack, packs, selFace, selState, pool, vi, variant, cid, canUndo, canRedo,
-    onEditPack, onSelectPack, onNewPack, onUndo, onRedo, onSetFaceState, onSetVariant, onAddVariant, onAddPart, onRemovePart, onSetPartField, onExport, onPublish,
+    onEditPack, onSelectPack, onNewPack, onUndo, onRedo, onSetFaceState, onSetVariant, onAddVariant, onRemoveVariant, onAddPart, onRemovePart, onSetPartField, onExport, onPublish,
 }: {
     pack: StylePack;
     packs: StylePack[];
@@ -52,6 +54,7 @@ export function FaceStateEditor({
     onSetFaceState: (state: number) => void;
     onSetVariant: (i: number) => void;
     onAddVariant: () => void;
+    onRemoveVariant: (i: number) => void;
     onAddPart: (def: VariantPart) => void;
     onRemovePart: (pi: number) => void;
     onSetPartField: (pi: number, key: keyof VariantPart, val: any) => void;
@@ -111,9 +114,16 @@ export function FaceStateEditor({
                         <button data-testid="sp-add-variant" onClick={onAddVariant} className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700">＋新</button>
                     </div>
                     <div className="flex flex-wrap gap-1">
+                        {/* chip = 选它 + 删它。删按钮在最后一个 option 上禁用:池空了
+                            这个 state 的面就没有造型可坍缩,是个死数据。 */}
                         {pool.map((v, i) => (
-                            <button key={i} data-testid={`sp-variant-${i}`} onClick={() => onSetVariant(i)}
-                                className={`px-2 py-0.5 rounded text-[11px] ${vi === i ? 'bg-cyan-500/25 text-cyan-100' : 'bg-neutral-800/60 text-neutral-400'}`}>{v.key ?? v.name}</button>
+                            <span key={i} className={`inline-flex items-center rounded ${vi === i ? 'bg-cyan-500/25' : 'bg-neutral-800/60'}`}>
+                                <button data-testid={`sp-variant-${i}`} onClick={() => onSetVariant(i)}
+                                    className={`pl-2 py-0.5 text-[11px] ${vi === i ? 'text-cyan-100' : 'text-neutral-400'}`}>{v.key ?? v.name}</button>
+                                <button data-testid={`sp-variant-del-${i}`} onClick={() => onRemoveVariant(i)} disabled={pool.length <= 1}
+                                    title={pool.length <= 1 ? '至少保留一个 option' : '删除该 option'}
+                                    className="px-1.5 py-0.5 text-[10px] text-neutral-500 hover:text-red-400 disabled:opacity-20 disabled:hover:text-neutral-500">×</button>
+                            </span>
                         ))}
                     </div>
                 </div>
@@ -137,7 +147,8 @@ export function FaceStateEditor({
                                 {(['u', 'v', 'su', 'sv', 'w', 'sw'] as const).map((f) => (
                                     <label key={f} className="flex flex-col text-neutral-500">
                                         {f}
-                                        <input type="number" step="0.05" value={(pt as any)[f] ?? (f === 'w' ? 0 : f === 'sw' ? '' : 0)}
+                                        <input data-testid={`sp-part-${pi}-${f}`} type="number" step="0.05"
+                                            value={(pt as any)[f] ?? (f === 'w' ? 0 : f === 'sw' ? '' : 0)}
                                             onChange={(e) => onSetPartField(pi, f, e.target.value === '' ? undefined : parseFloat(e.target.value))}
                                             className="w-full px-1 py-0.5 rounded bg-black/50 border border-neutral-800 text-neutral-200 outline-none focus:border-cyan-700" />
                                     </label>
