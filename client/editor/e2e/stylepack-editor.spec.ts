@@ -7,16 +7,21 @@ import { test, expect } from '@playwright/test';
 // preview re-expands live. Spec: spp-editors.md §3. Independent of the WORLD
 // runtime (own lean Engine harness), not of the engine library.
 
-const A1 = 0x00a1, A4 = 0x00a4, B4 = 0x00b4;
+const A4 = 0x00a4, B4 = 0x00b4;
 
-async function derived(page: any, typeId: number): Promise<number> {
-    return page.evaluate((t: number) => {
+/** Derived adjuncts in the preview — of one type, or of ANY type when `typeId`
+ *  is null. Which primitives the opening pack happens to use is CONTENT, not
+ *  editor behaviour: garden was a1 slabs until 2026-08-09 and is now an a2/a7
+ *  composition. Assertions about the pack we merely OPEN therefore stay
+ *  type-blind; only the parts this test adds itself are pinned by type. */
+async function derived(page: any, typeId: number | null): Promise<number> {
+    return page.evaluate((t: number | null) => {
         const w = (window as any).spLoader?.getEngine?.()?.getWorld?.();
         if (!w) return -1;
         let n = 0;
         for (const eid of w.queryEntities('AdjunctComponent')) {
             const a = w.getComponent(eid, 'AdjunctComponent');
-            if (a?.stdData?.derivedFrom && a.stdData.typeId === t) n++;
+            if (a?.stdData?.derivedFrom && (t === null || a.stdData.typeId === t)) n++;
         }
         return n;
     }, typeId);
@@ -32,8 +37,10 @@ test('SPP粒子 editor: cell preview, add a composition to a face state, drive t
     await expect(page.getByTestId('sp-editor')).toBeVisible();
     await expect(page.getByTestId('sp-preview')).toBeVisible();
 
-    // Default: all 6 faces collapsed to closed/solid → 6 a1 walls (the 粒子 = a box).
-    expect(await pump(page, async () => (await derived(page, A1)) >= 6), 'the 粒子 expands 6 solid walls').toBe(true);
+    // Default: all six faces collapsed onto the opening pack's first closed
+    // option → geometry on every face (the 粒子 = a box). At least six parts,
+    // whatever primitives that option is built from.
+    expect(await pump(page, async () => (await derived(page, null)) >= 6), 'the 粒子 expands geometry on all six faces').toBe(true);
     await page.screenshot({ path: 'test-results/sp2-0-box.png' });
 
     // Pick a face → its close tab → add a model (a4) + a stop (b4) into the solid
