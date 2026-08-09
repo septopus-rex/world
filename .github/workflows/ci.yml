@@ -49,7 +49,7 @@ jobs:
         run: yarn build
 
   client-build:
-    name: Client — PWA build
+    name: Client — PWA build + editor e2e
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -76,6 +76,21 @@ jobs:
         working-directory: client/editor
       - run: npm run build
         working-directory: client/editor
+      # …and its e2e runs on EVERY push, unlike the world suite. It can afford
+      # to: ~35 s, no world services, no 1.5 h boot cost — while what it guards
+      # is the authoring round-trip (edit → export → re-expand), where a
+      # regression silently corrupts creators' packs rather than crashing. The
+      # world suite stays nightly; this one is cheap enough to be a gate.
+      - run: npx playwright install --with-deps chromium
+        working-directory: client/editor
+      - run: npm run test:e2e
+        working-directory: client/editor
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: editor-e2e-failure-artifacts
+          path: client/editor/test-results
+          retention-days: 7
 
   e2e:
     name: E2E — full Playwright suite (nightly / manual)
@@ -99,9 +114,10 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: client/desktop
       # Editor suite FIRST: it is its own app with no world services and runs in
-      # ~10s, so a break in it reports immediately instead of after the ~1.5h
+      # ~35s, so a break in it reports immediately instead of after the ~1.5h
       # world suite. `if: always()` on the world suite keeps one failure from
-      # hiding the other.
+      # hiding the other. (It ALSO runs in client-build on every push — kept here
+      # so "nightly" stays literally the full suite, at negligible cost.)
       - run: npm ci
         working-directory: client/editor
       - run: npm run test:e2e

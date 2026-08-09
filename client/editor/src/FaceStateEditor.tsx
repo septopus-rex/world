@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import type { StylePack, FaceVariant, VariantPart } from '@engine/core/spp/Variants';
+import { checkOption } from '@engine/core/spp/OptionGuard';
+import { FaceState } from '@engine/core/types/ParticleCell';
 import { FACE_NAMES, PART_KINDS, typeName } from './constants';
 
 type SectionId = 'basic' | 'face' | 'store';
@@ -34,7 +36,7 @@ function Section({ id, title, hint, open, onToggle, children }: {
  */
 export function FaceStateEditor({
     pack, packs, selFace, selState, pool, vi, variant, cid, canUndo, canRedo,
-    onEditPack, onSelectPack, onNewPack, onUndo, onRedo, onSetFaceState, onSetVariant, onAddVariant, onRemoveVariant, onAddPart, onRemovePart, onSetPartField, onExport, onPublish,
+    onEditPack, onSelectPack, onNewPack, onUndo, onRedo, onSetFaceState, onSetVariant, onAddVariant, onRemoveVariant, onAddPart, onRemovePart, onSetPartField, onExport, onImport, onPublish,
 }: {
     pack: StylePack;
     packs: StylePack[];
@@ -59,10 +61,13 @@ export function FaceStateEditor({
     onRemovePart: (pi: number) => void;
     onSetPartField: (pi: number, key: keyof VariantPart, val: any) => void;
     onExport: () => void;
+    onImport: (text: string) => string | null;
     onPublish: () => void;
 }) {
     const [open, setOpen] = useState<SectionId | null>('face');
     const toggle = (id: SectionId) => setOpen((cur) => (cur === id ? null : id));
+    const [importText, setImportText] = useState('');
+    const [importError, setImportError] = useState<string | null>(null);
 
     return (
         <div className="w-96 shrink-0 border-l border-neutral-800 flex flex-col min-h-0">
@@ -136,6 +141,26 @@ export function FaceStateEditor({
                         ))}
                     </div>
                 </div>
+                {/* 契约守卫(§3.7):只报客观错误——伸出单位胞、零尺寸、挡不住的「挡」、
+                    过不去的「通」、共面闪烁。提示不硬拦:是否采纳由作者定。好看不好看
+                    不在这里判,那是预览的事。 */}
+                {variant && (() => {
+                    const issues = checkOption(variant, selState === 0 ? FaceState.Open : FaceState.Closed);
+                    if (!issues.length) return null;
+                    return (
+                        <div data-testid="sp-guard" className="px-2 pt-2 space-y-1">
+                            {issues.map((iss, i) => (
+                                <div key={i} data-testid={`sp-guard-${iss.code}`}
+                                    className={`text-[10px] leading-snug rounded px-2 py-1 border ${iss.level === 'error'
+                                        ? 'bg-red-500/10 border-red-500/30 text-red-200'
+                                        : 'bg-amber-500/10 border-amber-500/30 text-amber-200'}`}>
+                                    <span className="font-bold mr-1">{iss.level === 'error' ? '错' : '注意'}</span>
+                                    {iss.message}
+                                </div>
+                            ))}
+                        </div>
+                    );
+                })()}
                 <div data-testid="sp-parts" className="p-2 space-y-1.5">
                     {(variant?.parts ?? []).map((pt, pi) => (
                         <div key={pi} className="rounded border border-neutral-800 bg-black/30 p-1.5">
@@ -167,6 +192,23 @@ export function FaceStateEditor({
                     <div className="flex gap-2">
                         <button data-testid="sp-export" onClick={onExport} className="flex-1 px-3 py-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-100 font-bold">导出 JSON</button>
                         <button data-testid="sp-publish" onClick={onPublish} className="flex-1 px-3 py-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-amber-100 font-bold">Publish CID</button>
+                    </div>
+                    {/* 导入:贴一份 StylePack JSON(别人的库 / 工具或 AI 的产出)进来编。
+                        同 id 覆盖库里那条,免得留下两个同名条目。 */}
+                    <div className="pt-1 border-t border-neutral-800/60 space-y-1">
+                        <label className="block text-[10px] text-neutral-500">导入 JSON（粘贴一份 StylePack）</label>
+                        <textarea data-testid="sp-import-text" rows={3} value={importText}
+                            onChange={(e) => { setImportText(e.target.value); setImportError(null); }}
+                            placeholder='{"id":"my-pack","thickness":0.2,"closed":[…],"open":[…]}'
+                            className="w-full px-2 py-1 rounded bg-black/50 border border-neutral-800 text-[10px] font-mono outline-none focus:border-cyan-700 resize-y" />
+                        <button data-testid="sp-import-btn" disabled={!importText.trim()}
+                            onClick={() => {
+                                const err = onImport(importText);
+                                setImportError(err);
+                                if (!err) setImportText('');
+                            }}
+                            className="w-full px-3 py-1.5 rounded bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-100 font-bold disabled:opacity-30">导入并编辑</button>
+                        {importError && <div data-testid="sp-import-error" className="text-[10px] text-red-300 break-words">{importError}</div>}
                     </div>
                 </div>
             </Section>

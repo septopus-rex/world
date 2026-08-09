@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { StylePack, VariantPart } from '@engine/core/spp/Variants';
+import { checkPack } from '@engine/core/spp/OptionGuard';
 import { allStylePacks } from '@core/stylepacks';
 import type { Faces } from './StylePackPreviewLoader';
 import { usePreviewLoader } from './usePreviewLoader';
@@ -37,6 +38,10 @@ export default function StylePackEditor() {
     const { loaderRef, labels, faces } = usePreviewLoader(pack, dial);
     // Highlight the selected face on the in-scene panels (recolour, zero lag).
     useEffect(() => { loaderRef.current?.setHighlightFace?.(selFace); }, [loaderRef, selFace]);
+    // Debug handle, sibling of `window.spLoader`: the contract guard's verdict on
+    // the CURRENT document. tools/snapshot.mjs reads it so the machine-checkable
+    // half of a review comes from the same code the panel shows.
+    useEffect(() => { (window as any).__spGuard = () => checkPack(pack); }, [pack]);
 
     // ── derived: the selected face's [state, variant] IS what we edit ─────────
     const [selState, selRef] = dial[selFace] ?? [1, variantRef(pack.closed[0], 0)];
@@ -82,8 +87,15 @@ export default function StylePackEditor() {
 
     // ── dial navigation / preview (NOT recorded) ──────────────────────────────
     const selectFace = (fi: number) => setSelFace(fi);
-    /** Set a face's state + pick that state's first option; also selects the face. */
-    const setFaceState = (fi: number, state: number) => { setSelFace(fi); applyDial(dialWith(fi, state, variantRef((state === 0 ? pack.open : pack.closed)[0], 0))); };
+    /** Set a face's state + pick that state's first option; also selects the face.
+     *  Defensive on an empty pool: packs can arrive from import/CID, and a face
+     *  that cannot resolve an option should stay put rather than crash the tool. */
+    const setFaceState = (fi: number, state: number) => {
+        const target = (state === 0 ? pack.open : pack.closed) ?? [];
+        if (!target.length) return;
+        setSelFace(fi);
+        applyDial(dialWith(fi, state, variantRef(target[0], 0)));
+    };
     /** Point the SELECTED face at variant `i` of its current pool (which one to edit). */
     const setVariant = (i: number) => applyDial(dialWith(selFace, selState, variantRef(pool[i], i)));
     /** Any dial interaction on a face selects it + applies. */
@@ -146,6 +158,36 @@ export default function StylePackEditor() {
             (s === selState && String(r) === gone ? [s, fallback] : [s, r]) as [number, string]));
     };
 
+    /**
+     * Import a StylePack JSON (paste / tool / AI output) — the counterpart of
+     * export, §3.8. It goes through the SAME React state as every other edit
+     * (setPack + setDial via selectPack), NOT through `spLoader.apply`: applying
+     * straight to the preview engine would update the 3D view while the panel,
+     * the export and the undo history all kept the old document — the change
+     * would look applied and silently not be.
+     * Returns an error string for the UI, or null on success.
+     */
+    const importPack = (text: string): string | null => {
+        let parsed: any;
+        try { parsed = JSON.parse(text); } catch (e) { return `JSON 解析失败：${(e as Error).message}`; }
+        if (!parsed || typeof parsed !== 'object') return '不是一个对象';
+        if (typeof parsed.id !== 'string' || !parsed.id) return '缺少 id';
+        if (!Array.isArray(parsed.closed) || !Array.isArray(parsed.open)) return '缺少 closed[] / open[] 两池';
+        // BOTH pools must be non-empty: a face set to that state resolves the
+        // pool's first option, and an empty pool makes that a crash rather than
+        // a bad picture. (`open` is normally just `[{key:'empty',parts:[]}]`.)
+        if (!parsed.closed.length) return 'closed 池不能为空（面设成「挡」时没有造型可坍缩）';
+        if (!parsed.open.length) return 'open 池不能为空（面设成「通」时没有造型可坍缩，通常是一个空的 empty）';
+        if (typeof parsed.thickness !== 'number') parsed.thickness = 0.2;
+        pushUndo();
+        const lp = liftPack(parsed as StylePack);
+        // Same id ⇒ replace the library entry (importing a revision of a pack you
+        // already have should not leave two entries with one name).
+        setPacks((ps) => [...ps.filter((p) => p.id !== lp.id), lp]);
+        selectPack(lp, false);
+        return null;
+    };
+
     const exportPack = () => {
         const blob = new Blob([JSON.stringify(pack, null, 2)], { type: 'application/json' });
         const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${pack.id}.stylepack.json`; a.click(); URL.revokeObjectURL(a.href);
@@ -163,7 +205,7 @@ export default function StylePackEditor() {
                 canUndo={past.length > 0} canRedo={future.length > 0} onUndo={undo} onRedo={redo}
                 onEditPack={editPack} onSelectPack={selectPack} onNewPack={newPack} onSetFaceState={(state) => setFaceState(selFace, state)}
                 onSetVariant={setVariant} onAddVariant={addVariant} onRemoveVariant={removeVariant} onAddPart={addPart} onRemovePart={removePart}
-                onSetPartField={setPartField} onExport={exportPack} onPublish={publish} />
+                onSetPartField={setPartField} onExport={exportPack} onImport={importPack} onPublish={publish} />
         </div>
     );
 }

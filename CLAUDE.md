@@ -72,7 +72,7 @@ cd engine && yarn build                            # tsc
 
 ## 测试
 
-- **CI**：`.github/workflows/ci.yml`——push/PR 跑 引擎单测+tsc+Three.js 层级边界+client 构建；全量 e2e 每日定时（cron）+ 手动 dispatch（约 1.5h，失败上传 Playwright 报告）。
+- **CI**：`.github/workflows/ci.yml`——push/PR 跑 引擎单测+tsc+Three.js 层级边界+双 client 构建+**editor e2e**（约 35s，无世界服务，够便宜所以做门禁；它守的是创作往返 编辑→导出→重展开，回归时是**静默污染**作者的 pack 而不是崩溃）；**世界** e2e 每日定时（cron）+ 手动 dispatch（约 1.5h，失败上传 Playwright 报告）。
 - `engine/tests/`（vitest，node 环境）：`unit/`（CollapseCodec、Coords、adjunct transforms/sandbox/registry/resource-manager）、`integration/`（headless-boot）、`systems/`·`scenarios/`（部分 `todo`）。**务必读 `engine/tests/README.md` 的"局限性"**（无 GPU/浏览器、确定性、scenarios 待补等）。
 - **内容门禁（2026-07-21）**：`unit/content-conformance.test.ts` 逐文件校验 `client/core/src/{blocks,levels,stylepacks,assets}` 全部内容 JSON（槽位类型、资源引用形态、trigger 动作集、manifest 引用完整性，含反例自检）；`unit/resource-contract.test.ts` 钉死资源缝语义（a1 槽 3=颜色索引不出贴图、a2 槽 7=贴图、槽 3 的字面色不当资源 id、ResourceManager 直连白名单不含宿主相对路径）。**测试红了改内容，别改测试/引擎迁就内容**；跨工具守则同步写在根部 `AGENTS.md`（GEMINI.md 指向它）——起因：外部 AI 曾把 `/assets/*.png` 硬编码进风格包并反转 a2 槽 7 语义。
 - 真 WebGL / 像素 / 输入（L4）用 Playwright，在 `client/desktop/e2e/`（已搭 **59 个 spec**：boot/movement/fall-through/trigger/avatar/persistence/inventory/engine-features/editor-platform/spp/coaster/map2d/game-trigger/ai-authoring/rpg-xianjian/portal-travel/worldlabs-panel/palace/book-cover-title/world-clock 等；**`world-clock` 是唯一不调 `engine.stop()` 的 spec**——它验的正是客户端自己的 rAF 在推进世界时钟，其余 spec 全部手动 `step()`，一个 rAF 死掉的世界能让它们全绿；`npm run test:e2e`，SwiftShader 软渲染 + `engine.step(dt)` 确定性驱动）。

@@ -202,6 +202,122 @@ test('per-face collapse: each face can take a different state/option, and the di
     await page.screenshot({ path: 'test-results/authoring-3-dial.png' });
 });
 
+test('import: a pasted pack becomes the edited document — panel, preview and export all move', async ({ page }) => {
+    test.setTimeout(120_000);
+    await boot(page);
+
+    // A tiny hand-written pack: one closed option with two walls, one open.
+    const incoming = {
+        format: 'septopus.spp.stylepack', version: 1, id: 'imported-pack', thickness: 0.42,
+        closed: [{ key: 'twin', name: 'twin', parts: [
+            { type: A1, u: 0, v: 0, su: 0.4, sv: 1, props: [0, [1, 1], 0, 1] },
+            { type: A1, u: 0.6, v: 0, su: 0.4, sv: 1, props: [0, [1, 1], 0, 1] },
+        ] }],
+        open: [{ key: 'void', name: 'void', parts: [] }],
+    };
+    await section(page, 'store');
+    await page.getByTestId('sp-import-text').fill(JSON.stringify(incoming));
+    await page.getByTestId('sp-import-btn').click();
+    await expect(page.getByTestId('sp-import-error')).toHaveCount(0);
+
+    // The DOCUMENT moved — not just the 3D view. This is the trap the import
+    // exists to avoid: applying to the preview engine alone would leave the
+    // panel and the export on the old pack while the canvas showed the new one.
+    const pack = await livePack(page);
+    expect(pack.id).toBe('imported-pack');
+    expect(pack.thickness).toBeCloseTo(0.42, 5);
+    expect(pack.closed[0].parts).toHaveLength(2);
+    // …the preview re-expanded: six faces × two walls.
+    await expect.poll(() => derived(page, A1)).toBe(12);
+    // …the library shows it, and the export is the same document.
+    await section(page, 'basic');
+    await expect(page.getByTestId('sp-pack-imported-pack')).toBeVisible();
+    expect(await exportJson(page)).toEqual(pack);
+
+    // Malformed input is refused with a reason, and changes nothing.
+    await section(page, 'store');
+    await page.getByTestId('sp-import-text').fill('{"id":"bad"}');
+    await page.getByTestId('sp-import-btn').click();
+    await expect(page.getByTestId('sp-import-error')).toContainText('closed');
+    expect((await livePack(page)).id, 'a rejected import must not touch the document').toBe('imported-pack');
+    await page.screenshot({ path: 'test-results/authoring-4-import.png' });
+});
+
+test('contract guard flags objective mistakes, and stays quiet on correct authoring', async ({ page }) => {
+    test.setTimeout(120_000);
+    await boot(page);
+
+    // A pack that is wrong in three machine-checkable ways at once.
+    const bad = {
+        id: 'guard-probe', thickness: 0.2,
+        closed: [
+            { key: 'hollow', name: 'hollow', parts: [] },                               // blocks nothing
+            { key: 'spill', name: 'spill', parts: [{ type: A1, u: 0.5, v: 0, su: 0.9, sv: 1 }] }, // out of cell
+        ],
+        open: [{ key: 'sealed', name: 'sealed', parts: [{ type: A1, u: 0, v: 0, su: 1, sv: 1 }] }], // cannot pass
+    };
+    await section(page, 'store');
+    await page.getByTestId('sp-import-text').fill(JSON.stringify(bad));
+    await page.getByTestId('sp-import-btn').click();
+    await section(page, 'face');
+
+    // Face 0 lands on the first closed option (`hollow`).
+    await expect(page.getByTestId('sp-guard-closed-empty')).toBeVisible();
+    // Switch the face to the second option → the out-of-cell error shows instead.
+    await page.getByTestId('sp-variant-1').click();
+    await expect(page.getByTestId('sp-guard-part-out-of-cell')).toBeVisible();
+    // Flip the face to 通 → the sealed-open warning.
+    await page.getByTestId('sp-tab-open').click();
+    await expect(page.getByTestId('sp-guard-open-sealed')).toBeVisible();
+    await page.screenshot({ path: 'test-results/authoring-5-guard.png' });
+
+    // A correct pack raises nothing at all — the guard must not cry wolf, or
+    // authors learn to ignore it.
+    const good = {
+        id: 'guard-clean', thickness: 0.2,
+        closed: [{ key: 'solid', name: 'solid', parts: [{ type: A1, u: 0, v: 0, su: 1, sv: 1 }] }],
+        open: [{ key: 'empty', name: 'empty', parts: [] }],
+    };
+    await section(page, 'store');
+    await page.getByTestId('sp-import-text').fill(JSON.stringify(good));
+    await page.getByTestId('sp-import-btn').click();
+    await section(page, 'face');
+    await expect(page.getByTestId('sp-guard')).toHaveCount(0);
+    await page.getByTestId('sp-tab-open').click();
+    await expect(page.getByTestId('sp-guard')).toHaveCount(0);
+});
+
+test('the preview resolves textures — what the editor shows is what the world renders', async ({ page }) => {
+    test.setTimeout(120_000);
+    await boot(page);
+
+    // Regression for a stub that made the tool LIE (2026-08-09): the harness's
+    // IDataSource.texture() returned {}, so every texture id resolved to
+    // nothing. `terran` — whose options reference a detailed armour-panel image
+    // — rendered as flat grey boxes in the editor while rendering correctly in
+    // the world, and its data got blamed for a tool bug. §3.5's promise is
+    // 编辑器所见 = world 所渲; a stub here silently breaks exactly that.
+    await section(page, 'basic');
+    await page.getByTestId('sp-pack-terran').click();
+
+    const texturedMeshes = () => page.evaluate(() => {
+        const w = (window as any).spLoader?.getEngine?.()?.getWorld?.();
+        if (!w) return -1;
+        let n = 0;
+        for (const eid of w.queryEntities('AdjunctComponent', 'MeshComponent')) {
+            if (!w.getComponent(eid, 'AdjunctComponent')?.stdData?.derivedFrom) continue;
+            let has = false;
+            w.getComponent(eid, 'MeshComponent')?.handle?.traverse?.((c: any) => { if (c.material?.map) has = true; });
+            if (has) n++;
+        }
+        return n;
+    });
+    // Textures load through fetch → CAS → ResourceManager, so poll rather than
+    // assert on the first frame.
+    await expect.poll(texturedMeshes, { timeout: 30_000 }).toBeGreaterThan(0);
+    await page.screenshot({ path: 'test-results/authoring-6-textured.png' });
+});
+
 test('undo/redo covers content edits, and publish is content-addressed', async ({ page }) => {
     test.setTimeout(120_000);
     await boot(page);

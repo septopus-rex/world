@@ -4,6 +4,9 @@ import type { IDataSource } from '@engine/core/services/DataSource';
 import type { StylePack } from '@engine/core/spp/Variants';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
+// Content side of the shared core (the resource manifest) — same asset ids the
+// world apps resolve, so a pack's texture references mean the same thing here.
+import { DEMO_ASSETS } from '@core/scenes/demoScene';
 
 
 /**
@@ -66,9 +69,53 @@ export class StylePackPreviewLoader implements IDataSource {
 
     // ── IDataSource ──────────────────────────────────────────────────────────
     async world(_i: number): Promise<any> { return JSON.parse(JSON.stringify(MockWorldNormal)); }
-    async module(_ids: number[]): Promise<any> { return {}; }
-    async texture(_ids: number[]): Promise<any> { return {}; }
     async view(): Promise<any> { return null; }
+
+    /**
+     * Resources (textures / models) — resolved from the SAME manifest the world
+     * apps use, through the SAME CAS路径 (fetch → engine.ipfs.put → id→CID).
+     *
+     * These were `return {}` stubs, and the consequence was worse than "no
+     * textures in the preview": it made the editor LIE. `terran`'s options all
+     * reference texture 36 (a detailed armour-panel image that ships in
+     * public/assets); with the stub the id resolved to nothing and every face
+     * rendered flat grey — so the pack looked crude in the tool while rendering
+     * correctly in the world. Anyone judging by the preview (a person, or a
+     * model reading a screenshot) would "fix" a problem that was not in the
+     * data. §3.5's promise is 编辑器所见 = world 所渲; a stub here breaks exactly
+     * that.
+     */
+    private _resCache = new Map<number, any>();
+    private async ingestAsset(id: number): Promise<any | null> {
+        const cached = this._resCache.get(id);
+        if (cached) return cached;
+        const asset = DEMO_ASSETS.find((a) => a.id === id);
+        const router = (this.engine as any)?.ipfs;
+        if (!asset || !router) return null;
+        let rec: any = null;
+        try {
+            const resp = await fetch(asset.src);
+            if (!resp.ok) return null;   // a tool must not die over a missing asset
+            const cid = await router.put(new Uint8Array(await resp.arrayBuffer()));
+            rec = {
+                type: asset.type, format: asset.format, raw: cid,
+                ...(asset.repeat ? { repeat: asset.repeat } : {}),
+                ...(asset.size ? { size: asset.size } : {}),
+            };
+        } catch { return null; }
+        this._resCache.set(id, rec);
+        return rec;
+    }
+    async module(ids: number[]): Promise<any> {
+        const out: Record<string, any> = {};
+        for (const id of ids) { const r = await this.ingestAsset(id); if (r && r.type !== 'texture') out[id] = r; }
+        return out;
+    }
+    async texture(ids: number[]): Promise<any> {
+        const out: Record<string, any> = {};
+        for (const id of ids) { const r = await this.ingestAsset(id); if (r && r.type === 'texture') out[id] = r; }
+        return out;
+    }
     async stylePack(refs: string[]): Promise<Record<string, StylePack>> {
         const out: Record<string, StylePack> = {};
         if (this.pack) for (const r of refs) if (r === this.pack.id) out[r] = this.pack;

@@ -53,3 +53,7 @@ deploy/logs/
 
 client/*/dist-chain/
 services/*/data/
+
+# Claude Code: per-machine permission grants stay local; .claude/skills/ is
+# shared project tooling and DOES belong in the repo.
+.claude/settings.local.json
