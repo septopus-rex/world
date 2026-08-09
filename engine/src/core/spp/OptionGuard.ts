@@ -28,6 +28,7 @@ export interface OptionIssue {
     code:
         | 'part-out-of-cell'    // geometry leaves the unit cell → fights neighbours
         | 'part-overhang'       // sticks OUT past the face plane — legal, but it lands in the neighbour
+        | 'part-too-deep'       // reaches so far in that it blocks the other faces' options
         | 'part-zero-size'      // no extent on some axis → renders nothing
         | 'closed-empty'        // a 挡 option with no parts blocks nothing
         | 'closed-thin'         // a 挡 option that covers almost none of the face
@@ -44,6 +45,17 @@ const CLOSED_MIN_COVERAGE = 0.15;
 const OPEN_MAX_COVERAGE = 0.95;
 /** Sizes below this are treated as zero (authoring noise, not intent). */
 const EPS = 1e-4;
+/**
+ * Inward depth past which a face's part starts eating the cell's interior.
+ * A face option is CLADDING: the bundled packs sit at 0.06–0.08 of the cell
+ * (a 0.25 m skin on a 4 m cell). At 0.3 a part reaches nearly a third of the way
+ * in, and — this is the failure that motivated the rule — from any OTHER face's
+ * viewpoint it stands right in front of that face's own option, hiding it. The
+ * symptom is maddening: the option looks correct alone and vanishes when all six
+ * faces use it, and nothing about the data is illegal. `w + sw <= 1` does not
+ * catch it, because not punching through the far side was never the point.
+ */
+const DEEP_LIMIT = 0.3;
 
 const su = (p: VariantPart) => p.su ?? 0;
 const sv = (p: VariantPart) => p.sv ?? 0;
@@ -119,6 +131,12 @@ export function checkOption(variant: FaceVariant, state: FaceState): OptionIssue
             issues.push({
                 level: 'warn', code: 'part-overhang', partIndex: i,
                 message: `part ${i} 向外挑出 ${(-w).toFixed(2)}（屋檐/飘窗的常用手法）——它会进入邻格空间，邻格那面若也有几何就会打架`,
+            });
+        }
+        if (sw != null && sw > DEEP_LIMIT) {
+            issues.push({
+                level: 'warn', code: 'part-too-deep', partIndex: i,
+                message: `part ${i} 向内伸进 ${sw!.toFixed(2)}（内建风格包普遍在 0.06~0.08）——它会横在其他五个面的造型前面，六面同用时你会看不见自己刚做的东西`,
             });
         }
         // Zero extent in-plane: nothing is drawn, the part is dead data.

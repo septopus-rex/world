@@ -122,16 +122,34 @@ export class StylePackPreviewLoader implements IDataSource {
         return out;
     }
 
+    /**
+     * Optional MULTI-CELL preview: a whole little structure instead of the one
+     * unit cell. The editor edits ONE cell — that stays its job — but "what does
+     * my library actually build?" is a question about the library, and answering
+     * it by hand-authoring a level every time is why option sets go unverified.
+     * Null (default) = the single editing cell. Set via `setCells`.
+     */
+    private cells: any[] | null = null;
+    setCells(cells: any[] | null): void {
+        this.cells = cells;
+        // The six translucent face panels are an aid for picking ONE cell's face;
+        // in a multi-cell structure they just fog the thing you came to look at.
+        for (const p of this.panels) p.visible = !cells;
+        this.injectPreview();
+    }
+
     private buildBlockRaw(): any[] {
         const themeId = this.pack?.id ?? 'basic';
-        const cell = { position: [0, 0, 0], level: 0, faces: this.faces.map(f => [...f]) };
+        const cell = this.cells
+            ? null
+            : { position: [0, 0, 0], level: 0, faces: this.faces.map(f => [...f]) };
         // A tiny box far below suppresses BlockSystem's auto-ground (hasGround = a
         // Box with oz<0). Out of frame, so the 粒子 floats in the sky with no ground
         // under it — the Bottom face is inspectable and nothing looks odd.
         const groundSuppressor = [[0.01, 0.01, 0.01], [8, 8, -1000], [0, 0, 0], 0, [1, 1], 0, 0];
         return [0, 1, [
             [AdjunctType.Box, [groundSuppressor]],
-            [AdjunctType.Spp, [[CELL_ORIGIN, [cell], themeId]]],
+            [AdjunctType.Spp, [[CELL_ORIGIN, this.cells ?? [cell], themeId]]],
         ], []];
     }
 

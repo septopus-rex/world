@@ -51,8 +51,17 @@ describe('geometry errors', () => {
             .toBe('warn');
     });
 
-    it('accepts a part that exactly fills the cell (boundary is legal)', () => {
-        expect(codes(variant('full', [part({ u: 0, v: 0, su: 1, sv: 1, w: 0, sw: 1 })]), FaceState.Closed)).toEqual([]);
+    it('accepts a part that exactly fills the face (boundary is legal)', () => {
+        expect(codes(variant('full', [part({ u: 0, v: 0, su: 1, sv: 1, w: 0, sw: 0.08 })]), FaceState.Closed)).toEqual([]);
+    });
+
+    it('warns when a face part reaches deep into the cell (it hides the other faces)', () => {
+        // Legal by every boundary rule — and still wrong in practice: at sw=1 the
+        // part spans the whole cell, so from any other face it stands in front of
+        // that face's own option. Found the hard way while authoring terran.
+        const c = codes(variant('deep-but-legal', [part({ w: 0, sw: 1 })]), FaceState.Closed);
+        expect(c).toContain('part-too-deep');
+        expect(c).not.toContain('part-out-of-cell');
     });
 
     it('flags a part with no extent', () => {

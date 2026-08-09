@@ -37,6 +37,7 @@ const views = Number(flag('views', 4));
 const faceState = flag('faces', 'closed');           // which pool to collapse all six faces onto
 const optionKey = flag('option', null);              // which option in that pool (default: the first)
 const builtin = flag('builtin', null);
+const house = flag('house', null);          // a cells JSON: preview a whole structure
 
 const packPath = builtin
     ? resolve(HERE, `../../core/src/stylepacks/${builtin}.stylepack.json`)
@@ -68,6 +69,35 @@ try {
     await page.getByTestId('sp-import-btn').click();
     const err = page.getByTestId('sp-import-error');
     if (await err.count()) throw new Error(`import rejected: ${await err.textContent()}`);
+
+    // --house: photograph a whole STRUCTURE built from this library instead of
+    // the single editing cell. "Do these options actually collapse into a
+    // building?" is a question about the library, and answering it by
+    // hand-authoring a level each time is why option sets go unverified.
+    if (house) {
+        const cells = JSON.parse(readFileSync(resolve(house), 'utf8'));
+        await page.evaluate((c) => window.spLoader?.setCells?.(c), cells);
+        await page.addStyleTag({
+            content: '[data-testid="sp-dial"],[data-testid^="sp-facelabel-"],#sp-preview>div:first-child{display:none!important}',
+        });
+        await page.waitForTimeout(1500);
+        const shots = [];
+        for (let i = 0; i < views; i++) {
+            await page.evaluate(({ az, r }) => {
+                const w = window.spLoader?.getEngine?.()?.getWorld?.();
+                const cc = w?.systems?.findSystemByName('CharacterController');
+                cc?.setObserveOrbit?.(az, 0.55, r);
+            }, { az: (i / views) * Math.PI * 2 + 0.6, r: Number(flag('radius', 26)) });
+            await page.waitForTimeout(400);
+            const file = `${out}/house-${i}.png`;
+            await page.locator('#sp-preview').screenshot({ path: file });
+            shots.push(file);
+        }
+        console.log(`house     ${cells.length} cells → ${shots.join(' ')}`);
+        console.log(`derived   ${await page.evaluate(() => window.spLoader?.derivedCount?.() ?? -1)}`);
+        await browser.close();
+        process.exit(0);
+    }
 
     // Collapse all six faces onto the requested pool's first option, so the
     // photo shows one option from every angle instead of a mixture.

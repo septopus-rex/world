@@ -101,6 +101,10 @@ describe('terran StylePack:parts 路径产出贴图 a2 墙体', () => {
         const keys = theme.closed.map((v: any) => v.key ?? v.name);
         // floor/stair_top 是多层建筑的通用面变体(2026-07-25 起四个包都有),
         // 使 world.styleOverride 换包时楼板与楼梯不会整段消失。
-        expect(keys).toEqual(['solid', 'doorway', 'window', 'roof', 'deck', 'floor', 'stair_top']);
+        // 断言「含」而不是「精确等于」——这条测试要守的是这几个键在(它的名字就这么写
+        // 的),而 option 集合本来就会随内容长(2026-08-09 加了 corner/vent/blast_door
+        // /parapet/pipe_wall/beacon)。写成精确相等会让每次丰富库都要改测试,那是把
+        // 「不许少」误写成了「不许多」。
+        expect(keys).toEqual(expect.arrayContaining(['solid', 'doorway', 'window', 'roof', 'deck', 'floor', 'stair_top']));
     });
 });
