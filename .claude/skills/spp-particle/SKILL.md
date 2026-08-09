@@ -56,7 +56,14 @@ NODE_PATH=$(npm root -g) node tools/snapshot.mjs <pack.json> --out /tmp/spp-look
 
 **眼睛判的**——只能看图：比例、层次、风格识别度、"这看着像不像 X"。
 
-## 两条会让你白干一轮的坑（2026-08-09 实测）
+**守卫看不见的（2026-08-09 实测，别把 clean 当"没问题"）**：
+
+- **`rot` 完全不参与判定。** `part-out-of-cell` 算的是轴对齐 AABB，转过之后捅出胞外它照报 clean。
+- **`part-too-deep` 假设 option 是「面覆层」。** 对**体量型** option（`stair_top` 那种填满整个胞的楼梯）它是**误报**——见下面的坑④，照它改会把楼梯改到走不上去。
+- **`part-overhang` 没有量级概念。** `w=-0.01`（4cm 窗台线脚）和 `w=-0.36`（1.44m 烟囱伸出去）同一条 warn、同样措辞。一个用了线脚的库能刷出几十条，真危险的那几条淹在里面。**读 overhang 报告要自己看数值。**
+- **看不见"这东西被别的 part 挡住了"**（坑⑤）。
+
+## 五条会让你白干一轮的坑（2026-08-09 实测）
 
 **① `w`/`sw` 是【格子比例】，不是「厚度比例」。** `sw=0.85` 不是"85% 厚"，是
 `0.85 × 4m = 3.4m`——几乎穿透整格。单看这个 option 没问题，**六个面一起用时，每个面的
@@ -68,8 +75,27 @@ NODE_PATH=$(npm root -g) node tools/snapshot.mjs <pack.json> --out /tmp/spp-look
 整个消失在墙里。做法：大面走贴图，构件走调色板纯色（`STEEL 11` / `DARK 13` / `SLATE 9`
 / `BLACK 31` / `AMBER 24`，自带 roughness/metalness）。
 
-另：**a6 锥在面变体里朝向不受控**（锥尖朝外，渲染成一个黑洞），`VariantPart` 没有"朝向
-面外"的语义。要做灯罩/尖顶用盒子堆，别用锥。
+**③ `rot` 在面变体里不能用，a6 / a8 也不能。** 三者同一个根因：`partToBox`
+（`Expander.ts:169`）无条件把 part 尺寸按面朝向填成 `[x,y,z]` 包围盒，而 `rot` 是**引擎系
+绝对旋转**、不随面变换——同一个 part 映射到六个面朝向各不相同，做不了"绕面法线转 45°"
+的斜砌/人字纹。**a6 锥**的 slot 0 是 `[底半径, 高, 顶半径]`（协议 §2.1）不是包围盒，`su/sv/sw`
+填进去顶底半径相等 ⇒ **渲染成圆柱**，半径还按格宽算所以撑爆单位胞（旧版这里记的"朝向不受控、
+锥尖朝外"是**归错因了**）。**a8 牌**的 slot 0 是 `[东西, 南北]` 两元组且 `rot=0` 时**平躺**，
+在面变体里立不起来。要斜的/锥的/牌子，用盒子堆，或走 a4 模型。
+
+**④ 体量型 option 的深构件不是错，别照守卫改（血的教训，2026-08-09）。**
+`stair_top` 是一座**双跑楼梯**：flight A 沿 `w 0.9→0.6` 上行、半平台 `w 0.5`、flight B 沿
+`w 0.4→0.1` 折返，最后那个 `sw=0.375` 的薄片是**两跑之间的隔墙（flight divider）**，必须有
+那个深度才能把两条梯段分开。守卫报它 `part-too-deep`（因为守卫假设 option 是覆层），照着
+"修"掉之后楼梯塌成单跑、每级 0.62 m，**玩家爬不上去**。brick 有 `spp-tower-stairs-walk.test.ts`
+当场逮到；garden 没有，于是坏着提交推送了。**改任何共享 option 之前先
+`grep -rl "<option key>" engine/tests/`**——brick / garden / spanish 的 `stair_top` 是同一个模板。
+
+**⑤ 凹龛、凹槽、洞：减法只能靠"不放东西"表达。** 这是一套纯加法的几何。把深色背板推到
+`w` 更大的地方**不会**得到一个凹龛——它会被前面那张实心主面**整个挡住**（盲拱廊第一版就是
+这样，三个龛一个都没渲染出来）。正解是把主面**拆成块、让开龛的位置**，龛才是真的洞。
+同源的一条：石墙的"砌缝"画成深色细条是看不见的（明度差不够 + 浅凹槽不投影），
+**留 0.015 的真空隙让阴影自己去画**。
 
 ## 看整栋，不只看单胞
 
@@ -98,5 +124,9 @@ node tools/snapshot.mjs --builtin terran --house cells.json --views 2 --radius 2
 - 产物是**数据**（`client/core/src/stylepacks/*.stylepack.json`），不写 TS。
   内容门禁 `unit/content-conformance.test.ts` 会逐文件校验，红了改内容不改测试。
 - 面引用 option 用**稳定 key**（P4），不是数组下标。
-- 改完跑 `cd client/editor && npm run test:e2e`（~40s）与引擎单测。
+- 改完跑 `cd client/editor && npm run test:e2e`（~40s）与引擎单测。**引擎单测不是走过场**：
+  它是唯一能证明"楼梯还能走、门还能过"的东西，守卫和截图都证明不了可通行性。
+- **给内容加细节前先看它有没有被测试当夹具读。** `spp-tower-stairs-walk.test.ts` 直接读
+  `brick.stylepack.json`，并且按「box 高度 < 2m」把踏步和墙分开——所以往 brick 的 `solid`
+  或 `floor` 上加一条线脚，都会变成幽灵踏步让它红，而报错只是一串对不上的数字。
 - 规格：`docs/plan/specs/spp-editors.md`（§3.2 组合 · §3.3 单位系 · §3.7 守卫）。

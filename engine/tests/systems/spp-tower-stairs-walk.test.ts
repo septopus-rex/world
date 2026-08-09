@@ -108,3 +108,63 @@ describe('SPP tower stairs — StylePack stair_top variant', () => {
         expect(alt()).toBeGreaterThan(4.3); // …and not fallen to the ground floor
     });
 });
+
+// The switchback stair geometry is SHARED by brick / garden / spanish — the
+// three packs are cut from one template. Only brick was covered, and on
+// 2026-08-09 garden's copy was "tidied" (its flight divider read as a stray
+// deep handrail, so it was removed and the two runs collapsed into one
+// 0.62 m-per-tread flight). brick's test caught it; garden shipped broken.
+//
+// So: one climb per pack that carries the template. Deliberately NO geometry
+// assertion here — the tread-tops list above pins `floor` and `solid` shapes
+// as a side effect, and a list of numbers that no longer matches says nothing
+// about what broke. "Can a player get up it" is the property that matters.
+const CLIMBERS: Array<{ pack: string; floor: string; wall: string }> = [
+    { pack: 'garden', floor: 'lawn', wall: 'hedge' },
+];
+
+for (const { pack, floor, wall } of CLIMBERS) {
+    describe(`SPP stairwell — ${pack} carries the same switchback`, () => {
+        it('a real player climbs one storey', async () => {
+            const packJson = JSON.parse(fs.readFileSync(path.join(
+                __dirname, `../../../client/core/src/stylepacks/${pack}.stylepack.json`), 'utf8')) as StylePack;
+            const engine = await makeHeadlessEngine();
+            (engine as any).registerStylePack(packJson);
+            const world: any = engine.getWorld()!;
+            const faces = (top: any, bottom: any) =>
+                [top, bottom, [1, wall], [1, wall], [1, wall], [1, wall]];
+            const column = [
+                { position: [0, 0, 0], level: 0, faces: faces([1, 'stair_top'], [1, floor]) },
+                { position: [0, 0, 1], level: 0, faces: faces([1, floor], [0, 'empty']) },
+            ];
+            engine.injectBlock({
+                x: BX, y: BY, world: 'main', elevation: 0,
+                adjuncts: [0, 1, [[AdjunctType.Spp, [[[6, 6, 0], column, pack]]]], [], 0],
+            });
+            stepN(engine, 5);
+
+            const t = world.getComponent(
+                world.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0], 'TransformComponent');
+            const alt = () => t.position[1];
+            const leg = (ix: number, iy: number, frames: number) => {
+                (engine as any).setMoveIntent(ix, iy);
+                stepN(engine, frames);
+                (engine as any).setMoveIntent(0, 0);
+                stepN(engine, 20);
+            };
+
+            t.position[0] = (BX - 1) * 16 + 6.7;      // west lane, on tread 2
+            t.position[1] = 1.8;
+            t.position[2] = -((BY - 1) * 16 + 6.8);
+            t.dirty = true;
+            stepN(engine, 30);
+            expect(alt(), 'starts partway up flight A').toBeLessThan(2.0);
+
+            leg(0, 1, 40);                            // flight A → half-landing
+            expect(alt(), 'flight A reaches the landing').toBeGreaterThan(2.7);
+            leg(1, 0, 15);                            // shift to the mid lane
+            leg(0, -1, 30);                           // flight B → top tread
+            expect(alt(), 'flight B reaches the top tread').toBeGreaterThan(4.3);
+        });
+    });
+}
