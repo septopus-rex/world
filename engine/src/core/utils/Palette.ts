@@ -44,6 +44,19 @@ export interface PaletteEntry {
 export const PALETTE_MAX_INDEX = 255;
 
 /**
+ * The families whose raw slot 3 is a colour — i.e. the standard 7-slot
+ * primitives (adjunct-types.md §2). Everything else puts something entirely
+ * different there: a4 a model id, a8 a texture id, b4 a stop mode, b8 a shape.
+ *
+ * Exported so a UI can decide whether to offer a colour picker for a given
+ * part instead of keeping its own copy of the list — the editor's material
+ * dropdown reads this. A second hand-maintained copy is exactly how the
+ * "5 hard-coded part kinds" drift happened before `listOptionPartKinds`.
+ */
+export const PALETTE_SLOT3_TYPES: ReadonlySet<number> =
+    Object.freeze(new Set([0x00a1, 0x00a2, 0x00a5, 0x00a6, 0x00a7])) as ReadonlySet<number>;
+
+/**
  * The built-in table. Grouped so authored content can reach for a *material*
  * ("concrete", "timber", "glass") instead of a bare RGB triple — which is what
  * makes a scene read as built rather than blocked-out.

@@ -117,8 +117,13 @@ export default function StylePackEditor() {
         pushUndo();
         const ids = new Set(packs.map((p) => p.id));
         let n = 1; while (ids.has(`new-${n}`)) n++;
+        // No pack-level `color`: it is only threaded into legacy `pieces`
+        // (Expander.ts variantParts), and this editor only ever authors `parts`.
+        // A blank used to carry 0x9aa0a6, which every export then advertised and
+        // nothing ever honoured — the preview showed a1's own #f8f8f8 instead.
+        // Colour belongs on the part, in raw slot 3, where the picker writes it.
         const blank: StylePack = {
-            format: 'septopus.spp.stylepack', version: 1, id: `new-${n}`, thickness: 0.2, color: 0x9aa0a6,
+            format: 'septopus.spp.stylepack', version: 1, id: `new-${n}`, thickness: 0.2,
             closed: [{ key: 'solid', name: 'solid', parts: [{ type: 0x00a1, u: 0, v: 0, su: 1, sv: 1, props: [0, [1, 1], 0, 1] }] }],
             open: [{ key: 'empty', name: 'empty', parts: [] }],
         };
@@ -130,6 +135,19 @@ export default function StylePackEditor() {
     const addPart = (def: VariantPart) => editPack((n) => { n[tab][vi].parts!.push(JSON.parse(JSON.stringify(def))); });
     const removePart = (pi: number) => editPack((n) => { n[tab][vi].parts!.splice(pi, 1); });
     const setPartField = (pi: number, key: keyof VariantPart, val: any) => editPack((n) => { (n[tab][vi].parts![pi] as any)[key] = val; });
+    const setPart = (pi: number, part: VariantPart) => editPack((n) => { n[tab][vi].parts![pi] = JSON.parse(JSON.stringify(part)); });
+    /**
+     * Rename an option. The key IS the reference (P4), so every dial entry
+     * pointing at the old one has to move with it — otherwise renaming silently
+     * detaches every face that used it and they render empty, which reads as
+     * "the editor ate my wall". Same invariant `removeVariant` maintains.
+     */
+    const renameVariant = (i: number, key: string) => {
+        const from = variantRef(pool[i], i);
+        editPack((n) => { n[tab][i].key = key; n[tab][i].name = key; });
+        applyDial(dial.map(([s, r]) =>
+            (s === selState && String(r) === from ? [s, key] : [s, r]) as [number, string]));
+    };
     const addVariant = () => {
         pushUndo();
         const n: StylePack = JSON.parse(JSON.stringify(pack));
@@ -204,8 +222,9 @@ export default function StylePackEditor() {
             <FaceStateEditor pack={pack} packs={packs} selFace={selFace} selState={selState} pool={pool} vi={vi} variant={variant} cid={cid}
                 canUndo={past.length > 0} canRedo={future.length > 0} onUndo={undo} onRedo={redo}
                 onEditPack={editPack} onSelectPack={selectPack} onNewPack={newPack} onSetFaceState={(state) => setFaceState(selFace, state)}
-                onSetVariant={setVariant} onAddVariant={addVariant} onRemoveVariant={removeVariant} onAddPart={addPart} onRemovePart={removePart}
-                onSetPartField={setPartField} onExport={exportPack} onImport={importPack} onPublish={publish} />
+                onSetVariant={setVariant} onAddVariant={addVariant} onRemoveVariant={removeVariant} onRenameVariant={renameVariant}
+                onAddPart={addPart} onRemovePart={removePart} onSetPartField={setPartField} onSetPart={setPart}
+                onExport={exportPack} onImport={importPack} onPublish={publish} />
         </div>
     );
 }

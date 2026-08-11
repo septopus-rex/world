@@ -1,6 +1,8 @@
 import type { StylePack, FaceVariant, VariantPart } from '@engine/core/spp/Variants';
 import { listOptionPartKinds } from '@engine/core/spp/Variants';
 import { adjunctTypeName } from '@engine/core/types/AdjunctType';
+import { DEEP_LIMIT } from '@engine/core/spp/OptionGuard';
+import { PALETTE, PALETTE_SLOT3_TYPES } from '@engine/core/utils/Palette';
 
 /** open / closed pool key. */
 export type Pool = 'open' | 'closed';
@@ -52,12 +54,67 @@ const CN: Record<number, string> = {
     0x00e3: '视频', 0x00e4: '书', 0x00e5: '板',
 };
 
+/**
+ * How deep a freshly dropped part sits. Two requirements pull against each
+ * other, so this is DERIVED rather than a constant per type:
+ *
+ *   · it must be VISIBLE — a part shallower than the face's own wall slab is
+ *     buried inside it, and dropping one reads as "nothing happened";
+ *   · it must not trip the contract guard on arrival — `part-too-deep` fires
+ *     above `DEEP_LIMIT`.
+ *
+ * Until 2026-08-09 these were fixed numbers and 0x00a2 box shipped at `sw 0.4`:
+ * every first box a user dropped arrived with a warning already attached, and
+ * sat so far into the cell that it rendered as a HOLE punched through the face
+ * rather than a block sitting on it. Both symptoms, one bad default.
+ *
+ * The cap wins over visibility on purpose: on a pack with an unusually thick
+ * shell the part lands buried but SILENT, which the author fixes by typing a
+ * depth — better than a tool whose own defaults are flagged as mistakes.
+ */
+const dropDepth = (want: number, thickness: number) =>
+    // Rounded: this number goes straight into exported JSON, and
+    // `0.3 - 0.02 = 0.27999999999999997` is not something to ship in a document.
+    Math.round(Math.min(Math.max(want, thickness + 0.08), DEEP_LIMIT - 0.02) * 1e4) / 1e4;
+
 /** Part kinds you can drop into a state's option — enumerated from the ENGINE
- *  (types + starter tails + names), framed by the table above. */
-export const PART_KINDS: Array<{ label: string; def: VariantPart }> = listOptionPartKinds().map((k) => ({
-    label: `${CN[k.typeId] ?? k.name} ${typeHex(k.typeId)}`,
-    def: { type: k.typeId, ...(FRAMES[k.typeId] ?? FULL), props: k.props } as VariantPart,
-}));
+ *  (types + starter tails + names), framed by the table above, at a depth that
+ *  suits THIS pack's shell. */
+export function partKinds(thickness: number): Array<{ label: string; def: VariantPart }> {
+    return listOptionPartKinds().map((k) => {
+        const frame = FRAMES[k.typeId] ?? FULL;
+        return {
+            label: `${CN[k.typeId] ?? k.name} ${typeHex(k.typeId)}`,
+            def: {
+                type: k.typeId, ...frame, props: k.props,
+                ...(frame.sw != null ? { sw: dropDepth(frame.sw, thickness) } : {}),
+            } as VariantPart,
+        };
+    });
+}
+
+/** Material choices for a part whose slot 3 is a colour. Index 0 = the family's
+ *  own default (what every untouched part already carries), 1..n = the engine's
+ *  normative palette, each entry carrying roughness/metalness with it. */
+export const MATERIALS: Array<{ value: number; label: string; color: string }> = [
+    { value: 0, label: '默认色 (该型自带)', color: '#888888' },
+    ...PALETTE.map((e, i) => ({
+        value: i, label: `${i} ${e.label}`, color: `#${e.color.toString(16).padStart(6, '0')}`,
+    })).slice(1),
+];
+
+/** True when this part's raw slot 3 is a colour, i.e. a material picker applies.
+ *  a4 keeps a model id there, a8 a texture, b4 a stop mode — offering a colour
+ *  for those would silently corrupt the row. */
+export const takesMaterial = (typeId: number): boolean => PALETTE_SLOT3_TYPES.has(typeId);
+
+/** Swap a part's type: the frame (where it sits) is the author's, the raw tail
+ *  is the TYPE's, so the tail must be replaced wholesale — an a4's [modelId]
+ *  reinterpreted as an a2's [colour, repeat, …] is nonsense. */
+export function retypePart(part: VariantPart, typeId: number, thickness: number): VariantPart {
+    const kind = partKinds(thickness).find((k) => k.def.type === typeId);
+    return { ...part, type: typeId, props: kind ? JSON.parse(JSON.stringify(kind.def.props)) : [] };
+}
 
 /** `0x00a1` → `a1` — the short id creators read in the protocol docs. */
 function typeHex(t: number): string { return t.toString(16).padStart(4, '0').slice(2); }

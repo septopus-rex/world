@@ -54,8 +54,18 @@ const EPS = 1e-4;
  * symptom is maddening: the option looks correct alone and vanishes when all six
  * faces use it, and nothing about the data is illegal. `w + sw <= 1` does not
  * catch it, because not punching through the far side was never the point.
+ *
+ * KNOWN LIMIT: this reads every option as cladding. A VOLUME option (brick's
+ * `stair_top` is a whole switchback stairwell filling the cell) legitimately
+ * needs depth — its flight divider sits at 0.375 — and the warning there is a
+ * false positive. It cost a real regression on 2026-08-09: the divider was
+ * "fixed" away and the stair became unclimbable. Until the check can tell the
+ * two apart, treat a hit on a volume option as informational.
+ *
+ * Exported so the editor can place a newly dropped part just inside the limit
+ * rather than shipping a default that trips its own guard on arrival.
  */
-const DEEP_LIMIT = 0.3;
+export const DEEP_LIMIT = 0.3;
 
 const su = (p: VariantPart) => p.su ?? 0;
 const sv = (p: VariantPart) => p.sv ?? 0;

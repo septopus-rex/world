@@ -360,3 +360,55 @@ test('undo/redo covers content edits, and publish is content-addressed', async (
     const cid2 = (await page.getByTestId('sp-cid-store').textContent())!.replace('CID: ', '').trim();
     expect(cid2, 'identical content ⇒ identical CID').toBe(cid1);
 });
+
+/**
+ * MATERIAL · TYPE · KEY — the three things a creator could not express through
+ * this UI until 2026-08-09, each of which forced the work out into hand-edited
+ * JSON (and, for the key, produced libraries whose options were all called v1).
+ *
+ * Authored a whole pack through the UI that day and the export came back with
+ * `props[0]` stuck at 0 on all twelve parts — a pure white massing model. The
+ * palette lives in raw slot 3, so "pick a material" is the single edit that
+ * separates a blocked-out shape from something that reads as built.
+ */
+test('a part carries a material and a type, and an option carries a semantic key', async ({ page }) => {
+    await boot(page);
+    await page.getByTestId('sp-new-pack').click();
+    await section(page, 'face');
+
+    // ── the option's key is editable, and the face reference MOVES with it ────
+    await page.getByTestId('sp-variant-key').fill('ice_wall');
+    await expect.poll(() => livePack(page).then((p) => p.closed[0].key)).toBe('ice_wall');
+    const dial = await liveDial(page);
+    expect(dial.filter(([s]) => s === 1).every(([, k]) => k === 'ice_wall'),
+        'renaming must re-point every face that used the old key — a dangling ref renders empty').toBe(true);
+
+    // ── slot 3 is editable, per part, and only where slot 3 IS a colour ───────
+    await page.getByTestId('sp-part-0-material').selectOption('22');       // Snow
+    await expect.poll(() => livePack(page).then((p) => p.closed[0].parts[0].props[0])).toBe(22);
+
+    await page.getByTestId('sp-add-box').click();
+    // A freshly dropped part must not arrive already flagged: the placement
+    // default used to be sw 0.4 against a guard limit of 0.3.
+    await expect(page.getByTestId('sp-guard-part-too-deep'),
+        'a just-dropped part must not trip the guard').toHaveCount(0);
+    await page.getByTestId('sp-part-1-material').selectOption('14');       // Glass
+    await expect.poll(() => livePack(page).then((p) => p.closed[0].parts[1].props[0])).toBe(14);
+
+    // ── swapping the type replaces the raw TAIL, not just the id ─────────────
+    const framedAt = (await livePack(page)).closed[0].parts[1].su;
+    await page.getByTestId('sp-part-1-type').selectOption(String(A4));
+    await expect.poll(() => livePack(page).then((p) => p.closed[0].parts[1].type)).toBe(A4);
+    const asModule = (await livePack(page)).closed[0].parts[1];
+    expect(asModule.props.length,
+        'a4 module carries [resourceId], not the 4-slot standard tail').toBe(1);
+    expect(page.getByTestId('sp-part-1-material'),
+        'a4 keeps a model id in slot 3 — offering a colour there would corrupt the row').toHaveCount(0);
+    expect(asModule.su, 'the frame is the author\'s and must survive a type swap').toBe(framedAt);
+
+    // ── and it all reaches the file the creator walks away with ──────────────
+    const out = await exportJson(page);
+    expect(out.closed[0].key).toBe('ice_wall');
+    expect(out.closed[0].parts[0].props[0]).toBe(22);
+    expect(out.color, 'a blank pack must not ship a `color` nothing honours').toBeUndefined();
+});
