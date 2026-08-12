@@ -1,0 +1,714 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>SPP reveal</title>
+<style>
+  html,body{margin:0;background:#05070c;overflow:hidden}
+  canvas{display:block}
+</style>
+<canvas id="c"></canvas>
+<script>
+/* ============================================================================
+ * SPP 展开 — 10s 概念动画
+ *
+ * 手写的正交软渲染器（canvas 2D），但几何来自 client/core/src/stylepacks 的
+ * 真实 option 数据：面 variant 的 parts (u,v,su,sv,w,sw) 按 Expander.partToBox
+ * 的同一套映射展开成盒子，材质走 Palette 索引 / 真实贴图。
+ * 每帧由帧号完全决定（确定性，无 Date.now / Math.random）。
+ * ==========================================================================*/
+
+const Q = new URLSearchParams(location.search);
+const W = +Q.get('w') || 1920;
+const H = +Q.get('h') || 1080;
+const FPS = 60, DUR = 10, TOTAL = FPS * DUR;
+const PORTRAIT = H > W;
+
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const ctx = cv.getContext('2d', { alpha: false });
+
+/* ---------------------------------------------------------------- palette */
+// engine/src/core/utils/Palette.ts —— 索引即语义，颜色照抄
+const PALETTE = [
+  0x888888,0x555555,0x3d63a8,0xc0392b,0xb9b3a7,0x8f8578,0x9c5a3c,0x6f4b2f,
+  0xd8cbb0,0x3b3f46,0xeeeeee,0xc8ccd0,0xb08d57,0x2a2d33,0xdcecf2,0xfaf7f0,
+  0x4a7c3f,0x2f5233,0x7a8b3f,0x6b5540,0xc2a878,0x2290cc,0xe8e8ee,0x1d2733,
+  0xffcc33,0xff8800,0x33aa55,0x22ccbb,0x7744cc,0xdd4488,0xf5f0e6,0x141418,
+];
+const rgb = (n) => [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+
+// demo.manifest.json 的贴图条目：id → [文件, 世界尺度(米)]
+const TEXDEF = {
+  36: ['terran-wall.png', 2], 37: ['terran-roof.png', 2], 38: ['terran-accent.png', 0.5],
+  43: ['spanish-wall.png', 2], 44: ['spanish-roof.png', 2], 45: ['spanish-arch.png', 2],
+  46: ['brick-wall.png', 2], 47: ['concrete-floor.png', 2],
+};
+const TEX = {};   // id → {img, pat, size, avg:[r,g,b]}
+
+/* ------------------------------------------------------------------ packs */
+const PACK_IDS = ['brick', 'terran', 'ice', 'garden'];
+const PACKS = {};
+
+// 语义角色 → 各 pack 的 option key。SPP 里 face 引用的是 key，换 pack 即换皮。
+const ROLE = {
+  WALL:   { brick:'solid',        terran:'solid',    ice:'ice_wall',      garden:'stone_wall'    },
+  DOOR:   { brick:'doorway',      terran:'doorway',  ice:'ice_gate',      garden:'arbor_gate'    },
+  WINDOW: { brick:'arch_window',  terran:'window',   ice:'ice_window',    garden:'window_lattice'},
+  WIN2:   { brick:'window',       terran:'window',   ice:'ice_window',    garden:'lattice'       },
+  PLINTH: { brick:'plinth',       terran:'deck',     ice:'snow_bank',     garden:'flower_wall'   },
+  PILLAR: { brick:'pilaster',     terran:'pipe_wall',ice:'ice_pillar',    garden:'hedge_flower'  },
+  QUOIN:  { brick:'quoin',        terran:'corner',   ice:'glacier',       garden:'lattice'       },
+  BLIND:  { brick:'blind_arcade', terran:'vent',     ice:'frost_wall',    garden:'hedge'         },
+  FLOOR:  { brick:'floor',        terran:'floor',    ice:'frozen_floor',  garden:'deck'          },
+  ROOF:   { brick:'roof_slate',   terran:'roof',     ice:'rime_roof',     garden:'pergola_roof'  },
+  EAVES:  { brick:'corbel_eaves', terran:'parapet',  ice:'icicles',       garden:'planter'       },
+  PARAPET:{ brick:'parapet',      terran:'parapet',  ice:'snow_bank',     garden:'hedge'         },
+  CHIMNEY:{ brick:'chimney_stack',terran:'vent',     ice:'ice_pillar',    garden:'planter'       },
+  DECK:   { brick:'gutter',       terran:'deck',     ice:'ice_deck',      garden:'stone_path'    },
+  // open 池
+  EMPTY:  { brick:'empty',        terran:'empty',    ice:'empty',         garden:'empty'         },
+  ARCADE: { brick:'arcade',       terran:'gate',     ice:'ice_arch',      garden:'arch'          },
+  RAIL:   { brick:'railing',      terran:'railing',  ice:'ice_rail',      garden:'colonnade'     },
+  GATE:   { brick:'gate_iron',    terran:'gate',     ice:'crack_gap',     garden:'hedge_gap'     },
+};
+const OPEN_ROLES = new Set(['EMPTY', 'ARCADE', 'RAIL', 'GATE']);
+
+function variantOf(packId, role) {
+  const pack = PACKS[packId]; if (!pack) return null;
+  const pool = OPEN_ROLES.has(role) ? pack.open : pack.closed;
+  const key = (ROLE[role] || {})[packId];
+  return pool.find(v => (v.key ?? v.name) === key) || pool[0] || null;
+}
+
+/* -------------------------------------------------------------- expansion */
+// 面索引 = ParticleFace: 0 Top(Z+) 1 Bottom(Z-) 2 Front(Y-) 3 Back(Y+) 4 Left(X-) 5 Right(X+)
+// Expander.partToBox 的同一套映射（u/v = 面内两轴, w = 由面向内的深度）
+function partToBox(face, part, s, thickness) {
+  const uC = (part.u + part.su / 2) * s, sum = part.su * s;
+  const vC = (part.v + part.sv / 2) * s, svm = part.sv * s;
+  const swm = part.sw != null ? part.sw * s : thickness * s / 4;
+  const wC = (part.w ?? 0) * s + swm / 2;
+  switch (face) {
+    case 4: return { size: [swm, sum, svm], center: [wC, uC, vC] };          // Left  X-
+    case 5: return { size: [swm, sum, svm], center: [s - wC, uC, vC] };      // Right X+
+    case 2: return { size: [sum, swm, svm], center: [uC, wC, vC] };          // Front Y-
+    case 3: return { size: [sum, swm, svm], center: [uC, s - wC, vC] };      // Back  Y+
+    case 1: return { size: [sum, svm, swm], center: [uC, vC, wC] };          // Bottom Z-
+    case 0: return { size: [sum, svm, swm], center: [uC, vC, s - wC] };      // Top   Z+
+  }
+}
+
+// 一个面 → 该面所有 part 的世界盒子
+function faceBoxes(packId, role, face, origin, s, out) {
+  const v = variantOf(packId, role); if (!v) return;
+  const pack = PACKS[packId];
+  const parts = v.parts || (v.pieces || []).map(p => ({
+    type: 0xa2, u: p.du, v: p.dv, su: p.su, sv: p.sv, props: [0, [1, 1], 0, 1],
+  }));
+  for (const part of parts) {
+    const b = partToBox(face, part, s, pack.thickness ?? 0.1);
+    const pr = part.props || [];
+    out.push({
+      type: part.type ?? 0xa2,
+      size: b.size,
+      pos: [origin[0] + b.center[0], origin[1] + b.center[1], origin[2] + b.center[2]],
+      slot3: typeof pr[0] === 'number' ? pr[0] : 0,
+      tex: typeof pr[4] === 'number' ? pr[4] : null,
+    });
+  }
+}
+
+// 整个面的薄板（叠加态的"面板"底色用）
+function panelBox(face, origin, s) {
+  const b = partToBox(face, { u: 0, v: 0, su: 1, sv: 1, w: 0, sw: 0.006 }, s, 0.1);
+  return [{ type: 0xa2, size: b.size, pos: [origin[0]+b.center[0], origin[1]+b.center[1], origin[2]+b.center[2]], slot3: 0, tex: null }];
+}
+
+// 一个 cell（6 面各一个 role）→ 盒子。skipFaces 用于同层邻接消除。
+function cellBoxes(packId, roles, origin, s, out, skip) {
+  for (let f = 0; f < 6; f++) {
+    if (skip && skip.has(f)) continue;
+    const r = roles[f]; if (!r || r === 'SKIP') continue;
+    faceBoxes(packId, r, f, origin, s, out);
+  }
+}
+
+/* ------------------------------------------------------------------- math */
+const V = {
+  sub: (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]],
+  dot: (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2],
+  norm: (a) => { const l = Math.hypot(a[0],a[1],a[2]) || 1; return [a[0]/l, a[1]/l, a[2]/l]; },
+};
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+const easeOut = (t) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+const easeInOut = (t) => { t = clamp(t, 0, 1); return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; };
+// mulberry32 —— 与引擎坍缩同款，保证确定性
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+
+/* ----------------------------------------------------------------- camera */
+function camera(yaw, pitch, scale, target, shiftY) {
+  const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const dir = [cp * cy, cp * sy, sp];        // 目标 → 相机
+  const right = [-sy, cy, 0];
+  const up = [-sp * cy, -sp * sy, cp];
+  const ox = W / 2, oy = H / 2 + (shiftY || 0);
+  return {
+    dir, right, up, scale,
+    project(p) {
+      const d = V.sub(p, target);
+      return { x: ox + V.dot(d, right) * scale, y: oy - V.dot(d, up) * scale, z: V.dot(d, dir) };
+    },
+  };
+}
+
+const LIGHT = V.norm([-0.42, -0.78, 0.72]);   // 世界光向（指向光源）
+
+/* --------------------------------------------------------------- renderer */
+const BOXFACES = [           // [轴, 符号, 面内 u 轴, 面内 v 轴]
+  [0, +1, 1, 2], [0, -1, 1, 2],
+  [1, +1, 0, 2], [1, -1, 0, 2],
+  [2, +1, 0, 1], [2, -1, 0, 1],
+];
+
+// 收集一批盒子的可见面 → 屏幕多边形 + 材质，按深度排序后统一画
+function collect(boxes, cam, opt) {
+  const out = [];
+  for (const b of boxes) {
+    const [sx, sy, sz] = b.size, c = b.pos;
+    const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+    if (b.type === 0xa7) {   // a7 球：正交投影下是个圆
+      const p = cam.project(c);
+      out.push({ kind: 'ball', p, r: Math.max(sx, sy, sz) / 2 * cam.scale, z: p.z, box: b });
+      continue;
+    }
+    const h = [hx, hy, hz];
+    for (const [ax, sgn, ua, va] of BOXFACES) {
+      const n = [0, 0, 0]; n[ax] = sgn;
+      const ndl = V.dot(n, cam.dir);
+      if (ndl <= 0.002) continue;                       // 背面剔除
+      const base = [c[0], c[1], c[2]]; base[ax] += sgn * h[ax];
+      const U = [0, 0, 0]; U[ua] = h[ua] * 2;
+      const Vv = [0, 0, 0]; Vv[va] = h[va] * 2;
+      const p0 = [base[0] - U[0]/2 - Vv[0]/2, base[1] - U[1]/2 - Vv[1]/2, base[2] - U[2]/2 - Vv[2]/2];
+      const q0 = cam.project(p0);
+      const q1 = cam.project([p0[0]+U[0], p0[1]+U[1], p0[2]+U[2]]);
+      const q2 = cam.project([p0[0]+U[0]+Vv[0], p0[1]+U[1]+Vv[1], p0[2]+U[2]+Vv[2]]);
+      const q3 = cam.project([p0[0]+Vv[0], p0[1]+Vv[1], p0[2]+Vv[2]]);
+      out.push({
+        kind: 'face', q: [q0, q1, q2, q3], n,
+        lum: 0.30 + 0.70 * Math.max(0, V.dot(n, LIGHT)),
+        z: (q0.z + q1.z + q2.z + q3.z) / 4,
+        lu: Math.hypot(U[0], U[1], U[2]), lv: Math.hypot(Vv[0], Vv[1], Vv[2]),
+        box: b,
+      });
+    }
+  }
+  out.sort((a, b) => a.z - b.z);
+  return out;
+}
+
+function baseColor(box) {
+  if (box.slot3 > 255) return rgb(box.slot3);
+  if (box.slot3 >= 1 && box.slot3 < 32) return rgb(PALETTE[box.slot3]);
+  if (box.tex != null && TEX[box.tex]) return TEX[box.tex].avg;
+  return rgb(PALETTE[0]);
+}
+
+function paint(items, opt) {
+  opt = opt || {};
+  const gAlpha = opt.alpha == null ? 1 : opt.alpha;
+  for (const it of items) {
+    if (it.kind === 'ball') {
+      const col = baseColor(it.box);
+      ctx.globalAlpha = gAlpha;
+      const g = ctx.createRadialGradient(it.p.x - it.r*0.35, it.p.y - it.r*0.4, it.r*0.1, it.p.x, it.p.y, it.r);
+      g.addColorStop(0, `rgb(${Math.min(255,col[0]*1.35|0)},${Math.min(255,col[1]*1.35|0)},${Math.min(255,col[2]*1.35|0)})`);
+      g.addColorStop(1, `rgb(${col[0]*0.55|0},${col[1]*0.55|0},${col[2]*0.55|0})`);
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(it.p.x, it.p.y, Math.max(0.6, it.r), 0, 6.2832); ctx.fill();
+      continue;
+    }
+    const [q0, q1, q2, q3] = it.q;
+    ctx.globalAlpha = gAlpha;
+    ctx.beginPath();
+    ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.lineTo(q3.x, q3.y); ctx.closePath();
+
+    const t = it.box.tex != null ? TEX[it.box.tex] : null;
+    const col = baseColor(it.box);
+    if (t && it.lu > 0.02 && it.lv > 0.02 && opt.textures !== false) {
+      const nu = Math.max(0.08, it.lu / t.size), nv = Math.max(0.08, it.lv / t.size);
+      const ux = (q1.x - q0.x), uy = (q1.y - q0.y), vx = (q3.x - q0.x), vy = (q3.y - q0.y);
+      ctx.save(); ctx.clip();
+      ctx.transform(ux / (nu * t.img.width), uy / (nu * t.img.width),
+                    vx / (nv * t.img.height), vy / (nv * t.img.height), q0.x, q0.y);
+      ctx.fillStyle = t.pat;
+      ctx.fillRect(0, 0, nu * t.img.width, nv * t.img.height);
+      ctx.restore();
+      // 明暗：贴图之上叠一层
+      const s = it.lum;
+      ctx.fillStyle = s < 0.62 ? `rgba(4,7,14,${clamp((0.62 - s) * 1.5, 0, .82)})`
+                               : `rgba(255,246,226,${clamp((s - 0.62) * 0.55, 0, .3)})`;
+      ctx.fill();
+    } else {
+      const s = it.lum;
+      ctx.fillStyle = `rgb(${clamp(col[0]*s,0,255)|0},${clamp(col[1]*s,0,255)|0},${clamp(col[2]*s,0,255)|0})`;
+      ctx.fill();
+    }
+    if (opt.edge !== false && it.lu * cam0scale > 9 && it.lv * cam0scale > 9) {
+      ctx.strokeStyle = `rgba(8,11,18,${0.20 * gAlpha})`;
+      ctx.lineWidth = 1; ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+let cam0scale = 30;   // paint 里判断描边阈值用（由 renderFrame 设置）
+
+/* 线框 / 幽灵态：只画边，发光 */
+function ghost(boxes, cam, color, alpha, lw) {
+  const items = collect(boxes, cam, {});
+  ctx.lineJoin = 'round';
+  for (const pass of [[(lw||1.6) * 3.2, alpha * 0.16], [(lw||1.6), alpha * 0.95]]) {
+    ctx.lineWidth = pass[0]; ctx.strokeStyle = `rgba(${color},${pass[1]})`;
+    ctx.beginPath();
+    for (const it of items) {
+      if (it.kind !== 'face') continue;
+      const [q0, q1, q2, q3] = it.q;
+      ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.lineTo(q3.x, q3.y); ctx.closePath();
+    }
+    ctx.stroke();
+  }
+}
+function ghostFill(boxes, cam, color, alpha) {
+  const items = collect(boxes, cam, {});
+  ctx.fillStyle = `rgba(${color},${alpha})`;
+  ctx.beginPath();
+  for (const it of items) {
+    if (it.kind !== 'face') continue;
+    const [q0, q1, q2, q3] = it.q;
+    ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.lineTo(q3.x, q3.y); ctx.closePath();
+  }
+  ctx.fill();
+}
+
+/* -------------------------------------------------------- cell 线框 / 网格 */
+function cellWire(cam, origin, s, grow, alpha, color) {
+  const o = origin, e = s * grow, c = [o[0] + s/2, o[1] + s/2, o[2] + s/2];
+  const P = (a, b, cc) => cam.project([c[0] + (a - .5) * e, c[1] + (b - .5) * e, c[2] + (cc - .5) * e]);
+  const v = [P(0,0,0),P(1,0,0),P(1,1,0),P(0,1,0),P(0,0,1),P(1,0,1),P(1,1,1),P(0,1,1)];
+  const E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  for (const pass of [[5.5, alpha * 0.13], [1.7, alpha]]) {
+    ctx.lineWidth = pass[0]; ctx.strokeStyle = `rgba(${color || '104,214,255'},${pass[1]})`;
+    ctx.beginPath();
+    for (const [a, b] of E) { ctx.moveTo(v[a].x, v[a].y); ctx.lineTo(v[b].x, v[b].y); }
+    ctx.stroke();
+  }
+  // 顶点点子
+  ctx.fillStyle = `rgba(180,240,255,${alpha})`;
+  for (const p of v) { ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, 6.2832); ctx.fill(); }
+}
+
+function groundGrid(cam, alpha, span, step, z) {
+  if (alpha <= 0.005) return;
+  ctx.lineWidth = 1;
+  for (let i = -span; i <= span; i += step) {
+    for (const [a, b] of [[[i, -span, z], [i, span, z]], [[-span, i, z], [span, i, z]]]) {
+      const p = cam.project(a), q = cam.project(b);
+      const g = ctx.createLinearGradient(p.x, p.y, q.x, q.y);
+      const fade = Math.max(0, 1 - Math.abs(i) / span);
+      g.addColorStop(0, `rgba(78,150,190,0)`);
+      g.addColorStop(.5, `rgba(78,150,190,${alpha * (0.16 + 0.5 * fade)})`);
+      g.addColorStop(1, `rgba(78,150,190,0)`);
+      ctx.strokeStyle = g;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+    }
+  }
+}
+
+/* -------------------------------------------------------------- 背景 / 光 */
+function background(f) {
+  const g = ctx.createRadialGradient(W * 0.5, H * 0.46, 0, W * 0.5, H * 0.5, Math.max(W, H) * 0.72);
+  g.addColorStop(0, '#0d1622');
+  g.addColorStop(0.55, '#070b13');
+  g.addColorStop(1, '#04060a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+// 地面接触阴影 —— 没有它，什么都像悬在空中
+function contactShadow(cam, x0, x1, y0, y1, alpha, blurPx) {
+  if (alpha <= 0.01) return;
+  const c = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(p => cam.project([p[0], p[1], 0.03]));
+  ctx.save();
+  ctx.filter = `blur(${blurPx}px)`;
+  ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+  ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y);
+  for (let i = 1; i < 4; i++) ctx.lineTo(c[i].x, c[i].y);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+const STARS = (() => {
+  const r = rng(20260812), a = [];
+  for (let i = 0; i < 150; i++) a.push([r(), r(), 0.25 + r() * 0.75, r() * 6.28]);
+  return a;
+})();
+function starfield(f) {
+  for (const [u, v, b, ph] of STARS) {
+    const tw = 0.55 + 0.45 * Math.sin(f * 0.035 + ph);
+    ctx.fillStyle = `rgba(150,200,235,${0.05 + 0.16 * b * tw})`;
+    ctx.fillRect(u * W, v * H, 1.4, 1.4);
+  }
+}
+
+function glow(x, y, r, color, a) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, `rgba(${color},${a})`);
+  g.addColorStop(0.4, `rgba(${color},${a * 0.35})`);
+  g.addColorStop(1, `rgba(${color},0)`);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 6.2832); ctx.fill();
+}
+
+// 坍缩扫描面：贴着胞的水平光框（不是横穿画面的大平面）
+function sweepPlane(cam, zWorld, box, alpha, color) {
+  if (alpha <= 0.01) return;
+  const [x0, x1, y0, y1] = box, m = 0.55;
+  const c = [[x0-m, y0-m], [x1+m, y0-m], [x1+m, y1+m], [x0-m, y1+m]].map(p => cam.project([p[0], p[1], zWorld]));
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y); for (let i = 1; i < 4; i++) ctx.lineTo(c[i].x, c[i].y); ctx.closePath();
+  ctx.fillStyle = `rgba(${color},${alpha * 0.09})`; ctx.fill();
+  ctx.lineWidth = 9; ctx.strokeStyle = `rgba(${color},${alpha * 0.13})`; ctx.stroke();
+  ctx.lineWidth = 2.2; ctx.strokeStyle = `rgba(${color},${alpha * 0.9})`; ctx.stroke();
+  ctx.restore();
+}
+
+// 把一批盒子按波面 z 裁掉上半——坍缩是长出来的，不是整块蹦出来的
+function clipToWave(all, z, out) {
+  for (const b of all) {
+    const zb = b.pos[2] - b.size[2] / 2, zt = b.pos[2] + b.size[2] / 2;
+    if (zb >= z) continue;
+    if (zt <= z) { out.push(b); continue; }
+    const h = z - zb;
+    if (h < 0.012) continue;
+    out.push({ ...b, size: [b.size[0], b.size[1], h], pos: [b.pos[0], b.pos[1], zb + h / 2] });
+  }
+}
+
+/* ===========================================================================
+ *  内容：一个单位胞的六面角色 + 一栋楼的 cell 布局
+ * ========================================================================= */
+const S = 4;   // cellSize(level 0) = 4m
+
+// B2 每个面的候选池（叠加态）——真实 option 里挑得出的组合
+const CANDIDATES = [
+  ['ROOF', 'PARAPET', 'EAVES', 'DECK'],          // 0 Top
+  ['FLOOR', 'PLINTH', 'DECK', 'WALL'],           // 1 Bottom
+  ['DOOR', 'WINDOW', 'WALL', 'ARCADE'],          // 2 Front
+  ['WALL', 'WIN2', 'BLIND', 'PILLAR'],           // 3 Back
+  ['WINDOW', 'WALL', 'QUOIN', 'PILLAR'],         // 4 Left
+  ['WALL', 'WIN2', 'PILLAR', 'BLIND'],           // 5 Right
+];
+// 坍缩后定下来的那一套
+const COLLAPSED = ['ROOF', 'PLINTH', 'DOOR', 'WALL', 'WINDOW', 'WALL'];
+
+// 递归细化：8 个子胞（level 1，尺寸 2m），边界面继承父、内部面 Open
+function refineCells() {
+  const out = [];
+  for (let z = 0; z < 2; z++) for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) {
+    // 边界面继承父面的接口，内部面 Open；每个子胞各自坍缩成不同 option ——
+    // 这就是"更细的一层"，不是把父胞切成八块而已。
+    const roles = new Array(6).fill('SKIP');
+    roles[0] = z === 1 ? (x === 0 ? 'ROOF' : 'PARAPET') : 'SKIP';           // Top
+    roles[1] = z === 0 ? 'PLINTH' : 'SKIP';                                 // Bottom
+    roles[2] = y === 0 ? (z === 0 ? (x === 0 ? 'DOOR' : 'PLINTH') : (x === 0 ? 'WINDOW' : 'WIN2')) : 'SKIP';
+    roles[3] = y === 1 ? (z === 0 ? 'BLIND' : 'WIN2') : 'SKIP';
+    roles[4] = x === 0 ? (z === 1 ? 'WINDOW' : 'PLINTH') : 'SKIP';
+    roles[5] = x === 1 ? (z === 1 ? 'WIN2' : 'QUOIN') : 'SKIP';
+    out.push({ g: [x, y, z], roles });
+  }
+  return out;
+}
+const REFINED = refineCells();
+
+// B5 的楼：3(x) × 2(y) × 3(z)，顶层退台。面只在"外表面"画——这就是引擎的同层
+// 邻接消除（有邻居的那面不出几何），照做一遍，顺便省掉看不见的绘制。
+function buildingCells() {
+  const NX = 4, NY = 2, NZ = 3, cells = [];
+  const has = (x, y, z) =>
+    x >= 0 && x < NX && y >= 0 && y < NY && z >= 0 && z < NZ && !(z === 2 && x === 3 && y === 1);
+  const FRONT = ['DOOR', 'WINDOW', 'WIN2'], SIDE = ['PLINTH', 'WINDOW', 'QUOIN'], BACK = ['PLINTH', 'BLIND', 'WIN2'];
+  for (let z = 0; z < NZ; z++) for (let y = 0; y < NY; y++) for (let x = 0; x < NX; x++) {
+    if (!has(x, y, z)) continue;
+    const roles = new Array(6).fill('SKIP');
+    if (!has(x, y, z + 1)) roles[0] = (z === NZ - 1 && (x === 1 || x === 3)) ? 'PARAPET' : 'ROOF';
+    if (!has(x, y, z - 1)) roles[1] = 'PLINTH';
+    if (!has(x, y - 1, z)) roles[2] = z === 0 ? (x === 1 ? 'DOOR' : 'PLINTH') : (x === 2 ? 'WIN2' : FRONT[z]);
+    if (!has(x, y + 1, z)) roles[3] = BACK[z];
+    if (!has(x - 1, y, z)) roles[4] = SIDE[z];
+    if (!has(x + 1, y, z)) roles[5] = z === 1 ? 'WIN2' : SIDE[z];
+    cells.push({ g: [x, y, z], roles, d: Math.abs(x - 2) + y * 0.6 + z * 1.15 });
+  }
+  return cells;
+}
+const BUILDING = buildingCells();
+const BUILD_ORIGIN = [-S * 2, 0, 0];   // 让楼大致居中
+
+/* ===========================================================================
+ *  分镜 —— 60fps × 10s = 600 帧
+ * ========================================================================= */
+const B1 = 0, B2 = 56, B3 = 172, B4 = 252, B5 = 352, B6 = 482, END = TOTAL;
+
+function camFor(f) {
+  // 全片缓慢转 + 分段推拉。俯角刻意低：要看立面，不是看屋顶。
+  const yaw = -1.98 + f / TOTAL * 0.80;
+  let pitch = 0.34 - 0.11 * smooth((f - B5) / 130);
+  let scale, target, shiftY = PORTRAIT ? -H * 0.02 : H * 0.045;
+
+  const uSmall = PORTRAIT ? Math.min(W, H) * 0.168 : Math.min(W, H) * 0.152;
+  const uBig   = PORTRAIT ? Math.min(W, H) * 0.063 : Math.min(W, H) * 0.068;
+
+  if (f < B5) {
+    scale = uSmall * (1 + 0.045 * Math.sin(f * 0.02));
+    target = [S / 2, S / 2, S / 2];
+    scale *= 1 - 0.06 * smooth((f - B4) / 60);
+  } else {
+    const k = easeOut((f - B5 + 26) / 104);
+    scale = lerp(uSmall, uBig, k) * (1 - 0.05 * smooth((f - B6) / 110));
+    target = [lerp(S/2, BUILD_ORIGIN[0] + S * 2, k), lerp(S/2, BUILD_ORIGIN[1] + S, k), lerp(S/2, S * 1.35, k)];
+  }
+  return camera(yaw, pitch, scale, target, shiftY);
+}
+
+function styleAt(f) {
+  // B6：三次换皮 brick → terran → ice → garden
+  if (f < B6) return { a: 'brick', b: 'brick', k: 0 };
+  const seg = (END - B6) / 3;
+  const i = Math.min(2, Math.floor((f - B6) / seg));
+  const t = clamp(((f - B6) - i * seg) / (seg * 0.55), 0, 1);
+  return { a: PACK_IDS[i], b: PACK_IDS[i + 1], k: easeInOut(t) };
+}
+
+function renderFrame(f) {
+  f = clamp(f, 0, END - 1);
+  const cam = camFor(f);
+  cam0scale = cam.scale;
+  background(f);
+  starfield(f);
+
+  // 地面网格：B1 淡入，B5 之后更明显
+  const gA = 0.55 * smooth((f - 14) / 40) * (0.6 + 0.6 * smooth((f - B5) / 90));
+  groundGrid(cam, gA, 26, 2, 0);
+
+  // 接触阴影：单胞阶段贴着胞，B5 之后罩住整栋
+  if (f >= B3) {
+    if (f < B5) contactShadow(cam, -0.3, S + 0.3, -0.3, S + 0.3, 0.5, 26);
+    else {
+      const k = clamp((f - B5) / 60, 0, 1);
+      contactShadow(cam, BUILD_ORIGIN[0] - 0.4, BUILD_ORIGIN[0] + S * (1 + 3 * k) + 0.4,
+                    BUILD_ORIGIN[1] - 0.4, BUILD_ORIGIN[1] + S * 2 + 0.4, 0.55, 30);
+    }
+  }
+
+  /* ---------------------------------------------------------- B1 种子 → 胞 */
+  if (f < B2) {
+    const t = f / (B2 - 8);
+    const seed = cam.project([S/2, S/2, S/2]);
+    // 脉冲光晕
+    const pulse = 0.5 + 0.5 * Math.sin(f * 0.36);
+    glow(seed.x, seed.y, lerp(60, 190, easeOut(t * 1.5)) * (0.8 + 0.35 * pulse), '96,220,255', lerp(0.9, 0.16, smooth(t * 1.8)));
+    // 三圈扩散环
+    for (let i = 0; i < 3; i++) {
+      const rt = ((f / 26) + i / 3) % 1;
+      ctx.strokeStyle = `rgba(120,225,255,${(1 - rt) * 0.35 * (1 - smooth(t * 1.4))})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(seed.x, seed.y, rt * Math.min(W, H) * 0.30, 0, 6.2832); ctx.stroke();
+    }
+    // 从中心长出线框
+    const grow = easeOut((f - 16) / 46);
+    if (grow > 0.001) cellWire(cam, [0, 0, 0], S, grow, clamp(grow * 1.4, 0, 1) * 0.95);
+    // 核心亮点
+    ctx.fillStyle = `rgba(220,248,255,${clamp(1 - t * 1.6, 0, 1)})`;
+    ctx.beginPath(); ctx.arc(seed.x, seed.y, lerp(7, 2.5, smooth(t * 1.6)), 0, 6.2832); ctx.fill();
+  }
+
+  /* ------------------------------------------------ B2 六面叠加态（未坍缩） */
+  if (f >= B2 - 10 && f < B4) {
+    const alive = clamp((f - (B2 - 10)) / 22, 0, 1);
+    if (alive > 0.01) {
+      const r = rng(Math.floor(f / 5) * 977 + 13);
+      for (let face = 0; face < 6; face++) {
+        // 坍缩波已经扫过的面：交给实体，不再抖动
+        const faceZ = face === 0 ? S : face === 1 ? 0 : S / 2;
+        if (f >= B3 && sweepZ(f) > (face === 1 ? faceZ + 0.35 : S - 0.12)) continue;
+        const appear = clamp((f - (B2 - 6) - face * 6) / 14, 0, 1);
+        if (appear <= 0) continue;
+        const a = alive * appear;
+        // 面板本身：先让"六个面"这件事看得见
+        const pb = panelBox(face, [0, 0, 0], S);
+        ghostFill(pb, cam, '74,190,240', a * 0.055);
+        ghost(pb, cam, '110,215,255', a * 0.30, 1.1);
+        // 候选：1 个高亮 + 1 个重影，快速轮换 = 叠加态
+        const pool = CANDIDATES[face];
+        const pick = Math.floor(r() * pool.length);
+        const alt = (pick + 1 + Math.floor(r() * (pool.length - 1))) % pool.length;
+        for (const [role, hot] of [[pool[alt], false], [pool[pick], true]]) {
+          const bx = [];
+          faceBoxes('brick', role, face, [0, 0, 0], S, bx);
+          ghost(bx, cam, hot ? '158,242,255' : '64,150,200', a * (hot ? 0.92 : 0.22), hot ? 1.8 : 1.1);
+          if (hot) ghostFill(bx, cam, '96,210,255', a * 0.10);
+        }
+      }
+      cellWire(cam, [0, 0, 0], S, 1, alive * 0.55);
+    }
+  }
+
+  /* -------------------------------------------------------- B3/B4 实体部分 */
+  const solid = [];
+  if (f >= B3) {
+    if (f < B4) {                       // 单胞：波扫到哪，构件长到哪
+      const z = sweepZ(f), all = [];
+      for (let face = 0; face < 6; face++) faceBoxes('brick', COLLAPSED[face], face, [0, 0, 0], S, all);
+      clipToWave(all, z, solid);
+    } else if (f < B5) {                // 细化：8 个子胞
+      const open = easeInOut((f - B4) / 46) * (1 - 0.62 * smooth((f - B4 - 52) / 34));
+      const gap = 0.16 * open;
+      const z2 = sweepZ2(f);
+      for (const c of REFINED) {
+        const [x, y, zz] = c.g;
+        const o = [x * S/2 + (x - .5) * gap, y * S/2 + (y - .5) * gap, zz * S/2 + (zz - .5) * gap];
+        const cz = o[2] + S / 4;
+        const all = [];
+        for (let face = 0; face < 6; face++) {
+          if (c.roles[face] === 'SKIP') continue;
+          faceBoxes('brick', c.roles[face], face, o, S / 2, all);
+        }
+        clipToWave(all, z2, solid);
+      }
+    }
+  }
+
+  /* --------------------------------------------------- B4 未坍缩的子胞幽灵 */
+  if (f >= B4 && f < B5) {
+    const open = easeInOut((f - B4) / 46) * (1 - 0.62 * smooth((f - B4 - 52) / 34));
+    const gap = 0.16 * open;
+    const z2 = sweepZ2(f);
+    const r = rng(Math.floor(f / 4) * 613 + 7);
+    for (const c of REFINED) {
+      const [x, y, zz] = c.g;
+      const o = [x * S/2 + (x - .5) * gap, y * S/2 + (y - .5) * gap, zz * S/2 + (zz - .5) * gap];
+      const cz = o[2] + S / 4;
+      if (z2 >= cz - S/4) continue;
+      cellWire(cam, o, S / 2, 1, 0.5);
+      const face = Math.floor(r() * 6);
+      if (c.roles[face] !== 'SKIP') {
+        const bx = []; faceBoxes('brick', c.roles[face], face, o, S / 2, bx);
+        ghost(bx, cam, '150,238,255', 0.5, 1.3);
+      }
+    }
+  }
+
+  /* ------------------------------------------------------- B5/B6 整栋建筑 */
+  if (f >= B5) {
+    const st = styleAt(f);
+    const wave = (f - B5) / 74;                 // 生长波
+    const swx = sweepX(f);                      // B6 换皮的竖直扫描（世界 x）
+    const ghosts = [];
+    for (const c of BUILDING) {
+      const born = c.d === 0 ? 1 : clamp(wave * 6.2 - c.d * 1.05, 0, 1);
+      if (born <= 0) continue;
+      const o = [BUILD_ORIGIN[0] + c.g[0] * S, BUILD_ORIGIN[1] + c.g[1] * S, BUILD_ORIGIN[2] + c.g[2] * S];
+      if (born < 0.5) {                          // 刚出生：叠加态一闪
+        const r = rng((c.g[0] * 73 + c.g[1] * 191 + c.g[2] * 313) + Math.floor(f / 3) * 17);
+        cellWire(cam, o, S, easeOut(born * 2), born * 1.6);
+        const face = 2 + Math.floor(r() * 4);
+        const bx = []; faceBoxes('brick', CANDIDATES[face][Math.floor(r() * 4)], face, o, S, bx);
+        ghost(bx, cam, '150,238,255', born * 1.2, 1.2);
+        continue;
+      }
+      // 定形：按换皮扫描线决定用哪个 pack
+      const pid = (o[0] + S / 2 < swx) ? st.b : st.a;
+      for (let face = 0; face < 6; face++) {
+        if (c.roles[face] === 'SKIP') continue;
+        faceBoxes(pid, c.roles[face], face, o, S, solid);
+      }
+      if (born < 0.92) cellWire(cam, o, S, 1, (0.92 - born) * 2.4);
+    }
+    // 细化过的那个单胞留在楼里（第一格）——已由 BUILDING 覆盖，无需重画
+  }
+
+  // 统一画实体
+  if (solid.length) paint(collect(solid, cam, {}), { textures: true });
+
+  /* -------------------------------------------------------------- 扫描光带 */
+  if (f >= B3 && f < B4) sweepPlane(cam, sweepZ(f), [0, S, 0, S], 1 - smooth((f - B3 - 52) / 22), '190,245,255');
+  if (f >= B4 && f < B5) sweepPlane(cam, sweepZ2(f), [-0.2, S + .2, -0.2, S + .2], 1 - smooth((f - B4 - 66) / 22), '190,245,255');
+  if (f >= B6) {
+    const swx = sweepX(f), st = styleAt(f);
+    if (st.k > 0.001 && st.k < 0.999) {
+      // 一道竖直光墙沿 +X 扫过楼：扫过的列换成新的 StylePack
+      const y0 = BUILD_ORIGIN[1] - 1.4, y1 = BUILD_ORIGIN[1] + S * 2 + 1.4, z1 = S * 3 + 1.0;
+      const c = [[y0, -0.5], [y1, -0.5], [y1, z1], [y0, z1]].map(p => cam.project([swx, p[0], p[1]]));
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y); for (let i = 1; i < 4; i++) ctx.lineTo(c[i].x, c[i].y); ctx.closePath();
+      ctx.fillStyle = 'rgba(150,230,255,0.035)'; ctx.fill();
+      ctx.lineWidth = 16; ctx.strokeStyle = 'rgba(150,230,255,0.07)'; ctx.stroke();
+      ctx.lineWidth = 2.0; ctx.strokeStyle = 'rgba(205,245,255,0.55)'; ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 坍缩瞬间的白闪
+  const flash = Math.max(flashAt(f, B3, 10), flashAt(f, B4, 8), flashAt(f, B5, 8));
+  if (flash > 0.002) { ctx.fillStyle = `rgba(210,240,255,${flash * 0.11})`; ctx.fillRect(0, 0, W, H); }
+
+  // 片尾轻微暗角
+  vignette();
+}
+
+function sweepZ(f)  { return lerp(-0.4, S + 0.6, easeInOut((f - B3) / 68)); }
+function sweepZ2(f) { return lerp(-0.4, S + 0.9, easeInOut((f - B4 - 26) / 58)); }
+function sweepX(f) {
+  const seg = (END - B6) / 3, i = Math.min(2, Math.floor((f - B6) / seg));
+  const t = clamp(((f - B6) - i * seg) / (seg * 0.55), 0, 1);
+  return lerp(BUILD_ORIGIN[0] - 1.5, BUILD_ORIGIN[0] + S * 4 + 1.5, easeInOut(t));
+}
+function flashAt(f, at, len) { return f >= at && f < at + len ? Math.pow(1 - (f - at) / len, 2) : 0; }
+
+function vignette() {
+  const g = ctx.createRadialGradient(W/2, H/2, Math.min(W,H) * 0.30, W/2, H/2, Math.max(W,H) * 0.78);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+
+/* ------------------------------------------------------------------- boot */
+function loadImg(src) {
+  return new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = src; });
+}
+async function boot() {
+  for (const id of PACK_IDS) PACKS[id] = await (await fetch(`/client/core/src/stylepacks/${id}.stylepack.json`)).json();
+  for (const [id, [file, size]] of Object.entries(TEXDEF)) {
+    const img = await loadImg('/client/desktop/public/assets/' + file);
+    const oc = document.createElement('canvas'); oc.width = img.width; oc.height = img.height;
+    const octx = oc.getContext('2d'); octx.drawImage(img, 0, 0);
+    const d = octx.getImageData(0, 0, oc.width, oc.height).data;
+    let r = 0, g = 0, b = 0;
+    for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; b += d[i+2]; }
+    const n = d.length / 4;
+    TEX[id] = { img, pat: ctx.createPattern(img, 'repeat'), size, avg: [r/n|0, g/n|0, b/n|0] };
+  }
+  window.TOTAL = TOTAL;
+  window.renderFrame = renderFrame;   // 直接引用，别包箭头（会解析回 window.renderFrame 递归）
+  window.READY = true;
+  renderFrame(+Q.get('f') || 0);
+  if (Q.get('play')) {
+    let f = 0;
+    setInterval(() => { renderFrame(f); f = (f + 1) % TOTAL; }, 1000 / FPS);
+  }
+}
+boot();
+</script>
