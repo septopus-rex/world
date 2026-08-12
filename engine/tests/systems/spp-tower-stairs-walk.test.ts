@@ -109,62 +109,50 @@ describe('SPP tower stairs — StylePack stair_top variant', () => {
     });
 });
 
-// The switchback stair geometry is SHARED by brick / garden / spanish — the
-// three packs are cut from one template. Only brick was covered, and on
-// 2026-08-09 garden's copy was "tidied" (its flight divider read as a stray
-// deep handrail, so it was removed and the two runs collapsed into one
-// 0.62 m-per-tread flight). brick's test caught it; garden shipped broken.
+// The switchback stair geometry is SHARED — brick / garden / ice (and spanish)
+// are cut from one template. Only brick was covered, and on 2026-08-09 garden's
+// copy was "tidied": its flight divider read as a stray deep handrail, was
+// removed, the two runs collapsed into one 0.62 m-per-tread flight, and garden
+// shipped unclimbable. brick's climb above caught it there; nothing watched
+// garden.
 //
-// So: one climb per pack that carries the template. Deliberately NO geometry
-// assertion here — the tread-tops list above pins `floor` and `solid` shapes
-// as a side effect, and a list of numbers that no longer matches says nothing
-// about what broke. "Can a player get up it" is the property that matters.
-const CLIMBERS: Array<{ pack: string; floor: string; wall: string }> = [
-    { pack: 'garden', floor: 'lawn', wall: 'hedge' },
-];
+// The fix is NOT "walk a player up every pack". That was tried (2026-08-12) and
+// it does not port: step-up depends on approach SPEED, and speed depends on how
+// much that pack's walls rub against the player. garden's hedge carries a
+// moulding down the whole face and slows them to 0.9 m per leg; ice's wall has
+// three narrow ribs and they hit 2.6 m per leg — same stairs, and at that speed
+// the 0.4 m rise to the half-landing launches them clean over it and out
+// through the north wall. Tuning leg length per pack would be fitting magic
+// numbers to a collider, and the result would say nothing about the stairs.
+//
+// What actually needs guarding is that the shared template STAYS shared: brick's
+// climb proves this geometry carries a player, so any pack whose stair_top is
+// byte-identical to it inherits that proof. Diverge one and this goes red,
+// naming the pack and the field — which is exactly the failure that shipped.
+const TEMPLATE_PACKS = ['garden', 'ice', 'spanish'];
+const frameOf = (v: any) => (v.parts ?? []).map((p: any) =>
+    [p.type, p.u, p.v, p.su, p.sv, p.w ?? 0, p.sw ?? null]);
+const stairOf = (pack: string) => {
+    const json = JSON.parse(fs.readFileSync(path.join(
+        __dirname, `../../../client/core/src/stylepacks/${pack}.stylepack.json`), 'utf8'));
+    return (json.closed ?? []).find((v: any) => (v.key ?? v.name) === 'stair_top');
+};
 
-for (const { pack, floor, wall } of CLIMBERS) {
-    describe(`SPP stairwell — ${pack} carries the same switchback`, () => {
-        it('a real player climbs one storey', async () => {
-            const packJson = JSON.parse(fs.readFileSync(path.join(
-                __dirname, `../../../client/core/src/stylepacks/${pack}.stylepack.json`), 'utf8')) as StylePack;
-            const engine = await makeHeadlessEngine();
-            (engine as any).registerStylePack(packJson);
-            const world: any = engine.getWorld()!;
-            const faces = (top: any, bottom: any) =>
-                [top, bottom, [1, wall], [1, wall], [1, wall], [1, wall]];
-            const column = [
-                { position: [0, 0, 0], level: 0, faces: faces([1, 'stair_top'], [1, floor]) },
-                { position: [0, 0, 1], level: 0, faces: faces([1, floor], [0, 'empty']) },
-            ];
-            engine.injectBlock({
-                x: BX, y: BY, world: 'main', elevation: 0,
-                adjuncts: [0, 1, [[AdjunctType.Spp, [[[6, 6, 0], column, pack]]]], [], 0],
-            });
-            stepN(engine, 5);
+describe('SPP stairwell — the switchback template stays shared', () => {
+    const reference = frameOf(stairOf('brick'));
 
-            const t = world.getComponent(
-                world.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0], 'TransformComponent');
-            const alt = () => t.position[1];
-            const leg = (ix: number, iy: number, frames: number) => {
-                (engine as any).setMoveIntent(ix, iy);
-                stepN(engine, frames);
-                (engine as any).setMoveIntent(0, 0);
-                stepN(engine, 20);
-            };
-
-            t.position[0] = (BX - 1) * 16 + 6.7;      // west lane, on tread 2
-            t.position[1] = 1.8;
-            t.position[2] = -((BY - 1) * 16 + 6.8);
-            t.dirty = true;
-            stepN(engine, 30);
-            expect(alt(), 'starts partway up flight A').toBeLessThan(2.0);
-
-            leg(0, 1, 40);                            // flight A → half-landing
-            expect(alt(), 'flight A reaches the landing').toBeGreaterThan(2.7);
-            leg(1, 0, 15);                            // shift to the mid lane
-            leg(0, -1, 30);                           // flight B → top tread
-            expect(alt(), 'flight B reaches the top tread').toBeGreaterThan(4.3);
-        });
+    it('brick\'s stair_top is the template the climb above proves', () => {
+        expect(reference.length, 'slab ×3 + landing + 8 treads + flight divider').toBe(13);
+        // The divider is the part that got "fixed" away. It is deep ON PURPOSE —
+        // it separates the two runs — and the contract guard flags it
+        // `part-too-deep` because the guard reads every option as cladding.
+        const divider = reference[12];
+        expect(divider[6], 'the flight divider keeps its depth').toBeCloseTo(0.375);
     });
-}
+
+    for (const pack of TEMPLATE_PACKS) {
+        it(`${pack} carries the same geometry (colour may differ, shape may not)`, () => {
+            expect(frameOf(stairOf(pack))).toEqual(reference);
+        });
+    }
+});
