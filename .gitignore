@@ -55,7 +55,7 @@ client/*/dist-chain/
 services/*/data/
 
 # 宣传片成品（一条 1080p60 的 10s 片约 12 MB，同步代价太大）。生成器
-# docs/media/spp-reveal/{anim.html,render.js} 进库，视频按需重跑那条命令。
+# docs/media/spp/{reveal,street}.html + render.js 进库，视频按需重跑那条命令。
 docs/media/**/*.mp4
 
 # Claude Code: per-machine permission grants stay local; .claude/skills/ is

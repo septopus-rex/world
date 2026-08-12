@@ -2,11 +2,12 @@
 /**
  * SPP 展开宣传片 —— 逐帧渲染 + 合成。
  *
- *   node docs/media/spp-reveal/render.js            # 两个画幅都出
- *   node docs/media/spp-reveal/render.js 16x9       # 只出横版
- *   node docs/media/spp-reveal/render.js 9x16 --crf 24
+ *   node docs/media/spp/render.js            # 两个画幅都出（默认 reveal.html）
+ *   node docs/media/spp/render.js street.html # 换一支片子
+ *   node docs/media/spp/render.js 16x9       # 只出横版
+ *   node docs/media/spp/render.js 9x16 --crf 24
  *
- * 自带静态服务器（根 = 仓库根），所以 anim.html 直接 fetch 项目里的
+ * 自带静态服务器（根 = 仓库根），所以场景页直接 fetch 项目里的
  * stylepack 与贴图 —— 粒子库改了，重跑这条命令视频就跟着变。
  * 依赖：全局 playwright（NODE_PATH=$(npm root -g)）+ ffmpeg。
  */
@@ -18,11 +19,15 @@ const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '../../..');
 const OUT = __dirname;
+const SCENE_DIR = '/' + path.relative(ROOT, __dirname).split(path.sep).join('/');
 const PORT = 7912;                       // 临时端口，随进程结束；不读 env.PORT
 const FORMATS = { '16x9': [1920, 1080], '9x16': [1080, 1920] };
 const MIME = { '.html': 'text/html', '.json': 'application/json', '.png': 'image/png' };
 
 const args = process.argv.slice(2);
+const SCENES = { 'reveal.html': 'spp-reveal', 'street.html': 'spp-street' };
+const scene = args.find(a => /\.html$/.test(a)) || 'reveal.html';
+const name = SCENES[scene] || path.basename(scene, '.html');
 const want = args.filter(a => FORMATS[a]);
 const crf = args.includes('--crf') ? args[args.indexOf('--crf') + 1] : '19';
 const picked = want.length ? want : Object.keys(FORMATS);
@@ -45,10 +50,10 @@ const server = http.createServer((req, res) => {
 
   for (const fmt of picked) {
     const [W, H] = FORMATS[fmt];
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `spp-${fmt}-`));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), `${name}-${fmt}-`));
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     page.on('pageerror', e => console.log('PAGE EXC:', e.message));
-    await page.goto(`http://127.0.0.1:${PORT}/docs/media/spp-reveal/anim.html?w=${W}&h=${H}`);
+    await page.goto(`http://127.0.0.1:${PORT}${SCENE_DIR}/${scene}?w=${W}&h=${H}`);
     await page.waitForFunction(() => window.READY === true, null, { timeout: 30000 });
     const total = await page.evaluate(() => window.TOTAL);
 
@@ -64,7 +69,7 @@ const server = http.createServer((req, res) => {
     }
     await page.close();
 
-    const mp4 = path.join(OUT, `spp-reveal-${fmt}.mp4`);
+    const mp4 = path.join(OUT, `${name}-${fmt}.mp4`);
     execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', '60',
       '-i', path.join(dir, 'f%04d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
       '-crf', crf, '-preset', 'slow', '-movflags', '+faststart', mp4], { stdio: 'inherit' });
