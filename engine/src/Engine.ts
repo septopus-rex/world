@@ -11,7 +11,7 @@ import { descriptorToDefinition } from './core/services/DynamicAdjunct';
 import { registerDynamicAdjunct, clearDynamicAdjuncts } from './core/services/AdjunctRegistry';
 import { Coords } from './core/utils/Coords';
 import { AdjunctType } from './core/types/AdjunctType';
-import { registerStylePack, listSppThemes, setStyleOverride, getStyleOverride, listVariants, type StylePack, type VariantInfo } from './core/spp/Variants';
+import { registerStylePack, listSppThemes, setStyleOverride, getStyleOverride, listVariants, listPrefabs, type StylePack, type VariantInfo, type PrefabInfo } from './core/spp/Variants';
 import { FaceState } from './core/types/ParticleCell';
 import { GlobalConfig } from './core/GlobalConfig';
 import { EntityFactory } from './core/EntityFactory';
@@ -528,6 +528,15 @@ export class Engine {
      *  `key` is the stable reference to write into the face (P4). */
     public listVariants(themeId: string, state: 'open' | 'closed'): VariantInfo[] {
         return listVariants(themeId, state === 'closed' ? FaceState.Closed : FaceState.Open);
+    }
+
+    /** Every PREFAB (组合件) the loaded StylePacks provide, or one pack's when
+     *  `themeId` is given — the placement palette's "read the library" seam, the
+     *  non-face twin of `listVariants` (spp-editors.md §9). A `ref` is
+     *  `packId#key`; the editor palette arms one and the next surface click
+     *  stamps it as ordinary authored adjuncts. */
+    public listPrefabs(themeId?: string): PrefabInfo[] {
+        return listPrefabs(themeId);
     }
 
     public getStyleOverride(): string | null {

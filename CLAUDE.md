@@ -12,7 +12,7 @@
 
 - `engine/` 是唯一开发基准；`engine/backup/`（旧 JS 引擎）已 gitignore，只作历史参考、勿删勿续。
 - `chain/`（Solana 合约）与旧 `app/`（链耦合前端）**已移出 git 追踪、仅存本地磁盘**——目录在不代表在版本控制里。
-- `client/` 四分：`core` 共享核（无 package.json，各壳经 `@core` 源码别名引用）+ `desktop` 7777 + `mobile` 7778 + **`editor` 7779**（各自独立 package.json/vite/playwright）。前三者是「世界」，`editor` 是**没有世界的工具 app**（SPP 粒子库编辑器，2026-08-05 从 desktop 的 `?tool=stylepack` 分支剥离）。
+- `client/` 四分：`core` 共享核（无 package.json，各壳经 `@core` 源码别名引用）+ `desktop` 7777 + `mobile` 7778 + **`editor` 7779**（各自独立 package.json/vite/playwright）。前三者是「世界」，`editor` 是**没有世界的工具 app**（归一化组合件库编辑器：弦粒子 option + 组合件 prefab，2026-08-05 从 desktop 的 `?tool=stylepack` 分支剥离）。
 
 子目录另有各自的 `CLAUDE.md`（`engine/`、`client/`），进那个目录干活时才加载。
 
@@ -27,7 +27,7 @@ bash deploy/dev.sh --chain                         # 链上启动模式:只起 I
 bash deploy/publish-chain.sh                       # 仅发版(网关已在跑时,改代码/数据后重发)
 cd client/desktop && npm run dev                   # 或手动单起
 cd client/desktop && npm run build                 # 静态 PWA → dist/
-cd client/editor && npm run dev                    # SPP 粒子库编辑器(7779,无世界)
+cd client/editor && npm run dev                    # 组合件库编辑器(7779,无世界:option + prefab)
 cd client/editor && npm run test:e2e               # 它自己的 playwright(不背世界启动,~10s)
 
 # 引擎 —— 用 yarn（有 yarn.lock）
@@ -57,7 +57,8 @@ cd engine && yarn build                            # tsc
 - `engine/src/core/World.ts` — ECS 世界、系统编排、主循环。
 - `client/core/src/lib/DesktopLoader.ts` — 客户端数据装载器（实现 `IDataSource`，喂纯数据文档：`levels/`/`blocks/`/`worlds/` + ContentResolver）。**client 四分（三分定于 2026-07-08 specs/mobile-client.md；editor 2026-08-05 加入）**：`client/core`（共享核：loader/useEngine/共享组件/纯数据内容，无 package.json，各壳经 `@core` 源码别名引用）+ `client/desktop`（桌面 app，7777）+ `client/mobile`（移动 app，7778，独立 package.json/vite/playwright；摇杆/触屏视角/底部抽屉）+ `client/editor`（**SPP 粒子库编辑器，7779**）。**前三个共享 loader/世界，editor 不共享**——它只 import `@engine`（当库用）与 `@core` 的内容侧（bundled stylepacks），零 world 运行时。
 - `client/desktop/src/App.tsx` — 桌面壳入口（`main.tsx` 只管桌面；StylePack 编辑器**已不在这里**，见下条 `client/editor`）。**移动壳是独立 app**：`client/mobile/src/MobileApp.tsx`（7778，自己的 vite/playwright；虚拟摇杆→setMoveIntent、画布拖拽=引擎原生触屏视角、底部抽屉）。两壳共用 `lib/useEngine` + loader 核与全部交互组件（specs/mobile-client.md；e2e `mobile.spec.ts` 触屏视口）。
-- `client/editor/` — **SPP 粒子库编辑器（独立 app,7779,2026-08-05 从 desktop 剥离）**。**两个编辑器的落位是相反的,这是设计不是历史包袱**（`docs/plan/specs/spp-editors.md`）：**Editor 1 = 源编辑器（魔法球）必须在世界里**——空间放置是空间的事，拖出世界就退回「编辑器带个小预览窗」；**Editor 2 = 粒子库编辑器必须在世界外**——它编的是归一化单位胞里的 option，与「放在哪」无关，产出内容寻址的 StylePack。所以 `client/editor` 只装 Editor 2，**别把魔法球搬进来**，也别在这里引 world loader（它现在零 world 运行时，只把 `@engine` 当库用 + `StylePackPreviewLoader` 精简 harness）。e2e 在它自己套里跑（~10s，不背世界启动）。
+- `client/editor/` — **归一化组合件库编辑器（独立 app,7779,2026-08-05 从 desktop 剥离;2026-08-14 从「只能产弦粒子面变体」放宽）**。**两个编辑器的落位是相反的,这是设计不是历史包袱**（`docs/plan/specs/spp-editors.md`）：**Editor 1 = 源编辑器（魔法球）必须在世界里**——空间放置是空间的事，拖出世界就退回「编辑器带个小预览窗」；**Editor 2 = 库编辑器必须在世界外**——它编的是归一化单位胞里的一组 adjunct，与「放在哪」无关，产出内容寻址的 StylePack。所以 `client/editor` 只装 Editor 2，**别把魔法球搬进来**，也别在这里引 world loader（它现在零 world 运行时，只把 `@engine` 当库用 + `StylePackPreviewLoader` 精简 harness）。e2e 在它自己套里跑（~10s，不背世界启动）。
+  **它编的东西只有一种：「一组 adjunct 在归一化单位胞里」**，两个出口——进面的 open/closed 池 = 弦粒子 option；独立命名 = **组合件 Prefab**（`pack#key`，世界编辑 palette 第二排「从库里放」，见 `spp-editors.md §9`）。所以 parts 面板是共享的 `PartsEditor`，**面帧与胞帧只有轴标签不同**（`FACE_AXES`/`PREFAB_AXES`：面的 `v` 竖着走墙、胞的 `v` 向北铺地——标错就做出躺着的长椅），别做第二份。**判据（可直接套用到别处）：能命名、能复用、能算出 CID 的 → 独立 app；只能存在于「某块某行」里的 → 留在世界里编（必要时 2D 页面栈）。** 由此**不要**给 adjunct 再建一个独立编辑器：一行 adjunct raw 就是一份数据，把它的 tail 拖到世界外编只会退化成「编辑器带个小预览窗」。
 - `client/core/src/components/page/` — **2D 页面栈(2026-07-20,规矩与 e2e 句柄见该目录 `README.md`)**:3D 世界之上的每个 2D 界面都是这个栈上的**一页**(地图/地块详情/配置/确认框),`PageProvider`(只给 context)+`PageHost`(surface,z-50)+`usePages()`。push 子页是在**同一 surface 内往里走**(iOS 式「‹」返回,容器不变形),**被埋的页保持挂载**(`visibility:hidden`)——返回地图时平移/缩放/已流式格子原样还在,不重拉;代价是跑循环的页要用 `usePageActive()` 自己 idle。形态由**栈底页**定,`variant:'auto'`(默认)= 宽屏(≥768px)居中卡片·窄屏底部抽屉,故双端共用一份页面定义;`padded:false` 换的是布局模式(满幅 flex 列、不滚动)而不只是内边距,画布页必须用它 + 固定高度档。定义一页 = 导出返回 `PageSpec` 的工厂(`mapPage(loader)`/`blockDetailPage(...)`),调用方不必知道它长什么样。**`pages.confirm()` 是 `window.confirm` 的唯一替代**(原生对话框是红线,还卡 rAF、e2e 驱动不了)。首个用例:2D 地图页 → 点地块 → 详情页 → 原始数据页(e2e `map2d.spec.ts` + 组件自身契约 `page-stack.spec.ts`)。
 
 ## 编辑 / Adjunct

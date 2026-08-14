@@ -15,7 +15,7 @@
  */
 import { ParticleFace, FaceState, SubdivisionLevel } from '../types/ParticleCell';
 import { AdjunctType } from '../types/AdjunctType';
-import { getSppTheme, getVariant, getStyleOverride, VariantPart, FaceVariant, SppTheme } from './Variants';
+import { getSppTheme, getVariant, getStyleOverride, DEFAULT_PREFAB_SIZE, VariantPart, FaceVariant, SppTheme, Prefab } from './Variants';
 import { makeRng } from '../motif/Rng';
 import './CoasterTheme'; // side-effect: registers the 'coaster' theme (cells → c1 track)
 import type { TriggerLogicNode } from '../types/Trigger';
@@ -185,6 +185,52 @@ function partToBox(face: ParticleFace, part: VariantPart, s: number, thickness: 
         case ParticleFace.Top:     // Z+
             return { size: [sum, svm, swm], center: [uC, vC, s - wC] };
     }
+}
+
+/**
+ * Stamp a PREFAB (§9) into standard adjunct raw rows, positioned relative to
+ * `origin` (the unit cube's south-west-bottom corner, block-relative Septopus
+ * meters). Pure, deterministic, no theme lookup, no derived marking.
+ *
+ * The frame maths is `partToBox` with the Bottom face — that is the DEFINITION
+ * of the prefab frame (u→X east, v→Y north, w→Z up), not a convenient reuse.
+ * Sharing the function is the point: a prefab previewed in the library editor
+ * and a prefab stamped by the world palette go through the same code, so
+ * 编辑器所见 = world 所渲 holds for furniture exactly as §3.5 promises it for
+ * face options.
+ *
+ * Unlike SPP expansion this is an AUTHORING-TIME operation: the returned rows
+ * are written into the block draft as ordinary authored adjuncts, NOT marked
+ * `derivedFrom`. The consequence is deliberate — a stamped bench is plain data
+ * the creator can then move, recolour or take apart one piece at a time, and it
+ * does not silently change when the pack is later edited. A live instance
+ * (edit the pack → every placed copy follows) would need its own adjunct type
+ * and a runtime dependency on the pack being resolvable; that is a different
+ * feature, not a better version of this one (§9.4).
+ */
+export function expandPrefab(
+    prefab: Prefab,
+    origin: [number, number, number],
+    size: number = prefab.size ?? DEFAULT_PREFAB_SIZE,
+): Array<[number, any[]]> {
+    // These numbers get SERIALIZED into a block draft, so they are rounded: an
+    // authored row reading `0.27999999999999997` is not something to ship in a
+    // document (the same reason the editor rounds its own drop depths). 4 dp is
+    // a tenth of a millimetre — below anything the geometry cares about.
+    const r4 = (n: number) => Math.round(n * 1e4) / 1e4;
+    const rows: Array<[number, any[]]> = [];
+    for (const part of prefab.parts ?? []) {
+        // No theme here, so a part that omits `sw` gets a thin slab rather than
+        // a zero-height one: a prefab's sw is a HEIGHT, and 0 would be invisible.
+        const { size: box, center } = partToBox(ParticleFace.Bottom, part, size, 0.05 * size);
+        rows.push([part.type, [
+            box.map(r4),
+            [r4(origin[0] + center[0]), r4(origin[1] + center[1]), r4(origin[2] + center[2])],
+            part.rot ?? [0, 0, 0],
+            ...(part.props ?? []),
+        ]]);
+    }
+    return rows;
 }
 
 /**

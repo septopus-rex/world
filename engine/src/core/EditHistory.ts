@@ -8,6 +8,18 @@ import { EntityId } from './World';
 export interface HistoryEntry {
     task: EditTask;
     snapshot: Record<string, any>;  // deep clone of stdData BEFORE execution
+    /**
+     * Extra tasks that were executed as part of the SAME authoring action and
+     * must undo with it. One click that produces many rows — stamping a prefab
+     * (spp-editors.md §9) drops a whole bench — is one thing the creator did,
+     * so it has to be one Ctrl+Z. Without this, undoing a 12-part pergola means
+     * pressing undo twelve times and watching it disassemble, which reads as a
+     * bug rather than as history.
+     *
+     * Ordinary single-task edits leave it undefined; EditSystem replays these
+     * in reverse (last executed undone first).
+     */
+    also?: Array<{ task: EditTask; snapshot: Record<string, any> }>;
 }
 
 /**

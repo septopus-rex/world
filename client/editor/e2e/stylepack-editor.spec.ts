@@ -26,6 +26,12 @@ async function derived(page: any, typeId: number | null): Promise<number> {
         return n;
     }, typeId);
 }
+/** Everything visible in the preview, whichever mode it is in. A 组合件 is
+ *  STAMPED (authored rows), not expanded, so `derived` reports 0 for one — the
+ *  distinction is the feature, not an accident (spp-editors.md §9.4). */
+async function inPreview(page: any, typeId: number | null): Promise<number> {
+    return page.evaluate((t: number | null) => (window as any).spLoader?.previewCount?.(t ?? undefined) ?? -1, typeId);
+}
 async function pump(page: any, cond: () => Promise<boolean>, rounds = 80): Promise<boolean> {
     for (let i = 0; i < rounds; i++) { await page.waitForTimeout(150); if (await cond()) return true; }
     return false;
@@ -70,4 +76,46 @@ test('SPP粒子 editor: cell preview, add a composition to a face state, drive t
     await page.getByTestId('sp-dial-state-open').click(); // → 通(open) (top band)
     expect(await pump(page, async () => (await derived(page, A4)) < a4Before), 'flipping a face to open drops its composition').toBe(true);
     await page.screenshot({ path: 'test-results/sp2-2-dialed.png' });
+});
+
+test('组合件 Prefabs: edit a pack\'s furniture in the cell frame, then go back to the faces', async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto('/');
+    await expect(page.getByTestId('sp-editor')).toBeVisible();
+    // Wait for the cell preview to exist before touching modes — otherwise a fast
+    // machine can assert on an empty scene and call it a mode switch.
+    expect(await pump(page, async () => (await derived(page, null)) >= 6)).toBe(true);
+
+    // The opening pack (garden) ships furniture: the section lists it, and picking
+    // one switches the preview to that composition alone.
+    await page.getByTestId('sp-acc-prefab').click();
+    await expect(page.getByTestId('sp-prefab-bench')).toBeVisible();
+    await page.getByTestId('sp-prefab-bench').click();
+    // A prefab is STAMPED: authored rows, zero b6 expansion. Both halves matter —
+    // a non-zero `derived` here would mean the preview quietly fell back to the
+    // cell and we would be looking at a wall while editing a bench.
+    expect(await pump(page, async () => (await derived(page, null)) === 0 && (await inPreview(page, null)) >= 4),
+        'the preview shows the stamped bench, not the six-face cell').toBe(true);
+    const benchParts = await inPreview(page, null);
+    await expect(page.getByTestId('sp-prefab-key')).toHaveValue('bench');
+    await page.screenshot({ path: 'test-results/sp2-3-prefab.png' });
+
+    // The SAME parts editor works here — the frame is the cell's, the vocabulary
+    // is unchanged. Adding a part shows up in the preview immediately.
+    await page.getByTestId('sp-add-ball').click();
+    expect(await pump(page, async () => (await inPreview(page, null)) === benchParts + 1),
+        'a part added to the 组合件 appears in the preview').toBe(true);
+
+    // A new (empty) 组合件 trips the guard rule that only prefabs have: it stamps
+    // nothing. The face rules (挡 coverage) must NOT appear — they are meaningless
+    // off a face.
+    await page.getByTestId('sp-add-prefab').click();
+    await expect(page.getByTestId('sp-guard-prefab-empty')).toBeVisible();
+    await expect(page.getByTestId('sp-guard-closed-thin')).toHaveCount(0);
+
+    // Back to the faces: the cell returns, expansion resumes. This is the
+    // mutual-exclusion contract — one preview, one subject.
+    await page.getByTestId('sp-prefab-back').click();
+    expect(await pump(page, async () => (await derived(page, null)) >= 6),
+        'leaving prefab mode restores the six-face cell').toBe(true);
 });

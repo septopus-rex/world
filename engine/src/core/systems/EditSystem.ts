@@ -16,6 +16,8 @@ import { InputProvider } from './InputProvider';
 import { saveBlockDraft } from '../utils/BlockSerializer';
 import { PLACEABLE_ADJUNCTS, defaultRawFor } from '../edit/AdjunctDefaults';
 import { getBuiltinAdjunct } from '../services/AdjunctRegistry';
+import { listPrefabs, getPrefab, DEFAULT_PREFAB_SIZE } from '../spp/Variants';
+import { expandPrefab } from '../spp/Expander';
 import { reportError } from '../errors';
 
 /** Placement form drops these STD keys: position/rotation are set in 3D space
@@ -57,6 +59,10 @@ export class EditSystem implements ISystem {
     /** Pre-placement params (non-positional) set via the placement form; applied
      *  to the default raw when the armed type is placed. Null = use defaults. */
     private placingParams: Record<string, any> | null = null;
+    /** Armed PREFAB reference (`packId#key`, spp-editors.md §9). Mutually
+     *  exclusive with `placingTypeId`: the next click stamps a whole composition
+     *  instead of a single adjunct. */
+    private placingPrefab: string | null = null;
     /** Held-key edge tracking for the rotate/scale transform keys + undo. */
     private _prevTransformKeys: Set<string> = new Set();
     private _prevZ: boolean = false;
@@ -255,6 +261,9 @@ export class EditSystem implements ISystem {
     private undo(world: World): void {
         const entry = this.history.popUndo();
         if (!entry) return;
+        // Grouped actions (a stamped prefab) undo in reverse execution order, so
+        // the world passes back through the states it actually occupied.
+        for (const g of [...(entry.also ?? [])].reverse()) this.executor.restore(world, g.task.entityId, g.snapshot);
         this.executor.restore(world, entry.task.entityId, entry.snapshot);
         this.validateSelection(world);
         world.ui?.showToast(`Undo (${this.history.undoCount} remaining)`);
@@ -265,8 +274,9 @@ export class EditSystem implements ISystem {
     private redo(world: World): void {
         const entry = this.history.popRedo();
         if (!entry) return;
-        // Re-execute the task
+        // Re-execute the task (+ the rest of its group, in original order)
         this.executor.execute(world, entry.task);
+        for (const g of entry.also ?? []) this.executor.execute(world, g.task);
         this.validateSelection(world);
         world.ui?.showToast(`Redo (${this.history.redoCount} remaining)`);
         this.lastUISelection = undefined;
@@ -383,6 +393,10 @@ export class EditSystem implements ISystem {
             this.placeAt(world, data.point);
             return;
         }
+        if (this.placingPrefab !== null && data.entityId !== null && data.point) {
+            this.stampPrefabAt(world, data.point);
+            return;
+        }
 
         if (data.entityId === null) {
             this.selectedEntityId = null;
@@ -476,6 +490,7 @@ export class EditSystem implements ISystem {
             active: this.placingTypeId === entry.typeId && this.placingResource === null,
             onClick: () => {
                 const same = this.placingTypeId === entry.typeId && this.placingResource === null;
+                this.placingPrefab = null;
                 this.placingTypeId = same ? null : entry.typeId;
                 this.placingResource = null;
                 this.placingParams = null;       // re-arm resets any prior tweaks
@@ -498,6 +513,7 @@ export class EditSystem implements ISystem {
                 active: this.placingTypeId === AdjunctType.Module && this.placingResource === model.id,
                 onClick: () => {
                     const same = this.placingTypeId === AdjunctType.Module && this.placingResource === model.id;
+                    this.placingPrefab = null;
                     this.placingTypeId = same ? null : AdjunctType.Module;
                     this.placingResource = same ? null : model.id;
                     this.placingParams = null;
@@ -506,6 +522,30 @@ export class EditSystem implements ISystem {
                     world.ui?.hide("place-form");
                     if (this.placingTypeId !== null) {
                         world.ui?.showToast(`Place ${model.label}: click a surface in the active block`);
+                    }
+                },
+            });
+        }
+
+        // PREFABS (§9): the second row of the palette — whole compositions from
+        // the loaded StylePacks, not single adjuncts. Enumerated from the live
+        // library (`listPrefabs`), never a hard-coded menu, exactly as the face
+        // picker reads `listVariants`: what you can place is what the packs
+        // currently loaded actually provide.
+        for (const pf of listPrefabs()) {
+            buttons.push({
+                label: `⬚ ${pf.name} (${pf.parts})`,
+                active: this.placingPrefab === pf.ref,
+                onClick: () => {
+                    const same = this.placingPrefab === pf.ref;
+                    this.placingPrefab = same ? null : pf.ref;
+                    this.placingTypeId = null;
+                    this.placingResource = null;
+                    this.placingParams = null;
+                    this.paletteDirty = true;
+                    world.ui?.hide("place-form");   // a prefab's params live in its pack
+                    if (this.placingPrefab !== null) {
+                        world.ui?.showToast(`Place ${pf.name}: click a surface (${pf.parts} parts, ${pf.size}m)`);
                     }
                 },
             });
@@ -561,21 +601,114 @@ export class EditSystem implements ISystem {
         }
     }
 
+    /**
+     * block.max (the lord's per-block cap): refuse at the AUTHORING boundary, not
+     * just at inject — otherwise the editor lets you place content that a reload
+     * would silently truncate away (data loss). Counts authored rows only (ground
+     * plate + SPP/motif expansion products are derived).
+     *
+     * `n` is how many rows the pending action adds: stamping a prefab is an
+     * all-or-nothing check, since half a bench is worse than no bench.
+     */
+    private hasRoomFor(world: World, n: number): boolean {
+        const cap = (world.config as any)?.block?.max;
+        if (!(typeof cap === 'number' && cap > 0) || this.activeBlockId === null) return true;
+        let authored = 0;
+        for (const eid of world.getEntitiesWith(['AdjunctComponent'])) {
+            const a = world.getComponent<any>(eid, 'AdjunctComponent');
+            if (!a || a.parentBlockEntityId !== this.activeBlockId) continue;
+            if (typeof a.adjunctId === 'string' && a.adjunctId.startsWith('ground')) continue;
+            if (a.stdData?.derivedFrom) continue;
+            authored++;
+        }
+        if (authored + n > cap) {
+            world.ui?.showToast(n > 1
+                ? `Block is full (${cap} adjunct limit — this needs ${n} more)`
+                : `Block is full (${cap} adjunct limit)`);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * The clicked point as a BLOCK-RELATIVE Septopus position, or null when the
+     * click landed outside the active edit block (the caller stays armed so the
+     * creator can simply click again).
+     */
+    private placementPos(world: World, point: [number, number, number]): [number, number, number] | null {
+        if (this.activeBlockId === null) return null;
+        const block = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
+        if (!block) return null;
+        const spp = world.metrics.engineToSeptopus([point[0], point[1], point[2]]);
+        if (spp.block[0] !== block.x || spp.block[1] !== block.y) {
+            world.ui?.showToast('Placement must stay inside the active edit block');
+            return null;
+        }
+        spp.pos[2] -= block.elevation || 0;   // raw altitudes are block-relative
+        return spp.pos as [number, number, number];
+    }
+
+    /**
+     * Stamp the armed PREFAB at a clicked surface point (spp-editors.md §9).
+     *
+     * The unit cube stands ON the clicked point: the click is the centre of its
+     * floor, so a bench lands where the creator pointed rather than half-buried
+     * (the same "sits on the surface" contract `AdjunctDefaults.lift` gives a
+     * single adjunct). What lands is N ORDINARY authored adjuncts — see
+     * `expandPrefab` for why this is a stamp and not a live instance.
+     */
+    private stampPrefabAt(world: World, point: [number, number, number]): void {
+        const ref = this.placingPrefab;
+        if (ref === null || this.activeBlockId === null) return;
+        const prefab = getPrefab(ref);
+        if (!prefab) {
+            // A pack can vanish between arming and clicking (style switch, failed
+            // CID fetch). Disarm rather than leave a button that does nothing.
+            world.ui?.showToast(`Prefab ${ref} is no longer loaded`);
+            this.placingPrefab = null;
+            this.paletteDirty = true;
+            return;
+        }
+        const pos = this.placementPos(world, point);
+        if (!pos) return;
+
+        const size = prefab.size ?? DEFAULT_PREFAB_SIZE;
+        const origin: [number, number, number] = [pos[0] - size / 2, pos[1] - size / 2, pos[2]];
+        const rows = expandPrefab(prefab, origin, size);
+        if (!rows.length) { world.ui?.showToast(`${prefab.name} is empty — nothing to place`); return; }
+        if (!this.hasRoomFor(world, rows.length)) return;
+
+        const done: Array<{ task: EditTask; snapshot: Record<string, any> }> = [];
+        for (const [typeId, raw] of rows) {
+            const task: EditTask = {
+                entityId: -1, adjunct: '', action: 'add',
+                param: { typeId, blockEntityId: this.activeBlockId, raw },
+            };
+            const result = this.executor.execute(world, task);
+            if (!result.success || !result.snapshot) continue;
+            done.push({ task, snapshot: result.snapshot });
+        }
+        if (!done.length) { world.ui?.showToast('Placement failed'); return; }
+
+        // ONE undo step for one click, however many rows it produced.
+        this.history.push({ task: done[0].task, snapshot: done[0].snapshot, also: done.slice(1) });
+        this.dirty = true;
+        this.placingPrefab = null;
+        this.paletteDirty = true;
+        this.selectedEntityId = done[0].task.entityId;
+        this.lastUISelection = undefined;
+        this.syncUI(world);
+        world.ui?.showToast(`Placed ${prefab.name} (${done.length} parts) — Ctrl+Z undoes the whole thing`);
+    }
+
     /** Place the armed palette type at a clicked surface point (engine coords). */
     private placeAt(world: World, point: [number, number, number]): void {
         const typeId = this.placingTypeId;
         if (typeId === null || this.activeBlockId === null) return;
-        const block = world.getComponent<BlockComponent>(this.activeBlockId, "BlockComponent");
-        if (!block) return;
+        const pos = this.placementPos(world, point);
+        if (!pos) return;   // outside the block — stay armed, let them click again
 
-        const spp = world.metrics.engineToSeptopus([point[0], point[1], point[2]]);
-        if (spp.block[0] !== block.x || spp.block[1] !== block.y) {
-            world.ui?.showToast('Placement must stay inside the active edit block');
-            return; // keep the type armed — let the creator click again
-        }
-        spp.pos[2] -= block.elevation || 0;   // raw altitudes are block-relative
-
-        let raw = defaultRawFor(typeId, spp.pos, { resource: this.placingResource ?? undefined });
+        let raw = defaultRawFor(typeId, pos, { resource: this.placingResource ?? undefined });
         if (!raw) { world.ui?.showToast('No placement defaults for this type'); return; }
 
         // Overlay any pre-placement param tweaks onto the default raw (size/color/
@@ -591,25 +724,7 @@ export class EditSystem implements ISystem {
             }
         }
 
-        // block.max (the lord's per-block cap): refuse at the AUTHORING boundary,
-        // not just at inject — otherwise the editor lets you place content that a
-        // reload would silently truncate away (data loss). Counts authored rows
-        // only (ground plate + SPP/motif expansion products are derived).
-        const cap = (world.config as any)?.block?.max;
-        if (typeof cap === 'number' && cap > 0 && this.activeBlockId !== null) {
-            let authored = 0;
-            for (const eid of world.getEntitiesWith(['AdjunctComponent'])) {
-                const a = world.getComponent<any>(eid, 'AdjunctComponent');
-                if (!a || a.parentBlockEntityId !== this.activeBlockId) continue;
-                if (typeof a.adjunctId === 'string' && a.adjunctId.startsWith('ground')) continue;
-                if (a.stdData?.derivedFrom) continue;
-                authored++;
-            }
-            if (authored >= cap) {
-                world.ui?.showToast(`Block is full (${cap} adjunct limit)`);
-                return;
-            }
-        }
+        if (!this.hasRoomFor(world, 1)) return;
 
         const task: EditTask = {
             entityId: -1,
@@ -642,6 +757,7 @@ export class EditSystem implements ISystem {
             this.saveDraft(world, this.activeBlockId);
         }
         this.placingTypeId = null;
+        this.placingPrefab = null;
         world.ui?.hide("edit-palette");
 
         // Restore whatever view the player was in before Edit forced first-person.

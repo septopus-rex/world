@@ -18,7 +18,7 @@
  */
 
 import { FaceState } from '../types/ParticleCell';
-import type { FaceVariant, VariantPart } from './Variants';
+import type { FaceVariant, Prefab, VariantPart } from './Variants';
 
 export type IssueLevel = 'error' | 'warn';
 
@@ -33,7 +33,8 @@ export interface OptionIssue {
         | 'closed-empty'        // a 挡 option with no parts blocks nothing
         | 'closed-thin'         // a 挡 option that covers almost none of the face
         | 'open-sealed'         // a 通 option that covers the whole face
-        | 'parts-coincident';   // two parts occupy the same box → z-fighting
+        | 'parts-coincident'    // two parts occupy the same box → z-fighting
+        | 'prefab-empty';       // a 组合件 with no parts stamps nothing
     message: string;
     /** Index into `variant.parts`, when the issue is about one part. */
     partIndex?: number;
@@ -107,14 +108,20 @@ export function faceCoverage(variant: FaceVariant): number {
 }
 
 /**
- * Check one option. `state` decides the semantic half of the checks: the same
- * geometry is fine as a wall and wrong as a doorway.
+ * The GEOMETRIC half of the guard — true of any parts list in a unit frame,
+ * face option or prefab alike. Shared so the two callers cannot drift: the
+ * frame is the same frame, so "leaves the cube" and "has no size" mean the
+ * same thing in both.
+ *
+ * `cladding` selects the one check that is NOT shared. A face option is a skin
+ * on a wall, so reaching far inward hides the other five faces' options
+ * (DEEP_LIMIT). A prefab is a VOLUME by definition — its `sw` is the object's
+ * height, and a full-height wardrobe is the normal case, not a mistake. Running
+ * the cladding rule over furniture would flag nearly every prefab, which is the
+ * fastest way to teach an author to ignore the guard entirely.
  */
-export function checkOption(variant: FaceVariant, state: FaceState): OptionIssue[] {
+function geometryIssues(parts: VariantPart[], cladding: boolean): OptionIssue[] {
     const issues: OptionIssue[] = [];
-    const parts = variant.parts ?? [];
-    const name = variant.key ?? variant.name ?? '?';
-
     parts.forEach((p, i) => {
         const u = p.u ?? 0, v = p.v ?? 0, w = p.w ?? 0;
         const sw = p.sw;
@@ -143,7 +150,7 @@ export function checkOption(variant: FaceVariant, state: FaceState): OptionIssue
                 message: `part ${i} 向外挑出 ${(-w).toFixed(2)}（屋檐/飘窗的常用手法）——它会进入邻格空间，邻格那面若也有几何就会打架`,
             });
         }
-        if (sw != null && sw > DEEP_LIMIT) {
+        if (cladding && sw != null && sw > DEEP_LIMIT) {
             issues.push({
                 level: 'warn', code: 'part-too-deep', partIndex: i,
                 message: `part ${i} 向内伸进 ${sw!.toFixed(2)}（内建风格包普遍在 0.06~0.08）——它会横在其他五个面的造型前面，六面同用时你会看不见自己刚做的东西`,
@@ -173,6 +180,18 @@ export function checkOption(variant: FaceVariant, state: FaceState): OptionIssue
         }
     }
 
+    return issues;
+}
+
+/**
+ * Check one face option. `state` decides the semantic half of the checks: the
+ * same geometry is fine as a wall and wrong as a doorway.
+ */
+export function checkOption(variant: FaceVariant, state: FaceState): OptionIssue[] {
+    const parts = variant.parts ?? [];
+    const name = variant.key ?? variant.name ?? '?';
+    const issues = geometryIssues(parts, true);
+
     const cov = faceCoverage(variant);
     if (state === FaceState.Closed) {
         if (!parts.length) {
@@ -196,16 +215,43 @@ export function checkOption(variant: FaceVariant, state: FaceState): OptionIssue
     return issues;
 }
 
-/** Check every option of a pack. Returns issues tagged with where they live. */
-export function checkPack(pack: { closed?: FaceVariant[]; open?: FaceVariant[] }):
-    Array<OptionIssue & { pool: 'closed' | 'open'; variantKey: string }> {
-    const out: Array<OptionIssue & { pool: 'closed' | 'open'; variantKey: string }> = [];
+/**
+ * Check one PREFAB (§9). Geometry only, plus the one semantic rule a prefab
+ * has: an empty one stamps nothing. The face-pool rules (coverage as 挡/通) are
+ * deliberately absent — a prefab answers to no face, so "does this block the
+ * way" is the author's intent expressed with a b4 stop part, not a contract the
+ * pool membership implies.
+ */
+export function checkPrefab(prefab: Prefab): OptionIssue[] {
+    const parts = prefab.parts ?? [];
+    const issues = geometryIssues(parts, false);
+    if (!parts.length) {
+        issues.push({
+            level: 'error', code: 'prefab-empty',
+            message: `组合件「${prefab.key || prefab.name || '?'}」没有任何 part——放进世界什么都不会出现`,
+        });
+    }
+    return issues;
+}
+
+/** Where in a pack an issue lives. `prefabs` is the non-face half (§9). */
+export type PackPool = 'closed' | 'open' | 'prefabs';
+
+/** Check every option AND prefab of a pack. Returns issues tagged with where
+ *  they live. */
+export function checkPack(pack: { closed?: FaceVariant[]; open?: FaceVariant[]; prefabs?: Prefab[] }):
+    Array<OptionIssue & { pool: PackPool; variantKey: string }> {
+    const out: Array<OptionIssue & { pool: PackPool; variantKey: string }> = [];
     for (const pool of ['closed', 'open'] as const) {
         const state = pool === 'closed' ? FaceState.Closed : FaceState.Open;
         for (const v of pack[pool] ?? []) {
             const key = v.key ?? v.name ?? '?';
             for (const iss of checkOption(v, state)) out.push({ ...iss, pool, variantKey: key });
         }
+    }
+    for (const p of pack.prefabs ?? []) {
+        const key = p.key ?? p.name ?? '?';
+        for (const iss of checkPrefab(p)) out.push({ ...iss, pool: 'prefabs', variantKey: key });
     }
     return out;
 }

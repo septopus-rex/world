@@ -1,10 +1,14 @@
 import { useState, type ReactNode } from 'react';
-import type { StylePack, FaceVariant, VariantPart } from '@engine/core/spp/Variants';
-import { checkOption } from '@engine/core/spp/OptionGuard';
+import type { StylePack, FaceVariant, VariantPart, Prefab } from '@engine/core/spp/Variants';
+import { checkOption, checkPrefab } from '@engine/core/spp/OptionGuard';
 import { FaceState } from '@engine/core/types/ParticleCell';
-import { FACE_NAMES, partKinds, typeName, MATERIALS, takesMaterial, retypePart } from './constants';
+import {
+    FACE_NAMES, partKinds, prefabPartKinds,
+    FACE_AXES, PREFAB_AXES, FACE_FRAME_HELP, PREFAB_FRAME_HELP,
+} from './constants';
+import { PartsEditor } from './PartsEditor';
 
-type SectionId = 'basic' | 'face' | 'store';
+type SectionId = 'basic' | 'face' | 'prefab' | 'store';
 
 /** One accordion section: a clickable header + collapsible body. */
 function Section({ id, title, hint, open, onToggle, children }: {
@@ -27,16 +31,25 @@ function Section({ id, title, hint, open, onToggle, children }: {
 }
 
 /**
- * FaceStateEditor — the right column, an ACCORDION of three sections:
- *   · 基本 Basic   — 粒子 meta (name/thickness) + pack library
- *   · 面选项 Face  — the selected face's state (通/挡, synced with the dial) → its
- *                   option variants → add adjuncts/geometry → the variant's parts
- *   · 储存 Storage — export JSON / publish CID
+ * FaceStateEditor — the right column, an ACCORDION of four sections:
+ *   · 基本 Basic     — 粒子 meta (name/thickness) + pack library
+ *   · 面选项 Face    — the selected face's state (通/挡, synced with the dial) → its
+ *                     option variants → add adjuncts/geometry → the variant's parts
+ *   · 组合件 Prefabs — named compositions that belong to NO face (§9): the same
+ *                     parts editor, framed on the cell, placed by the world palette
+ *   · 储存 Storage   — export JSON / publish CID
  * The face is picked in the collapse dial (or a 3D face); this column edits it.
+ *
+ * Face and prefab are mutually exclusive EDITING MODES, not two panels open at
+ * once: the 3D preview can only show one thing, and an editor whose preview
+ * disagrees with the panel is the failure §3.5 exists to prevent. Selecting a
+ * prefab therefore switches the preview; picking a face switches it back.
  */
 export function FaceStateEditor({
-    pack, packs, selFace, selState, pool, vi, variant, cid, canUndo, canRedo,
-    onEditPack, onSelectPack, onNewPack, onUndo, onRedo, onSetFaceState, onSetVariant, onAddVariant, onRemoveVariant, onRenameVariant, onAddPart, onRemovePart, onSetPartField, onSetPart, onExport, onImport, onPublish,
+    pack, packs, selFace, selState, pool, vi, variant, selPrefab, prefab, cid, canUndo, canRedo,
+    onEditPack, onSelectPack, onNewPack, onUndo, onRedo, onSetFaceState, onSetVariant, onAddVariant, onRemoveVariant, onRenameVariant,
+    onSelectPrefab, onAddPrefab, onRemovePrefab, onRenamePrefab, onSetPrefabSize,
+    onAddPart, onRemovePart, onSetPartField, onSetPart, onExport, onImport, onPublish,
 }: {
     pack: StylePack;
     packs: StylePack[];
@@ -45,6 +58,9 @@ export function FaceStateEditor({
     pool: FaceVariant[];
     vi: number;
     variant: FaceVariant | undefined;
+    /** Key of the prefab being edited, or null = face mode. */
+    selPrefab: string | null;
+    prefab: Prefab | undefined;
     cid: string | null;
     canUndo: boolean;
     canRedo: boolean;
@@ -58,6 +74,12 @@ export function FaceStateEditor({
     onAddVariant: () => void;
     onRemoveVariant: (i: number) => void;
     onRenameVariant: (i: number, key: string) => void;
+    /** null = leave prefab mode (back to the face). */
+    onSelectPrefab: (key: string | null) => void;
+    onAddPrefab: () => void;
+    onRemovePrefab: (key: string) => void;
+    onRenamePrefab: (key: string, next: string) => void;
+    onSetPrefabSize: (key: string, meters: number) => void;
     onAddPart: (def: VariantPart) => void;
     onRemovePart: (pi: number) => void;
     onSetPartField: (pi: number, key: keyof VariantPart, val: any) => void;
@@ -69,7 +91,13 @@ export function FaceStateEditor({
     onPublish: () => void;
 }) {
     const [open, setOpen] = useState<SectionId | null>('face');
-    const toggle = (id: SectionId) => setOpen((cur) => (cur === id ? null : id));
+    const toggle = (id: SectionId) => {
+        // Opening 面选项 while a 组合件 is on screen would show face parts next to a
+        // preview of a bench — the exact panel/preview disagreement §3.5 forbids.
+        // Expanding the section IS the request to look at faces again.
+        if (id === 'face' && open !== 'face' && selPrefab !== null) onSelectPrefab(null);
+        setOpen((cur) => (cur === id ? null : id));
+    };
     const [importText, setImportText] = useState('');
     const [importError, setImportError] = useState<string | null>(null);
 
@@ -147,85 +175,77 @@ export function FaceStateEditor({
                             className="flex-1 px-2 py-1 rounded bg-black/50 border border-neutral-800 text-[11px] outline-none focus:border-cyan-700" />
                     </div>
                 )}
+                <PartsEditor
+                    parts={variant?.parts ?? []}
+                    kinds={partKinds(pack.thickness ?? 0.2)}
+                    thickness={pack.thickness ?? 0.2}
+                    frameHelp={FACE_FRAME_HELP}
+                    axisLabels={FACE_AXES}
+                    issues={variant ? checkOption(variant, selState === 0 ? FaceState.Open : FaceState.Closed) : []}
+                    onAddPart={onAddPart} onRemovePart={onRemovePart}
+                    onSetPartField={onSetPartField} onSetPart={onSetPart}
+                    emptyHint="空 option（通=可穿过）。加 part 来拼。" />
+            </Section>
+
+            {/* 组合件 — the same parts vocabulary, framed on the CELL, belonging to
+                no face. This is the whole of §9 on the authoring side: a StylePack
+                stops being "只能产弦粒子的面变体" and becomes a reusable library. */}
+            <Section id="prefab" title="组合件 Prefabs" hint={selPrefab ? `编辑中 · ${selPrefab}` : `${(pack.prefabs ?? []).length} 个`} open={open} onToggle={toggle}>
                 <div className="p-2 border-b border-neutral-800/60">
-                    <div className="text-[10px] text-neutral-500 mb-1">给「{variant?.key ?? variant?.name ?? '—'}」加 adjunct / 几何体</div>
-                    <div className="flex flex-wrap gap-1">
-                        {partKinds(pack.thickness ?? 0.2).map((k, i) => (
-                            <button key={i} data-testid={`sp-add-${typeName(k.def.type)}`} onClick={() => onAddPart(k.def)}
-                                className="px-2 py-0.5 rounded text-[11px] bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-100">＋{k.label}</button>
-                        ))}
+                    <div className="text-[10px] text-neutral-600 leading-snug mb-1.5">
+                        与「放在哪」无关的可复用组合（长椅 / 树 / 阻挡花瓶）。世界里的编辑 palette 直接从这里取。
                     </div>
+                    <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] text-neutral-500">库里的组合件</span>
+                        <button data-testid="sp-add-prefab" onClick={onAddPrefab} className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700">＋新</button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                        {(pack.prefabs ?? []).map((pf) => (
+                            <span key={pf.key} className={`inline-flex items-center rounded ${selPrefab === pf.key ? 'bg-cyan-500/25' : 'bg-neutral-800/60'}`}>
+                                <button data-testid={`sp-prefab-${pf.key}`} onClick={() => onSelectPrefab(pf.key)}
+                                    className={`pl-2 py-0.5 text-[11px] ${selPrefab === pf.key ? 'text-cyan-100' : 'text-neutral-400'}`}>{pf.name || pf.key}</button>
+                                <button data-testid={`sp-prefab-del-${pf.key}`} onClick={() => onRemovePrefab(pf.key)}
+                                    title="删除该组合件" className="px-1.5 py-0.5 text-[10px] text-neutral-500 hover:text-red-400">×</button>
+                            </span>
+                        ))}
+                        {!(pack.prefabs ?? []).length && <span className="text-[10px] text-neutral-600 italic">还没有组合件。</span>}
+                    </div>
+                    {selPrefab && (
+                        <button data-testid="sp-prefab-back" onClick={() => onSelectPrefab(null)}
+                            className="mt-1.5 w-full px-2 py-1 rounded text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300">‹ 回到面预览</button>
+                    )}
                 </div>
-                {/* 契约守卫(§3.7):只报客观错误——伸出单位胞、零尺寸、挡不住的「挡」、
-                    过不去的「通」、共面闪烁。提示不硬拦:是否采纳由作者定。好看不好看
-                    不在这里判,那是预览的事。 */}
-                {variant && (() => {
-                    const issues = checkOption(variant, selState === 0 ? FaceState.Open : FaceState.Closed);
-                    if (!issues.length) return null;
-                    return (
-                        <div data-testid="sp-guard" className="px-2 pt-2 space-y-1">
-                            {issues.map((iss, i) => (
-                                <div key={i} data-testid={`sp-guard-${iss.code}`}
-                                    className={`text-[10px] leading-snug rounded px-2 py-1 border ${iss.level === 'error'
-                                        ? 'bg-red-500/10 border-red-500/30 text-red-200'
-                                        : 'bg-amber-500/10 border-amber-500/30 text-amber-200'}`}>
-                                    <span className="font-bold mr-1">{iss.level === 'error' ? '错' : '注意'}</span>
-                                    {iss.message}
-                                </div>
-                            ))}
-                        </div>
-                    );
-                })()}
-                <div data-testid="sp-parts" className="p-2 space-y-1.5">
-                    {(variant?.parts ?? []).map((pt, pi) => (
-                        <div key={pi} className="rounded border border-neutral-800 bg-black/30 p-1.5">
-                            <div className="flex items-center justify-between mb-1 gap-1">
-                                {/* 换型换的是 raw 尾巴,不是位置——所以 frame 留着、props 整条
-                                    换成新型的起始尾巴(retypePart)。把 a4 的 [modelId] 当
-                                    a2 的 [色,repeat,…] 解释是纯粹的坏数据。 */}
-                                <select data-testid={`sp-part-${pi}-type`} value={pt.type}
-                                    onChange={(e) => onSetPart(pi, retypePart(pt, Number(e.target.value), pack.thickness ?? 0.2))}
-                                    className="flex-1 min-w-0 px-1 py-0.5 rounded bg-black/50 border border-neutral-800 text-[11px] text-cyan-200 font-bold outline-none focus:border-cyan-700">
-                                    {partKinds(pack.thickness ?? 0.2).map((k) => (
-                                        <option key={k.def.type} value={k.def.type}>{k.label}</option>
-                                    ))}
-                                </select>
-                                <button data-testid={`sp-part-del-${pi}`} onClick={() => onRemovePart(pi)} className="text-[10px] text-red-400 hover:text-red-300 shrink-0 px-1">删</button>
+                {prefab && (
+                    <>
+                        <div className="p-2 border-b border-neutral-800/60 space-y-1.5">
+                            <div className="flex items-center gap-2">
+                                <label className="text-[10px] text-neutral-500 shrink-0">名 key</label>
+                                <input data-testid="sp-prefab-key" value={prefab.key}
+                                    onChange={(e) => onRenamePrefab(prefab.key, e.target.value)}
+                                    className="flex-1 min-w-0 px-2 py-1 rounded bg-black/50 border border-neutral-800 text-[11px] outline-none focus:border-cyan-700" />
                             </div>
-                            {/* 材质:raw 槽 3。只对标准 7 槽型开放(PALETTE_SLOT3_TYPES)——
-                                a4 那里放的是模型 id、a8 是贴图、b4 是 stopMode,给它们塞
-                                颜色是静默写坏一行。调色板项自带 roughness/metalness,所以
-                                「选钢」连金属度一起给了,这正是层次感的来源。 */}
-                            {takesMaterial(pt.type) && (
-                                <div className="flex items-center gap-1 mb-1">
-                                    <span className="w-3 h-3 rounded-sm border border-neutral-700 shrink-0"
-                                        style={{ background: MATERIALS.find((m) => m.value === (pt.props?.[0] ?? 0))?.color ?? '#888' }} />
-                                    <select data-testid={`sp-part-${pi}-material`} value={Number(pt.props?.[0] ?? 0)}
-                                        onChange={(e) => {
-                                            const next = [...(pt.props ?? [])];
-                                            next[0] = Number(e.target.value);
-                                            onSetPartField(pi, 'props', next);
-                                        }}
-                                        className="flex-1 min-w-0 px-1 py-0.5 rounded bg-black/50 border border-neutral-800 text-[10px] text-neutral-200 outline-none focus:border-cyan-700">
-                                        {MATERIALS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-                                    </select>
-                                </div>
-                            )}
-                            <div className="grid grid-cols-4 gap-1 text-[10px]">
-                                {(['u', 'v', 'su', 'sv', 'w', 'sw'] as const).map((f) => (
-                                    <label key={f} className="flex flex-col text-neutral-500">
-                                        {f}
-                                        <input data-testid={`sp-part-${pi}-${f}`} type="number" step="0.05"
-                                            value={(pt as any)[f] ?? (f === 'w' ? 0 : f === 'sw' ? '' : 0)}
-                                            onChange={(e) => onSetPartField(pi, f, e.target.value === '' ? undefined : parseFloat(e.target.value))}
-                                            className="w-full px-1 py-0.5 rounded bg-black/50 border border-neutral-800 text-neutral-200 outline-none focus:border-cyan-700" />
-                                    </label>
-                                ))}
+                            {/* size 不是装饰:单位帧是尺度无关的(§3.3),这个数字决定 1.0 在
+                                世界里等于几米——也就是放下去的长椅到底是长椅还是纪念碑。 */}
+                            <div className="flex items-center gap-2">
+                                <label className="text-[10px] text-neutral-500 shrink-0">尺寸 size（米）</label>
+                                <input data-testid="sp-prefab-size" type="number" step="0.5" min="0.1" value={prefab.size ?? 2}
+                                    onChange={(e) => onSetPrefabSize(prefab.key, parseFloat(e.target.value) || 0)}
+                                    className="flex-1 min-w-0 px-2 py-1 rounded bg-black/50 border border-neutral-800 text-[11px] outline-none focus:border-cyan-700" />
                             </div>
+                            <div className="text-[10px] text-neutral-600 font-mono">ref: {pack.id}#{prefab.key}</div>
                         </div>
-                    ))}
-                    {(!variant || (variant.parts ?? []).length === 0) && <div className="text-[10px] text-neutral-600 italic">空 option（通=可穿过）。加 part 来拼。</div>}
-                </div>
+                        <PartsEditor
+                            parts={prefab.parts ?? []}
+                            kinds={prefabPartKinds()}
+                            thickness={pack.thickness ?? 0.2}
+                            frameHelp={PREFAB_FRAME_HELP}
+                            axisLabels={PREFAB_AXES}
+                            issues={checkPrefab(prefab)}
+                            onAddPart={onAddPart} onRemovePart={onRemovePart}
+                            onSetPartField={onSetPartField} onSetPart={onSetPart}
+                            emptyHint="空组合件——放进世界什么都不会出现。加 part 来拼。" />
+                    </>
+                )}
             </Section>
 
             {/* 储存 — export / publish */}

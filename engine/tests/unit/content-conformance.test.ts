@@ -299,12 +299,26 @@ describe('content gate — stylepacks', () => {
             if (/https?:/.test(text)) errs.push(`${f}: URL inside a pack — packs must stay content-addressable`);
             // Part props are the raw tail [slot3, repeat, anim, stop, slot7]: same
             // slot rules as the emitted rows (Expander appends them verbatim).
-            for (const variant of [...(pack.closed ?? []), ...(pack.open ?? [])]) {
+            // Prefabs (§9) are the same parts vocabulary in the cell frame, so
+            // they go through the same row check — a bench's a2 seat may no more
+            // carry a host path than a wall's may.
+            for (const variant of [...(pack.closed ?? []), ...(pack.open ?? []), ...(pack.prefabs ?? [])]) {
                 for (const [pi, part] of (variant.parts ?? []).entries()) {
                     const at = `${f}:${variant.key}.parts[${pi}]`;
                     const props = part.props ?? [];
                     checkRow(part.type, [[0, 0, 0], [0, 0, 0], [0, 0, 0], ...props], at, errs);
                 }
+            }
+            // A prefab is referenced ONLY by `packId#key` (§3.6 applied at birth:
+            // no positional form exists), so a missing or duplicated key is a
+            // dangling reference waiting to happen, not a cosmetic problem.
+            const keys = new Set<string>();
+            for (const [i, pf] of (pack.prefabs ?? []).entries()) {
+                if (typeof pf.key !== 'string' || !pf.key) { errs.push(`${f}: prefabs[${i}] missing a stable key`); continue; }
+                if (keys.has(pf.key)) errs.push(`${f}: duplicate prefab key '${pf.key}' — pack#key must resolve to one thing`);
+                keys.add(pf.key);
+                if (!Array.isArray(pf.parts) || !pf.parts.length) errs.push(`${f}: prefab '${pf.key}' has no parts — it would stamp nothing`);
+                if (pf.size != null && !(typeof pf.size === 'number' && pf.size > 0)) errs.push(`${f}: prefab '${pf.key}' size must be a positive number of meters`);
             }
             expect(errs).toEqual([]);
         });

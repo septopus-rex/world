@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { Engine } from '@engine/Engine';
 import type { IDataSource } from '@engine/core/services/DataSource';
-import type { StylePack } from '@engine/core/spp/Variants';
+import type { StylePack, Prefab } from '@engine/core/spp/Variants';
+import { DEFAULT_PREFAB_SIZE } from '@engine/core/spp/Variants';
+import { expandPrefab } from '@engine/core/spp/Expander';
 import { AdjunctType } from '@engine/core/types/AdjunctType';
 import { MockWorldNormal } from '@engine/core/mocks/WorldConfigs';
 // Content side of the shared core (the resource manifest) — same asset ids the
@@ -132,23 +134,68 @@ export class StylePackPreviewLoader implements IDataSource {
     private cells: any[] | null = null;
     setCells(cells: any[] | null): void {
         this.cells = cells;
-        // The six translucent face panels are an aid for picking ONE cell's face;
-        // in a multi-cell structure they just fog the thing you came to look at.
-        for (const p of this.panels) p.visible = !cells;
+        this.syncPanels();
         this.injectPreview();
+    }
+
+    /**
+     * PREFAB mode (§9): preview one 组合件 instead of the six-face cell. Null
+     * returns to the cell.
+     *
+     * It is rendered by stamping `expandPrefab` — the SAME call the world palette
+     * makes — straight into the block raw, NOT through a b6 source. That is the
+     * point rather than a shortcut: a prefab has no faces to collapse, and going
+     * through the identical code path is what makes 编辑器所见 = world 所渲 true
+     * for furniture (§3.5). If this ever grew its own row builder, the tool would
+     * be able to show a bench the world cannot place.
+     */
+    private prefab: Prefab | null = null;
+    setPrefab(prefab: Prefab | null): void {
+        if (this.pack) { this.show(this.pack, prefab); return; }
+        this.prefab = prefab;
+        this.syncPanels();
+    }
+
+    /** The six translucent face panels are an aid for picking ONE cell's face; in
+     *  a multi-cell structure or a prefab they just fog what you came to look at. */
+    private syncPanels(): void {
+        const show = !this.cells && !this.prefab;
+        for (const p of this.panels) p.visible = show;
+    }
+
+    /** Edge (meters) of whatever the preview is currently framing. */
+    private unitSize(): number {
+        return this.prefab ? (this.prefab.size ?? DEFAULT_PREFAB_SIZE) : CELL_SIZE;
     }
 
     private buildBlockRaw(): any[] {
         const themeId = this.pack?.id ?? 'basic';
-        const cell = this.cells
-            ? null
-            : { position: [0, 0, 0], level: 0, faces: this.faces.map(f => [...f]) };
         // A tiny box far below suppresses BlockSystem's auto-ground (hasGround = a
         // Box with oz<0). Out of frame, so the 粒子 floats in the sky with no ground
         // under it — the Bottom face is inspectable and nothing looks odd.
         const groundSuppressor = [[0.01, 0.01, 0.01], [8, 8, -1000], [0, 0, 0], 0, [1, 1], 0, 0];
+        const suppressor: any[] = [AdjunctType.Box, [groundSuppressor]];
+
+        if (this.prefab) {
+            // Centre the prefab's cube on the same point the cell occupies, so
+            // switching modes does not move the subject out of frame.
+            const s = this.unitSize();
+            const c = [CELL_ORIGIN[0] + CELL_SIZE / 2, CELL_ORIGIN[1] + CELL_SIZE / 2, CELL_ORIGIN[2] + CELL_SIZE / 2];
+            const origin: [number, number, number] = [c[0] - s / 2, c[1] - s / 2, c[2] - s / 2];
+            // Rows arrive as [typeId, raw]; block raw wants them grouped per type.
+            const byType = new Map<number, any[][]>();
+            for (const [typeId, raw] of expandPrefab(this.prefab, origin, s)) {
+                if (!byType.has(typeId)) byType.set(typeId, []);
+                byType.get(typeId)!.push(raw);
+            }
+            return [0, 1, [suppressor, ...[...byType].map(([t, rows]) => [t, rows])], []];
+        }
+
+        const cell = this.cells
+            ? null
+            : { position: [0, 0, 0], level: 0, faces: this.faces.map(f => [...f]) };
         return [0, 1, [
-            [AdjunctType.Box, [groundSuppressor]],
+            suppressor,
             [AdjunctType.Spp, [[CELL_ORIGIN, this.cells ?? [cell], themeId]]],
         ], []];
     }
@@ -235,7 +282,7 @@ export class StylePackPreviewLoader implements IDataSource {
         const aspect = cam.aspect > 0.01 ? cam.aspect : width / height;
         const vFov = (cam.fov * Math.PI) / 180;
         const hFov = 2 * Math.atan(Math.tan(vFov / 2) * aspect);
-        const R = 4;                          // bounding sphere of a 4m cell (+ part margin)
+        const R = this.unitSize();            // bounding sphere of the framed cube (+ part margin)
         const dist = (R / Math.sin(Math.min(vFov, hFov) / 2)) * 1.15;
         cc.setObserveOrbit?.(0.8, 0.5, dist);
     }
@@ -256,18 +303,55 @@ export class StylePackPreviewLoader implements IDataSource {
         return { player, wall, cam: cam ? [cam.x, cam.y, cam.z] : null, obs: cc?.getObserveState?.() };
     }
 
-    /** Apply an (edited) pack — re-register + re-inject so the preview updates. */
-    apply(pack: StylePack): void {
+    /**
+     * Show an (edited) pack, and within it either a PREFAB or the six-face cell.
+     * One entry point on purpose: pack and subject change together on almost
+     * every edit (typing in a prefab's part changes both), and two calls would
+     * re-inject the block twice and briefly render the new pack with the old
+     * subject.
+     */
+    show(pack: StylePack, prefab: Prefab | null): void {
         this.pack = pack;
+        this.prefab = prefab;
+        this.syncPanels();
         if (!this.engine) return;
         this.engine.registerStylePack(pack); // same id → overwrites the registry entry
         this.injectPreview();
+        this.fitView();                      // a prefab has its own size
+    }
+
+    /** Apply an (edited) pack, keeping the current subject. */
+    apply(pack: StylePack): void {
+        this.show(pack, this.prefab);
     }
 
     /** Set the six faces (the collapse dial) and re-inject. */
     setFaces(faces: Faces): void {
         this.faces = faces.map(f => [...f]) as Faces;
         this.injectPreview();
+    }
+
+    /**
+     * Everything actually visible in the preview, whatever the mode — for
+     * tests/verification. Cell mode produces DERIVED entities (b6 expansion),
+     * prefab mode produces AUTHORED ones (a stamp), so a count that only knew
+     * about `derivedFrom` would report 0 for every prefab. The ground
+     * suppressor (parked at z=-1000, out of frame) is excluded.
+     */
+    previewCount(typeId?: number): number {
+        const w = this.engine?.getWorld() as any;
+        if (!w) return 0;
+        let n = 0;
+        for (const eid of w.queryEntities('AdjunctComponent')) {
+            const a = w.getComponent(eid, 'AdjunctComponent');
+            if (!a?.stdData) continue;
+            if (typeof a.adjunctId === 'string' && a.adjunctId.startsWith('ground')) continue;
+            const t = w.getComponent(eid, 'TransformComponent');
+            if (t && t.position?.[1] < -100) continue;   // the suppressor
+            if (typeId != null && a.stdData.typeId !== typeId) continue;
+            n++;
+        }
+        return n;
     }
 
     /** Derived entities of a type in the preview — for tests/verification. */

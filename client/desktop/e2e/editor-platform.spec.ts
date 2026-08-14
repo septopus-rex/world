@@ -66,6 +66,62 @@ test('palette placement: armed type + click → adjunct placed, persisted across
   expect(survived, 'placed box persisted into the block draft').toBe(true);
 });
 
+test('组合件 palette: a StylePack prefab stamps as N authored adjuncts and persists', async ({ page }) => {
+  // The world half of spp-editors.md §9. The palette's prefab row is read from
+  // the LOADED packs (Engine.listPrefabs), so this also proves the boot-time
+  // pack registration reaches the editor — a prefab authored in client/editor
+  // and shipped in a .stylepack.json is placeable here with no other wiring.
+  await bootDeterministic(page);
+  await page.locator('[data-testid="mode-edit"]').click();
+  await stepEngine(page, 10);
+
+  const expected = await page.evaluate(() =>
+    (window as any).loader.engine.listPrefabs().find((p: any) => p.ref === 'garden#bench'));
+  expect(expected, 'the garden pack ships a bench').toBeTruthy();
+
+  // Arm through the REAL palette button, not by poking EditSystem state.
+  const benchBtn = page.locator('.sept-ui-group button', { hasText: '长椅' });
+  await expect(benchBtn).toBeVisible();
+  await benchBtn.click();
+
+  const placed = await page.evaluate(() => {
+    const w = (window as any).loader.engine.getWorld();
+    const before = w.queryEntities('AdjunctComponent').length;
+    const blockEid = w.activeEditBlockId;
+    const block = w.getComponent(blockEid, 'BlockComponent');
+    const ex = (block.x - 1) * 16 + 10, ez = -((block.y - 1) * 16 + 10);
+    w.events.emit('interact.primary',
+      { metadata: {}, distance: 5, point: [ex, 0, ez] },
+      { target: blockEid, actor: w.queryEntities('TransformComponent', 'InputStateComponent')[0] });
+    for (let i = 0; i < 3; i++) (window as any).loader.engine.step(1 / 60);
+    return { delta: w.queryEntities('AdjunctComponent').length - before, blockX: block.x, blockY: block.y };
+  });
+  expect(placed.delta, 'every part of the bench landed').toBe(expected.parts);
+  await page.screenshot({ path: 'test-results/prefab-stamped.png' });
+
+  await page.locator('[data-testid="mode-normal"]').click();
+  await stepEngine(page, 5);
+  await page.evaluate(async () => { await (window as any).loader.engine.getWorld().draftStore.flush(); });
+  await page.reload();
+  await settle(page);
+
+  // What persisted is ORDINARY authored rows — the stamp is data the creator now
+  // owns, not a live reference to the pack (§9.4).
+  const survived = await page.evaluate(([bx, by]: number[]) => {
+    const w = (window as any).loader.engine.getWorld();
+    const draft = w.draftStore.load(0, bx, by);
+    const groups: any[] = draft?.raw?.[2] ?? [];
+    const rows = groups.flatMap((g: any[]) => g[1].map((r: any[]) => ({ type: g[0], r })));
+    // The bench's stop part is a b4 centred on the click (10, 10).
+    return {
+      stops: rows.filter((x) => x.type === 0x00b4 && Math.abs(x.r[1][0] - 10) < 0.01 && Math.abs(x.r[1][1] - 10) < 0.01).length,
+      nearby: rows.filter((x) => Math.abs(x.r[1][0] - 10) < 1.1 && Math.abs(x.r[1][1] - 10) < 1.1).length,
+    };
+  }, [placed.blockX, placed.blockY]);
+  expect(survived.stops, 'the b4 stop part persisted').toBe(1);
+  expect(survived.nearby, 'so did the rest of the bench').toBe(expected.parts);
+});
+
 test('moving platform: the lift ball carries a standing player upward', async ({ page }) => {
   await bootDeterministic(page);
 

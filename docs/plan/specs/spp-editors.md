@@ -15,6 +15,9 @@ Status: **设计（未实现）** · 2026-07-06 · 过程文档(非规范)
 
 **world 只消费**:源按 CID 指向库 → `expandSpp` 合成 → 渲染。本文重点讲 **Editor 2 怎么做最稳**(§3)。
 
+> **2026-08-14 追加 §9「组合件 Prefabs」**:同一把尺子量 adjunct,得到的不是「再建一个 adjunct 编辑器」,
+> 而是把 Editor 2 从「只能产弦粒子的面变体」放宽成**归一化组合件库**。判据与实现见 §9。
+
 ---
 
 ## 1. 从数据分离推出两个编辑器
@@ -262,6 +265,11 @@ Editor 1(源)  ──选"这面第几号 option"── 读 ──▶  Editor 2 �
   (真 UI 面板点选)。旧 实→门→窗→空 循环保留为 `sandboxCycleFace` API 缝(ray-free 快速雕刻/测试)。
   **仍待做**:源级选 theme(CID 指针,现只有世界级 override)、option 预览缩略图。
 - **P6(可选)AI 生成 StylePack** — 🔲 待做。
+- **P7 组合件 Prefabs** — ✅ **已实现(2026-08-14)**:StylePack 加第三个池 `prefabs`(`pack#key` 稳定引用、
+  胞的 Bottom 面帧、`size` 声明尺度);`listPrefabs`/`getPrefab`/`Engine.listPrefabs` 读库缝;`expandPrefab`
+  复用 `partToBox`;`checkPrefab` 免掉 `part-too-deep`、新增 `prefab-empty`;世界编辑 palette 第二排点击盖章
+  (一次点击一步撤销、cap 按整件校验);`client/editor` 第三个折叠区 + 共享 `PartsEditor`;garden 首批
+  `bench`/`tree`。完整设计与取舍见 **§9**。**剩余**:缩略图、按 pack 分组、CID 冻结、深数据模板(§9.6)。
 - **规范抽取**:P1/P4 稳定后,变体身份(key)、unit frame、CID 冻结、契约语义抽进 `protocol/`(SPP 规范,双语)。
 
 > 顺序要点:**P1 是地基(数据模型),Editor 2(P2/P3)先于 Editor 1(P5)**——因为 Editor 1"从库里选"要先有丰富的库。
@@ -307,3 +315,102 @@ key/CID 修法 = 拉回协议对齐**(必做,P4)。另有一处**受限子集**(
 - **变体身份是头号风险**:必须上 §3.6(key + CID 冻结),否则库一演进就静默错位。P4 不能省。
 - **契约靠自律 + 护栏**:§3.7 是提示不是强制;跨信任边界(服务器权威)再谈硬校验。
 - **别把"能编库"当"做出了游戏"**:库/源只解决场景与接口;玩法回路仍在逻辑层(trigger/actuator/flag/dialogue)。
+
+---
+
+## 9. 组合件 Prefabs —— 同一把尺子量 adjunct（2026-08-14 落地）
+
+### 9.1 问题:「adjunct 也搞个独立编辑器」合理吗
+
+提法是:仿照 SPP 的双编辑器,给 adjunct 也做一个——世界里管定位,独立 app 管精细化。
+**方向对,但要迁移的是判据不是形态。**
+
+Editor 1/2 能拆,根因**不是「粗调 vs 精调」,是数据先拆成了两份**(`spp-protocol-full.md` ②):
+源绑块、每实例一份;StylePack 是库、可复用、可寻址。§3.1 那句"跟'放在哪'无关"讲的就是这个。
+所以真正的尺子是:
+
+> **编辑器边界 = 数据边界。能命名、能复用、能算出 CID 的 → 独立 app;
+> 只能存在于「某块某行」里的 → 留在世界里编(必要时用 2D 页面栈)。**
+
+按这把尺子量 adjunct:**一行 adjunct raw 就是一份数据,没有第二份。**
+`core/edit/AdjunctDefaults.ts` 的 `defaultRawFor` / `defaultTailFor` 之分(2026-08-05)已经把缝找出来了
+——`[size, pos, rot]` 是 where、`tail`(槽 3+)是 what,且 tail **确实与位置无关**。
+但**位置无关 ≠ 可复用**:tail 内联在某块某行里,没法命名、没法发 CID,把它拖到世界外编,
+产物只能写回那一行,于是编辑器必须知道是哪个世界哪个块哪个实体——退化成 §1 判过的
+「编辑器带个小预览窗」。
+
+### 9.2 真能拆出去的那一档:组合件——而且它已经存在
+
+§3.2 早就写了 **option = adjunct 组合**;P1 把 `pieces` 泛化成 `parts: VariantPart[]`(任意 type + 归一化 frame)。
+「一组 adjunct 在归一化单位胞里」**正是一件家具的定义**。所以正确动作不是新建 adjunct 编辑器,
+而是**放宽 Editor 2 的归属规则**:
+
+| | 之前 | 现在 |
+|---|---|---|
+| 编的东西 | 一组 adjunct parts,在归一化单位胞里 | **不变** |
+| 必须归到哪 | 某个面的 open / closed 池 | 池**之外**也能存:一个独立命名的 **Prefab** |
+| 引用形态 | 面写 `[state, key]` | `packId#key` |
+| 产出 | StylePack JSON → CID | **同一条通道**(同一个文件、同一个 CID) |
+| 世界里怎么用 | b6 源选第几号 option | 编辑 palette 第二排「从库里放」 |
+
+**不在里面的两件事**(容易混):① **不是**把世界里某个 adjunct 实例拖到 editor 里改
+——那个仍在世界里编(它有位置、有场景引用,出了世界就没意义);② **不是** 21 型的通用属性表单
+(§8 的 DCC 陷阱)。放宽的是「能不能不进池」,不是「能编多少字段」。
+
+### 9.3 数据形态
+
+```jsonc
+StylePack {
+  id, thickness, closed[], open[],
+  prefabs?: Prefab[],        // ★ 新增,可选——没有家具的包仍是完整的包
+}
+Prefab {
+  key:   string,   // ★ 必填。组合件是新东西,一出生就在 §3.6 的正确一侧:
+                   //   只能按 pack#key 引用,不存在下标形态可漂移
+  name:  string,
+  size?: number,   // 作者声明的单位立方边长(米),默认 2 = 家具尺度
+  parts: VariantPart[],
+}
+```
+
+**帧 = 胞的 Bottom 面帧**(§3.3 的「体变体」):`u→X 东 · v→Y 北`(地面足迹)、`w/sw→Z 上`(离地高度 / 自身高度)。
+展开直接复用 `partToBox(ParticleFace.Bottom, …)`——**这是定义不是巧合**:面 option 与组合件走同一段几何代码,
+§3.5 的「编辑器所见 = world 所渲」对家具才同样成立。
+
+### 9.4 「盖章」而不是「实例」——一个刻意的取舍
+
+`expandPrefab` 是**创作期**操作:落到块草稿里的是 **N 个普通的 authored adjunct**,
+**不标 `derivedFrom`**。后果是双向的,两边都想清楚了:
+
+- ✅ 盖下去的长椅是**作者从此拥有的数据**——能挪、能改色、能拆开单独调一件;
+- ✅ 后来编辑风格包,**已经盖出去的不会跟着变**(存量世界不会被库的演进悄悄改掉);
+- ❌ 反过来也就没有「改库 → 所有副本跟着变」的联动。
+
+要联动就得**新开一个 adjunct 型 + 运行时依赖库可解析**——那是**另一个特性,不是这个特性的更好版本**。
+现在不做。
+
+### 9.5 落点(已实现)
+
+| 层 | 东西 |
+|---|---|
+| 数据 | `Prefab` / `StylePack.prefabs` / `SppTheme.prefabs`(`core/spp/Variants.ts`);内容门禁校验 key 唯一、parts 非空、size 为正 |
+| 读库缝 | `listPrefabs(themeId?) → PrefabInfo[]` · `getPrefab('pack#key')` · `Engine.listPrefabs()`——与 `listVariants` 同款,**palette 列的是活库不是硬编码菜单** |
+| 展开 | `expandPrefab(prefab, origin, size)`(`core/spp/Expander.ts`),复用 `partToBox` |
+| 守卫 | `checkPrefab`(`OptionGuard`)——几何检查共用 `geometryIssues`;**`part-too-deep` 不适用**(那条规则把 option 读作「贴面的皮」,而组合件按定义是体,全高衣柜是常态);新增 `prefab-empty` |
+| 世界 | `EditSystem` palette 第二排(`⬚ 名字 (件数)`)→ 点面盖章;**单位立方站在点击点上**(点击点 = 底面中心);`block.max` 按整件校验,**不会盖出半张长椅** |
+| undo | `HistoryEntry.also[]`——**一次点击 = 一步撤销**,不管产生了几行 |
+| 编辑器 | `client/editor` 第三个折叠区「组合件 Prefabs」;parts 面板抽成共享的 `PartsEditor`(**面/胞两帧只有轴标签不同**,别做第二份);预览走 `show(pack, prefab)` 单一入口,面标签与坍缩盘在组合件模式下收起 |
+| 内容 | `garden.stylepack.json` 首批两件:`bench`(长椅,a2×4 + b4)· `tree`(小树,a2 + a7×2 + b4) |
+| 测试 | `unit/spp-prefab.test.ts`(15)· `systems/prefab-placement.test.ts`(5)· editor e2e「组合件 Prefabs」· desktop e2e「组合件 palette」 |
+
+**轴标签必须分开**(`FACE_AXES` / `PREFAB_AXES`):同样是 u/v/w,面帧的 `v` 竖着走墙、`sw` 向内咬,
+胞帧的 `v` 向北铺地、`sw` 是高度。两处标一样,作者就会做出一张**躺着的长椅**。
+
+### 9.6 剩下没做的
+
+- **组合件的缩略图 / 预览图**:palette 现在只有文字按钮(与 option 缩略图同一笔欠账,见 P5)。
+- **世界内「从库里选」的第二级**:现在是一个扁平列表;包多了要按 pack 分组。
+- **CID 冻结**:与 §3.6 的第 2 层同一笔——`prefabs` 随包一起冻结,单独的版本故事还没写。
+- **深数据的可复用部分**(animation 时间轴 / npc 行为模板 / motif 模板):按 §9.1 的尺子,
+  **模板可抽,实例上的场景引用(触发哪个实体、读哪个 flag、传送到哪个锚点)不可抽**——
+  那些该做成 2D 页面栈里的一页,不是第二个 app。尚未动手。

@@ -1,5 +1,5 @@
-import type { StylePack, FaceVariant, VariantPart } from '@engine/core/spp/Variants';
-import { listOptionPartKinds } from '@engine/core/spp/Variants';
+import type { StylePack, FaceVariant, VariantPart, Prefab } from '@engine/core/spp/Variants';
+import { listOptionPartKinds, DEFAULT_PREFAB_SIZE } from '@engine/core/spp/Variants';
 import { adjunctTypeName } from '@engine/core/types/AdjunctType';
 import { DEEP_LIMIT } from '@engine/core/spp/OptionGuard';
 import { PALETTE, PALETTE_SLOT3_TYPES } from '@engine/core/utils/Palette';
@@ -137,6 +137,47 @@ export function liftPack(src: StylePack): StylePack {
     }
     return p;
 }
+
+// ─── 组合件 Prefabs (§9) ─────────────────────────────────────────────────────
+
+/**
+ * What u/v/su/sv/w/sw MEAN in each frame. The numbers are the same six; the
+ * axes they name are not, and a UI that labels them identically in both places
+ * is how an author builds a bench lying on its side. A face option's `v` runs
+ * up the wall and `sw` bites inward; a prefab's `v` runs north across the floor
+ * and `sw` is the object's height.
+ */
+export const FACE_AXES: [string, string, string, string, string, string] =
+    ['u 横', 'v 竖', 'su 宽', 'sv 高', 'w 深', 'sw 厚'];
+export const PREFAB_AXES: [string, string, string, string, string, string] =
+    ['u 东', 'v 北', 'su 东西', 'sv 南北', 'w 离地', 'sw 高'];
+
+export const FACE_FRAME_HELP = '面的单位帧：u/v 是面内 0..1，w/sw 是向内的深度。';
+export const PREFAB_FRAME_HELP = '胞的单位帧：u→东 X · v→北 Y（地面足迹），w→离地高度、sw→自身高度，均为 0..1。';
+
+/**
+ * A freshly dropped prefab part: a centred block STANDING ON the floor.
+ *
+ * One constant, not a per-type table like FRAMES. A face part has a natural
+ * pose because the face tells it where to be (a wall fills it, a sign lies flat
+ * on it); a prefab part has no such cue — the author is building an object out
+ * of blocks and will type real numbers immediately. Inventing a per-type guess
+ * here would be a second table to keep in sync with FRAMES for no gain.
+ */
+export const prefabPartFrame = (): Omit<VariantPart, 'type' | 'props'> =>
+    ({ u: 0.3, v: 0.3, su: 0.4, sv: 0.4, w: 0, sw: 0.4 });
+
+/** Part kinds framed for a prefab (same engine-enumerated types, floor pose). */
+export function prefabPartKinds(): Array<{ label: string; def: VariantPart }> {
+    return partKinds(0.2).map((k) => ({
+        label: k.label,
+        def: { ...k.def, ...prefabPartFrame() } as VariantPart,
+    }));
+}
+
+/** A blank 组合件 — furniture-scale cube, no parts yet. */
+export const blankPrefab = (key: string): Prefab =>
+    ({ key, name: key, size: DEFAULT_PREFAB_SIZE, parts: [] });
 
 /** The initial collapse dial for a pack: all six faces closed on its first option. */
 export const defaultDial = (p: StylePack): Array<[number, string]> =>

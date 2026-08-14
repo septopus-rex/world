@@ -22,7 +22,7 @@ function inPoly(x: number, y: number, pts: Array<{ x: number; y: number }>): boo
  * face polygons to SELECT a face directly in 3D. Face-name labels + the collapse
  * dial overlay it too.
  */
-export function PreviewPane({ packId, cid, labels, faces, selFace, dial, pack, onSelectFace, onSetDialFace }: {
+export function PreviewPane({ packId, cid, labels, faces, selFace, dial, pack, prefabKey, onSelectFace, onSetDialFace }: {
     packId: string;
     cid: string | null;
     labels: FaceLabel[];
@@ -30,14 +30,21 @@ export function PreviewPane({ packId, cid, labels, faces, selFace, dial, pack, o
     selFace: number;
     dial: Faces;
     pack: StylePack;
+    /** Non-null ⇒ the view is showing a 组合件, not the cell (§9). */
+    prefabKey: string | null;
     onSelectFace: (i: number) => void;
     onSetDialFace: (fi: number, state: number, ref: string) => void;
 }) {
     const down = useRef<{ x: number; y: number } | null>(null);
+    // Every face affordance — labels, the collapse dial, click-to-pick — belongs
+    // to the CELL. A 组合件 has no faces, so leaving them up would offer controls
+    // that describe something the viewer is not looking at.
+    const inPrefab = prefabKey !== null;
 
     const onDown = (e: React.MouseEvent) => { down.current = { x: e.clientX, y: e.clientY }; };
     const onUp = (e: React.MouseEvent) => {
         const d = down.current; down.current = null;
+        if (inPrefab) return;
         if (!d || Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6) return; // drag = orbit, not a pick
         const rect = e.currentTarget.getBoundingClientRect();
         const px = e.clientX - rect.left, py = e.clientY - rect.top;
@@ -56,7 +63,7 @@ export function PreviewPane({ packId, cid, labels, faces, selFace, dial, pack, o
                 REAL scene meshes (StylePackPreviewLoader) so they track the box with
                 zero lag during orbit. Here we only reproject the labels + hit-test
                 clicks against the projected face polygons. */}
-            {labels.map((l, i) => l.front && (
+            {!inPrefab && labels.map((l, i) => l.front && (
                 <button key={i} data-testid={`sp-facelabel-${i}`} onClick={() => onSelectFace(i)}
                     style={{ left: l.x, top: l.y }}
                     className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded text-[10px] font-bold pointer-events-auto ${selFace === i ? 'bg-cyan-400 text-black' : 'bg-black/55 text-cyan-200 border border-cyan-400/40 hover:bg-black/80'}`}>
@@ -64,10 +71,14 @@ export function PreviewPane({ packId, cid, labels, faces, selFace, dial, pack, o
                 </button>
             ))}
 
-            <div className="absolute top-3 left-3 text-[10px] text-neutral-500 pointer-events-none">SPP 粒子 · {packId} · 点面选中 · 拖拽旋转 · W/S 缩放</div>
+            <div data-testid="sp-caption" className="absolute top-3 left-3 text-[10px] text-neutral-500 pointer-events-none">
+                {inPrefab
+                    ? `组合件 · ${packId}#${prefabKey} · 拖拽旋转 · W/S 缩放`
+                    : `SPP 粒子 · ${packId} · 点面选中 · 拖拽旋转 · W/S 缩放`}
+            </div>
             {cid && <div data-testid="sp-cid" className="absolute top-3 right-3 text-[10px] text-cyan-300 font-mono">CID: {cid}</div>}
 
-            <CollapseDial dial={dial} pack={pack} selFace={selFace} onSelectFace={onSelectFace} onSetDialFace={onSetDialFace} />
+            {!inPrefab && <CollapseDial dial={dial} pack={pack} selFace={selFace} onSelectFace={onSelectFace} onSetDialFace={onSetDialFace} />}
         </div>
     );
 }

@@ -51,6 +51,35 @@ export interface FaceVariant {
     parts?: VariantPart[];
 }
 
+/**
+ * A PREFAB (组合件) — a named, reusable adjunct composition that belongs to no
+ * face (spp-editors.md §9).
+ *
+ * Same `parts` vocabulary as a face option, and deliberately so: an option
+ * already IS "a group of adjuncts in a normalized unit frame" (§3.2), which is
+ * exactly what a piece of furniture is. The only difference is the FRAME —
+ * a face option is framed on one of six faces, a prefab is framed on the cell
+ * itself, which the expander treats as the Bottom face:
+ *
+ *   u → X 东 · v → Y 北 (the footprint on the floor) · w/sw → Z 上 (height)
+ *
+ * so authoring one reads as "a thing standing on the floor of a unit cube".
+ *
+ * `key` is REQUIRED (unlike FaceVariant's, which tolerates legacy positional
+ * references). Prefabs are new, so they start on the right side of §3.6: the
+ * only way to name one is a stable key, and the only way to reference one is
+ * `packId#key`. There is no index form to drift.
+ */
+export interface Prefab {
+    key: string;
+    name: string;
+    /** Authored edge of the unit cube, in meters. Default 2 — furniture scale.
+     *  The frame is scale-invariant (§3.3); this is only what "1.0" means when
+     *  the prefab is stamped into a block. */
+    size?: number;
+    parts: VariantPart[];
+}
+
 export interface SppTheme {
     /** Wall slab thickness in meters (embedded inside the cell). */
     thickness: number;
@@ -70,6 +99,13 @@ export interface SppTheme {
      * ResourceManager like any other texture. Unset → solid colour.
      */
     texture?: string | number;
+    /**
+     * Reusable compositions that are NOT face options (§9). Carried on the theme
+     * so a style ships its own furniture — a garden pack's bench belongs to the
+     * garden pack. Never touched by the expander: prefabs are stamped at
+     * authoring time (see `expandPrefab`), not expanded per frame.
+     */
+    prefabs?: Prefab[];
     /**
      * Optional per-cell geometry override. When present, the expander calls this
      * for each cell INSTEAD of the face/wall/adjacency logic, and uses whatever
@@ -116,6 +152,9 @@ export interface StylePack {
     thickness: number;
     closed: FaceVariant[];
     open: FaceVariant[];
+    /** Named compositions that are not face options (§9). Optional — a pack
+     *  without furniture is still a complete pack. */
+    prefabs?: Prefab[];
     color?: number;
     texture?: string | number;
 }
@@ -129,6 +168,10 @@ export function registerStylePack(pack: StylePack): string | null {
         thickness: pack.thickness,
         closed: pack.closed,
         open: pack.open,
+        // A malformed `prefabs` is dropped, not fatal: the two pools are what a
+        // b6 source needs to render, and refusing a whole pack over its optional
+        // furniture list would break worlds that never place any.
+        ...(Array.isArray(pack.prefabs) ? { prefabs: pack.prefabs } : {}),
         ...(pack.color != null ? { color: pack.color } : {}),
         ...(pack.texture != null ? { texture: pack.texture } : {}),
     });
@@ -212,6 +255,61 @@ export function listVariants(themeId: string, state: FaceState): VariantInfo[] {
     if (!theme) return [];
     const pool = state === FaceState.Closed ? theme.closed : theme.open;
     return pool.map(v => ({ key: v.key ?? v.name, name: v.name }));
+}
+
+// ─── Prefabs: the library's non-face half (§9) ───────────────────────────────
+
+/** How a prefab is addressed from outside its pack: `packId#key`. Opaque and
+ *  stable (§3.6) — never a position. */
+export const prefabRef = (packId: string, key: string): string => `${packId}#${key}`;
+
+/** One prefab as a picker lists it. `ref` is what a caller passes back. */
+export interface PrefabInfo {
+    ref: string;
+    pack: string;
+    key: string;
+    name: string;
+    /** How many adjuncts get stamped — the palette shows it so "place" is never
+     *  a surprise (a 12-part pergola is not the same click as a 1-part stool). */
+    parts: number;
+    /** Authored cube edge in meters (default 2). */
+    size: number;
+}
+
+/**
+ * Every prefab of one pack, or of ALL registered packs when `themeId` is
+ * omitted. This is the world palette's "read the library" seam — the same
+ * relationship `listVariants` has with the face picker (§2.2): the menu is what
+ * the loaded packs actually provide, never a hard-coded list.
+ */
+export function listPrefabs(themeId?: string): PrefabInfo[] {
+    const out: PrefabInfo[] = [];
+    for (const [id, theme] of themes) {
+        if (themeId != null && id !== themeId) continue;
+        for (const p of theme.prefabs ?? []) {
+            if (!p || typeof p.key !== 'string' || !p.key) continue;
+            out.push({
+                ref: prefabRef(id, p.key), pack: id, key: p.key,
+                name: p.name ?? p.key, parts: (p.parts ?? []).length, size: p.size ?? DEFAULT_PREFAB_SIZE,
+            });
+        }
+    }
+    return out;
+}
+
+/** Default authored cube edge for a prefab, in meters — furniture scale. */
+export const DEFAULT_PREFAB_SIZE = 2;
+
+/** Resolve a `packId#key` reference. Unknown pack or key → undefined (callers
+ *  must treat a dangling reference as "nothing to place", never as a crash:
+ *  packs arrive from CID/URL and can legitimately be missing). */
+export function getPrefab(ref: string): Prefab | undefined {
+    const hash = ref.lastIndexOf('#');
+    if (hash <= 0) return undefined;
+    const theme = themes.get(ref.slice(0, hash));
+    if (!theme) return undefined;
+    const key = ref.slice(hash + 1);
+    return (theme.prefabs ?? []).find(p => p.key === key);
 }
 
 /** Built-in starter theme: solid / doorway / window walls, open = passage. */

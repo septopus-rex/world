@@ -10,6 +10,7 @@
 | 一个新关卡(出生点+多块+组合) | `src/levels/<名>.level.json` | gallery / xianjian / refine |
 | 一块可复用/可复位的内容 | `src/blocks/<名>.block.json` | demo / maze / hub / 各游戏家具 |
 | 一个风格包 | `src/stylepacks/<名>.stylepack.json` | brick / garden |
+| 一件可复用的家具/装饰(与「放在哪」无关) | **同一个风格包的 `prefabs[]`**(组合件,`pack#key`,`spp-editors.md §9`);在 `client/editor` 里编,世界编辑 palette 第二排盖章 | garden `bench` / `tree` |
 | 原生小游戏的配置 | **块数据里的 b8 game trigger**(`enterGame params[0].game={kind,…}`),System 经 `game.declare` 自臂 | shooting / pool / tumble |
 | 触发器指向同块对象 | **块相对 id** `adj_~_~_{type十进制}_{idx}`(禁止烤绝对坐标) | demo 门 |
 | 程序化生成、但种子写死(输出永不变) | **跑一次,冻结成 JSON**(生成器删除) | maze |
