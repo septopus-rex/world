@@ -7,7 +7,23 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  timeout: 90_000,
+  // 180s per test. This suite is the HEAVIEST of the three (mobile and editor sit
+  // at 120s) because every test boots the whole world — a real block stream plus
+  // SwiftShader's PBR shader compile burst — before it asserts anything.
+  //
+  // At the old 90s the margin had gone negative on a COLD run: the three
+  // editor-platform tests take ~45–50 s once Vite's dep cache is warm, but
+  // 1.5–1.8 min on the first run after a cold start, and there all three failed
+  // on time alone — including two that had nothing wrong with them (2026-08-14).
+  // COLD is the case to size against: CI and the nightly cron are always cold, so
+  // a limit tuned on a warm local re-run is a limit that only ever fires on the
+  // machine you cannot watch. A timeout that fires on healthy tests is worse than
+  // a loose one — it trains you to re-run rather than to read the failure.
+  //
+  // It is still a HANG detector, not a budget: nothing here should legitimately
+  // approach 3 minutes. A test creeping toward it is telling you it now waits on
+  // something it did not before — find that, don't raise this again.
+  timeout: 180_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
