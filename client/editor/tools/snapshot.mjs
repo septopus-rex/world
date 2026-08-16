@@ -12,6 +12,7 @@
  * Usage:
  *   node tools/snapshot.mjs <pack.json> [--out DIR] [--views N] [--faces open|closed]
  *   node tools/snapshot.mjs --builtin terran --out /tmp/terran
+ *   node tools/snapshot.mjs --builtin garden --prefab all      # the 组合件, not the faces
  *
  * Assumes the editor dev server is reachable (npm run dev, port 7779); pass
  * --url to point elsewhere. Writes view-<i>.png + guard.json + pack.json into
@@ -38,12 +39,17 @@ const faceState = flag('faces', 'closed');           // which pool to collapse a
 const optionKey = flag('option', null);              // which option in that pool (default: the first)
 const builtin = flag('builtin', null);
 const house = flag('house', null);          // a cells JSON: preview a whole structure
+// --prefab: photograph the pack's 组合件 (§9) instead of its faces. `all` walks
+// every one of them. A prefab belongs to no face, so the six-face collapse below
+// would never show it — without this flag furniture is authored blind, which is
+// exactly the "read the effect out of the data" failure this tool exists against.
+const prefabKey = flag('prefab', null);
 
 const packPath = builtin
     ? resolve(HERE, `../../core/src/stylepacks/${builtin}.stylepack.json`)
     : positional[0] && resolve(positional[0]);
 if (!packPath) {
-    console.error('usage: node tools/snapshot.mjs <pack.json> [--out DIR] [--views N] [--faces open|closed]');
+    console.error('usage: node tools/snapshot.mjs <pack.json> [--out DIR] [--views N] [--faces open|closed] [--prefab KEY|all]');
     process.exit(2);
 }
 
@@ -99,45 +105,106 @@ try {
         process.exit(0);
     }
 
-    // Collapse all six faces onto the requested pool's first option, so the
-    // photo shows one option from every angle instead of a mixture.
-    await page.getByTestId('sp-acc-face').click();
-    for (let f = 0; f < 6; f++) {
-        await page.getByTestId(`sp-face-${f}`).click();
-        await page.getByTestId(`sp-dial-state-${faceState === 'open' ? 'open' : 'closed'}`).click();
-        // --option lets you photograph ONE option on all six faces. Without it a
-        // pack's roof/deck/stair variants are invisible here: every face lands on
-        // the pool's first entry, so `solid` is all you ever see.
-        if (optionKey) await page.getByTestId('sp-dial-opt').selectOption(optionKey);
-    }
-
-    // Wait for the expansion to land before photographing anything.
-    await page.waitForFunction(() => (window.spLoader?.derivedCount?.() ?? 0) >= 0, null, { timeout: 20_000 });
-
     // Hide the editor's own overlays. The subject is the GEOMETRY; a dial and
     // six face labels in every frame are noise a reviewer has to look past, and
     // they cover the lower third of the cell.
-    if (flag('chrome', null) === null) {
+    const hideChrome = async () => {
+        if (flag('chrome', null) !== null) return;
         await page.addStyleTag({
             content: '[data-testid="sp-dial"],[data-testid^="sp-facelabel-"],#sp-preview>div:first-child{display:none!important}',
         });
-    }
-    await page.waitForTimeout(600);
+    };
+
+    // b4 stop bodies do not render in the WORLD — they are pure collision. The
+    // editor draws them so an author can see the blocker they are shaping, but a
+    // photo that includes them is not what the world will look like: the bench
+    // disappeared behind its own translucent box, and the table grew a green
+    // panel where the stop's top plane met the tabletop. Hide them by default;
+    // `--stops 1` puts them back when the collision shape IS what you came to
+    // check. Must run after every re-expansion — switching prefab rebuilds the
+    // entities.
+    const hideStops = async () => {
+        if (flag('stops', null) !== null) return;
+        await page.evaluate(() => {
+            const w = window.spLoader?.getEngine?.()?.getWorld?.();
+            if (!w) return 0;
+            let n = 0;
+            for (const eid of w.queryEntities('AdjunctComponent')) {
+                const a = w.getComponent(eid, 'AdjunctComponent');
+                if (a?.stdData?.typeId !== 0xb4) continue;
+                const obj = w.renderEngine?.getObjectByEntityId?.(eid);
+                if (obj) { obj.visible = false; n++; }
+            }
+            return n;
+        });
+    };
+
+    // Spin around whatever the preview has framed and shoot it from `views`
+    // sides. The fitted radius/elevation are kept rather than recomputed: the
+    // loader's fitView() already sized the subject, and a prefab's cube is a
+    // different size from a cell's.
+    const photograph = async (prefix) => {
+        const files = [];
+        for (let i = 0; i < views; i++) {
+            await page.evaluate((az) => {
+                const w = window.spLoader?.getEngine?.()?.getWorld?.();
+                const cc = w?.systems?.findSystemByName('CharacterController');
+                const st = cc?.getObserveState?.();
+                cc?.setObserveOrbit?.(az, st?.elevation ?? 0.5, st?.radius ?? 12);
+            }, (i / views) * Math.PI * 2);
+            await page.waitForTimeout(350);
+            const file = `${out}/${prefix}-${i}.png`;
+            await page.locator('#sp-preview').screenshot({ path: file });
+            files.push(file);
+        }
+        return files;
+    };
 
     const shots = [];
-    for (let i = 0; i < views; i++) {
-        const azimuth = (i / views) * Math.PI * 2;
-        await page.evaluate((az) => {
-            const w = window.spLoader?.getEngine?.()?.getWorld?.();
-            const cc = w?.systems?.findSystemByName('CharacterController');
-            const st = cc?.getObserveState?.();
-            // Keep the fitted radius/elevation; only spin around the cell.
-            cc?.setObserveOrbit?.(az, st?.elevation ?? 0.5, st?.radius ?? 12);
-        }, azimuth);
-        await page.waitForTimeout(350);
-        const file = `${out}/view-${i}.png`;
-        await page.locator('#sp-preview').screenshot({ path: file });
-        shots.push(file);
+    const placed = {};      // prefab key → adjuncts the stamp actually produced
+    if (prefabKey) {
+        // 组合件 mode. Driven through the panel rather than `spLoader.setPrefab`
+        // for the same reason the pack is imported through the textarea: what is
+        // photographed must be what the editor would be editing.
+        const all = (pack.prefabs ?? []).map((p) => p.key);
+        if (!all.length) throw new Error(`pack "${pack.id}" has no 组合件 to photograph`);
+        const keys = prefabKey === 'all' ? all : [prefabKey];
+        await page.getByTestId('sp-acc-prefab').click();
+        await hideChrome();
+        for (const key of keys) {
+            const btn = page.getByTestId(`sp-prefab-${key}`);
+            if (!(await btn.count())) throw new Error(`no 组合件 "${key}" in ${pack.id} (have: ${all.join(', ')})`);
+            await btn.click();
+            // Each prefab declares its own `size`, so selecting one re-expands AND
+            // re-fits; read the camera only after both have landed.
+            await page.waitForTimeout(700);
+            // previewCount, not derivedCount: a stamp produces AUTHORED adjuncts
+            // (§9.4), so the derived counter is 0 for every prefab by definition —
+            // it would report an empty preview over a photo with a bench in it.
+            placed[key] = await page.evaluate(() => window.spLoader?.previewCount?.() ?? -1);
+            await hideStops();
+            shots.push(...(await photograph(`prefab-${key}`)));
+        }
+    } else {
+        // Collapse all six faces onto the requested pool's first option, so the
+        // photo shows one option from every angle instead of a mixture.
+        await page.getByTestId('sp-acc-face').click();
+        for (let f = 0; f < 6; f++) {
+            await page.getByTestId(`sp-face-${f}`).click();
+            await page.getByTestId(`sp-dial-state-${faceState === 'open' ? 'open' : 'closed'}`).click();
+            // --option lets you photograph ONE option on all six faces. Without it a
+            // pack's roof/deck/stair variants are invisible here: every face lands on
+            // the pool's first entry, so `solid` is all you ever see.
+            if (optionKey) await page.getByTestId('sp-dial-opt').selectOption(optionKey);
+        }
+
+        // Wait for the expansion to land before photographing anything.
+        await page.waitForFunction(() => (window.spLoader?.derivedCount?.() ?? 0) >= 0, null, { timeout: 20_000 });
+
+        await hideChrome();
+        await hideStops();
+        await page.waitForTimeout(600);
+        shots.push(...(await photograph('view')));
     }
 
     // The machine-checkable half, from the same engine code the editor shows.
@@ -146,12 +213,19 @@ try {
     const report = {
         pack: pack.id,
         source: packPath,
+        subject: prefabKey ? `prefabs:${prefabKey}` : `faces:${faceState}`,
         faces: faceState,
         views: shots,
         derived: await page.evaluate(() => window.spLoader?.derivedCount?.() ?? -1),
         options: {
             closed: (pack.closed ?? []).map((v) => ({ key: v.key ?? v.name, parts: (v.parts ?? v.pieces ?? []).length })),
             open: (pack.open ?? []).map((v) => ({ key: v.key ?? v.name, parts: (v.parts ?? v.pieces ?? []).length })),
+            // Listed unconditionally, not only in --prefab mode: "this pack has
+            // no furniture" is worth seeing while looking at its faces.
+            prefabs: (pack.prefabs ?? []).map((p) => ({
+                key: p.key, name: p.name, size: p.size ?? 2, parts: (p.parts ?? []).length,
+                ...(p.key in placed ? { placed: placed[p.key] } : {}),
+            })),
         },
         guard,
     };
@@ -159,10 +233,16 @@ try {
     writeFileSync(`${out}/pack.json`, packJson);
 
     console.log(`pack      ${pack.id}  (${packPath})`);
-    console.log(`views     ${shots.length} → ${out}/view-*.png`);
-    console.log(`derived   ${report.derived} adjuncts from the six faces`);
+    console.log(`views     ${shots.length} → ${out}/${prefabKey ? 'prefab-*' : 'view-*'}.png`);
+    if (!prefabKey) console.log(`derived   ${report.derived} adjuncts from the six faces`);
     for (const pool of ['closed', 'open']) {
         for (const o of report.options[pool]) console.log(`  ${pool.padEnd(6)} ${String(o.key).padEnd(14)} parts=${o.parts}`);
+    }
+    for (const p of report.options.prefabs) {
+        // `placed` is the stamp's real yield — parts that collapse to nothing
+        // (a zero-size box) never show up in the world and would go unnoticed.
+        const yielded = p.placed != null ? `  placed=${p.placed}` : '';
+        console.log(`  ${'prefab'.padEnd(6)} ${String(p.key).padEnd(14)} parts=${p.parts}${yielded}  size=${p.size}m  ${p.name ?? ''}`);
     }
     if (guard?.length) {
         console.log(`guard     ${guard.length} issue(s):`);
@@ -172,6 +252,13 @@ try {
     } else {
         console.log('guard     (not exposed by this build)');
     }
+} catch (e) {
+    // Usage mistakes are the common failure here — no such 组合件, a pack with an
+    // empty pool, an import the editor rejected. A stack trace buries the one
+    // line that says which. Set DEBUG=1 when the fault is in the tool itself.
+    console.error(`\nsnapshot: ${e.message}`);
+    if (process.env.DEBUG) console.error(e.stack);
+    process.exitCode = 2;
 } finally {
     await browser.close();
 }

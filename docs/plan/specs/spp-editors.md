@@ -400,15 +400,26 @@ Prefab {
 | 世界 | `EditSystem` palette 第二排(`⬚ 名字 (件数)`)→ 点面盖章;**单位立方站在点击点上**(点击点 = 底面中心);`block.max` 按整件校验,**不会盖出半张长椅** |
 | undo | `HistoryEntry.also[]`——**一次点击 = 一步撤销**,不管产生了几行 |
 | 编辑器 | `client/editor` 第三个折叠区「组合件 Prefabs」;parts 面板抽成共享的 `PartsEditor`(**面/胞两帧只有轴标签不同**,别做第二份);预览走 `show(pack, prefab)` 单一入口,面标签与坍缩盘在组合件模式下收起 |
-| 内容 | `garden.stylepack.json` 首批两件:`bench`(长椅,a2×4 + b4)· `tree`(小树,a2 + a7×2 + b4) |
-| 测试 | `unit/spp-prefab.test.ts`(15)· `systems/prefab-placement.test.ts`(5)· editor e2e「组合件 Prefabs」· desktop e2e「组合件 palette」 |
+| 内容 | `garden.stylepack.json` 六件:`bench` 长椅 · `tree` 小树 · `lamp` 园灯 · `table` 石桌 · `planter_pot` 花盆 · `fountain` 喷泉(2026-08-16 扩充) |
+| 看图 | `client/editor/tools/snapshot.mjs --prefab <key>|all`(2026-08-16)——**b4 stop 默认不入镜**(世界里它本就不渲染,带着拍的不是世界会呈现的样子),`--stops 1` 找回 |
+| 测试 | `unit/spp-prefab.test.ts`(15)· `systems/prefab-placement.test.ts`(5)· editor e2e「组合件 Prefabs」· desktop e2e「组合件 palette」(**该测试钉死 bench 的 b4 中心 = 点击点**,改 bench 的 stop 要保持 u,v 中心 .5) |
 
 **轴标签必须分开**(`FACE_AXES` / `PREFAB_AXES`):同样是 u/v/w,面帧的 `v` 竖着走墙、`sw` 向内咬,
 胞帧的 `v` 向北铺地、`sw` 是高度。两处标一样,作者就会做出一张**躺着的长椅**。
 
 ### 9.6 剩下没做的
 
+> 2026-08-16 补:**看图闭环已补上**(`--prefab`,见 §9.5)。此前组合件是唯一**没有眼睛**的产物
+> ——`snapshot.mjs` 只会把六面坍缩到某个 option 上拍,组合件不属于任何面,于是永远不入镜,
+> 首批两件是盲写出来的。补上当天就逮到三处只有画面能看见的问题:小树的树冠球**圆心全落在
+> 主球半径内**(7 个 part 齐全、守卫 clean,画面是个棒棒糖)、花盆的 stop 与盆身**共面**导致
+> 盆身发黑、石桌的 stop 顶面与桌面齐平长出一块 z-fighting 绿方块。**`parts-coincident` 只报
+> 完全全等的盒子,「共面但不全等」是守卫的盲区**——判据与坑写进了 `spp-particle` skill。
+
 - **组合件的缩略图 / 预览图**:palette 现在只有文字按钮(与 option 缩略图同一笔欠账,见 P5)。
+  注:`snapshot.mjs` 已能离屏产出每件的多视角 PNG,是缩略图的现成前身;缺的是**运行时**那一半
+  ——`RenderEngine` 没有截图 API 且未开 `preserveDrawingBuffer`,裸 `toDataURL()` 会拿到白图。
+  注入点是干净的:`UIButtonConfig` 已有 `icon` 槽,`EditSystem` 现在把 `⬚` 烤进 label 没用它。
 - **世界内「从库里选」的第二级**:现在是一个扁平列表;包多了要按 pack 分组。
 - **CID 冻结**:与 §3.6 的第 2 层同一笔——`prefabs` 随包一起冻结,单独的版本故事还没写。
 - **深数据的可复用部分**(animation 时间轴 / npc 行为模板 / motif 模板):按 §9.1 的尺子,

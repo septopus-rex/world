@@ -1,6 +1,6 @@
 ---
 name: spp-particle
-description: 创作或改进 SPP 粒子库（StylePack：一个单位胞的 open/closed 两池 option）。当任务是"做一套 X 风格的 SPP 粒子/StylePack""改进现有粒子库""让某个 stylepack 更像 Y"时使用。给出一条 生成→导入→看图→守卫→迭代 的闭环，替代凭空吐 JSON。
+description: 创作或改进 SPP 粒子库（StylePack：一个单位胞的 open/closed 两池 option，外加不属于任何面的组合件 prefabs）。当任务是"做一套 X 风格的 SPP 粒子/StylePack""改进现有粒子库""让某个 stylepack 更像 Y""给库里加一批家具/长椅/路灯/树（组合件）"时使用。给出一条 生成→导入→看图→守卫→迭代 的闭环，替代凭空吐 JSON。
 ---
 
 # 创作 SPP 粒子库
@@ -58,6 +58,7 @@ NODE_PATH=$(npm root -g) node tools/snapshot.mjs <pack.json> --out /tmp/spp-look
 | `closed-thin` | 「挡」只覆盖极小面积，不成墙 |
 | `open-sealed` | 「通」覆盖了整个面，过不去 |
 | `parts-coincident` | 两个 part 完全重合 → z-fighting 闪烁 |
+| `prefab-empty` | 组合件没有 part，盖进世界什么都不出现 |
 
 **眼睛判的**——只能看图：比例、层次、风格识别度、"这看着像不像 X"。
 
@@ -110,6 +111,58 @@ node tools/snapshot.mjs --builtin terran --house cells.json --views 2 --radius 2
 `cells.json` = `[{position:[gx,gy,gz], level:0, faces:[[state,key]×6]}, …]`，
 面序 `0 顶 · 1 底 · 2 南 · 3 北 · 4 西 · 5 东`。**option 齐不齐、能不能坍缩成建筑，
 只有搭起来才知道**——单胞好看不代表拼得成房子。
+
+## 组合件 Prefabs —— 同一套 parts，另一个帧
+
+一份 pack 有**三个**池：面的 `open` / `closed`，加一个**不属于任何面**的 `prefabs`（长椅、树、
+路灯）。世界里的编辑 palette 第二排直接从这里取，点一下就**盖章**下去。用的是同一个
+`PartsEditor`、同一段 `partToBox` 几何代码——所以下面只讲**不一样**的地方。
+
+```bash
+node tools/snapshot.mjs --builtin garden --prefab all      # 每件都拍一轮
+node tools/snapshot.mjs --builtin garden --prefab bench    # 只看这一件
+node tools/snapshot.mjs --builtin garden --prefab bench --stops 1   # 连碰撞体一起拍
+```
+出 `prefab-<key>-<i>.png`，外加报告里那行 `parts=5 placed=5 size=2m`。
+**b4 stop 默认不入镜**：它在世界里本就不渲染，编辑器画它是为了让作者看见碰撞体，
+带着它拍出来的**不是世界会呈现的样子**（长椅曾整个消失在自己的半透明盒子后面）。
+
+**① 帧不同，标错就做出一张躺着的长椅。** 面帧的 `v` 竖着走墙、`w/sw` 向内咬进去；
+胞帧是**站在地上**的：
+
+| | u | v | w | sw |
+|---|---|---|---|---|
+| 面 `FACE_AXES` | 横 | **竖** | 向内的深 | 厚 |
+| 胞 `PREFAB_AXES` | 东 X | **北 Y（地面足迹）** | **离地高度** | **自身高度** |
+
+**② `size` 不是装饰，它决定 1.0 等于几米**（默认 2）。同一份 parts，`size=2` 是长椅、
+`size=8` 是纪念碑。树用 3。
+
+**③ 守卫在这里只剩几何。** `checkPrefab` 刻意**不跑** `part-too-deep`——那条规则把 option
+读作「贴面的皮」，而组合件按定义是**体**，全高衣柜是常态。通/挡那三条（`closed-thin` /
+`open-sealed` / `closed-empty`）也不适用：它不属于任何池。只剩 `part-out-of-cell` /
+`part-zero-size` / `parts-coincident` + 新增的 `prefab-empty`。**所以组合件比面 option
+更依赖看图**——机器能替你判的更少了。
+
+**④ 想让人撞不过去，要自己放 `b4` stop——而且它的足迹要【内缩】。** 几何件里 a2 恒 solid、
+a7 球按槽 6 决定（`tree` 的树冠给 `0`，让人能穿过去是对的）；stop 的作用是给整件一个规整
+碰撞体，免得玩家卡进椅子腿之间。**但 stop 千万别和可见几何共面**：花盆的 stop 当初与盆身
+u/v/su/sv 完全相同、只是 sw 更高，四个侧面共面 → z-fighting，**盆身在预览里整个发黑**；
+石桌的 stop 顶面与桌面顶面齐平 → 桌面正中央长出一块绿方块。
+**`parts-coincident` 抓不到这一类**——它只报**完全相同**的盒子，「共面但不全等」是它的盲区。
+
+**④b 球体会把小球整个吞掉，守卫和数据都看不出来。** `tree` 第一版是「一根柱子 + 一个大球」，
+后来加的两个 lobe 和顶球**圆心全落在主球半径之内**，于是一个都没露出来——数据上 7 个 part
+齐全、`placed=7`、守卫 clean，画面上就是个棒棒糖。**判据是圆心距要大于两半径之差**
+（`d > R − r` 才露得出来，想明显露出来就得 `d ≈ R`）。这与坑⑤（凹龛被主面挡住）同源：
+**加法几何里"被挡住"不是错误，是沉默。**
+
+**⑤ `placed` 对不上 `parts` 就是有件塌了。** 报告里两个数字应当相等——不等说明某个 part
+尺寸为 0 或被判无效，**在世界里它就是不存在**，而画面上你多半看不出少了哪件。
+
+**⑥ 盖下去的是作者自己的数据，不是库的引用**（规格 §9.4）。落进块草稿的是 N 个普通
+authored adjunct，**不标来源**。所以：后来改库，**已经盖出去的不会跟着变**——这是刻意的
+（存量世界不被库的演进悄悄改掉），代价是也没有「改库→所有副本跟着变」。别指望联动。
 
 ## 做出风格的几条实招
 
