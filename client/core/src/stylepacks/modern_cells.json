@@ -1,0 +1,26 @@
+[
+  {
+    "position": [0, 0, 0],
+    "level": 0,
+    "faces": [
+      [1, "solid"],
+      [1, "solid"],
+      [1, "wood_slat_wall"],
+      [1, "bookshelf_wall"],
+      [1, "french_window"],
+      [0, "steel_portal"]
+    ]
+  },
+  {
+    "position": [1, 0, 0],
+    "level": 0,
+    "faces": [
+      [1, "solid"],
+      [1, "solid"],
+      [1, "bookshelf_wall"],
+      [1, "french_window"],
+      [0, "steel_portal"],
+      [1, "wood_slat_wall"]
+    ]
+  }
+]

@@ -322,5 +322,45 @@
       2,
       2
     ]
+  },
+  {
+    "id": 60,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/modern-concrete.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 61,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/modern-slat.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 62,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/modern-books.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 63,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/modern-marble.png",
+    "size": [
+      2,
+      2
+    ]
   }
 ]
