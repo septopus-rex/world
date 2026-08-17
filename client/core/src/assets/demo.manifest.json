@@ -242,5 +242,45 @@
       0.5,
       0.5
     ]
+  },
+  {
+    "id": 52,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/oriental-wood.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 53,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/oriental-lattice.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 54,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/oriental-brick.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 55,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/oriental-screen.png",
+    "size": [
+      2,
+      2
+    ]
   }
 ]

@@ -3,6 +3,7 @@ import brick from './brick.stylepack.json';
 import cyber from './cyber.stylepack.json';
 import garden from './garden.stylepack.json';
 import ice from './ice.stylepack.json';
+import oriental from './oriental.stylepack.json';
 import spanish from './spanish.stylepack.json';
 import terran from './terran.stylepack.json';
 
@@ -15,7 +16,7 @@ import terran from './terran.stylepack.json';
  * resolved through IDataSource.stylePack(). Spec: spp-protocol-full.md §3.B.
  */
 
-const PACKS: StylePack[] = [brick as StylePack, cyber as StylePack, garden as StylePack, ice as StylePack, spanish as StylePack, terran as StylePack];
+const PACKS: StylePack[] = [brick as StylePack, cyber as StylePack, garden as StylePack, ice as StylePack, oriental as StylePack, spanish as StylePack, terran as StylePack];
 
 /** Deterministic content id over the canonical JSON — a CID stand-in so packs
  *  are addressable by CONTENT, not name (same bytes → same id). Real IPFS would
