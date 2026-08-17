@@ -20,13 +20,23 @@ import { Coords } from '../../core/utils/Coords';
  * (AABB resolve + step-over + standable top), so a stop adjunct only has to mark
  * its std `stop: true` — BlockSystem.attachAdjunctComponents then attaches the
  * SolidComponent automatically. It renders as a faint translucent box so it can
- * be seen/placed in edit mode without cluttering the scene (set hidden for a
- * fully invisible collider in production).
+ * be seen/placed in edit mode without cluttering the scene; slot 6 turns that
+ * tint off for a genuinely invisible collider.
  *
  * CANONICAL SLOT MAP (cleaned up from the old box-derived layout):
  *   0 = size [x,y,z]   1 = offset [ox,oy,oz]   2 = rotation [rx,ry,rz]
  *   3 = mode (1 BODY · 2 FOOT · 3 HEAD)   4 = animate (optional)
  *   5 = shape (1 BOX · 2 BALL cylinder · 3 SLOPE wedge; default BOX)
+ *   6 = hidden (truthy ⇒ collider present, nothing drawn; default 0 = tinted)
+ *
+ * WHY SLOT 6 EXISTS (2026-08-17). The tint was unconditional, and this comment
+ * used to claim you could "set hidden" — nothing read such a flag. It only
+ * showed up once furniture started carrying stops: every bench in the gallery
+ * sat in a glowing cyan box. Authored content that WANTS the tint (a visible
+ * force field) keeps it by saying nothing, so the twelve pre-existing b4 rows
+ * are untouched; furniture asks to be invisible. The default is arguably the
+ * wrong way round — a collider is production furniture more often than it is a
+ * debug aid — but flipping it would silently restyle existing scenes.
  *
  * Modes are carried for forward-compat; collision currently treats every stop as
  * a full AABB (BODY: blocks horizontally, standable on top, blocks the head).
@@ -67,7 +77,8 @@ const attribute: AdjunctAttribute = {
             stop: true,                       // → BlockSystem attaches a SolidComponent
             stopMode: data[3] ?? STOP_MODE.BODY,
             animate: data[4] ?? null,
-            stopShape: data[5] ?? STOP_SHAPE.BOX
+            stopShape: data[5] ?? STOP_SHAPE.BOX,
+            stopHidden: !!data[6]
         };
     },
     serialize: (std: STDObject) => {
@@ -77,7 +88,8 @@ const attribute: AdjunctAttribute = {
             [std.rx, std.ry, std.rz],
             std.stopMode ?? STOP_MODE.BODY,
             std.animate,
-            std.stopShape ?? STOP_SHAPE.BOX
+            std.stopShape ?? STOP_SHAPE.BOX,
+            std.stopHidden ? 1 : 0
         ];
     }
 };
@@ -103,6 +115,11 @@ const transform: AdjunctTransform = {
                 },
                 // Translucent so the collider reads as a "force field", not a solid box.
                 material: { color: STOP_COLOR, opacity: STOP_OPACITY },
+                // `invisible`, not `hidden`: the mesh is still built (and still
+                // raycastable), only not drawn. Collision is unaffected either
+                // way — BlockSystem attaches the SolidComponent off the std data,
+                // never off the mesh.
+                invisible: row.stopHidden === true,
                 stop: { opacity: STOP_OPACITY, color: STOP_COLOR }
             };
         });

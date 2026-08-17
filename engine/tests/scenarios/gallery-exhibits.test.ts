@@ -39,10 +39,19 @@ async function bootTail() {
 describe('画廊新展块(⑭–⑲):语义 headless 验证', () => {
     it('⑭ b4 三形状碰撞体齐备,⑰ c1 轨道建实体,⑱ e5 留言板,每块一本书', async () => {
         const { world } = await bootTail();
+        // ⑭ exhibits the three collider SHAPES, and those are the tinted ones a
+        // visitor is meant to see. Since the corridor was dressed (2026-08-17)
+        // its furniture carries stops too — benches, lamps, planters — but those
+        // are hidden (basic_stop.ts slot 6), so visibility separates "on show"
+        // from "structural" without this assertion having to know the furniture
+        // plan. Counting every b4 in the streamed tail broke the moment the
+        // avenue got a single bench.
         const stops = adjunctsOf(world, AdjunctType.Stop);
-        expect(stops.length, 'box + ball + slope').toBe(3);
-        const shapes = stops.map((s: any) => s.stdData?.stopShape).sort();
+        const shown = stops.filter((s: any) => !s.stdData?.stopHidden);
+        expect(shown.length, 'box + ball + slope').toBe(3);
+        const shapes = shown.map((s: any) => s.stdData?.stopShape).sort();
         expect(new Set(shapes).size, 'three DISTINCT shapes').toBe(3);
+        expect(stops.length, 'the dressing adds hidden ones on top').toBeGreaterThan(shown.length);
 
         expect(adjunctsOf(world, AdjunctType.Track).length, 'the S-curve tube').toBe(1);
         expect(adjunctsOf(world, AdjunctType.Book).length, 'numbered books + plaza gate signs').toBe(12);

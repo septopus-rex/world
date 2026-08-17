@@ -115,17 +115,20 @@ try {
         });
     };
 
-    // b4 stop bodies do not render in the WORLD — they are pure collision. The
-    // editor draws them so an author can see the blocker they are shaping, but a
-    // photo that includes them is not what the world will look like: the bench
-    // disappeared behind its own translucent box, and the table grew a green
-    // panel where the stop's top plane met the tabletop. Hide them by default;
-    // `--stops 1` puts them back when the collision shape IS what you came to
-    // check. Must run after every re-expansion — switching prefab rebuilds the
-    // entities.
-    const hideStops = async () => {
-        if (flag('stops', null) !== null) return;
-        await page.evaluate(() => {
+    // b4 stop bodies are collision, not scenery. A photo that includes them is
+    // not what the world will look like: the bench disappeared behind its own
+    // translucent box, and the table grew a green panel where the stop's top
+    // plane met the tabletop. Hidden by default; `--stops 1` when the collision
+    // shape IS what you came to check.
+    //
+    // The flag FORCES visible rather than merely skipping the hide: a library's
+    // stops normally carry basic_stop.ts slot 6 (hidden), so leaving them alone
+    // would draw nothing and the flag would look broken.
+    //
+    // Must run after every re-expansion — switching prefab rebuilds the entities.
+    const setStops = async () => {
+        const show = flag('stops', null) !== null;
+        await page.evaluate((visible) => {
             const w = window.spLoader?.getEngine?.()?.getWorld?.();
             if (!w) return 0;
             let n = 0;
@@ -133,10 +136,10 @@ try {
                 const a = w.getComponent(eid, 'AdjunctComponent');
                 if (a?.stdData?.typeId !== 0xb4) continue;
                 const obj = w.renderEngine?.getObjectByEntityId?.(eid);
-                if (obj) { obj.visible = false; n++; }
+                if (obj) { obj.visible = visible; n++; }
             }
             return n;
-        });
+        }, show);
     };
 
     // Spin around whatever the preview has framed and shoot it from `views`
@@ -182,7 +185,7 @@ try {
             // (§9.4), so the derived counter is 0 for every prefab by definition —
             // it would report an empty preview over a photo with a bench in it.
             placed[key] = await page.evaluate(() => window.spLoader?.previewCount?.() ?? -1);
-            await hideStops();
+            await setStops();
             shots.push(...(await photograph(`prefab-${key}`)));
         }
     } else {
@@ -202,7 +205,7 @@ try {
         await page.waitForFunction(() => (window.spLoader?.derivedCount?.() ?? 0) >= 0, null, { timeout: 20_000 });
 
         await hideChrome();
-        await hideStops();
+        await setStops();
         await page.waitForTimeout(600);
         shots.push(...(await photograph('view')));
     }
