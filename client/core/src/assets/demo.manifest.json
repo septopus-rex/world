@@ -282,5 +282,45 @@
       2,
       2
     ]
+  },
+  {
+    "id": 56,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/dungeon-stone.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 57,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/dungeon-iron.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 58,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/dungeon-rune.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 59,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/dungeon-altar.png",
+    "size": [
+      2,
+      2
+    ]
   }
 ]

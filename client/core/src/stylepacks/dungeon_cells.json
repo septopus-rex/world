@@ -1,0 +1,26 @@
+[
+  {
+    "position": [0, 0, 0],
+    "level": 0,
+    "faces": [
+      [1, "solid"],
+      [1, "solid"],
+      [1, "iron_grate"],
+      [1, "rune_wall"],
+      [1, "skull_alcove"],
+      [0, "arch_portal"]
+    ]
+  },
+  {
+    "position": [1, 0, 0],
+    "level": 0,
+    "faces": [
+      [1, "solid"],
+      [1, "solid"],
+      [1, "rune_wall"],
+      [1, "skull_alcove"],
+      [0, "arch_portal"],
+      [1, "iron_grate"]
+    ]
+  }
+]
