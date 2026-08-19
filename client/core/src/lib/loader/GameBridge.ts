@@ -6,7 +6,7 @@ import { GameApiRouter } from '../../games/GameApiRouter';
 import { ProbedGameApi } from '../../games/ProbedGameApi';
 import { FetchGameApi } from '../../games/FetchGameApi';
 import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z } from '../../scenes/mahjong3dScene';
-import { generateMahjongFaceCids } from '../../scenes/mahjongFaces';
+import { generateMahjongFaceCids, TILE_BACK_INDEX } from '../../scenes/mahjongFaces';
 
 /** The seam GameBridge needs from its host (DesktopLoader): the engine handle,
  *  the connection hub the backends register on, and the mode verb leaveGame
@@ -153,11 +153,15 @@ export class GameBridge {
      *  MahjongSystem owns the game; we generate readable tile faces (slot-7
      *  textures via the CAS), then seed it and mark it ready. */
     private async setupMahjong3D(): Promise<void> {
-        const faceCids = await this.mahjongFaceCids();
+        const generated = await this.mahjongFaceCids();
+        // The generator returns 34 faces plus the tile back at TILE_BACK_INDEX.
+        const faceCids = generated?.slice(0, TILE_BACK_INDEX);
+        const backCid = generated?.[TILE_BACK_INDEX];
         this.host.engine()?.setupMahjong({
             block: NATIVE_MAHJONG_BLOCK, origin: [8, 8],
             surfaceZ: MAHJONG_SURFACE_Z, seed: 20260629,
             ...(faceCids ? { faceCids } : {}),
+            ...(backCid ? { backCid } : {}),
         });
         this._mahjongReady = true;
     }

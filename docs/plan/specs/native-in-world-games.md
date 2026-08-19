@@ -44,7 +44,7 @@
 - **边界**：IPFS 现为可选后端（链已解耦），抽象是 `IpfsRouter`，必须在纯本地 CAS provider 下也能跑（本来就是）。**固定字形**用预制图集完美；**任意动态文字**（实时分数、玩家名）仍需另一条 text→canvas 贴图路，不在本项内。
 
 **子任务**：
-- [x] 牌面资产生成 + 注入 CAS（`client/desktop/src/scenes/mahjongFaces.ts`：34 种 canvas→PNG→`engine.ipfs.put`→CID；纯 ASCII+颜色，不依赖字体）。
+- [x] 牌面资产生成 + 注入 CAS（`client/core/src/scenes/mahjongFaces.ts`：34 种 canvas→PNG→`engine.ipfs.put`→CID）。**2026-08-19 重画成真牌面**：筒/索是**纯矢量**（同心钱纹、竹节，1索是鸟）——这两门本来就是图案，零字体依赖，占全副牌的三分之二；萬与字牌需要 CJK 字形，走系统字体并**检测是否解析成功**（`hasCjk`：比较「萬」与 notdef 的 advance），缺字体时那 8 种退回拉丁标记，降级但不出豆腐块。画布 192×256 = 牌面物理比 0.24×0.34 m，`material.fit` 才不会把字压扁。附带 kind 34 = **牌背**（`TILE_BACK_INDEX`），暗牌不再是一排纯色方块。
 - [x] `MahjongSystem.spawnTile` 在 faceUp 时写 slot7 = `faceCids[kind]`（`MahjongConfig.faceCids`，DesktopLoader 生成+缓存后注入）。
 - [x] e2e：top-down 截图肉眼可读（数字+花色+风/箭），数据断言 14 明牌带 CID / 39 暗牌空白 / CID 经 CAS 解析。`test-results/mahjong3d-readable-faces.png`。
 - [x] **关键修复**：`TextureScale.applyBoxWorldUV`（尺寸派生 UV 平铺，为墙/地设计）会把 0.24×0.36m 小牌面 UV 缩到 0..0.12，只采样到字形左下角空白→牌看着空白。新增 `material.fit`（`MeshFactory` 跳过平铺、用自然 0..1 UV 贴满整面，几何缓存键含 `:fit`）；牌面 spawn 后置 `material.fit=true`。**任何"贴满整图"的标签/贴花 box（招牌、二维码、motif 活图板）都该用 `fit`**。
@@ -111,6 +111,84 @@
 **方案（草案）**：客户端通用「游戏 HUD」覆盖层（镜像 System 状态事件）；「坐下」相机预设（复用 Observe 绕目标）。
 
 ---
+
+## #7 规则住在 System 里 ✅ 已抽出牌理核（2026-08-19）
+
+**病**：同一款麻将存在于两处——`MahjongSystem`（Pattern B，世界里的 3D 桌）与
+`client/core/src/games/mahjong/MahjongGame.ts`（Pattern A，外部 app，也跑在
+`services/mahjong`）——而**两边各写了一半规则**：
+
+- 3D 桌**没有和牌判定**（旧注释自陈 `Scope is the SEAM, not legal mahjong: no win
+  detection / scoring`），四家摸打到流局为止；
+- Pattern A 有和牌判定，但只自摸、无番种、bot 同样摸打。
+
+坐下三十秒就能看出这不是麻将：**不能碰、不能杠、不算番**。这不是"demo 的合理简化"，
+是玩法本身缺席——`#1 可读对象`把牌面修到能读了，读出来的却是一局永远不会结束的牌。
+
+**做法**：规则抽成 `engine/src/core/mahjong/`，纯函数、零 import、不碰 ECS/渲染/DOM：
+
+| 文件 | 职责 |
+|---|---|
+| `Tiles.ts` | 34 种编码（萬/筒/索/風/箭）、花色点数、幺九判定、副露类型 |
+| `Rules.ts` | 和牌判定（4 面子+1 将 · 七对 · 十三幺）、**向听数**、待张、吃碰杠合法性 |
+| `Score.ts` | 番种识别（国标子集 30 项）+ 番种互斥 + 结算（底分 8 + 番） |
+| `Bot.ts` | 按向听选弃牌、进张数破同分、现物防守、副露决策 |
+
+`MahjongSystem` 由 343 行的"发牌+轮转"变成**只管桌子**：座位几何、实体生死、
+turn/claim 状态机、bot 计时器。每一个「这手能不能和 / 值多少番 / 这张能不能碰」
+都问牌理核。Pattern A 问同一份（相对路径 import——`services/mahjong` 跑裸 tsx，
+没有 `@engine` 别名）。
+
+**判据（可复用）**：这段逻辑换个引擎、换个宿主还成立吗？成立就不属于 System。
+Pattern B 是"承认的不可移植逃生舱"（见 `GAME_SYSTEMS_BACKLOG.md` 铁律），但逃生舱
+装的应该是**桌子**，不是**规则**——规则是纯函数，天然可移植，焊进 System 只是懒。
+
+### 落地时调过的三个参数（别凭直觉改回去）
+
+1. **bot 不能「能吃就吃」**。第一版 `decideClaim` 只要向听改善就叫牌，实测 24 局：
+   副露最多 7 副、一局 20–50 手就结束——**真实牌局的三分之一**，且门清番种几乎绝迹。
+   现在要求「已副露 / 幺九字牌 / 已近听」才叫，门前清立刻回到多数局。
+2. **起胡 2 番**（`MahjongConfig.minFan`，默认 2）。不设的话 1 番"鸡和"满天飞，
+   番种系统等于白做。
+3. **和牌判定与算分必须同源**：`winValue()` 与 `declareWin()` 走同一个 `scoreHand`。
+   否则会出现「胡牌按钮亮了、点下去说番数不够」——玩家读作 bug，且无从解释。
+
+### 顺带修掉的两个视觉错误
+
+- **手牌立起来**（`upright`），面朝各自座位；副露与弃牌平放。此前全部平躺在毡面上，
+  第一人称根本看不见自己的牌。整牌只用 `rot[2] = seat × 90°` 转向，**不是按座位交换
+  size 分量**——后者会把 `fit` 贴图沿错误的轴拉伸，字全躺下。
+- **暗牌有牌背**（`MahjongConfig.backCid`）。此前对家手牌是纯色方块。
+
+**验证**：`engine/tests/unit/mahjong-rules.test.ts`（29 项，牌理核本身：和牌形状、
+向听、待张、吃碰杠、番种互斥、结算平账、bot 策略）+ `engine/tests/integration/mahjong.test.ts`
+（14 项，含**打完整局**——5 个种子全部产出可验证的和牌，番数≥1、账目平衡、和牌手真的
+是和牌手）+ e2e `mahjong3d.spec.ts`（HUD 呼叫按钮、结算面板、真实鼠标点击打牌）。
+
+### 场景：中式茶室（`client/core/src/blocks/mahjong3d.block.json`）
+
+此前是「一张方桌 + 四个方凳站在空草地上」。现在是 12×12 m 的中式茶室，用
+`oriental.stylepack` 砌：
+
+| 部位 | 用什么 | 为什么不是别的 |
+|---|---|---|
+| 四个特色面 | SPP：南=月亮门廊(入口) · 北=水墨屏风月亮门 · 东西=雕花菱花窗 | 这四面是**你会看的地方**，值得多部件造型 |
+| 八段普通墙 | 单块 a2 砖墙板 | `solid` option 是 5 个 part，八段就是 40 个 mesh 画八面从两米外看毫无差别的墙——**e2e 预算就卡在这里** |
+| 顶棚 / 地台 | 各一块 a2 板 | 同理，九个 SPP 顶面 = 45 个 mesh 画一个平顶 |
+| 座椅 | `scholar_chair` prefab ×3（东/北/西） | **南面有意留空**——那是玩家站的位置，摆上椅子就把人挡在毡外了 |
+| 陈设 | `stone_lantern` + `incense_burner`，**碰撞关掉** | prefab 每个 part 自带 stop=1；纯陈设玩家够不着，却每帧参与碰撞检测 |
+| 光 | 桌上暖色吊灯 + 门口/屏风两盏补光 | 有顶棚就是个黑盒子，这不是画面偏好而是必需 |
+
+**生成器一次性跑完即冻结**（`scenes/README.md` 的内容=数据纪律），脚本不入库。要重做
+就照上表重写一份：SPP 源是一行 b6（3×3 level-0 cells，`origin [2,2,0.12]`），其余是
+普通 authored 行。
+
+### 仍开放
+
+- **一局制**：没有连庄/换风/多局累计，`scores` 每次进桌重置。
+- **不能自己开杠之外的选择**：暗杠/加杠会自动列入 offer，但没有"这张不碰"的记忆。
+- **无听牌提示的具体张**：HUD 只显示「聽牌 / N 向聽」，不列待张（`waits()` 已有，
+  是产品选择不是缺口）。
 
 ## 有意不做（非缺失）
 

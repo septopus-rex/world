@@ -8,6 +8,7 @@ import { HealthBar } from '@core/components/HealthBar';
 import { Toaster } from '@core/components/Toaster';
 import { ParkourHUD } from '@core/components/ParkourHUD';
 import { MahjongHUD } from '@core/components/MahjongHUD';
+import { MahjongTableHUD } from '@core/components/MahjongTableHUD';
 import { PoolHUD } from '@core/components/PoolHUD';
 import { HoldemHUD } from '@core/components/HoldemHUD';
 import { ShootingHUD } from '@core/components/ShootingHUD';
@@ -238,6 +239,12 @@ function App() {
       {ready && loader && activeGame === 'mahjong' && gameState && <MahjongHUD state={gameState} loader={loader} />}
       {ready && loader && activeGame === 'pool' && gameState && <PoolHUD state={gameState} loader={loader} />}
       {ready && loader && activeGame === 'holdem' && gameState && <HoldemHUD state={gameState} loader={loader} />}
+
+      {/* The native 3D mahjong table is Pattern B: MahjongSystem owns it, so it has
+          no `activeGame` from the GameRuntime. Its HUD polls the engine and renders
+          nothing unless a table is live — the calls (碰/杠/吃/胡) only exist for a
+          few seconds and cannot be shown by the tiles on the felt. */}
+      {ready && loader && mode === 'game' && !activeGame && <MahjongTableHUD loader={loader} />}
 
       {/* 'confirm'-policy games: stepping off the block keeps the round alive and
           asks whether to leave (vs the silent 'ephemeral' auto-exit). */}

@@ -47,7 +47,12 @@ export function MahjongHUD({ state, loader }: { state: MahjongState; loader: Des
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <strong style={{ fontSize: 14, letterSpacing: 1 }}>🀄 麻将 · Mahjong</strong>
-                <span style={{ fontSize: 12, opacity: 0.8 }} data-testid="mj-wall">牌山 Wall: {state.wallRemaining}</span>
+                <span style={{ fontSize: 12, opacity: 0.8 }}>
+                    <span data-testid="mj-shanten" style={{ color: state.shanten <= 0 ? '#ffd54a' : undefined }}>
+                        {state.shanten < 0 ? '和了' : state.shanten === 0 ? '聽牌' : `${state.shanten} 向聽`}
+                    </span>
+                    {'  ·  '}<span data-testid="mj-wall">牌山 {state.wallRemaining}</span>
+                </span>
             </div>
 
             {/* Opponents' discard counts — a glimpse of the 3 bots playing. */}
@@ -72,11 +77,13 @@ export function MahjongHUD({ state, loader }: { state: MahjongState; loader: Des
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 {won ? (
                     <span data-testid="mj-win-banner" style={{ color: '#ffd54a', fontWeight: 700 }}>
-                        🎉 自摸！You win (tsumo)
+                        🎉 自摸！{state.result ? `${state.result.total} 番 · ${state.result.fan.map((f) => f.name).join(' ')}` : ''}
                     </span>
                 ) : finished ? (
                     <span data-testid="mj-end-banner" style={{ opacity: 0.85 }}>
-                        牌局结束 · {state.result?.reason}
+                        {state.result?.reason === 'lost'
+                            ? `家${state.result.winner} 自摸 · ${state.result.total} 番`
+                            : state.result?.reason === 'exhausted' ? '流局' : `牌局结束 · ${state.result?.reason}`}
                     </span>
                 ) : state.canWin ? (
                     <button

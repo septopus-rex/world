@@ -598,8 +598,22 @@ export class Engine {
         return w ? !!(w.systems.findSystemByName('MahjongSystem') as any)?.discard(w, tileId) : false;
     }
 
-    /** Current mahjong table state (turn/hands/discards/phase), or null. Read-only
-     *  snapshot for HUDs and tests. */
+    /** Take one of the calls currently offered to the local human — 碰 pon / 杠 kan
+     *  / 吃 chi / 胡 ron / 自摸 tsumo / 暗杠 ankan. `kinds` disambiguates a chi (which
+     *  run) or a kan (which tile). Refused when that call isn't on offer. */
+    public mahjongClaim(action: 'ron' | 'kan' | 'pon' | 'chi' | 'tsumo' | 'ankan', kinds?: number[]): boolean {
+        const w = this.world;
+        return w ? !!(w.systems.findSystemByName('MahjongSystem') as any)?.claim(w, action, kinds) : false;
+    }
+
+    /** Decline every open call; play passes on. (The window also times out.) */
+    public mahjongPass(): boolean {
+        const w = this.world;
+        return w ? !!(w.systems.findSystemByName('MahjongSystem') as any)?.pass(w) : false;
+    }
+
+    /** Current mahjong table state (turn/hands/melds/discards/phase/offers/result),
+     *  or null. Read-only snapshot for HUDs and tests. */
     public mahjongState(): any {
         const w = this.world;
         return w ? (w.systems.findSystemByName('MahjongSystem') as any)?.snapshot(w) ?? null : null;

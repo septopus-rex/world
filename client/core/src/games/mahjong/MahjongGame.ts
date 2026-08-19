@@ -1,19 +1,36 @@
 /**
- * MahjongGame — a small, self-contained mahjong engine. This is the "external
- * game" in the Septopus Game Mode Protocol: it knows NOTHING about the world
- * engine, the ECS, or Three.js. The world reaches it only through the Game
- * Setting `methods` whitelist (start/state/discard/win/end), exactly as it would
- * reach a remote server — here the "server" just happens to run in-page.
+ * MahjongGame — the "external game" in the Septopus Game Mode Protocol: it knows
+ * NOTHING about the world engine, the ECS, or Three.js. The world reaches it only
+ * through the Game Setting `methods` whitelist (start/state/discard/win/end),
+ * exactly as it would reach a remote server — here the "server" just happens to
+ * run in-page (and, on `services/mahjong`, actually is one).
  *
- * Rules (a compact but real mahjong): 3 suits (m/p/s) × ranks 1–9, 4 copies each
- * = 108 tiles, no honors. The human is seat 0; seats 1–3 are tsumogiri bots
- * (draw and immediately discard). A win is the standard 4 melds + 1 pair, where a
- * meld is a triplet (3 identical) or a run (3 consecutive in one suit). Self-draw
- * only (tsumo) — no calling from discards, which keeps the mock honest yet small.
+ * RULES COME FROM `engine/src/core/mahjong` — the same pure rule core the in-world
+ * 3D table (MahjongSystem) uses. That import is the ONLY thing this file takes
+ * from the engine tree, and it is not engine machinery: it is functions over
+ * numbers. Before it existed the two mahjongs each had half a rulebook and
+ * disagreed — the 3D table could not even detect a win.
+ *
+ * NOTE the relative import path rather than the `@engine` alias: `services/mahjong`
+ * runs this file under bare `tsx`, which has no vite aliases.
+ *
+ * Scope: a compact but real mahjong — 3 suits (m/p/s) × ranks 1–9, 4 copies each
+ * = 108 tiles, no honours. The human is seat 0; seats 1–3 play the shared bot
+ * policy. Self-draw only (tsumo) — calling from discards belongs to the in-world
+ * table, which has the 3D affordances to offer it. Deliberately smaller than the
+ * full table: this one exists to prove the external-app seam, not to be the
+ * better mahjong.
  *
  * Deterministic: all randomness comes from a seeded RNG, so a given seed always
- * deals the same wall (makes the flow testable).
+ * deals the same wall.
  */
+
+import {
+    tally, kindLabel, kindName,
+    isWinningHand as coreIsWinningHand, shanten,
+    chooseDiscard, scoreHand, settle,
+    type FanEntry,
+} from '../../../../../engine/src/core/mahjong';
 
 export type Tile = number; // 0..26 : suit*9 + (rank-1)  (m0..8, p9..17, s18..26)
 
@@ -23,6 +40,8 @@ export interface MahjongState {
     hand: Tile[];                       // sorted; 13 between turns, 14 after a draw
     drawn: Tile | null;                 // the tile just self-drawn (highlight in UI)
     canWin: boolean;                    // current 14-tile hand is a winning hand
+    /** How far from a win, from the shared rule core: −1 won, 0 tenpai, n away. */
+    shanten: number;
     discards: Record<number, Tile[]>;   // per-seat discard piles (0..3)
     wallRemaining: number;
     turn: number;                       // whose turn (0 = human)
@@ -33,16 +52,26 @@ export interface MahjongState {
 
 export interface MahjongResult {
     won: boolean;
-    reason: 'tsumo' | 'exhausted' | 'resigned';
+    reason: 'tsumo' | 'exhausted' | 'resigned' | 'lost';
     hand: Tile[];
     turns: number;
+    /** 番 breakdown when someone won (empty for a draw / resignation). */
+    fan: FanEntry[];
+    total: number;
+    /** Per-seat point delta, winner first-class. */
+    delta: number[];
+    /** Which seat won, when one did. */
+    winner: number | null;
 }
 
-const SUITS = ['m', 'p', 's'] as const;
-
 /** Human-readable tile label, e.g. 0 → "1m", 17 → "9p". */
-export function tileLabel(t: Tile): string {
-    return `${(t % 9) + 1}${SUITS[Math.floor(t / 9)]}`;
+export function tileLabel(t: Tile): string { return kindLabel(t); }
+/** Chinese tile name for richer UI, e.g. 0 → 一萬. */
+export function tileName(t: Tile): string { return kindName(t); }
+
+/** Is this 14-tile hand complete? Thin wrapper so callers need not build a tally. */
+export function isWinningHand(hand: Tile[]): boolean {
+    return hand.length === 14 && coreIsWinningHand(tally(hand));
 }
 
 /** mulberry32 — tiny deterministic PRNG so a seed reproduces a deal. */
@@ -56,52 +85,7 @@ function rng(seed: number): () => number {
     };
 }
 
-/** 27-bucket tile-count histogram from a hand. */
-function counts(hand: Tile[]): number[] {
-    const c = new Array(27).fill(0);
-    for (const t of hand) c[t]++;
-    return c;
-}
-
-/**
- * Standard win test: can `c` (a 27-count histogram, 14 tiles) decompose into one
- * pair + four melds? Tries each possible pair, then checks the rest is all melds.
- */
-export function isWinningHand(hand: Tile[]): boolean {
-    if (hand.length !== 14) return false;
-    const c = counts(hand);
-    for (let p = 0; p < 27; p++) {
-        if (c[p] >= 2) {
-            c[p] -= 2;
-            if (allMelds(c.slice())) return true;
-            c[p] += 2;
-        }
-    }
-    return false;
-}
-
-/** Does the histogram decompose entirely into melds (triplets / runs)? */
-function allMelds(c: number[]): boolean {
-    // First non-empty tile.
-    let i = 0;
-    while (i < 27 && c[i] === 0) i++;
-    if (i === 27) return true; // nothing left → success
-
-    // Try a triplet at i.
-    if (c[i] >= 3) {
-        c[i] -= 3;
-        if (allMelds(c)) return true;
-        c[i] += 3;
-    }
-    // Try a run i, i+1, i+2 (must stay within the same suit: rank 0..6 in-suit).
-    const rank = i % 9;
-    if (rank <= 6 && c[i + 1] > 0 && c[i + 2] > 0) {
-        c[i]--; c[i + 1]--; c[i + 2]--;
-        if (allMelds(c)) return true;
-        c[i]++; c[i + 1]++; c[i + 2]++;
-    }
-    return false; // tile i can't be consumed → dead end
-}
+const SUIT_COUNT = 27;   // no honours in this deck
 
 export class MahjongGame {
     private wall: Tile[] = [];
@@ -125,7 +109,7 @@ export class MahjongGame {
     private deal(): void {
         // Build + shuffle the 108-tile wall (Fisher–Yates, seeded).
         const wall: Tile[] = [];
-        for (let t = 0; t < 27; t++) for (let k = 0; k < 4; k++) wall.push(t);
+        for (let t = 0; t < SUIT_COUNT; t++) for (let k = 0; k < 4; k++) wall.push(t);
         for (let i = wall.length - 1; i > 0; i--) {
             const j = Math.floor(this.rand() * (i + 1));
             [wall[i], wall[j]] = [wall[j], wall[i]];
@@ -141,7 +125,7 @@ export class MahjongGame {
     /** Human self-draws (hand → 14); sets canWin / draw-game as needed. */
     private drawForHuman(): void {
         if (this.wall.length === 0) {
-            this.endGame('exhausted');
+            this.endGame('exhausted', null);
             return;
         }
         const t = this.wall.shift()!;
@@ -151,19 +135,60 @@ export class MahjongGame {
         this.turn = 0;
     }
 
-    /** Bots 1..3 each draw and immediately discard (tsumogiri). */
+    /** Everything a seat can see: every discard on the table so far. */
+    private seen(): number[] {
+        const all: Tile[] = [];
+        for (let s = 0; s < 4; s++) all.push(...this.discards[s]);
+        return tally(all);
+    }
+
+    /**
+     * Bots 1..3 each draw, then discard by the SHARED policy (not 摸打). A bot that
+     * draws its winning tile takes the hand — the human can lose, which is what
+     * makes their own discards a decision rather than a formality.
+     */
     private runBots(): void {
         for (let seat = 1; seat <= 3; seat++) {
-            if (this.wall.length === 0) { this.endGame('exhausted'); return; }
+            if (this.wall.length === 0) { this.endGame('exhausted', null); return; }
             const t = this.wall.shift()!;
-            this.discards[seat].push(t); // discard the drawn tile
+            const hand = this.hands[seat];
+            hand.push(t);
+            hand.sort((a, b) => a - b);
+
+            if (coreIsWinningHand(tally(hand))) { this.endGame('lost', seat, t); return; }
+
+            const kind = chooseDiscard({ hand: tally(hand), melds: [], seen: this.seen() });
+            const idx = hand.indexOf(kind);
+            const out = idx >= 0 ? hand.splice(idx, 1)[0] : hand.pop()!;
+            this.discards[seat].push(out);
         }
     }
 
-    private endGame(reason: MahjongResult['reason']): void {
+    private endGame(reason: MahjongResult['reason'], winner: number | null, winTile?: Tile): void {
         this.finished = true;
         this.won = reason === 'tsumo';
-        this.result = { won: this.won, reason, hand: this.hands[0].slice(), turns: this.turnCount };
+        const hand = this.hands[winner ?? 0].slice();
+
+        let fan: FanEntry[] = [];
+        let total = 0;
+        let delta = [0, 0, 0, 0];
+        if (winner != null) {
+            const score = scoreHand({
+                concealed: tally(hand),
+                melds: [],
+                winTile: winTile ?? hand[hand.length - 1],
+                selfDraw: true,          // this deck only wins by 自摸
+                seatWind: 27 + winner,
+                roundWind: 27,
+            });
+            fan = score.fan;
+            total = score.total;
+            delta = settle(score, winner, -1);
+        }
+        this.result = {
+            won: this.won, reason, hand, turns: this.turnCount,
+            fan, total, delta, winner,
+        };
     }
 
     // ── External API surface (matches the Game Setting `methods` whitelist) ──
@@ -173,12 +198,14 @@ export class MahjongGame {
 
     /** `state` — current snapshot. */
     public state(): MahjongState {
+        const hand = this.hands[0];
         return {
             gameId: this.gameId,
             seat: 0,
-            hand: this.hands[0].slice(),
+            hand: hand.slice(),
             drawn: this.drawn,
-            canWin: !this.finished && this.hands[0].length === 14 && isWinningHand(this.hands[0]),
+            canWin: !this.finished && hand.length === 14 && coreIsWinningHand(tally(hand)),
+            shanten: shanten(tally(hand)),
             discards: { 0: this.discards[0].slice(), 1: this.discards[1].slice(), 2: this.discards[2].slice(), 3: this.discards[3].slice() },
             wallRemaining: this.wall.length,
             turn: this.turn,
@@ -205,15 +232,15 @@ export class MahjongGame {
 
     /** `win` — declare tsumo if the 14-tile hand is a winning hand. */
     public win(): MahjongState {
-        if (!this.finished && this.hands[0].length === 14 && isWinningHand(this.hands[0])) {
-            this.endGame('tsumo');
+        if (!this.finished && this.hands[0].length === 14 && coreIsWinningHand(tally(this.hands[0]))) {
+            this.endGame('tsumo', 0, this.drawn ?? undefined);
         }
         return this.state();
     }
 
     /** `end` — finalize the session (resign if still running); return the result. */
     public end(): MahjongResult {
-        if (!this.finished) this.endGame('resigned');
+        if (!this.finished) this.endGame('resigned', null);
         return this.result!;
     }
 }

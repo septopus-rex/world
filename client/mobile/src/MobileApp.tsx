@@ -14,6 +14,7 @@ import { AvatarPicker } from '@core/components/AvatarPicker';
 import { ParkourHUD } from '@core/components/ParkourHUD';
 import { ShootingHUD } from '@core/components/ShootingHUD';
 import { MahjongHUD } from '@core/components/MahjongHUD';
+import { MahjongTableHUD } from '@core/components/MahjongTableHUD';
 import { PoolHUD } from '@core/components/PoolHUD';
 import { StatusPanel } from '@core/components/StatusPanel';
 import { MiniCompass } from '@core/components/MiniCompass';
@@ -373,6 +374,10 @@ function MobileApp() {
             <ShootingHUD loader={loader} ready={ready} />
             {ready && loader && activeGame === 'mahjong' && gameState && <MahjongHUD state={gameState} loader={loader} />}
             {ready && loader && activeGame === 'pool' && gameState && <PoolHUD state={gameState} loader={loader} />}
+
+            {/* The native 3D mahjong table (Pattern B) has no `activeGame`; its HUD
+                polls the engine and renders nothing unless a table is live. */}
+            {ready && loader && mode === 'game' && !activeGame && <MahjongTableHUD loader={loader} />}
             <LeaveGameDialog loader={loader} open={ready && leaveIntent} />
 
             {/* ── zone-gated game entry / exit (same contract as desktop) ── */}

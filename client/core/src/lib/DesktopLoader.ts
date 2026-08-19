@@ -223,6 +223,22 @@ export class DesktopLoader implements IDataSource {
     public mahjongWin(): Promise<void> { return this.gameAction('win', []); }
     public mahjongLeave(): void { this.leaveGame(); }
 
+    // ── native 3D mahjong table (Pattern B — MahjongSystem, not GameRuntime) ──
+    // The in-world table is engine-owned, so its seam is the engine facade rather
+    // than the whitelisted-method transport the external mahjong app uses above.
+    // Same shape for the HUD either way: read a snapshot, send a move.
+
+    /** Read-only table snapshot (hands/melds/discards/phase/offers/result). */
+    public mahjongTableState(): any { return this.engine?.mahjongState() ?? null; }
+    /** Discard from the human's hand by stable tileId. */
+    public mahjongTableDiscard(tileId: number): boolean { return !!this.engine?.mahjongDiscard(tileId); }
+    /** Take an offered call: 碰 pon / 杠 kan / 吃 chi / 胡 ron / 自摸 tsumo / 暗杠 ankan. */
+    public mahjongTableClaim(action: string, kinds?: number[]): boolean {
+        return !!(this.engine as any)?.mahjongClaim(action, kinds);
+    }
+    /** Decline every open call. */
+    public mahjongTablePass(): boolean { return !!(this.engine as any)?.mahjongPass(); }
+
     /** Read-only shooting-range snapshot (score/shots/hits/phase) for the HUD. */
     public shootingState(): any { return this.engine?.shootingState() ?? null; }
     /** Read-only tumble-tower snapshot (standing/pulled/maxY/toppled/settled). */

@@ -3,7 +3,7 @@
 > **用途**：追踪「从『功能完备的引擎/技术 demo』到『用户能真正玩起来』」的落地进度。
 > 引擎本体（机制/物理/渲染/持久化/编辑原语）已就绪且有测试覆盖；缺口全在其**上层**——内容、分发、产品外壳。
 > **配套**：开发基准与历史见 `STANDALONE_ENGINE_ROADMAP.md`；SPP 分发见 `specs/spp-integration.md`。
-> **更新**：2026-07-03 状态修订（`player.setSpawn` / authored 关卡 / 2D 地图勾选 ✅，目标系统标部分完成）。2026-06 创建（gap 评估基线）。改一项就勾一项、并更新本行日期。
+> **更新**：2026-08-19 麻将可玩化 + 修正过期的跑酷计时条目。2026-07-03 状态修订（`player.setSpawn` / authored 关卡 / 2D 地图勾选 ✅，目标系统标部分完成）。2026-06 创建（gap 评估基线）。改一项就勾一项、并更新本行日期。
 
 ## 图例
 
@@ -57,9 +57,16 @@
 > 现状：有积木（trigger/flag/HP/item/actuator/SPP 关卡），但没组装成有目标的游戏，无 game-state/目标系统。
 
 - [ ] 🔲 选定首发玩法（推荐**跑酷**：SPP 关卡 + 摔死重生闭环已就绪）
-- [ ] 🚧 目标/进度系统（到达终点 / 计时 / 计分）—— **部分 ✅**：到达终点已由 flags 配方表达（`AuthoredLevel.completeFlag` / `levelComplete` 旗标）；计时/计分仍无
+- [x] ✅ **麻将做成真能打完一局（2026-08-19）** —— 规则抽成两个麻将共用的牌理核
+      `engine/src/core/mahjong/`（和牌/向听/待张/吃碰杠/国标番种子集/bot 策略）；3D 桌
+      补上 **碰杠吃 + 和牌 + 番种结算**（此前旧注释自陈"no win detection"，只能打到流局），
+      牌面重画成真牌（矢量筒索 + 汉字萬/字牌 + 牌背），手牌立起来面朝座位，场景换成
+      oriental 粒子库砌的中式茶室。诊断与三个调过的参数见 `specs/native-in-world-games.md §#7`。
+- [ ] 🚧 目标/进度系统（到达终点 / 计时 / 计分）—— **跑酷已 ✅**：到达终点由 flags 配方表达
+      （`AuthoredLevel.completeFlag` / `levelComplete`），**计时 + 最佳成绩持久化 + 完成覆盖层
+      已在 `ParkourHUD.tsx`**（本行此前写"计时/计分仍无"，已过期）；其余玩法的计分仍无
 - [x] ✅ `player.setSpawn` 动作（检查点重生）—— `core/services/Actuator.ts` `execSetSpawn` + HealthSystem 检查点重生；`parkour.level.json` 3 处在用
-- [ ] 🔲 计时/计分/目标 HUD（客户端 UI）
+- [x] ✅ 计时/计分/目标 HUD —— 跑酷 `ParkourHUD`（计时/最佳/完成）· 麻将 `MahjongTableHUD`（呼叫按钮/向听/番种结算）
 - [x] ✅ 至少一关完整 authored 内容（关卡数据 + 通关验证 e2e）—— `client/desktop/src/levels/parkour.level.json` + `coaster.level.json`；e2e `parkour.spec.ts`（断言到达终点）+ `coaster.spec.ts`
 - [ ] ⏸️ 多关卡 / 关卡选择 / 进度存档
 
