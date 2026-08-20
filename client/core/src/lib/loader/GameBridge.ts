@@ -5,7 +5,6 @@ import { GAMES } from '../../games/registry';
 import { GameApiRouter } from '../../games/GameApiRouter';
 import { ProbedGameApi } from '../../games/ProbedGameApi';
 import { FetchGameApi } from '../../games/FetchGameApi';
-import { NATIVE_MAHJONG_BLOCK, MAHJONG_SURFACE_Z } from '../../scenes/mahjong3dScene';
 import { generateMahjongFaceCids, TILE_BACK_INDEX } from '../../scenes/mahjongFaces';
 
 /** The seam GameBridge needs from its host (DesktopLoader): the engine handle,
@@ -106,8 +105,22 @@ export class GameBridge {
             this._gameState = null;
             this._onGameState?.(null, null);
         });
-        engine.on('block.loaded', () => { void this.setupMahjong3D(); },
-            { key: `blk:${NATIVE_MAHJONG_BLOCK[0]}_${NATIVE_MAHJONG_BLOCK[1]}`, once: true });
+        // Mahjong tile art. NOT tied to a block any more: a table arms itself from
+        // its own block data (b8 `game:{kind:'mahjong'}` → game.declare), so the
+        // client's only remaining job is to supply the 34 faces + the back as a
+        // WORLD resource — no coordinate, any table picks them up.
+        //
+        // Generated LAZILY, on the first table that declares itself — not at boot.
+        // Drawing 34 faces + a back is 35 canvas→PNG→CAS round trips, and a world
+        // with no mahjong table in it should not pay for them (doing it on the first
+        // block loaded cost the external-app mahjong spec its whole time budget).
+        // Not in `wire` either: the Engine is still being assembled here, and
+        // `engine.ipfs` is not up — the generator caches its own promise, so asking
+        // too early poisons the cache with `undefined` and tiles stay blank forever.
+        // MahjongSystem respawns live tiles if the art lands after a table dealt.
+        engine.on('game.declare', (p: any) => {
+            if (p?.kind === 'mahjong') void this.injectMahjongFaces();
+        });
         if (typeof window !== 'undefined') {
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'KeyB') this.poolShootFromCamera(); // no-ops without a live pool session
@@ -139,30 +152,25 @@ export class GameBridge {
     private mahjongFaceCids(): Promise<string[] | undefined> {
         if (!this._mahjongFaceCids) {
             const router = this.host.engine()?.ipfs;
-            this._mahjongFaceCids = router
-                ? generateMahjongFaceCids(router).catch((e) => {
-                    console.warn('[GameBridge] mahjong face generation failed; tiles stay blank.', e);
-                    return undefined;
-                })
-                : Promise.resolve(undefined);
+            // Not ready → return undefined WITHOUT caching, so a later call retries.
+            // Caching it (what this used to do) makes one early call permanent.
+            if (!router) return Promise.resolve(undefined);
+            this._mahjongFaceCids = generateMahjongFaceCids(router).catch((e) => {
+                console.warn('[GameBridge] mahjong face generation failed; tiles stay blank.', e);
+                return undefined;
+            });
         }
         return this._mahjongFaceCids;
     }
 
-    /** Deal the native 3D mahjong table (geometry matches mahjong3dScene). The
-     *  MahjongSystem owns the game; we generate readable tile faces (slot-7
-     *  textures via the CAS), then seed it and mark it ready. */
-    private async setupMahjong3D(): Promise<void> {
+    /** Generate the 34 tile faces + the back, ingest them into the CAS, and hand
+     *  the CIDs to the engine as a world resource. Every mahjong table uses them;
+     *  no table coordinate appears anywhere in this file. */
+    private async injectMahjongFaces(): Promise<void> {
         const generated = await this.mahjongFaceCids();
+        if (!generated) return;
         // The generator returns 34 faces plus the tile back at TILE_BACK_INDEX.
-        const faceCids = generated?.slice(0, TILE_BACK_INDEX);
-        const backCid = generated?.[TILE_BACK_INDEX];
-        this.host.engine()?.setupMahjong({
-            block: NATIVE_MAHJONG_BLOCK, origin: [8, 8],
-            surfaceZ: MAHJONG_SURFACE_Z, seed: 20260629,
-            ...(faceCids ? { faceCids } : {}),
-            ...(backCid ? { backCid } : {}),
-        });
+        this.host.engine()?.setMahjongFaces(generated.slice(0, TILE_BACK_INDEX), generated[TILE_BACK_INDEX]);
         this._mahjongReady = true;
     }
 

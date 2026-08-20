@@ -224,6 +224,97 @@ describe('3D mahjong (MahjongSystem)', () => {
         throw new Error('no seed produced a call in 10 hands');
     });
 
+    // ── placeable: the table arms itself from ITS OWN block data ──────────────
+
+    /** A block whose only content is a b8 game trigger declaring a mahjong table. */
+    function tableBlock(seed: number) {
+        return [0, 1, [[0x00b8, [[
+            [5, 5, 3], [8, 8, 1.5], [0, 0, 0], 1, 0,
+            [{
+                type: 'in', oneTime: false,
+                actions: [{
+                    type: 'player', method: 'enterGame',
+                    params: [{ exitPolicy: 'confirm', game: { kind: 'mahjong', origin: [8, 8], surfaceZ: 0.95, seed } }],
+                }],
+            }],
+        ]]]], [], 1];
+    }
+
+    function movePlayerTo(engine: any, bx: number, by: number) {
+        const w = engine.getWorld();
+        const eid = w.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0];
+        const t = w.getComponent(eid, 'TransformComponent');
+        const e = w.metrics.septopusToEngine([8, 8, 2], [bx, by]);
+        t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
+        t.dirty = true;
+    }
+
+    it('is placeable: two blocks of the same table data arm two independent tables, with no host call', async () => {
+        const engine = await makeHeadlessEngine();
+        // Two tables, different seeds, declared ONLY by their block data. Note what
+        // is absent: no engine.setupMahjong(), no coordinate known to any host.
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: tableBlock(111) } as any);
+        engine.injectBlock({ x: 2049, y: 2048, world: 'main', elevation: 0, adjuncts: tableBlock(222) } as any);
+        stepN(engine, 4);   // block init → game.declare → both tables arm themselves
+
+        movePlayerTo(engine, 2048, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        const a = engine.mahjongState();
+        expect(a, 'the west table dealt').toBeTruthy();
+        expect(a.block).toEqual([2048, 2048]);
+        const dealA = a.hands.map((h: number[]) => h.map((t) => a.kinds[t]).join()).join('|');
+
+        // Walk away: the hand tears down, the ARMING survives.
+        engine.setMode(SystemMode.Normal, { force: true });
+        stepN(engine, 2);
+        expect(engine.mahjongState(), 'leaving ends the hand').toBeNull();
+
+        movePlayerTo(engine, 2049, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        const b = engine.mahjongState();
+        expect(b, 'the east table dealt too').toBeTruthy();
+        expect(b.block).toEqual([2049, 2048]);
+        expect(b.hands[b.humanSeat].length).toBe(14);
+        const dealB = b.hands.map((h: number[]) => h.map((t) => b.kinds[t]).join()).join('|');
+
+        // Its own seed → its own shuffle. Same System, two tables, no interference.
+        expect(dealB).not.toEqual(dealA);
+
+        // Going back deals the first table FRESH (arcade-cabinet model).
+        engine.setMode(SystemMode.Normal, { force: true });
+        stepN(engine, 2);
+        movePlayerTo(engine, 2048, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        const again = engine.mahjongState();
+        expect(again.block).toEqual([2048, 2048]);
+        expect(again.hands.map((h: number[]) => h.map((t: number) => again.kinds[t]).join()).join('|')).toEqual(dealA);
+    });
+
+    it('tile art is a world resource: injected late, live tiles pick it up', async () => {
+        const engine = await bootMahjong();          // no faceCids
+        const w = engine.getWorld();
+        const texOf = () => {
+            const out: any[] = [];
+            for (const eid of w.getEntitiesWith(['MahjongTileComponent', 'AdjunctComponent'])) {
+                out.push(w.getComponent(eid, 'AdjunctComponent').stdData?.material?.texture ?? null);
+            }
+            return out;
+        };
+        expect(texOf().every((t) => t == null), 'blank before the art arrives').toBe(true);
+
+        const faces = Array.from({ length: 34 }, (_, k) => `face-${k}`);
+        engine.setMahjongFaces(faces, 'tile-back');
+        stepN(engine, 1);
+
+        const after = texOf();
+        expect(after.length).toBe(53);
+        expect(after.every((t) => typeof t === 'string'), 'every live tile got art').toBe(true);
+        expect(after.filter((t) => t === 'tile-back').length, 'three concealed hands').toBe(39);
+    });
+
     it('refuses a call that was never offered', async () => {
         const engine = await bootMahjong();
         expect(engine.mahjongClaim('pon', [0])).toBe(false);

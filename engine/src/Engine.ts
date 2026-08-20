@@ -583,12 +583,21 @@ export class Engine {
         return w ? !!(w.systems.findSystemByName('PoolSystem') as any)?.shoot(w, angleRad, power) : false;
     }
 
-    /** Build a 3D mahjong table on the given block (MahjongSystem owns the game;
-     *  tiles are a2 box adjunct entities it spawns and drives — the discrete,
-     *  turn-based counterpart to the pool). Deal is seeded → reproducible. */
+    /** Arm a mahjong table on the given block imperatively. NOT the normal path —
+     *  a table declares itself from its own block data (b8 game trigger, `game:
+     *  {kind:'mahjong', …}`), which is what lets the same block be placed anywhere.
+     *  Kept for tests and for hosts that build a table without authored data. */
     public setupMahjong(config: import('./core/systems/MahjongSystem').MahjongConfig): void {
         const w = this.world;
         if (w) (w.systems.findSystemByName('MahjongSystem') as any)?.configure(w, config);
+    }
+
+    /** Provide the tile art every mahjong table uses (kind → CID + the back).
+     *  A world resource, not table config: injected once, applies to tables that
+     *  have not streamed in yet. */
+    public setMahjongFaces(faceCids: string[] | null, backCid?: string | null): void {
+        const w = this.world;
+        if (w) (w.systems.findSystemByName('MahjongSystem') as any)?.setFaces(w, faceCids, backCid);
     }
 
     /** The local human discards a tile from their hand (by stable tileId). Refused

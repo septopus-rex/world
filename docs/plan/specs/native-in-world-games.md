@@ -92,11 +92,21 @@
 
 **方案（草案）**：场内连续/手势输入通道（drag 向量 + hold 时长），供「拖拽瞄准 + 蓄力」一类玩法；保持 System 不直接读输入（经事件）。
 
-## #4 System 是单例，不是每实例 🔲
+## #4 System 是单例，不是每实例 🟡 麻将已改每块一份 ✅ / Pool·Shooting·Tumble 仍是单例
 
 **现状（已核）**：`findTable` = `getEntitiesWith([...Table...])[0]`，单 `tableEid`/`ballEids`。世界里两张桌只追踪一张。
 
 **方案（草案）**：游戏状态绑到 table 实体（已是组件），System 改为按实体集合迭代，去掉单例字段缓存。
+
+**麻将已解决（2026-08-20）**：`MahjongSystem.configs` 是 `Map<"x_y", MahjongConfig>`，
+每块一份；`liveBlock` 记住哪张桌子在玩，走到另一张会换局（街机柜模型，同时只有一局）。
+回归 `integration/mahjong.test.ts`「is placeable」：**同一份桌子数据放两个坐标，各自按自己的
+seed 发牌，来回走都是新局，全程零宿主调用**。
+
+**其余三个仍是单个 `config` 字段**——它们也从 `game.declare` 自臂，所以"能放在任意一块"成立，
+但**放第二张就会被最后加载的那块覆盖**，先加载的那张走进去不发牌。要修就照麻将改成 Map；
+没修是因为它们目前各自只有一个演示块，**这条缺口对它们尚未显形**。
+
 
 ## #5 没有「谁在玩」—— 交互无 actor 绑定 🔲
 
@@ -164,6 +174,37 @@ Pattern B 是"承认的不可移植逃生舱"（见 `GAME_SYSTEMS_BACKLOG.md` �
 向听、待张、吃碰杠、番种互斥、结算平账、bot 策略）+ `engine/tests/integration/mahjong.test.ts`
 （14 项，含**打完整局**——5 个种子全部产出可验证的和牌，番数≥1、账目平衡、和牌手真的
 是和牌手）+ e2e `mahjong3d.spec.ts`（HUD 呼叫按钮、结算面板、真实鼠标点击打牌）。
+
+### 桌子成为可放置的数据（2026-08-20）
+
+`#7` 抽出规则之后还剩最后一根钉子：**麻将桌的坐标写死在客户端**。
+
+```ts
+// client/core/src/scenes/mahjong3dScene.ts —— 已删除
+export const NATIVE_MAHJONG_BLOCK: [number, number] = [2047, 2048];
+engine.on('block.loaded', () => setupMahjong3D(), { key: 'blk:2047_2048', once: true });
+```
+
+所以「麻将只能在一个地方玩」**跟能不能动态加载逻辑代码毫无关系**——机制 2026-07 就有了
+（`full-data-migration.md` P2：b8 game trigger 带 `game:{kind,…}` → `BlockSystem` 发
+`game.declare` → System 自臂），Pool / Shooting / Tumble 三个都接了，**麻将是唯一没跟上的**。
+它没跟上的原因是 `faceCids`：34 张牌面要客户端 canvas 生成后注入，于是走了宿主调用那条老路。
+
+**解法是把两件被混在一起的事拆开**：
+
+| | 归属 | 落点 |
+|---|---|---|
+| 桌子放在哪、几号种子、桌面多高 | **数据** | 块自己的 b8 `game` 声明 |
+| 34 张牌面长什么样 | **世界资源** | `Engine.setMahjongFaces`，一次注入、所有桌子共用 |
+
+拆开后：客户端零坐标，`MahjongConfig` 变成每块一份的 Map，同一份块数据放在任意坐标都是一张
+能玩的桌子。**牌面异步到达时 `setFaces` 会重刷已发的牌**——否则抢先坐下的玩家整局对着白板。
+
+两个连带效果，都不是设计出来的：
+- **e2e 从 23.2 分钟降到 9.6 分钟**。发牌此前要等 35 张 canvas→PNG→CAS 往返，现在不等了。
+- **踩到一个缓存陷阱**：牌面注入一度挂在 `GameBridge.wire()`，但那时 `engine.ipfs` 还没起来，
+  而生成器缓存自己的 promise —— **问早了就把 `undefined` 永久缓存，牌永远是白板**。改挂
+  `block.loaded{once}`（任意块，不是特定块）。
 
 ### 场景：中式茶室（`client/core/src/blocks/mahjong3d.block.json`）
 

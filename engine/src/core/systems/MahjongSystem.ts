@@ -77,12 +77,23 @@ const SEAT_AXES: { nx: number; ny: number; rx: number; ry: number }[] = [
 ];
 
 export class MahjongSystem implements ISystem {
-    private config: MahjongConfig | null = null;   // armed declaration (block + params)
+    /** Armed tables, keyed "x_y" — ONE PER BLOCK, not one per System.
+     *  A mahjong table is a placeable thing: the same block data dropped on two
+     *  coordinates is two tables, and walking to either must deal that one. A
+     *  single `config` field (what the other native games still have) silently
+     *  makes the last-loaded block the only playable one. */
+    private configs = new Map<string, MahjongConfig>();
     private tableEid: EntityId | null = null;       // live session (null = no session)
+    private liveBlock: string | null = null;        // which armed table is in play
+    /** Tile art is a WORLD resource, not per-table config: every table shows the
+     *  same 34 faces. Injected once by the host (or left null for plain tiles). */
     private faceCids: string[] | null = null;
     private backCid: string | null = null;
     private minFan = 2;
+    private declareReader: import('../events/EventReader').EventReader<'game.declare'> | null = null;
     private interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
+
+    private static key(block: [number, number]): string { return `${block[0]}_${block[1]}`; }
 
     // ── setup ────────────────────────────────────────────────────────────────
 
@@ -92,38 +103,75 @@ export class MahjongSystem implements ISystem {
      *  the zone, so walking away ends it cleanly with nothing left to evict.
      *  The armed config persists across eviction so re-entry deals a fresh game. */
     public configure(world: World, config: MahjongConfig): void {
-        this.endSession(world);
-        this.config = config;
-        this.syncSession(world); // deal immediately if already in Game mode here
+        const key = MahjongSystem.key(config.block);
+        const prev = this.configs.get(key);
+        // Block loads re-emit game.declare; an identical re-arm must NOT tear down
+        // a hand in progress just because the player stepped near a block edge.
+        if (prev && JSON.stringify(prev) === JSON.stringify(config)) return;
+        this.configs.set(key, config);
+        if (this.liveBlock === key) this.endSession(world);   // re-arming the table in play restarts it
+        this.syncSession(world);
+    }
+
+    /** Set the tile art every table uses (kind → CID, plus the back). A world
+     *  resource, so it is injected once and applies to tables not yet loaded.
+     *
+     *  Generating the art is async (34 canvas→PNG→CAS round trips), so it can land
+     *  AFTER a table has already dealt — a player who spawns straight onto the
+     *  block would otherwise sit at a rack of blank cream boxes for the rest of the
+     *  hand. Live tiles are therefore respawned in place. */
+    public setFaces(world: World, faceCids: string[] | null, backCid?: string | null): void {
+        this.faceCids = faceCids ?? null;
+        this.backCid = backCid ?? null;
+        const table = this.findTable(world);
+        if (table) this.refreshTiles(world, table);
+    }
+
+    /** Rebuild every live tile entity, keeping its zone/seat/faceUp. */
+    private refreshTiles(world: World, table: MahjongTableComponent): void {
+        const blockEid = this.findBlock(world, table.block);
+        if (blockEid == null) return;
+        const live: Array<{ tileId: number; zone: MahjongZone; seat: number; faceUp: boolean }> = [];
+        for (const eid of world.getEntitiesWith(['MahjongTileComponent'])) {
+            const tc = world.getComponent<MahjongTileComponent>(eid, 'MahjongTileComponent')!;
+            live.push({ tileId: tc.tileId, zone: tc.zone, seat: tc.seat, faceUp: tc.faceUp });
+        }
+        for (const t of live) {
+            this.destroyTile(world, t.tileId);
+            this.spawnTile(world, blockEid, table, t.tileId, t.zone, t.seat, t.faceUp);
+        }
+        this.recomputeSlots(world, table);
     }
 
     /** Reconcile the live game with "should there be one?" = armed + Game mode +
      *  our block IS the active session's block + that block is still loaded. */
     private syncSession(world: World): void {
-        const c = this.config;
         const a = world.activeGameBlock;
+        const key = a ? MahjongSystem.key(a as [number, number]) : null;
+        const c = key ? this.configs.get(key) : undefined;
         const want = c != null
             && world.mode === SystemMode.Game
-            && a != null && a[0] === c.block[0] && a[1] === c.block[1]
             && this.findBlock(world, c.block) != null;
-        if (want && this.tableEid == null) this.startSession(world);
+        // Walking from one table straight to another swaps the session.
+        if (want && this.tableEid != null && this.liveBlock !== key) this.endSession(world);
+        if (want && this.tableEid == null) this.startSession(world, c!);
         else if (!want && this.tableEid != null) this.endSession(world);
     }
 
     /** Build the table, shuffle + deal, spawn the hand tiles, and start the
      *  dealer's turn (draw to 14, then await a discard). */
-    private startSession(world: World): void {
-        const config = this.config;
-        if (!config) return;
+    private startSession(world: World, config: MahjongConfig): void {
         const blockEid = this.findBlock(world, config.block);
         if (blockEid == null) return;
         const bs = world.systems.findSystemByName('BlockSystem') as any;
         if (!bs?.spawnAdjunct) return;
 
         const humanSeat = config.humanSeat ?? 0;
-        this.faceCids = config.faceCids ?? null;
-        this.backCid = config.backCid ?? null;
+        // Per-table overrides stay possible, but the world resource is the default.
+        if (config.faceCids) this.faceCids = config.faceCids;
+        if (config.backCid) this.backCid = config.backCid;
         this.minFan = config.minFan ?? 2;
+        this.liveBlock = MahjongSystem.key(config.block);
         const rng = makeRng(config.seed);
 
         // Fixed identity: tileId → kind (four of each), then a seeded draw order.
@@ -204,6 +252,22 @@ export class MahjongSystem implements ISystem {
     // ── per-frame ──────────────────────────────────────────────────────────────
 
     public update(world: World, dt: number): void {
+        // Data-driven arming: the block's b8 game trigger declares this table
+        // (enterGame params[0].game = {kind:'mahjong', …}) — BlockSystem emits
+        // game.declare at block init; configure() from the DATA, no host call.
+        // This is what makes the table PLACEABLE: drop the same block anywhere and
+        // it deals there, with no client-side coordinate baked in.
+        if (!this.declareReader && (world as any).events?.reader) {
+            this.declareReader = world.events.reader('game.declare');
+        }
+        if (this.declareReader) {
+            for (const ev of this.declareReader.read()) {
+                const p = ev.payload;
+                if (p.kind !== 'mahjong') continue;
+                const { kind: _k, ...decl } = p.decl ?? {};
+                this.configure(world, { ...decl, block: p.block } as MahjongConfig);
+            }
+        }
         this.syncSession(world); // start/stop the game on Game-mode / zone transitions
         const table = this.findTable(world);
         if (!table) return;
@@ -778,8 +842,8 @@ export class MahjongSystem implements ISystem {
         return b?.elevation || 0;
     }
 
-    /** End the live game: free every tile mesh + destroy the table entity. The
-     *  armed config is kept, so re-entering the zone deals a fresh game. */
+    /** End the live game: free every tile mesh + destroy the table entity. Every
+     *  armed table stays armed, so re-entering any zone deals a fresh game. */
     private endSession(world: World): void {
         const bs = world.systems.findSystemByName('BlockSystem') as any;
         for (const eid of world.getEntitiesWith(['MahjongTileComponent'])) {
@@ -787,6 +851,7 @@ export class MahjongSystem implements ISystem {
         }
         if (this.tableEid != null) world.destroyEntity?.(this.tableEid);
         this.tableEid = null;
+        this.liveBlock = null;
         this.interactReader = null;
     }
 }

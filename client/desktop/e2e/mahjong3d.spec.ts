@@ -203,7 +203,22 @@ test('3D mahjong: a REAL mouse click on a hand tile discards it (truly playable)
 test('3D mahjong: tiles are READABLE — each face-up tile shows its kind (slot-7 texture via CAS)', async ({ page }) => {
     test.setTimeout(600_000);
     await bootDeterministic(page);
-    await waitForDeal(page); // the loader generated 34 face images + ingested them into the CAS
+    await waitForDeal(page);
+
+    // Tile art is a WORLD RESOURCE now, not table config: the client generates the
+    // 34 faces + the back once at boot and injects them, so a table can deal before
+    // the art lands (MahjongSystem then respawns the live tiles with it). The deal
+    // no longer waits on 35 canvas→PNG→CAS round trips — which is most of why this
+    // spec went from ~5 min to ~1 — but reading a FACE does, so wait for it here.
+    await page.waitForFunction(() => {
+        const w = (window as any).loader.engine.getWorld();
+        for (const eid of w.getEntitiesWith(['MahjongTileComponent', 'AdjunctComponent'])) {
+            const tc = w.getComponent(eid, 'MahjongTileComponent');
+            if (!tc.faceUp) continue;
+            return typeof w.getComponent(eid, 'AdjunctComponent').stdData?.material?.texture === 'string';
+        }
+        return false;
+    }, null, { timeout: 120_000 });
 
     // Every face-up tile (your open hand) references a content-addressed face image
     // in box slot 7; concealed opponents reference none.
