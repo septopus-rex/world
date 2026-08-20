@@ -105,6 +105,11 @@ setMode(mode, opts?: { force?: boolean }): boolean
 zone 追踪——跨越 block 边界的轨道**不会**把骑乘中的玩家甩出 Game（轨道载客期间是位置权威）。下车（退出 Game）即解除。
 （目标的"区域 / `persistent`"语义将更通用地覆盖此例外。）
 
+**但乘骑必须锚定到块**（2026-08-20 补）：`CoasterSystem` 只在 `world.activeGameBlock` 那一块**自己带**轨道时才载客，
+path 只从该块的 b6 建、且不跨会话缓存。此前它扫全世界取第一条轨道、只判 `mode===Game`，于是同一世界里
+**任何** Game 区（牌桌、靶场）一进去就被弹上轨道；再叠加上面这条冻结，玩家还走不出去。
+细节与回归见 `docs/plan/specs/coaster-via-spp.md §10`。
+
 ## 6. 客户端约定（3D 官方解释器）
 
 - 模式切换器**不含**自由 GAME 按钮（`client/desktop/src/App.tsx`）。

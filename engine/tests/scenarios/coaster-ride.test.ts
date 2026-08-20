@@ -74,4 +74,96 @@ describe('coaster ride from SPP (C2)', () => {
         stepN(engine, 1);
         expect(cc.getRideState().mounted).toBe(false);
     });
+
+    // ── the ride is a PLACED THING, not a world singleton ─────────────────────
+    // Regression for the three bugs the old world-scanning buildPath carried:
+    // the wrong rail got ridden, every other game zone got hijacked, and the
+    // cached path outlived its session.
+
+    /** A b6 coaster source of `n` cells running north, as block raw. */
+    function coasterBlock(n: number) {
+        const cells = Array.from({ length: n }, (_, i) => ({ position: [0, i, 0], level: 0, faces: straightNS }));
+        return [0, 1, [[0x00b6, [[[2, 2, 14], cells, 'coaster']]]], [], 1];
+    }
+
+    function movePlayerTo(engine: any, bx: number, by: number) {
+        const w = engine.getWorld();
+        const eid = w.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0];
+        const t = w.getComponent(eid, 'TransformComponent');
+        const e = w.metrics.septopusToEngine([8, 8, 2], [bx, by]);
+        t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
+        t.dirty = true;
+    }
+
+    it('is placeable: you ride the rail on the block you boarded, not the first one in the world', async () => {
+        const { engine } = await makeHeadlessEngineWith({ api: api() });
+        const world = engine.getWorld()!;
+        // Two coasters of DIFFERENT lengths, each declared only by its own block
+        // data — no host call, no coordinate known to anything but the block.
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: coasterBlock(5) } as any);
+        engine.injectBlock({ x: 2049, y: 2048, world: 'main', elevation: 0, adjuncts: coasterBlock(3) } as any);
+        stepN(engine, 6);
+        const cc = world.systems.findSystem(CoasterSystem)!;
+
+        movePlayerTo(engine, 2048, 2048);
+        stepN(engine, 1);                                    // GameZoneSystem anchors the zone
+        expect(engine.setMode(SystemMode.Game), 'zone-gated entry, no force').toBe(true);
+        stepN(engine, 2);
+        const west = cc.getRideState();
+        expect(west.mounted).toBe(true);
+        expect(west.block, 'boarded the west rail').toEqual([2048, 2048]);
+        expect(west.total, '5 cells = 4 segments × 4 m').toBeCloseTo(16, 1);
+
+        engine.setMode(SystemMode.Normal);
+        stepN(engine, 1);
+        expect(cc.getRideState().mounted, 'leaving forgets the rail').toBe(false);
+
+        // Board the OTHER one. The old System kept the first path forever and
+        // would have re-run this rider down the west rail.
+        movePlayerTo(engine, 2049, 2048);
+        stepN(engine, 1);
+        expect(engine.setMode(SystemMode.Game)).toBe(true);
+        stepN(engine, 2);
+        const east = cc.getRideState();
+        expect(east.block, 'the east coaster is the one being ridden').toEqual([2049, 2048]);
+        expect(east.total, 'its own, shorter rail').toBeCloseTo(8, 1);
+    });
+
+    it('a game zone with no rail is left alone — a coaster elsewhere no longer hijacks it', async () => {
+        const { engine } = await makeHeadlessEngineWith({ api: api() });
+        const world = engine.getWorld()!;
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: coasterBlock(5) } as any);
+        // A playable block with NO track — the holdem table in the gallery
+        // corridor, a shooting range, anything that is not a coaster.
+        engine.injectBlock({ x: 2049, y: 2048, world: 'main', elevation: 0, adjuncts: [0, 1, [], [], 1] } as any);
+        stepN(engine, 6);
+        const cc = world.systems.findSystem(CoasterSystem)!;
+        const player = world.queryEntities('TransformComponent', 'InputStateComponent')[0];
+        const trans = world.getComponent<any>(player, 'TransformComponent');
+
+        // Ride once first: this is exactly what used to poison every later session.
+        movePlayerTo(engine, 2048, 2048);
+        stepN(engine, 1);
+        expect(engine.setMode(SystemMode.Game)).toBe(true);
+        stepN(engine, 20);
+        expect(cc.getRideState().mounted).toBe(true);
+        const rail: [number, number] = [trans.position[0], trans.position[2]];
+
+        engine.setMode(SystemMode.Normal);
+        stepN(engine, 1);
+
+        // Now sit down at the other game.
+        movePlayerTo(engine, 2049, 2048);
+        stepN(engine, 1);
+        const seat: [number, number] = [trans.position[0], trans.position[2]];
+        expect(engine.setMode(SystemMode.Game), 'the other block is playable too').toBe(true);
+        stepN(engine, 30);
+
+        expect(cc.getRideState().mounted, 'no rail on this block, so no ride').toBe(false);
+        expect(world.rideActive, 'zone tracking stays live (GameZoneSystem can still auto-exit)').toBe(false);
+        expect(Math.hypot(trans.position[0] - seat[0], trans.position[2] - seat[1]),
+            'the player stayed at their seat').toBeLessThan(1);
+        expect(Math.hypot(trans.position[0] - rail[0], trans.position[2] - rail[1]),
+            'and is nowhere near the rail').toBeGreaterThan(5);
+    });
 });
