@@ -98,7 +98,7 @@
 | C | 词汇包（LLM 教材） | `services/ai-gateway/prompts/` | 从 protocol/specs 蒸馏：18 adjunct raw 格式、11 actuator 动作、JSONLogic 变量、SPP cell 语法；few-shot＝`parkour.level.json`、demo 场景、迷宫样例。**前置：文档已于 2026-07-03 全面对齐事实** |
 | D | 生成器目录 v1 | `client/desktop/src/generators/`（或 engine `core/`，实施时定） | **maze**（把 `mazeScene.ts` 迷宫逻辑参数化，seed 确定性）；v1.5 候选：room、跑酷段、NPC+对话预设；与 `c2 motif` 的关系：motif 是引擎内生成原语，目录是 AI 可调用的参数面 |
 | E | 聊天面板 | `client/desktop/src/components/AuthorChat.tsx` | 输入框、流式方案卡片（摘要+统计+预算）、[预览][调整][建造] 三键、多轮上下文 |
-| F | AIWorldQuery | `client/desktop/src/lib/`（DesktopLoader 邻座） | 上行快照：目标块现有 raw、draft 有无、邻块占用、玩家位置 |
+| F | AIWorldQuery | `client/core/src/lib/`（DesktopLoader 邻座） | 上行快照：目标块现有 raw、draft 有无、邻块占用、玩家位置 |
 | G | 预览/建造管线 | 复用现成原语 | 预览＝`injectBlock`（**不写 draft**）+ Observe 相机环绕块心；取消＝`removeBlock`；建造＝`draftStore.save` + 重注入（`stampTestScene` 模式）；发布＝`publishBlock`（CAS 已通） |
 
 目标块选择规则（v1）：玩家站立块为空（无 authored/draft 内容）即可用；否则自动挑最近空邻块；

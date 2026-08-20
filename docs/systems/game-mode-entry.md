@@ -125,12 +125,15 @@ path 只从该块的 b6 建、且不跨会话缓存。此前它扫全世界取�
 
 ## 7. 原生在场游戏复用本契约（Pattern B）
 
-- **现状（✅）**：原生游戏块标 `block.game=1`（纯可玩标记），客户端 `block.loaded` 时**硬编码** `setupShooting({block:[2048,2047]…})`
-  等 arm；进入经场景内 game trigger 的 `enterGame`，**已声明 `exitPolicy`**（打靶/台球/叠叠乐 `ephemeral`、麻将
-  `confirm`，见 `client/desktop/src/scenes/*Scene.ts`）；System 每帧 `syncSession` 按「`mode===Game` 且玩家在该块」
-  spawn/teardown；走出 block 按声明档收场（`ephemeral` 静默拆局 / `confirm` 保活弹框），仍是单块一游戏。
-- **目标（🔲）**：`enterGame` 再携带 **`gameId`+`origin`**（**干掉客户端硬编码坐标**——
-  `native-in-world-games.md` 记的开放项随之解决）；一块可放多台。详见 `docs/plan/specs/native-in-world-games.md` #3。
+- **现状（✅）**：原生游戏块标 `block.game=1`（纯可玩标记），**arm 全部来自块数据**——块的 b8 game trigger
+  带富声明（`enterGame params[0].game={kind,…}`）→ BlockSystem 发 `game.declare` → System 自臂，
+  **客户端不再有任何游戏坐标**（四个原生游戏 2026-08-20 全部接上；块数据在
+  `client/core/src/blocks/{shooting,pool,tumble,mahjong3d}.block.json`）。`exitPolicy` 同在这份声明里
+  （打靶/台球/叠叠乐 `ephemeral`、麻将 `confirm`）；System 每帧 `syncSession` 按「`mode===Game` 且
+  `activeGameBlock` 是本块」spawn/teardown，armed config **每块一份**（`Map<"x_y",…>`）；走出 block 按
+  声明档收场（`ephemeral` 静默拆局 / `confirm` 保活弹框），仍是单块一游戏。
+- **目标（🔲）**：`enterGame` 再携带 **`gameId`**，让一块能放多台（现在一块只能声明一种 kind）。
+  详见 `docs/plan/specs/native-in-world-games.md` #3。
 
 ## 8. 实现状态 / 路线
 

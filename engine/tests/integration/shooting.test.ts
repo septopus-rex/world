@@ -180,4 +180,75 @@ describe('3D shooting range (ShootingRangeSystem)', () => {
         };
         expect(await play()).toEqual(await play());
     });
+
+    // ── placeable: one armed range PER BLOCK (native-in-world-games.md #4) ────
+
+    /** A block whose b8 game trigger declares a range — the real data path
+     *  (BlockSystem → game.declare → configure), no host setupShooting. */
+    function rangeBlock(targetCount: number) {
+        return [0, 1, [[0x00b8, [[
+            [5, 5, 3], [8, 8, 1.5], [0, 0, 0], 1, 0,
+            [{
+                type: 'in', oneTime: false,
+                actions: [{
+                    type: 'player', method: 'enterGame',
+                    params: [{ exitPolicy: 'confirm', game: { kind: 'shooting', origin: [8, 8], dist: 2.5, z: 1.6, targetCount, duration: 60, litTime: 1.2 } }],
+                }],
+            }],
+        ]]]], [], 1];
+    }
+
+    function movePlayerTo(engine: any, bx: number, by: number) {
+        const w = engine.getWorld();
+        const eid = w.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0];
+        const t = w.getComponent(eid, 'TransformComponent');
+        const e = w.metrics.septopusToEngine([8, 8, 2], [bx, by]);
+        t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
+        t.dirty = true;
+    }
+
+    it('is placeable: two blocks of range data arm two independent ranges, with no host call', async () => {
+        const engine = await makeHeadlessEngine();
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: rangeBlock(5) } as any);
+        engine.injectBlock({ x: 2049, y: 2048, world: 'main', elevation: 0, adjuncts: rangeBlock(2) } as any);
+        stepN(engine, 4);   // block init → game.declare → BOTH ranges arm themselves
+
+        // The east block declared last. With one `config` field it overwrote the
+        // west one, and the west range then went silently dead — you walked in and
+        // no targets appeared.
+        movePlayerTo(engine, 2048, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        expect(engine.shootingState()?.block, 'the west range opened').toEqual([2048, 2048]);
+        expect(engine.shootingState()?.targetCount, 'with its own target count').toBe(5);
+
+        engine.setMode(SystemMode.Normal, { force: true });
+        stepN(engine, 2);
+        expect(engine.shootingState(), 'leaving closes the range').toBeNull();
+
+        movePlayerTo(engine, 2049, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        expect(engine.shootingState()?.block, 'and the east one is its own range').toEqual([2049, 2048]);
+        expect(engine.shootingState()?.targetCount).toBe(2);
+    });
+
+    it('an identical re-arm does not reset a round in progress', async () => {
+        const engine = await bootRange();
+        engine.shootingFire(0);
+        engine.shootingFire(1);
+        expect(engine.shootingState()!.score).toBe(2);
+
+        // A block re-load re-emits the SAME declaration every time. Before the
+        // guard, standing near a block edge wiped the scoreboard.
+        engine.setupShooting({ ...CFG });
+        stepN(engine, 1);
+        expect(engine.shootingState()!.score, 'the round survived the re-arm').toBe(2);
+
+        // A GENUINELY different declaration still replaces the range.
+        engine.setupShooting({ ...CFG, targetCount: 3 });
+        stepN(engine, 2);
+        expect(engine.shootingState()!.targetCount).toBe(3);
+        expect(engine.shootingState()!.score, 'new params = fresh round').toBe(0);
+    });
 });

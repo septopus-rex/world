@@ -15,13 +15,16 @@
   **🔴 桌子是数据，不是宿主调用（2026-08-20）**：`MahjongSystem` 从块自己的 b8 game trigger
   自臂（`enterGame params[0].game={kind:'mahjong',origin,surfaceZ,seed}` → BlockSystem 发
   `game.declare` → System `configure`），客户端不再有任何桌子坐标。**它的 config 是
-  `Map<"x_y", MahjongConfig>`，每块一份**——这点与 Pool/Shooting/Tumble 不同：那三个虽然也
-  数据自臂，但 config 是单个字段，**放第二张桌子会覆盖第一张**（backlog `#4 System 是单例`）。
+  `Map<"x_y", MahjongConfig>`，每块一份**——Pool/Shooting/Tumble 2026-08-20 已跟上（此前是单个
+  字段，放第二台就被最后加载的那块覆盖，先加载那台成静默死物；backlog `#4` 已结）。同族守卫：
+  块重新 loaded 会重发 `game.declare`，`configure()` 收到**逐字节相同**的声明必须直接 return，
+  否则在块边缘走一下就把正在打的一局静默重置。
   牌面是**世界资源**（`Engine.setMahjongFaces`），不是每桌配置：34 面 + 牌背由客户端生成一次注入，
   晚到时 `setFaces` 会**重刷已发的牌**（否则先坐下的人整局对着白板）。两个连带效果：① 发牌不再
-  等 35 张 canvas→PNG→CAS，3D 麻将 e2e 从 23 分钟降到 9.6 分钟；② 牌面注入必须挂在
-  `block.loaded{once}` 而不是 `wire()`——wire 时 `engine.ipfs` 还没起来，而生成器缓存自己的
-  promise，**问早了就把 `undefined` 永久缓存，牌永远是白板**。
+  等 35 张 canvas→PNG→CAS，3D 麻将 e2e 从 23 分钟降到 9.6 分钟；② 牌面注入**订阅 `game.declare`**——挂点错过两次：挂在 `wire()` 时
+  `engine.ipfs` 还没起来，而生成器缓存自己的 promise，**问早了就把 `undefined` 永久缓存、牌永远是
+  白板**；改挂 `block.loaded` 后又变成任何世界启动都画 35 张 PNG（世界里没有麻将桌也画），把
+  Pattern A 的 spec 顶爆预算。最终只在**真有桌子声明**时才生成。
   三条调过的参数，别凭直觉改回去：① **bot 不是「能吃就吃」**——无条件叫牌实测把一局压到 20–50 手（真实的三分之一）、副露多到 7 副，`decideClaim` 现在要求「已副露 或 幺九字牌 或 已近听」；② **起胡 2 番**（`MahjongConfig.minFan`），否则 1 番鸡和满天飞；③ **和牌算分与和牌判定必须同源**（`winValue` 与 `declareWin` 走同一个 `scoreHand`），否则会出现「按钮亮了、点下去番数不够」。
 - **出生防卡死**：落入固体内时 `MovementCollider.popOutIfEmbedded` 自动弹上固体顶面（行走子步 ≤0.08m < 0.1 触发余量，正常移动永不误触）。
 - **🔴 `b4` stop 默认是【可见】的半透明青盒，家具必须显式关掉它（`basic_stop.ts` 槽 6 `hidden`，2026-08-17 加）**。那层青色染色本意是编辑模式的辅助，但渲染无条件执行、且此前**没有任何开关**（文件注释写着"set hidden"，代码里从来没读过这个标志）。症状只有在 stop 进入生产内容后才现形：给 gallery 走廊摆上长椅，**每条长椅都坐在一个发光的青箱子里**。写 `[mode, animate, shape, 1]` 即隐形；`invisible` 而非 `hidden`（mesh 照建、只是不画，仍可射线拾取），**碰撞与可见性完全无关**——`SolidComponent` 由 `BlockSystem` 按 std 的 `stop` 附加，不看 mesh。默认保持可见是为了不动既有的 12 行 authored b4（有的就是要那层"力场"观感）；**默认值其实反了**，但翻转会静默改掉存量场景的样子。副作用：它同时成了「展示用 vs 结构用」的天然分界，`gallery-exhibits.test.ts` 就靠 `stopHidden` 把 ⑭ 演示的三个形状与走廊家具的碰撞体分开。

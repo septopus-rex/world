@@ -46,7 +46,7 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 
 - [x] ✅⚠️ **C1 · seed→派生（重灾区）——物品侧已闭，motif 侧仍开**：**物品推导已规范化**（`protocol/{cn,en}/item.md`：mulberry32 逐位定义 + 稀有度 roll + 属性抽取**顺序**即协议 + 身份/堆叠 + 显示色公式；`BUILTIN_ITEM_TEMPLATES` 迁出引擎 → `core/mocks/ItemTemplates.ts`，模板=世界内容、宿主显式注册，2026-07）。**仍开**：`MotifExpander` per-template TS 展开（PRNG 同款 mulberry32、`Rng.ts` 已注 seed-0→1 变体并交叉引用 item.md §2，但每个 motif 模板的展开算法仍是 implementation-defined）。
 - [x] ✅ **C2 · avatar 动画状态映射**：**v1 已落地（2026-07）**——规范契约（§3 剪辑名相等、大小写不敏感）优先 + §2 回退链（run→walk→idle · air→jump→idle · land→idle）+ §2 阈值派生（IDLE_MAX 0.5 / WALK_MAX=maxSpeedWalk×1.2 线性）进引擎；正则启发式降级为不合规素材兜底。骨架朝向校验随 v2。
-- [x] ✅⚠️ **C3 · coaster/track 运动——已实现（2026-06），运动语义留 TS**：coaster 已落地——`core/systems/CoasterSystem.ts`（World.ts 注册）+ `core/spp/CoasterTheme.ts`（面对→tube 件，数据侧）+ `plugins/adjunct/adjunct_track.ts`（c1 track adjunct）+ 关卡 `client/desktop/src/levels/coaster.level.json` + e2e `coaster.spec.ts`。**仍开**：轨道几何/连通是数据，cart 沿轨运动语义仍是 TS（Pattern-B 味）——原语化进协议或正式归入 B 逃生舱，待议。
+- [x] ✅⚠️ **C3 · coaster/track 运动——已实现（2026-06），运动语义留 TS**：coaster 已落地——`core/systems/CoasterSystem.ts`（World.ts 注册）+ `core/spp/CoasterTheme.ts`（面对→tube 件，数据侧）+ `plugins/adjunct/adjunct_track.ts`（c1 track adjunct）+ 关卡 `client/core/src/levels/coaster.level.json` + e2e `coaster.spec.ts`。**仍开**：轨道几何/连通是数据，cart 沿轨运动语义仍是 TS（Pattern-B 味）——原语化进协议或正式归入 B 逃生舱，待议。
 - [x] ✅ **C4 · 移动手感常量**：**capacity config 已接活（2026-07）**——原来 `player.capacity`（speed/jumpForce/gravityMultiplier）**声明了但引擎从不消费**（EntityFactory 硬编码）；现 walk/run/jump/gravityMultiplier + 新增 ghostFlySpeed/voidRecover 均从 config 读（mock 值对齐既有行为=零变化；`body.gravity` 乘数真正落到重力积分）。**留作引擎常量**（有意）：GRAVITY 基值（世界侧旋钮=gravityMultiplier）、`CONTROL_CONSTANTS`（鼠标灵敏度/转速=宿主输入表现，非语义）。
 - [x] ✅⚠️ **C5 · 环境/相机 juice——语义侧已规范，表现侧有意保留**：**天气/时间确定性派生已进协议**（`protocol/{cn,en}/world.md §3.1`：hash 切片位置、类别表、mod-4 grade、雷暴判定、固定历法分解——跨引擎语义）；闪电闪光包络、相机摔落抖屏=渲染器自定义（行为等价，有意不规范）。
 
@@ -68,7 +68,7 @@ adjunct（raw→std→render，plugin=原语类型）· trigger/actuator/JSONLog
 
 以「数据即逻辑」为尺重扫硬编码后集中处理的一批（除 C 系列外的新发现）：
 
-- ✅ **关卡数据化**：`core/levels/parkour.ts`+`coaster.ts`（authored 内容以 TS 住在引擎核心——最重的越界）**已删除**。关卡=纯数据文档 **`AuthoredLevel` JSON**（format/version/start/completeFlag/blocks[coord→raw]），内容随客户端（`client/desktop/src/levels/*.level.json`，由退役生成器一次性冻结导出）；引擎只留词汇 `core/services/AuthoredLevel.ts`（类型+`validateAuthoredLevel`+`levelSceneProvider`，空块回退）。接入既有块管线不变（LocalDataSource overlay/CAS publish 照常）。引擎场景测试用冻结 fixture（`tests/fixtures/levels/`）。
+- ✅ **关卡数据化**：`core/levels/parkour.ts`+`coaster.ts`（authored 内容以 TS 住在引擎核心——最重的越界）**已删除**。关卡=纯数据文档 **`AuthoredLevel` JSON**（format/version/start/completeFlag/blocks[coord→raw]），内容随客户端（`client/core/src/levels/*.level.json`，由退役生成器一次性冻结导出）；引擎只留词汇 `core/services/AuthoredLevel.ts`（类型+`validateAuthoredLevel`+`levelSceneProvider`，空块回退）。接入既有块管线不变（LocalDataSource overlay/CAS publish 照常）。引擎场景测试用冻结 fixture（`tests/fixtures/levels/`）。
 - ✅ **物品模板迁出引擎**：`BUILTIN_ITEM_TEMPLATES` → `core/mocks/ItemTemplates.ts`（对齐 BlockMocks 惯例）；引擎登记表默认**空**，宿主显式 `registerDemoItemTemplates()`。
 - **有意保留的硬编码**（合法，勿再翻案）：TILE_METERS=2（协议契约）、渲染光照/阴影常量（renderer-defined）、`CONTROL_CONSTANTS`（宿主输入表现）、SPP theme 实现（注册表词汇，同 adjunct 定义）、Pattern B 五 System（逃生舱已裁定）、demo 场景坐标 dispatch（客户端内容层——后续随「场景 JSON 化」二期处理，非引擎越界）。
 - 🔲 **场景 JSON 化二期（候选）**：10 个 `client/scenes/*.ts` 手写生成器 + `sceneBlock` 坐标 if/else 同样可走 AuthoredLevel 路（生成器跑一次→冻结 JSON→publish 进 CAS）。当前属客户端内容层（不违反引擎边界），优先级让位 F1。

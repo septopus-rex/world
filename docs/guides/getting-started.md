@@ -38,7 +38,7 @@ engine.start();                 // rAF 主循环;测试用 engine.step(1/60) 确
 
 - **数据流**:`IDataSource` → 地块 raw(纯数据,见协议)→ ECS 实体 → 渲染。
   宿主监听 `engine.on('block.need', …)` 按需喂块——参考实现
-  `client/desktop/src/lib/DesktopLoader.ts` 是完整样例(流式 5×5、草稿覆盖、
+  `client/core/src/lib/DesktopLoader.ts` 是完整样例(流式 5×5、草稿覆盖、
   关卡装载、AI 造物通道)。
 - **确定性**:`engine.step(dt)` 固定步进 = headless 测试的地基
   (`engine/tests/` 全部无 GPU 运行)。
@@ -51,7 +51,7 @@ engine.start();                 // rAF 主循环;测试用 engine.step(1/60) 确
 [protocol/cn/adjunct-types.md](../../protocol/cn/adjunct-types.md))。三条路:
 
 1. **编辑器**:客户端 Edit 模式,palette 放置 + 表单调参,草稿自动持久化;
-2. **关卡 JSON**:`AuthoredLevel` 文档(样例 `client/desktop/src/levels/*.level.json`
+2. **关卡 JSON**:`AuthoredLevel` 文档(样例 `client/core/src/levels/*.level.json`
    ——跑酷/过山车/RPG 全是纯数据关卡),`?level=<名>` 装载;
 3. **AI 造物**:聊天输入自然语言 → 生成文档 → 预览 → 建造
    (需启动 `services/ai-gateway`,见 [specs/ai-authoring.md](../plan/specs/ai-authoring.md))。

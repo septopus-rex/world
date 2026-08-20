@@ -1,6 +1,6 @@
 # 用 SPP 搭建过山车 — 设计文档（Coaster via SPP）
 
-> **状态**：**已实现（2026-06）**——落点：`plugins/adjunct/adjunct_track.ts`（c1 track adjunct）+ `core/spp/CoasterTheme.ts`（coaster theme）+ `core/systems/CoasterSystem.ts`（World.ts 注册）+ 关卡 `client/desktop/src/levels/coaster.level.json` + e2e `client/desktop/e2e/coaster.spec.ts`。本文把"用 SPP 表达过山车"拆成可落地的部件 + 分期（保留为设计记录）。
+> **状态**：**已实现（2026-06）**——落点：`plugins/adjunct/adjunct_track.ts`（c1 track adjunct）+ `core/spp/CoasterTheme.ts`（coaster theme）+ `core/systems/CoasterSystem.ts`（World.ts 注册）+ 关卡 `client/core/src/levels/coaster.level.json` + e2e `client/desktop/e2e/coaster.spec.ts`。本文把"用 SPP 表达过山车"拆成可落地的部件 + 分期（保留为设计记录）。
 > **前提认知**：SPP 管的是**连通/拓扑**(哪些面连通)，**几何如何实现交给 theme**(可插拔)。
 > 所以一段轨道 = 一个 cell + "两个开放面"，开放面对决定这段是直轨/弯轨/坡轨；
 > theme 把"面对"渲成对应的 **tube 几何**。SPP 建"轨道"，一个运动系统让"车"跑起来。

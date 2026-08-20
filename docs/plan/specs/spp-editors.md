@@ -36,7 +36,7 @@ Status: **设计（未实现）** · 2026-07-06 · 过程文档(非规范)
 
 ### 2.1 现状与问题
 
-现有"魔法球"沙盘(`client/desktop/src/scenes/sandboxScene.ts` + `DesktopLoader` sandbox* + `App.tsx`
+现有"魔法球"沙盘(`client/core/src/scenes/sandboxScene.ts` + `DesktopLoader` sandbox* + `App.tsx`
 sandbox-bar)已能:定位 cell、点面循环状态、写回草稿。但**两个耦合要拆**:
 
 1. **state 与 variant 揉在一起**:`FACE_CYCLE`(`sandboxScene.ts:40`)把"实/门/窗/空"写死成

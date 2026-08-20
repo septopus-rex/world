@@ -95,4 +95,77 @@ describe('TumbleSystem — rigid-body tower (rapier)', () => {
         expect(world.getEntitiesWith(['TumbleBlockComponent']).length).toBe(0);
         expect(engine.tumbleState().block).toBeNull();
     });
+
+    // ── placeable: one armed tower PER BLOCK (native-in-world-games.md #4) ────
+
+    /** A block whose b8 game trigger declares a tower — the real data path
+     *  (BlockSystem → game.declare → configure), no host setupTumble. */
+    function towerBlock(layers: number) {
+        return [0, 1, [[0x00b8, [[
+            [5, 5, 3], [8, 8, 1.5], [0, 0, 0], 1, 0,
+            [{
+                type: 'in', oneTime: false,
+                actions: [{
+                    type: 'player', method: 'enterGame',
+                    params: [{ exitPolicy: 'confirm', game: { kind: 'tumble', origin: [8, 8], layers } }],
+                }],
+            }],
+        ]]]], [], 1];
+    }
+
+    function movePlayerTo(engine: any, bx: number, by: number) {
+        const w = engine.getWorld();
+        const eid = w.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0];
+        const t = w.getComponent(eid, 'TransformComponent');
+        const e = w.metrics.septopusToEngine([8, 8, 2], [bx, by]);
+        t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
+        t.dirty = true;
+    }
+
+    it('is placeable: two blocks of tower data build two independent towers, with no host call', async () => {
+        const { engine } = await makeHeadlessEngineWith({ api: api() });
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: towerBlock(9) } as any);
+        engine.injectBlock({ x: 2049, y: 2048, world: 'main', elevation: 0, adjuncts: towerBlock(4) } as any);
+        stepN(engine, 6);   // block init → game.declare → BOTH towers arm themselves
+
+        // The east block declared last. With one `config` field it overwrote the
+        // west one, and the west tower then went silently dead — you walked up and
+        // nothing was built.
+        movePlayerTo(engine, 2048, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 20);
+        expect(engine.tumbleState().block, 'the west tower was built').toEqual([2048, 2048]);
+        expect(engine.tumbleState().standing, '9 layers × 3').toBe(27);
+
+        engine.setMode(SystemMode.Normal, { force: true });
+        stepN(engine, 2);
+        expect(engine.tumbleState().block, 'leaving tears the tower down').toBeNull();
+
+        movePlayerTo(engine, 2049, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 20);
+        expect(engine.tumbleState().block, 'and the east one is its own tower').toEqual([2049, 2048]);
+        expect(engine.tumbleState().standing, '4 layers × 3').toBe(12);
+    });
+
+    it('an identical re-arm does not rebuild a half-pulled tower', async () => {
+        const { engine } = await bootTumble();
+        stepN(engine, 150);
+        expect(engine.tumbleState().standing).toBe(45);
+        engine.tumblePull(1);
+        stepN(engine, 5);
+        expect(engine.tumbleState().pulled, 'a block is out').toBe(1);
+
+        // A block re-load re-emits the SAME declaration every time. Before the
+        // guard, that silently rebuilt the tower under the player.
+        engine.setupTumble({ block: BLOCK, origin: [8, 8] });
+        stepN(engine, 2);
+        expect(engine.tumbleState().pulled, 'the pull survived the re-arm').toBe(1);
+
+        // A GENUINELY different declaration still replaces the tower.
+        engine.setupTumble({ block: BLOCK, origin: [8, 8], layers: 4 });
+        stepN(engine, 20);
+        expect(engine.tumbleState().standing, 'rebuilt at the new height').toBe(12);
+        expect(engine.tumbleState().pulled).toBe(0);
+    });
 });

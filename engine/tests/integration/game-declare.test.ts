@@ -35,9 +35,11 @@ describe('game.declare — native game armed from block DATA (P2)', () => {
 
         expect(seen.length, 'game.declare emitted from block data').toBe(1);
         const sys: any = world.systems.findSystemByName('ShootingRangeSystem');
-        expect(sys?.config, 'System ARMED from the event (config set)').toBeTruthy();
-        expect(sys.config.block).toEqual([2048, 2048]);
-        expect(sys.config.targetCount).toBe(5);
+        // Armed PER BLOCK (configs is a Map keyed "x_y"), not one config per System.
+        const armed = sys?.configs?.get('2048_2048');
+        expect(armed, 'System ARMED from the event, under this block key').toBeTruthy();
+        expect(armed.block).toEqual([2048, 2048]);
+        expect(armed.targetCount).toBe(5);
 
         // Enter Game in the declared block (zone from raw[4]=1) → session spawns.
         expect(world.gameZoneActive, 'zone active from raw[4]').toBe(true);

@@ -4,9 +4,9 @@
 > **由来**：用四个案例对抗性验证了这条缝——`PoolSystem`（连续物理）+ `MahjongSystem`（离散回合）+ `ShootingRangeSystem`（一击一反应/运行时改色）+ `TumbleSystem`（叠叠乐/Jenga，**真实刚体物理**）。核心回路已证明通用（对象即 adjunct、System 持逻辑、点击→动作、确定性、`derivedFrom` 防序列化、`destroyAdjunct` 防网格泄漏）。本文记录这些案例**没触及**或刚补上的部分。
 >
 > **Tumble（第 4 案，2026-06-30）—— 这条缝撑得住"引入一个物理库"**：抽积木塔，点击抽块看塌不塌。选型上由 hand-rolled 阈值模型升级为真·刚体（`@dimforge/rapier3d-compat`，引擎首个 Three.js 之外的运行时依赖）——倒塌的涌现手感**就是**玩法，值这个依赖。要点：rapier 是 headless WASM 数学库，落 `core/` **不**破渲染层边界；每局跑**独立 scoped world**（仅本塔 ~45 块 + 地面，进入建/退出 `.free()`，引擎其余实体不变刚体）；首次需要把刚体**旋转**同步到 mesh（pool 只同步位置）——`TransformComponent.rotation` 是 Euler，core 内手算四元数→Euler-XYZ（`quatToEulerXYZ` 匹配 `THREE.Euler`）。三个坑：rapier 睡眠体抽块后须 `wakeUp()`、`setEntityColor` 须等 mesh 出现后再上色（延迟 `pendingColor`）、yaw=90° 是 XYZ-Euler 万向锁奇点→"倾倒"判定改用四元数算上轴夹角（`snapshot.maxTilt`）。验证：engine `tests/systems/tumble.test.ts`（4）+ e2e `tumble3d.spec.ts`（trigger 进入建 45 块直立木塔→抽支撑→倒塌 maxY 1.99→0.92、maxTilt→π；截图 `tumble3d-standing|toppled.png`）。
-> **三种托管模式**（别混）：**A 外部 app**（GameSetting + GameRuntime + IGameApi + HUD，逻辑零引擎依赖、可服务端跑）·**B 原生 System**（本文，System 持逻辑、对象即 adjunct）·**C 纯数据驱动**（authored 块数据 + 通用 Trigger/Actuator/Flag/Health，**零专用代码**）。**跑酷 = C**（`client/desktop/src/levels/parkour.level.json` + `core/services/AuthoredLevel.ts`，已落地+测；原 `core/levels/parkour.ts` 生成器已退役、冻结为 JSON；移动闯关/机关/门禁类用 C 就够，不该写 System）。选型口诀：**先问能不能 C，不能再上 B，需要服务端权威才上 A**。
+> **三种托管模式**（别混）：**A 外部 app**（GameSetting + GameRuntime + IGameApi + HUD，逻辑零引擎依赖、可服务端跑）·**B 原生 System**（本文，System 持逻辑、对象即 adjunct）·**C 纯数据驱动**（authored 块数据 + 通用 Trigger/Actuator/Flag/Health，**零专用代码**）。**跑酷 = C**（`client/core/src/levels/parkour.level.json` + `core/services/AuthoredLevel.ts`，已落地+测；原 `core/levels/parkour.ts` 生成器已退役、冻结为 JSON；移动闯关/机关/门禁类用 C 就够，不该写 System）。选型口诀：**先问能不能 C，不能再上 B，需要服务端权威才上 A**。
 > **配套**：内容寻址/资源见 `specs/mock-ipfs-resource.md`；可玩化总清单见 `PLAYABLE_CHECKLIST.md`；记忆 `native-in-world-game-pattern.md`。
-> **更新**：2026-07-03 —— **#3 校正已实现**：trigger 承载进入 + per-game `exitPolicy` 三档已落地（b601422，`core/services/Actuator.ts` `asExitPolicy` + e2e `game-trigger.spec.ts`）；`gameId` 路由仍未做。2026-06-30（晚）—— **#3 设计校正**：经讨论确认「写在 block 上的区域门控」**层放错了**——一块只能一个游戏（放不下一排扭蛋机），且把"哪里能玩"和"玩什么+在哪+参数"挤在一层。**校正为**：游戏富声明迁到 **game trigger**（`enterGame` 带 `gameId`/`origin`/`exitPolicy`，一块可多台），block 只留**粗粒度"此处可玩"位**；退出做成 per-game **`exitPolicy` 三档**（`ephemeral` 走出即拆＝现状 / `confirm` 弹框防误触 / `persistent` 存档重入）。**不新增第二个 SystemMode**（玩法门控不变）。文档已按此校正（本文 #3 + `game-mode-entry.md`），**代码已跟进（2026-07，见本行首）**。2026-06-30（早）—— #3 单块 ephemeral 落地（区域门控 Game、复用 GameZoneSystem，反转早先「不挂 Game、在场」决策）+ 打靶第三案例 + 运行时改色（#1 子项 ✅）。2026-06-29 创建。改一项就勾一项并更新本行。
+> **更新**：2026-08-20 —— **#4 已结**：四个原生游戏的 armed config 全部改成 `Map<"x_y",…>` 每块一份 + 「逐字节相同的重复声明不重置进行中的一局」守卫；同日 `CoasterSystem` 从世界单例改为锚定 `world.activeGameBlock`（详见 `coaster-via-spp.md §10`）。2026-07-03 —— **#3 校正已实现**：trigger 承载进入 + per-game `exitPolicy` 三档已落地（b601422，`core/services/Actuator.ts` `asExitPolicy` + e2e `game-trigger.spec.ts`）；`gameId` 路由仍未做。2026-06-30（晚）—— **#3 设计校正**：经讨论确认「写在 block 上的区域门控」**层放错了**——一块只能一个游戏（放不下一排扭蛋机），且把"哪里能玩"和"玩什么+在哪+参数"挤在一层。**校正为**：游戏富声明迁到 **game trigger**（`enterGame` 带 `gameId`/`origin`/`exitPolicy`，一块可多台），block 只留**粗粒度"此处可玩"位**；退出做成 per-game **`exitPolicy` 三档**（`ephemeral` 走出即拆＝现状 / `confirm` 弹框防误触 / `persistent` 存档重入）。**不新增第二个 SystemMode**（玩法门控不变）。文档已按此校正（本文 #3 + `game-mode-entry.md`），**代码已跟进（2026-07，见本行首）**。2026-06-30（早）—— #3 单块 ephemeral 落地（区域门控 Game、复用 GameZoneSystem，反转早先「不挂 Game、在场」决策）+ 打靶第三案例 + 运行时改色（#1 子项 ✅）。2026-06-29 创建。改一项就勾一项并更新本行。
 
 ## 图例
 
@@ -52,7 +52,7 @@
 - [ ] 球号（a7 球面）：贴图绕球面是 decal/UV 问题（非 slot-7 直贴），单列。
 - [ ] 任意动态文字（实时分数/玩家名）：text→canvas 贴图路（仍开放）。
 
-**关键文件**：麻将牌面：`render/MeshFactory.ts`(`fit`/`getGeometry`)、`render/TextureScale.ts`、`core/types/Adjunct.ts`(`MaterialConfig.fit`)、`core/systems/MahjongSystem.ts`(`faceCids`/slot7)、`client/desktop/src/scenes/mahjongFaces.ts`、`client/desktop/src/lib/DesktopLoader.ts`(`mahjongFaceCids`)。运行时改色：`core/utils/Appearance.ts`、`core/components/VisualizationComponents.ts`(`MeshComponent.colorOverride/opacityOverride`)、`core/systems/VisualSyncSystem.ts`、`render/RenderEngine.ts`(`isolateMaterial`)、`core/systems/ShootingRangeSystem.ts`。验证：engine `mahjong.test.ts`(9) + `shooting.test.ts`(8) + e2e `mahjong3d.spec.ts`(3) + `shooting3d.spec.ts`(1，真实点击→绿变红、其余不染)。
+**关键文件**：麻将牌面：`render/MeshFactory.ts`(`fit`/`getGeometry`)、`render/TextureScale.ts`、`core/types/Adjunct.ts`(`MaterialConfig.fit`)、`core/systems/MahjongSystem.ts`(`faceCids`/slot7)、`client/core/src/scenes/mahjongFaces.ts`、`client/core/src/lib/loader/GameBridge.ts`(`injectMahjongFaces`，订阅 `game.declare`)。运行时改色：`core/utils/Appearance.ts`、`core/components/VisualizationComponents.ts`(`MeshComponent.colorOverride/opacityOverride`)、`core/systems/VisualSyncSystem.ts`、`render/RenderEngine.ts`(`isolateMaterial`)、`core/systems/ShootingRangeSystem.ts`。验证：engine `mahjong.test.ts`(9) + `shooting.test.ts`(8) + e2e `mahjong3d.spec.ts`(3) + `shooting3d.spec.ts`(1，真实点击→绿变红、其余不染)。
 
 ## #3 生命周期绑定（load / evict / persist）✅ ephemeral 单块版 ✅ / trigger 声明 + exitPolicy 已实现（2026-07，gameId 路由仍开放）
 
@@ -82,7 +82,7 @@
 - ③ ✅ `block.game` 已降级为粗粒度"此处可玩"位（富声明在 game trigger）。
 - ④ 🟡 `persistent` 档已随 exitPolicy 落地（存档重入，b601422）；**跨多块区域预加载仍开放**（依赖 `coaster-via-spp.md §9.1/M2.5`；`ephemeral` 单块不需要）。
 
-**关键文件**：`core/systems/{Pool,Mahjong,ShootingRange}System.ts`（arm/syncSession/startSession/endSession + playerInBlock）、`core/systems/GameZoneSystem.ts`、`World.setMode` 守卫、`core/services/Actuator.ts`（`enterGame` 带 `exitPolicy` 已实现，`asExitPolicy`；`gameId` 路由待做）、`core/systems/GameRuntimeSystem.ts`（解析管道）、客户端 `client/desktop/src/scenes/{shooting,mahjong3d}Scene.ts`（现 `raw[4]=1`）。验证：engine `shooting.test.ts`（zone-gated spawn + 退出 teardown + 重入 fresh）、e2e `shooting3d.spec.ts`（走上块→无棋子+进入提示→进入→spawn→点击变红→**真实走出 block 自动退出+拆除**→走回重入 fresh）。
+**关键文件**：`core/systems/{Pool,Mahjong,ShootingRange}System.ts`（arm/syncSession/startSession/endSession + playerInBlock）、`core/systems/GameZoneSystem.ts`、`World.setMode` 守卫、`core/services/Actuator.ts`（`enterGame` 带 `exitPolicy` 已实现，`asExitPolicy`；`gameId` 路由待做）、`core/systems/GameRuntimeSystem.ts`（解析管道）、块数据 `client/core/src/blocks/{shooting,pool,tumble,mahjong3d}.block.json`（`raw[4]=1` + b8 game trigger 富声明；**客户端零坐标**）。验证：engine `shooting.test.ts`（zone-gated spawn + 退出 teardown + 重入 fresh）、e2e `shooting3d.spec.ts`（走上块→无棋子+进入提示→进入→spawn→点击变红→**真实走出 block 自动退出+拆除**→走回重入 fresh）。
 
 ## #2 输入只有「单击 → 离散动作」🔲
 
@@ -92,22 +92,28 @@
 
 **方案（草案）**：场内连续/手势输入通道（drag 向量 + hold 时长），供「拖拽瞄准 + 蓄力」一类玩法；保持 System 不直接读输入（经事件）。
 
-## #4 System 是单例，不是每实例 🟡 麻将已改每块一份 ✅ / Pool·Shooting·Tumble 仍是单例
+## #4 System 是单例，不是每实例 ✅ 四个原生游戏 + 过山车都已改每块一份（2026-08-20）
 
-**现状（已核）**：`findTable` = `getEntitiesWith([...Table...])[0]`，单 `tableEid`/`ballEids`。世界里两张桌只追踪一张。
+**曾经的病（已核）**：每个 System 只有**一个** `config` 字段。四个都从 `game.declare` 自臂，
+所以"能放在任意一块"成立，但**放第二台就被最后加载的那块覆盖**——先加载的那台走进去不发牌、
+不摆球、不出靶、不搭塔：**零报错的静默死物**，而且哪台活着取决于块加载顺序。
 
-**方案（草案）**：游戏状态绑到 table 实体（已是组件），System 改为按实体集合迭代，去掉单例字段缓存。
+**修法（四个一致）**：`configs = Map<"x_y", Config>` 每块一份 + `live` 记住哪台在玩，
+走到另一台换局（街机柜模型，同时只有一局）。**外加一条守卫**：块重新 loaded 会重发
+`game.declare`，`configure()` 收到**逐字节相同**的声明必须直接 return——否则玩家在块边缘走一下，
+正在打的一局就被静默重置（球重摆、靶归零、塔重建）。麻将 2026-08-19 先踩到，另三个 2026-08-20 补齐。
 
-**麻将已解决（2026-08-20）**：`MahjongSystem.configs` 是 `Map<"x_y", MahjongConfig>`，
-每块一份；`liveBlock` 记住哪张桌子在玩，走到另一张会换局（街机柜模型，同时只有一局）。
-回归 `integration/mahjong.test.ts`「is placeable」：**同一份桌子数据放两个坐标，各自按自己的
-seed 发牌，来回走都是新局，全程零宿主调用**。
+**「同时只有一个 live 会话」是设计，不是漏网**：`findTable` 仍是 `getEntitiesWith([...Table...])[0]`，
+但同一时刻只可能有一局在跑（`world.activeGameBlock` 是唯一锚），所以这个查找取到的就是那一局。
+早先的草案「System 改为按实体集合迭代」**不再需要**——要并发多局得先有"多个 activeGameBlock"，
+那是多人/多会话议题（#5），不在本项。
 
-**其余三个仍是单个 `config` 字段**——它们也从 `game.declare` 自臂，所以"能放在任意一块"成立，
-但**放第二张就会被最后加载的那块覆盖**，先加载的那张走进去不发牌。要修就照麻将改成 Map；
-没修是因为它们目前各自只有一个演示块，**这条缺口对它们尚未显形**。
+**回归**：`integration/mahjong.test.ts`「is placeable」（同一份桌子数据放两个坐标，各自按自己的
+seed 发牌，来回走都是新局，全程零宿主调用）· `integration/pool.test.ts` ·
+`integration/shooting.test.ts` · `systems/tumble.test.ts` 各两项（「is placeable」+
+「identical re-arm 不重置进行中的一局」）。
 
-**过山车比它们更早一步，已修（2026-08-20）**：`CoasterSystem` 连"单例 config"都算不上——它没有 config，
+**过山车是同一族的另一种走法，也已修（2026-08-20）**：`CoasterSystem` 连"单例 config"都算不上——它没有 config，
 `buildPath` 扫全世界取**第一条** coaster 轨道、path 跨会话缓存，且**完全不问这是哪个块的局**。
 后果不是"放第二台会覆盖"，而是同世界里**任何** Game 区一进去就被弹上轨道（gallery 里那张德州扑克桌
 正中此招），且 `rideActive` 冻结 zone 追踪让玩家走不出去。现改为锚定 `world.activeGameBlock`、

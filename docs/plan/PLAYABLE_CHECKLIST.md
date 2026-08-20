@@ -67,7 +67,7 @@
       已在 `ParkourHUD.tsx`**（本行此前写"计时/计分仍无"，已过期）；其余玩法的计分仍无
 - [x] ✅ `player.setSpawn` 动作（检查点重生）—— `core/services/Actuator.ts` `execSetSpawn` + HealthSystem 检查点重生；`parkour.level.json` 3 处在用
 - [x] ✅ 计时/计分/目标 HUD —— 跑酷 `ParkourHUD`（计时/最佳/完成）· 麻将 `MahjongTableHUD`（呼叫按钮/向听/番种结算）
-- [x] ✅ 至少一关完整 authored 内容（关卡数据 + 通关验证 e2e）—— `client/desktop/src/levels/parkour.level.json` + `coaster.level.json`；e2e `parkour.spec.ts`（断言到达终点）+ `coaster.spec.ts`
+- [x] ✅ 至少一关完整 authored 内容（关卡数据 + 通关验证 e2e）—— `client/core/src/levels/parkour.level.json` + `coaster.level.json`；e2e `parkour.spec.ts`（断言到达终点）+ `coaster.spec.ts`
 - [ ] ⏸️ 多关卡 / 关卡选择 / 进度存档
 
 ### G3 · 创作 → 分享闭环 🔲

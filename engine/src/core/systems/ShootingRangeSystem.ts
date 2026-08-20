@@ -30,21 +30,35 @@ import { setEntityColor } from '../utils/Appearance';
  * mode (castRayFromCamera is null with no GPU, so the click path is e2e-only).
  */
 export class ShootingRangeSystem implements ISystem {
-    private config: ShootingConfig | null = null;   // armed declaration (block + params)
+    /** Armed ranges, keyed "x_y" — ONE PER BLOCK, not one per System. A range is a
+     *  placeable thing: the same block data dropped on two coordinates is two
+     *  ranges, and walking into either must open THAT one. A single `config` field
+     *  (what this used to be) silently makes the LAST-loaded block the only
+     *  playable range in the world — see native-in-world-games.md #4. */
+    private configs = new Map<string, ShootingConfig>();
+    private live: ShootingConfig | null = null;     // which armed range is in play
     private rangeEid: EntityId | null = null;       // live session entity (null = no session)
     private targetEids: EntityId[] = [];
     private interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
     private missReader: import('../events/EventReader').EventReader<'interact.miss'> | null = null;
     private declareReader: import('../events/EventReader').EventReader<'game.declare'> | null = null;
 
+    private static key(block: [number, number]): string { return `${block[0]}_${block[1]}`; }
+
     // ── arm / lifecycle ──────────────────────────────────────────────────────
 
-    /** Arm this block as a shooting range. The session itself spawns when the
-     *  player enters Game mode in this block; re-arming ends any live session and
-     *  replaces the declaration. */
+    /** Arm THIS BLOCK as a shooting range (other blocks keep their own). The
+     *  session itself spawns when the player enters Game mode in this block;
+     *  re-arming with DIFFERENT params replaces the declaration and restarts a
+     *  round in progress. */
     public configure(world: World, config: ShootingConfig): void {
-        this.endSession(world);
-        this.config = config;
+        const key = ShootingRangeSystem.key(config.block);
+        const prev = this.configs.get(key);
+        // Block loads re-emit game.declare; an identical re-arm must NOT reset a
+        // round in progress just because the player stepped near a block edge.
+        if (prev && JSON.stringify(prev) === JSON.stringify(config)) return;
+        this.configs.set(key, config);
+        if (this.live && ShootingRangeSystem.key(this.live.block) === key) this.endSession(world);
         this.syncSession(world); // start immediately if already in Game mode here
     }
 
@@ -55,21 +69,20 @@ export class ShootingRangeSystem implements ISystem {
      *  is up; the block-loaded guard tears it down if the player wanders far enough
      *  to evict it (so no dangling pieces either way). Called every frame + on arm. */
     private syncSession(world: World): void {
-        const c = this.config;
         const a = world.activeGameBlock;
+        const c = a ? this.configs.get(ShootingRangeSystem.key(a as [number, number])) : undefined;
         const want = c != null
             && world.mode === SystemMode.Game
-            && a != null && a[0] === c.block[0] && a[1] === c.block[1]
             && this.findBlock(world, c.block) != null;
-        if (want && this.rangeEid == null) this.startSession(world);
+        // Walking from one range straight into another swaps the session.
+        if (want && this.rangeEid != null && this.live !== c) this.endSession(world);
+        if (want && this.rangeEid == null) this.startSession(world, c!);
         else if (!want && this.rangeEid != null) this.endSession(world);
     }
 
     /** Build the range: spawn a row of a7 sphere targets (baked green) + the
      *  scoreboard, and start the round timer. */
-    private startSession(world: World): void {
-        const config = this.config;
-        if (!config) return;
+    private startSession(world: World, config: ShootingConfig): void {
         const blockEid = this.findBlock(world, config.block);
         if (blockEid == null) return;
         const bs = world.systems.findSystemByName('BlockSystem') as any;
@@ -90,6 +103,7 @@ export class ShootingRangeSystem implements ISystem {
             litTime: config.litTime ?? 1.2,
         };
         this.rangeEid = world.createEntity();
+        this.live = config;
         world.addComponent(this.rangeEid, 'ShootingRangeComponent', range);
         // A gallery is played at RANGE — lift the world's 3.5 m hand-reach gate for
         // the duration (World.interactReach). Unbounded is safe here: fireAtEntity
@@ -132,6 +146,7 @@ export class ShootingRangeSystem implements ISystem {
         world.interactReach = null;   // back to the world's hand-reach gate
         this.targetEids = [];
         this.rangeEid = null;
+        this.live = null;
         this.interactReader = null;
         this.missReader = null;
     }

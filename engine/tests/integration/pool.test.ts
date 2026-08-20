@@ -133,4 +133,86 @@ describe('3D pool (PoolSystem)', () => {
         const after = w.getComponent(eid, 'TransformComponent').position;
         expect(Math.hypot(after[0] - before[0], after[2] - before[2])).toBeGreaterThan(0.05);
     });
+
+    // ── placeable: one armed table PER BLOCK (native-in-world-games.md #4) ────
+
+    /** A block whose b8 game trigger declares a pool table — the real data path
+     *  (BlockSystem → game.declare → PoolSystem.configure), no host setupPool. */
+    function tableBlock(bedW: number) {
+        return [0, 1, [[0x00b8, [[
+            [5, 5, 3], [8, 8, 1.5], [0, 0, 0], 1, 0,
+            [{
+                type: 'in', oneTime: false,
+                actions: [{
+                    type: 'player', method: 'enterGame',
+                    params: [{ exitPolicy: 'confirm', game: { kind: 'pool', origin: [8, 8], bedW, bedD: 4, bedSurfaceZ: 0.95, ballR: 0.12, pocketR: 0.22, friction: 0.55 } }],
+                }],
+            }],
+        ]]]], [], 1];
+    }
+
+    function movePlayerTo(engine: any, bx: number, by: number) {
+        const w = engine.getWorld();
+        const eid = w.getEntitiesWith(['TransformComponent', 'InputStateComponent'])[0];
+        const t = w.getComponent(eid, 'TransformComponent');
+        const e = w.metrics.septopusToEngine([8, 8, 2], [bx, by]);
+        t.position[0] = e[0]; t.position[1] = e[1]; t.position[2] = e[2];
+        t.dirty = true;
+    }
+
+    function tableOf(engine: any) {
+        const w = engine.getWorld();
+        const eid = w.getEntitiesWith(['PoolTableComponent'])[0];
+        return eid != null ? w.getComponent(eid, 'PoolTableComponent') : null;
+    }
+
+    it('is placeable: two blocks of table data arm two independent tables, with no host call', async () => {
+        const engine = await makeHeadlessEngine();
+        engine.injectBlock({ x: 2048, y: 2048, world: 'main', elevation: 0, adjuncts: tableBlock(7) } as any);
+        engine.injectBlock({ x: 2049, y: 2048, world: 'main', elevation: 0, adjuncts: tableBlock(3) } as any);
+        stepN(engine, 4);   // block init → game.declare → BOTH tables arm themselves
+
+        // The east block declared last. With one `config` field it overwrote the
+        // west one, and the west table then went silently dead: you walked up, the
+        // zone opened, you entered Game — and nothing racked.
+        movePlayerTo(engine, 2048, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        expect(tableOf(engine)?.block, 'the west table racked').toEqual([2048, 2048]);
+        expect(tableOf(engine)?.bedW, 'with its own bed size').toBe(7);
+
+        engine.setMode(SystemMode.Normal, { force: true });
+        stepN(engine, 2);
+        expect(tableOf(engine), 'leaving clears the table').toBeNull();
+
+        movePlayerTo(engine, 2049, 2048);
+        engine.setMode(SystemMode.Game, { force: true });
+        stepN(engine, 2);
+        expect(tableOf(engine)?.block, 'and the east one is its own table').toEqual([2049, 2048]);
+        expect(tableOf(engine)?.bedW).toBe(3);
+    });
+
+    it('an identical re-arm does not re-rack a table mid-shot', async () => {
+        const engine = await bootPool();
+        const racked = balls(engine)[0].x;
+        engine.poolShoot(0, 1);                 // strike east
+        stepN(engine, 20);
+        const moved = balls(engine)[0].x;
+        expect(Math.abs(moved - racked), 'the cue is under way').toBeGreaterThan(0.5);
+
+        // A block re-load re-emits the SAME declaration every time. Before the
+        // guard this re-racked the table under the player mid-shot.
+        engine.setupPool({ ...CFG });
+        stepN(engine, 1);
+        // Still rolling from where it was, not back on the spot (it keeps moving,
+        // so assert "not re-racked" rather than an exact position).
+        expect(balls(engine)[0].x, 'the shot survived the re-arm').toBeGreaterThan(moved - 0.01);
+        expect(Math.abs(balls(engine)[0].x - racked), 'and was NOT put back on the spot').toBeGreaterThan(0.5);
+
+        // A GENUINELY different declaration still replaces the table.
+        engine.setupPool({ ...CFG, bedW: 8 });
+        stepN(engine, 2);
+        expect(tableOf(engine)?.bedW).toBe(8);
+        expect(balls(engine)[0].x, 'fresh rack on the new bed').toBeCloseTo(8 - 8 * 0.25, 5);
+    });
 });

@@ -38,21 +38,35 @@ export interface PoolConfig {
 }
 
 export class PoolSystem implements ISystem {
-    private config: PoolConfig | null = null;   // armed declaration (block + params)
+    /** Armed tables, keyed "x_y" — ONE PER BLOCK, not one per System. A pool table
+     *  is a placeable thing: the same block data dropped on two coordinates is two
+     *  tables, and walking to either must rack THAT one. A single `config` field
+     *  (what this used to be) silently makes the LAST-loaded block the only
+     *  playable table in the world — see native-in-world-games.md #4. */
+    private configs = new Map<string, PoolConfig>();
     private declareReader: import('../events/EventReader').EventReader<'game.declare'> | null = null;
     private ballEids: EntityId[] = [];
     private tableEid: EntityId | null = null;    // live session (null = no session)
+    private live: PoolConfig | null = null;      // which armed table is in play
+
+    private static key(block: [number, number]): string { return `${block[0]}_${block[1]}`; }
 
     // ── arm / lifecycle ──────────────────────────────────────────────────────
 
-    /** Arm this block as a pool table. The balls spawn when the player ENTERS Game
+    /** Arm THIS BLOCK as a pool table (other blocks keep their own). The balls
+     *  spawn when the player ENTERS Game
      *  mode in this block, and tear down on leaving (Game exit / step off the block
      *  → GameZoneSystem reverts to Normal) — the game is scoped to the zone, so
      *  walking away ends it cleanly with nothing left to evict (#3). The armed
      *  config persists across eviction so re-entering re-racks. */
     public configure(world: World, config: PoolConfig): void {
-        this.endSession(world);
-        this.config = config;
+        const key = PoolSystem.key(config.block);
+        const prev = this.configs.get(key);
+        // Block loads re-emit game.declare; an identical re-arm must NOT re-rack a
+        // table mid-shot just because the player stepped near a block edge.
+        if (prev && JSON.stringify(prev) === JSON.stringify(config)) return;
+        this.configs.set(key, config);
+        if (this.live && PoolSystem.key(this.live.block) === key) this.endSession(world); // re-arming the table in play re-racks it
         this.syncSession(world); // start immediately if already in Game mode here
     }
 
@@ -62,21 +76,20 @@ export class PoolSystem implements ISystem {
      *  'confirm' round survives stepping off; the load guard cleans up on evict).
      *  Called every frame + on (re)arm. */
     private syncSession(world: World): void {
-        const c = this.config;
         const a = world.activeGameBlock;
+        const c = a ? this.configs.get(PoolSystem.key(a as [number, number])) : undefined;
         const want = c != null
             && world.mode === SystemMode.Game
-            && a != null && a[0] === c.block[0] && a[1] === c.block[1]
             && this.findBlock(world, c.block) != null;
-        if (want && this.tableEid == null) this.startSession(world);
+        // Walking from one table straight to another swaps the session.
+        if (want && this.tableEid != null && this.live !== c) this.endSession(world);
+        if (want && this.tableEid == null) this.startSession(world, c!);
         else if (!want && this.tableEid != null) this.endSession(world);
     }
 
     /** Build the table + rack: spawn a7 sphere ball entities and tag them with
      *  PoolBallComponent, create the PoolTableComponent. */
-    private startSession(world: World): void {
-        const config = this.config;
-        if (!config) return;
+    private startSession(world: World, config: PoolConfig): void {
         const blockEid = this.findBlock(world, config.block);
         if (blockEid == null) return;
         const bs = world.systems.findSystemByName('BlockSystem') as any;
@@ -96,6 +109,7 @@ export class PoolSystem implements ISystem {
             finished: false,
         };
         this.tableEid = world.createEntity();
+        this.live = config;
         world.addComponent(this.tableEid, 'PoolTableComponent', table);
 
         const r = config.ballR;
@@ -308,5 +322,6 @@ export class PoolSystem implements ISystem {
         if (this.tableEid != null) world.destroyEntity?.(this.tableEid);
         this.ballEids = [];
         this.tableEid = null;
+        this.live = null;
     }
 }

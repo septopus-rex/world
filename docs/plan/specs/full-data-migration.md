@@ -5,7 +5,7 @@
 
 ## 0. 为什么要做这件事
 
-当前引擎的世界内容有相当一部分**不在块数据里**,而是由客户端 TypeScript（`client/desktop/src/scenes/*.ts`、`DesktopLoader` 的镜像几何、`DEMO_ASSETS` 清单）在运行时生成。这在单引擎单机是能跑的,但它**堵死了两条路**:
+当前引擎的世界内容有相当一部分**不在块数据里**,而是由客户端 TypeScript（`client/core/src/scenes/*.ts`、`DesktopLoader` 的镜像几何、`DEMO_ASSETS` 清单）在运行时生成。这在单引擎单机是能跑的,但它**堵死了两条路**:
 
 1. **上链**:链上只存数据。若世界要靠客户端代码才能拼出来,那"同一份数据必解出同一个世界"就不成立——链上拿到的块是空的或不完整的。
 2. **跨引擎复用**:我们在评估用 Rust 的 **bevy** 做第二个解析引擎。一个干净房间引擎只会读「块数据 + 协议」,它不会执行我们的 TS。凡是"配置外的隐藏处理",在 bevy 里就是缺失的世界。
@@ -113,14 +113,14 @@
 - **原生游戏布局入块数据 + System/loader 从块数据读初始布局 + 删 `DesktopLoader` 镜像几何**（A2）。先挑最简单的 shooting 做实证,跑通"布局进数据 → System 读数据 → 删镜像"这条链,再推广。
 - **进展(2026-07-08)**:
   - ✅ **refine 冻结**:`refineScene.ts` 删除 → `src/levels/refine.level.json`(spp-refine e2e 绿)。
-  - ✅ **`game.declare` 数据驱动链**:b8 game trigger 的 `enterGame params[0].game = {kind,…}` 即富声明;BlockSystem 块初始化时发 `game.declare` 事件,匹配的游戏 System 拉 reader 自臂(`configure` from data)。**shooting / pool / tumble 三个已接**,loader 的 `setupShooting3D/setupPool3D/setupTumble3D` 镜像全删(headless `game-declare.test.ts` + shooting3d/pool3d/tumble3d e2e 全绿)。mahjong3d 暂缓:牌面=客户端生成图片异步 ingest CAS(host 资源关注点),待资源清单数据化后回收。
+  - ✅ **`game.declare` 数据驱动链**:b8 game trigger 的 `enterGame params[0].game = {kind,…}` 即富声明;BlockSystem 块初始化时发 `game.declare` 事件,匹配的游戏 System 拉 reader 自臂(`configure` from data)。**shooting / pool / tumble 三个已接**,loader 的 `setupShooting3D/setupPool3D/setupTumble3D` 镜像全删(headless `game-declare.test.ts` + shooting3d/pool3d/tumble3d e2e 全绿)。**mahjong3d 2026-08-20 补齐**——它卡在"牌面=客户端生成图片异步 ingest CAS",解法是把混在一起的两件事拆开:**桌子在哪 = 块数据**(b8 声明),**牌面长什么样 = 世界资源**(`Engine.setMahjongFaces`,一次注入、所有桌子共用,订阅 `game.declare` 惰性生成);`mahjong3dScene.ts` 删除。同日四个 System 的 armed config 一并改成 `Map<"x_y",…>` 每块一份。
   - ✅ **demoScene 内容 → `src/levels/demo-block.json`**:先把触发器目标全改**块相对**(`adj_~_~_…`,trigger e2e 5/5 绿)→ 冻结 → 出生块 registry / `stampTestScene` / worldHub demo-embed 三处消费者共用一份 JSON(克隆服务);`demoScene.ts` 311→62 行只剩资产清单+常量(boot/inventory/book/world-hub/engine-features/persistence e2e 全绿)。
   - ✅ **maze → `src/blocks/maze.block.json`**:carveMaze 的种子是写死的 → 按「一次性生成→冻结」准则冻结(49 个 b6 胞元源行 + 大理石装饰;引擎加载时照常展开、只存源);`mazeScene.ts` 只剩常量(maze e2e 4/4 绿)。**P3 注**:maze 不做 motif 模板——motif 现只发 a2 且派生行不再二次展开(嵌套源展开是新原语,YAGNI);要参数化迷宫时再议。
   - ✅ **剩余家具全部冻结 + 防复发规矩(2026-07-08)**:shooting/pool/tumble/mahjong/mahjong3d/hub
     六块家具冻结为 `src/blocks/*.block.json`(game 标志原样保留:pool=43、mahjong=42 外部 app id);
     五个 scene 文件收缩为纯常量,worldHub 的 `hubBlockRaw()` 退役(hub 块=数据,`portal()` 只服务
     include overlay 的返回门);registry 全部改为 JSON 克隆服务。**规矩落两处**:
-    `client/desktop/src/scenes/README.md`(诱惑点,内容放哪/本文件夹只允许常量清单·组合胶水·工具)
+    `client/core/src/scenes/README.md`(诱惑点,内容放哪/本文件夹只允许常量清单·组合胶水·工具)
     + 根 CLAUDE.md 开发注意事项(内容=数据纪律)。`scenes/` 从此零世界内容。
   - ✅ **数据目录约定(2026-07-08)**:一种数据一个文件夹 + 后缀标类型(沿 stylepacks 先例)——
     `src/levels/*.level.json`(关卡文档:出生点+多块+include)· `src/blocks/*.block.json`

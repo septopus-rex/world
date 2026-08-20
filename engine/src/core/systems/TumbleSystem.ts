@@ -71,7 +71,13 @@ export interface TumbleConfig {
 }
 
 export class TumbleSystem implements ISystem {
-    private config: TumbleConfig | null = null;     // armed declaration
+    /** Armed towers, keyed "x_y" — ONE PER BLOCK, not one per System. A tower is a
+     *  placeable thing: the same block data dropped on two coordinates is two
+     *  towers, and walking to either must build THAT one. A single `config` field
+     *  (what this used to be) silently makes the LAST-loaded block the only
+     *  playable tower in the world — see native-in-world-games.md #4. */
+    private configs = new Map<string, TumbleConfig>();
+    private live: TumbleConfig | null = null;        // which armed tower is in play
     private declareReader: import('../events/EventReader').EventReader<'game.declare'> | null = null;
     private rapier: any = null;                      // scoped RAPIER.World (null = no session)
     private towerEid: EntityId | null = null;        // live session marker
@@ -79,14 +85,22 @@ export class TumbleSystem implements ISystem {
     private pendingColor = new Map<EntityId, number>(); // block → wood tone, applied once its mesh exists
     private interactReader: import('../events/EventReader').EventReader<'interact.primary'> | null = null;
 
+    private static key(block: [number, number]): string { return `${block[0]}_${block[1]}`; }
+
     // ── arm / lifecycle (mirrors PoolSystem) ─────────────────────────────────
 
-    /** Arm this block as a tumble tower. The tower spawns when the player ENTERS
-     *  Game mode in this block and tears down on leaving; the armed config persists
-     *  across eviction so re-entering builds a fresh tower (arcade-cabinet model). */
+    /** Arm THIS BLOCK as a tumble tower (other blocks keep their own). The tower
+     *  spawns when the player ENTERS Game mode in this block and tears down on
+     *  leaving; the armed config persists across eviction so re-entering builds a
+     *  fresh tower (arcade-cabinet model). */
     public configure(world: World, config: TumbleConfig): void {
-        this.endSession(world);
-        this.config = config;
+        const key = TumbleSystem.key(config.block);
+        const prev = this.configs.get(key);
+        // Block loads re-emit game.declare; an identical re-arm must NOT rebuild a
+        // half-pulled tower just because the player stepped near a block edge.
+        if (prev && JSON.stringify(prev) === JSON.stringify(config)) return;
+        this.configs.set(key, config);
+        if (this.live && TumbleSystem.key(this.live.block) === key) this.endSession(world);
         initTumblePhysics();          // start the WASM load now so it's ready by entry
         this.syncSession(world);
     }
@@ -96,22 +110,21 @@ export class TumbleSystem implements ISystem {
      *  (keyed on world.activeGameBlock, not the player's live position, so a
      *  'confirm' round survives stepping off; the load guard cleans up on evict). */
     private syncSession(world: World): void {
-        const c = this.config;
         const a = world.activeGameBlock;
+        const c = a ? this.configs.get(TumbleSystem.key(a as [number, number])) : undefined;
         const want = c != null
             && _rapierReady
             && world.mode === SystemMode.Game
-            && a != null && a[0] === c.block[0] && a[1] === c.block[1]
             && this.findBlock(world, c.block) != null;
-        if (want && this.towerEid == null) this.startSession(world);
+        // Walking from one tower straight to another swaps the session.
+        if (want && this.towerEid != null && this.live !== c) this.endSession(world);
+        if (want && this.towerEid == null) this.startSession(world, c!);
         else if (!want && this.towerEid != null) this.endSession(world);
     }
 
     // ── build ─────────────────────────────────────────────────────────────────
 
-    private startSession(world: World): void {
-        const c = this.config;
-        if (!c) return;
+    private startSession(world: World, c: TumbleConfig): void {
         const blockEid = this.findBlock(world, c.block);
         if (blockEid == null) return;
         const bs = world.systems.findSystemByName('BlockSystem') as any;
@@ -150,6 +163,7 @@ export class TumbleSystem implements ISystem {
             pulled: 0, toppled: false, settled: false,
         };
         this.towerEid = world.createEntity();
+        this.live = c;
         world.addComponent(this.towerEid, 'TumbleTowerComponent', tower);
 
         // Half-extents are in the block's LOCAL frame (long axis = X); odd layers
@@ -340,9 +354,9 @@ export class TumbleSystem implements ISystem {
         tower.settled = snap.settled;
     }
 
-    private layerHeight(): number { return (this.config?.blockHt ?? 0.14); }
+    private layerHeight(): number { return (this.live?.blockHt ?? 0.14); }
     private footprintRadius(): number {
-        const c = this.config; const L = c?.blockLen ?? 0.72;
+        const c = this.live; const L = c?.blockLen ?? 0.72;
         return L; // a piece more than one block-length off the central axis = fallen off
     }
 
@@ -377,6 +391,7 @@ export class TumbleSystem implements ISystem {
         this.pendingColor.clear();
         if (this.rapier) { this.rapier.free(); this.rapier = null; }
         if (this.towerEid != null) { world.destroyEntity?.(this.towerEid); this.towerEid = null; }
+        this.live = null;
     }
 }
 

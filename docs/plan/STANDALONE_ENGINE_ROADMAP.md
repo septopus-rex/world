@@ -189,7 +189,7 @@ BlockSystem.load ──同步──→ Map 命中则用草稿,否则 mock
 | SPP 编解码 | `engine/src/core/protocol/CollapseCodec.ts` |
 | 触发器执行(P2) | `engine/src/core/systems/TriggerSystem.ts` |
 | 编辑流水线 | `engine/src/core/systems/EditSystem.ts` |
-| 客户端数据装载器 | `client/desktop/src/lib/DesktopLoader.ts` |
+| 客户端数据装载器 | `client/core/src/lib/DesktopLoader.ts` |
 | 上链发布接口(P4 可选) | `engine/src/core/services/IChainPublisher.ts` |
 | 引擎收敛规格(P5) | `docs/plan/specs/phase0-engine-consolidation.md` |
 | 新增(P1) | `services/DraftStore.ts`(idb)、`services/LocalDataSource.ts`、`services/ExportService.ts`、`engine/src/core/services/IdbDraftBackend.ts`(IDB 后端,实际落点) |
