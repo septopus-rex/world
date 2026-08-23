@@ -362,5 +362,53 @@
       2,
       2
     ]
+  },
+  {
+    "id": 64,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/column-pillar.glb"
+  },
+  {
+    "id": 65,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/arch-gate.glb"
+  },
+  {
+    "id": 66,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/fence-railing.glb"
+  },
+  {
+    "id": 67,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/lantern-lamp.glb"
+  },
+  {
+    "id": 68,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/bench-chair.glb"
+  },
+  {
+    "id": 69,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/plant-pot.glb"
+  },
+  {
+    "id": 70,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pine-tree.glb"
+  },
+  {
+    "id": 71,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/bush-shrub.glb"
   }
 ]
