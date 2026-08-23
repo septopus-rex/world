@@ -301,15 +301,19 @@ export class MeshFactory {
             return uentry.res;
         }
 
-        // Textured surfaces get a FRESH, un-cached, un-shared material. AdjunctFactory
-        // assigns its .map async per surface; the .map TEXTURE is shared + ref-counted
-        // by ResourceManager and survives material.dispose(). A fresh material is
+        // Textured / PBR surfaces get a FRESH, un-cached, un-shared material. AdjunctFactory
+        // assigns its maps async per surface; textures are shared + ref-counted
+        // by ResourceManager and survive material.dispose(). A fresh material is
         // disposed cleanly on eviction — unlike a process-wide cached material, which
         // would dangle (pointing at a freed texture) after its texture is released.
-        if (config?.texture) {
+        const hasMaps = !!(config?.texture || config?.normalMap || config?.roughnessMap ||
+            config?.metalnessMap || config?.aoMap || config?.emissiveMap || config?.ormMap);
+        if (hasMaps) {
+            const emissive = config?.emissive !== undefined ? new THREE.Color(config.emissive) : undefined;
             const mat = new THREE.MeshStandardMaterial({
                 color, transparent: opacity < 1, opacity, side: THREE.DoubleSide,
                 roughness, metalness,
+                ...(emissive ? { emissive } : {}),
                 // Cast shadows from BACK faces only. With side=DoubleSide, Three would
                 // otherwise default shadowSide=DoubleSide → a surface's own FRONT face
                 // lands in the shadow map and self-shadows it, producing grazing-angle

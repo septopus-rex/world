@@ -85,11 +85,13 @@ export class AdjunctFactory {
                 // (deterministic port of the old engine's replaceFun).
                 if (renderItem.type === 'module' && renderItem.resource) {
                     this.scheduleModuleSwap(world, meshGroup, mesh, renderItem, relativePos);
-                } else if (renderItem.material?.texture) {
-                    // Textured surfaces (box/wall/etc): the mesh shows its colour now;
-                    // load the texture and assign it to the material when ready.
+                } else if (renderItem.material && (renderItem.material.texture || renderItem.material.normalMap ||
+                    renderItem.material.roughnessMap || renderItem.material.metalnessMap ||
+                    renderItem.material.aoMap || renderItem.material.emissiveMap || renderItem.material.ormMap)) {
+                    // Textured / PBR surfaces (box/wall/etc): the mesh shows its colour now;
+                    // load textures and assign to the material channels when ready.
                     // Mutually exclusive with module — a module placeholder must not
-                    // also pin a texture it never shows.
+                    // also pin textures it never shows.
                     this.scheduleTextureSwap(world, meshGroup, mesh, renderItem);
                 }
 
@@ -193,9 +195,9 @@ export class AdjunctFactory {
     }
 
     /**
-     * Async texture application for a textured surface. The mesh renders with its
-     * solid colour immediately; the texture is loaded ONCE per id (shared by
-     * reference across every surface using it) and assigned as .map when ready.
+     * Async texture application for a textured / PBR surface. The mesh renders with its
+     * solid colour immediately; textures are loaded ONCE per id (shared by
+     * reference across every surface using it) and assigned to material channels when ready.
      * Texel density is already handled at the geometry level (size-derived UV
      * tiling in MeshFactory), so a low-res image won't go mosaic on a big face.
      *
@@ -209,25 +211,83 @@ export class AdjunctFactory {
         renderItem: RenderObject
     ): void {
         const rm = (world as any).resourceManager as ResourceManager | undefined;
-        const texId = renderItem.material?.texture as string | undefined;
-        if (!rm || !texId) return;
-        // Texel density is handled by size-derived UV tiling (MeshFactory), so we do
-        // NOT pass a per-surface repeat: a texture is shared by reference, its
-        // `.repeat` is one value per id (taken from the texture record). Per-surface
-        // repeat would silently be first-writer-wins on the shared texture.
-        rm.getTexture(texId).then((tex: any) => {
-            if (this.isHandleRemoved(meshGroup)) return; // evicted mid-load — don't retain
+        const matConfig = renderItem.material;
+        if (!rm || !matConfig) return;
 
-            const mat = (mesh as any).material;
-            const assign = (m: any) => { if (m) { m.map = tex; m.needsUpdate = true; } };
-            if (Array.isArray(mat)) mat.forEach(assign); else assign(mat);
+        const tasks: { id: string; apply: (m: any, tex: any) => void }[] = [];
 
-            rm.retainTexture(texId);
-            const ud = (meshGroup as any).userData ?? ((meshGroup as any).userData = {});
-            ud.loadedTextures = [...(ud.loadedTextures ?? []), texId];
-        }).catch((err: unknown) => {
-            reportError(new ResourceError(`texture ${texId} load failed; keeping solid colour`, { cause: err }), { tag: '[AdjunctFactory]', severity: 'warn' });
-        });
+        if (matConfig.texture) {
+            tasks.push({
+                id: matConfig.texture,
+                apply: (m, tex) => { m.map = tex; }
+            });
+        }
+        if (matConfig.normalMap) {
+            tasks.push({
+                id: matConfig.normalMap,
+                apply: (m, tex) => {
+                    m.normalMap = tex;
+                    if (matConfig.normalScale && m.normalScale) {
+                        m.normalScale.set(matConfig.normalScale[0], matConfig.normalScale[1]);
+                    }
+                }
+            });
+        }
+        if (matConfig.roughnessMap) {
+            tasks.push({
+                id: matConfig.roughnessMap,
+                apply: (m, tex) => { m.roughnessMap = tex; }
+            });
+        }
+        if (matConfig.metalnessMap) {
+            tasks.push({
+                id: matConfig.metalnessMap,
+                apply: (m, tex) => { m.metalnessMap = tex; }
+            });
+        }
+        if (matConfig.aoMap) {
+            tasks.push({
+                id: matConfig.aoMap,
+                apply: (m, tex) => { m.aoMap = tex; }
+            });
+        }
+        if (matConfig.emissiveMap) {
+            tasks.push({
+                id: matConfig.emissiveMap,
+                apply: (m, tex) => { m.emissiveMap = tex; }
+            });
+        }
+        if (matConfig.ormMap) {
+            tasks.push({
+                id: matConfig.ormMap,
+                apply: (m, tex) => {
+                    m.aoMap = tex;
+                    m.roughnessMap = tex;
+                    m.metalnessMap = tex;
+                }
+            });
+        }
+
+        for (const task of tasks) {
+            rm.getTexture(task.id).then((tex: any) => {
+                if (this.isHandleRemoved(meshGroup)) return; // evicted mid-load — don't retain
+
+                const mat = (mesh as any).material;
+                const assign = (m: any) => {
+                    if (m) {
+                        task.apply(m, tex);
+                        m.needsUpdate = true;
+                    }
+                };
+                if (Array.isArray(mat)) mat.forEach(assign); else assign(mat);
+
+                rm.retainTexture(task.id);
+                const ud = (meshGroup as any).userData ?? ((meshGroup as any).userData = {});
+                ud.loadedTextures = [...(ud.loadedTextures ?? []), task.id];
+            }).catch((err: unknown) => {
+                reportError(new ResourceError(`texture ${task.id} load failed; keeping default`, { cause: err }), { tag: '[AdjunctFactory]', severity: 'warn' });
+            });
+        }
     }
 
     /** True if a handle has been removed/disposed (set by RenderEngine.removeHandle). */

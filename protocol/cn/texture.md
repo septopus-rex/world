@@ -8,20 +8,29 @@
 
 ## 1. 范围
 
-- 本协议覆盖表面的**漫反射 / 颜色贴图**（albedo `.map`）。
-- **PBR 多贴图**（法线 / 粗糙度 / 金属度 / AO / 自发光）**不在 v1**，见 §8 路线。
+- 本协议覆盖表面的**漫反射 / 颜色贴图**（albedo `.map`）以及 **PBR 物理贴图通道**（法线 normalMap / 粗糙度 roughnessMap / 金属度 metalnessMap / 环境光遮蔽 aoMap / 自发光 emissiveMap / 复合 ormMap）。
 - 目标三条：**密度恒定**（16m 地板与 1m 箱子一样清晰）、**可上链**（数字 id / CID）、
   **去重共享**（同一张图跨面/跨块共用一个 GPU 纹理，跨引擎逐面可复现）。
 
 ## 2. 引用与解析
 
-- adjunct 用一个**字符串**引用贴图，三种形态：**数字资源 id** | **CIDv1**（`bafk…`）| **URL / data:**。
+- adjunct 用**字符串**引用贴图，三种形态：**数字资源 id** | **CIDv1**（`bafk…`）| **URL / data:**。
 - 解析：数字 id → `IDataSource.texture([id])` → **贴图记录**；CID / URL 直连。
 - **贴图记录** = `{ raw, format, size?, repeat? }`：
   - `raw` — CID / URL / 相对路径，经 `resolveUrl` 落到可加载 URL（CID→内容路由或网关）。
   - `format` — `png` | `jpg`（**须 POT**，见 §4）。
   - `size` — **物理世界尺寸**，见 §3。
   - `repeat` — 可选细乘子，见 §5。
+- **材质 PBR 槽位（MaterialConfig）**：
+  - `texture` / `map` — 基础漫反射颜色贴图（sRGB）
+  - `normalMap` — 法线贴图（切线空间，OpenGL Y+）
+  - `normalScale` — 法线强度缩放 `[x, y]`，默认 `[1, 1]`
+  - `roughnessMap` — 粗糙度贴图（Linear 灰度）
+  - `metalnessMap` — 金属度贴图（Linear 灰度）
+  - `aoMap` — 环境光遮蔽贴图（Linear 灰度）
+  - `emissiveMap` — 自发光贴图（sRGB）
+  - `emissive` — 自发光颜色（十六进制，默认 0x000000）
+  - `ormMap` — 复合 ORM 贴图（R: AO, G: Roughness, B: Metallic）
 - **加载一次、按 id 去重、引用计数释放**（同 id 全场共享一个 `THREE.Texture`）。
 
 ## 3. 世界尺度 `size` —— 一张图铺多大（用 scale 实现）
@@ -71,20 +80,19 @@
 
 ## 7. 材质与确定性
 
-- 材质 `MeshStandardMaterial`；贴图赋 **`.map`**（sRGB albedo）。颜色索引 / hex → 基色 tint（贴图面用白底以显真色）。
+- 材质 `MeshStandardMaterial`；贴图赋 **`.map`**（sRGB albedo），支持 normalMap/roughnessMap 等 PBR 通道。颜色索引 / hex → 基色 tint（贴图面用白底以显真色）。
 - **去重**：同 id 共享一张 `THREE.Texture`；`repeat = 1/size` per-id 一致，故共享安全。仅 world-aligned / 视频 / 运行时改色走 clone-on-write。
 - **确定性**：`size` / 密度 / UV 全部由**数据 + 面尺寸**推导，无随机 → 跨引擎逐面可复现（同 iNFT 性质）。
 
 ## 8. 缺口与路线（v1 之外）
 
-- **PBR 多贴图**：贴图记录 + 材质加 `normal / roughness / metalness / ao / emissive` 槽（v2）。
 - **`material.offset / rotation`**：当前声明未接线；world-aligned 锚定与贴图滚动依赖它，随之实现。
 - **非盒几何 UV**：球 / 柱 / 面 / 楔的世界空间 UV（当前回落 0..1，密度不归一）。
 - **墙 a1 raw 贴图**：当前墙 `raw[7]` 被当**颜色**用，从数据贴不了图（见 §9 勘误）；补 raw 贴图槽或改述。
 
 ## 9. 实现状态 · 迁移 · 勘误
 
-- **已实现**：尺寸驱动 UV（现为全局 `TILE_METERS = 2`）、albedo `.map`、id / CID 解析、去重 + 引用计数、POT 告警、各向异性、sRGB。样例仅 3 张（`checker` id7 / `ground-forest` id1 / `ground-moon` id5）。
+- **已实现**：尺寸驱动 UV（现为全局 `TILE_METERS = 2`）、albedo `.map`、PBR 多贴图通道支持（normal/roughness/metalness/ao/emissive/orm）、id / CID 解析、去重 + 引用计数、POT 告警、各向异性、sRGB。
 - **本规范的变更**：全局 `TILE_METERS = 2` → **贴图 `size`（默认 1m）**；新增 **512 px/m** 纹素密度基准；`[bottom, left]` 锚定；接通 `offset`；补墙贴图。
 - **迁移**：给现有 `checker / ground-forest / ground-moon` 填 `size` 以保观感；按 512 px/m 重出为 POT。
 - **勘误**：[附属物协议 §5](./adjunct.md) 的资源表曾写「图像 `raw[3]` = texture id」——**有误**。`raw[3]` 是**颜色 / 调色板索引**；**贴图在 a2 box 的 `raw[7]`**（可选）。以本协议 + [附属物类型](./adjunct-types.md) 为准。

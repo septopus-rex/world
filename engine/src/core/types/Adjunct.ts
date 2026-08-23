@@ -55,6 +55,14 @@ export interface MaterialConfig {
     unlit?: boolean;                // 无光照（MeshBasicMaterial）：路标/贴花等须恒定可读的图面
     roughness?: number;             // PBR 粗糙度 [0,1]；缺省用引擎默认（见 MeshFactory）
     metalness?: number;             // PBR 金属度 [0,1]；缺省用引擎默认（见 MeshFactory）
+    normalMap?: string;             // 法线贴图资源 id（赋为 .normalMap）
+    normalScale?: [number, number]; // 法线缩放系数，默认 [1, 1]
+    roughnessMap?: string;          // 粗糙度贴图资源 id（赋为 .roughnessMap）
+    metalnessMap?: string;          // 金属度贴图资源 id（赋为 .metalnessMap）
+    aoMap?: string;                 // 环境光遮蔽贴图资源 id（赋为 .aoMap）
+    emissiveMap?: string;           // 自发光贴图资源 id（赋为 .emissiveMap）
+    emissive?: number;              // 自发光颜色（十六进制；默认 0x000000）
+    ormMap?: string;                // 复合 ORM 贴图资源 id（R: AO, G: Roughness, B: Metallic）
 }
 
 /**

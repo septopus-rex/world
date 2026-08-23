@@ -10,8 +10,7 @@
 
 ## 1. Scope
 
-- This protocol covers a surface's **diffuse / color texture** (albedo `.map`).
-- **PBR maps** (normal / roughness / metalness / AO / emissive) are **not in v1** — see §8 roadmap.
+- This protocol covers a surface's **diffuse / color texture** (albedo `.map`) and **PBR physical texture channels** (normalMap, roughnessMap, metalnessMap, aoMap, emissiveMap, ormMap).
 - Three goals: **constant density** (a 16 m floor and a 1 m crate look equally crisp),
   **on-chain capable** (numeric id / CID), and **dedup-shared** (one GPU texture reused across
   faces/blocks, reproducible per-face across engines).
@@ -26,6 +25,16 @@
   - `format` — `png` | `jpg` (**must be POT**, see §4).
   - `size` — **physical world size**, see §3.
   - `repeat` — optional fine multiplier, see §5.
+- **Material PBR Slots (MaterialConfig)**:
+  - `texture` / `map` — Base albedo color map (sRGB)
+  - `normalMap` — Tangent-space normal map (OpenGL Y+)
+  - `normalScale` — Normal strength scale `[x, y]`, default `[1, 1]`
+  - `roughnessMap` — Roughness map (Linear grayscale)
+  - `metalnessMap` — Metalness map (Linear grayscale)
+  - `aoMap` — Ambient occlusion map (Linear grayscale)
+  - `emissiveMap` — Emissive map (sRGB)
+  - `emissive` — Emissive tint color (hex, default 0x000000)
+  - `ormMap` — Packed ORM map (R: AO, G: Roughness, B: Metallic)
 - **Load-once, dedup by id, refcount-released** (all uses of an id share one `THREE.Texture`).
 
 ## 3. World size `size` — how much world one image covers (implemented as scale)
@@ -86,7 +95,7 @@
 
 ## 7. Material & determinism
 
-- Material `MeshStandardMaterial`; texture assigned to **`.map`** (sRGB albedo). Color index / hex →
+- Material `MeshStandardMaterial`; texture assigned to **`.map`** (sRGB albedo), with support for PBR channels (normalMap/roughnessMap/etc). Color index / hex →
   base tint (textured faces use white base so the image shows true).
 - **Dedup**: one `THREE.Texture` shared per id; `repeat = 1/size` is per-id consistent, so sharing is
   safe. Only world-aligned / video / runtime recolour go clone-on-write.
@@ -95,7 +104,6 @@
 
 ## 8. Gaps & roadmap (beyond v1)
 
-- **PBR maps**: add `normal / roughness / metalness / ao / emissive` slots to the record + material (v2).
 - **`material.offset / rotation`**: currently declared but unwired; world-aligned anchoring and
   texture scrolling depend on it, implemented alongside.
 - **Non-box geometry UVs**: world-space UVs for sphere / cylinder / plane / wedge (currently fall back
@@ -105,9 +113,8 @@
 
 ## 9. Implementation status · migration · errata
 
-- **Implemented**: size-derived UV (currently the global `TILE_METERS = 2`), albedo `.map`, id / CID
-  resolution, dedup + refcount, POT warning, anisotropy, sRGB. Only 3 samples exist (`checker` id7 /
-  `ground-forest` id1 / `ground-moon` id5).
+- **Implemented**: size-derived UV (currently the global `TILE_METERS = 2`), albedo `.map`, PBR multi-map channels (normal/roughness/metalness/ao/emissive/orm), id / CID
+  resolution, dedup + refcount, POT warning, anisotropy, sRGB.
 - **This spec's changes**: global `TILE_METERS = 2` → per-texture **`size` (default 1 m)**; add the
   **512 px/m** texel-density baseline; `[bottom, left]` anchoring; wire `offset`; add wall textures.
 - **Migration**: give existing `checker / ground-forest / ground-moon` a `size` to preserve their
