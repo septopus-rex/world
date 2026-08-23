@@ -19,6 +19,7 @@ import { PlayerLighting } from './PlayerLighting';
 import { SkyEnvironment } from './SkyEnvironment';
 import { Picking } from './Picking';
 import { disposeMeshResources, disposeMediaResources, disposePlateResources } from './HandleDisposal';
+import { PostProcessingPass, PostProcessingConfig } from './PostProcessingPass';
 
 export interface RenderEngineConfig {
     containerId: string;
@@ -28,6 +29,8 @@ export interface RenderEngineConfig {
     shadows?: boolean;
     /** Derive an image-based light from the sky (default ON — see SkyEnvironment). */
     ibl?: boolean;
+    /** Post-processing pipeline options (bloom, tone mapping). Default ON. */
+    postprocessing?: PostProcessingConfig;
 }
 
 export enum CameraType {
@@ -44,6 +47,7 @@ export class RenderEngine {
     private mainCamera: THREE.PerspectiveCamera;
     private readonly minimap = new MinimapPass();
     private readonly media = new MediaScreens();
+    private readonly postProcessing: PostProcessingPass;
     private renderer: THREE.WebGLRenderer;
     private container: HTMLElement;
     private stats: Stats | null = null;
@@ -236,7 +240,17 @@ export class RenderEngine {
         // still read against a floor that isn't pitch black.
         this.lighting.setHemisphere(0xffffff, 0x444444, 0.06);
 
-        // 6. Stats (optional performance monitor)
+        // 6. Post-processing pipeline (Selective Bloom, Tone Mapping)
+        this.postProcessing = new PostProcessingPass(
+            this.renderer,
+            this.scene,
+            this.mainCamera,
+            this.container.clientWidth,
+            this.container.clientHeight,
+            config.postprocessing
+        );
+
+        // 7. Stats (optional performance monitor)
         if (config.stats) {
             this.stats = new Stats();
             this.stats.dom.style.position = 'absolute';
@@ -573,21 +587,30 @@ export class RenderEngine {
         if ((this._frameCount++ % 10) === 0) {
             this.media.updateLabels(this.mainCamera.position, this.scene);
         }
-        if (!isMinimapActive) {
-            this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
-            this.renderer.setScissorTest(false);
-            this.renderer.render(this.scene, this.mainCamera);
+        if (this.postProcessing.isEnabled) {
+            this.postProcessing.render();
         } else {
-            // Main pass
             this.renderer.setViewport(0, 0, this.container.clientWidth, this.container.clientHeight);
             this.renderer.setScissorTest(false);
             this.renderer.render(this.scene, this.mainCamera);
+        }
 
+        if (isMinimapActive) {
             // PiP Minimap pass (render/MinimapPass)
             this.minimap.render(this.renderer, this.scene, this.container);
         }
         this.stats?.end();
     }
+
+    /**
+     * Post-processing controls
+     */
+    public setPostProcessingEnabled(on: boolean): void { this.postProcessing.setEnabled(on); }
+    public setBloomEnabled(on: boolean): void { this.postProcessing.setBloomEnabled(on); }
+    public setBloomParams(threshold: number, strength: number, radius: number): void {
+        this.postProcessing.setBloomParams(threshold, strength, radius);
+    }
+    public get isPostProcessingEnabled(): boolean { return this.postProcessing.isEnabled; }
 
     /**
      * Flip the sun's shadow map at runtime — the A/B switch for "how much does
@@ -645,6 +668,7 @@ export class RenderEngine {
         this.mainCamera.aspect = width / height;
         this.mainCamera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
+        this.postProcessing.setSize(width, height);
     }
 
     /**
