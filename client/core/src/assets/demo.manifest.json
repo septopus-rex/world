@@ -410,5 +410,73 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/bush-shrub.glb"
+  },
+  {
+    "id": 72,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/concrete-floor-normal.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 73,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/concrete-floor-roughness.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 74,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/oriental-wood-normal.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 75,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/oriental-wood-roughness.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 76,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/dungeon-stone-normal.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 77,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/dungeon-stone-roughness.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 78,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/terran-wall-normal.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 79,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/terran-wall-roughness.png",
+    "size": [2, 2]
+  },
+  {
+    "id": 80,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/curb-edge.glb"
+  },
+  {
+    "id": 81,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/grass-clump.glb"
   }
 ]

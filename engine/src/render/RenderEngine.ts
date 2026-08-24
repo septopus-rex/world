@@ -606,6 +606,7 @@ export class RenderEngine {
      * Post-processing controls
      */
     public setPostProcessingEnabled(on: boolean): void { this.postProcessing.setEnabled(on); }
+    public setAoEnabled(on: boolean): void { this.postProcessing.setAoEnabled(on); }
     public setBloomEnabled(on: boolean): void { this.postProcessing.setBloomEnabled(on); }
     public setBloomParams(threshold: number, strength: number, radius: number): void {
         this.postProcessing.setBloomParams(threshold, strength, radius);

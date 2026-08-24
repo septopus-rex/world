@@ -1,11 +1,19 @@
 import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 export interface PostProcessingConfig {
     enabled?: boolean;
+    ao?: {
+        enabled?: boolean;
+        radius?: number;
+        distanceExponent?: number;
+        thickness?: number;
+        scale?: number;
+    };
     bloom?: {
         enabled?: boolean;
         threshold?: number;
@@ -17,6 +25,7 @@ export interface PostProcessingConfig {
 /**
  * PostProcessingPass encapsulates the post-processing pipeline:
  * - RenderPass (Base scene render)
+ * - GTAOPass (Ground Truth Ambient Occlusion for natural contact shadows)
  * - UnrealBloomPass (Selective glow for emissive surfaces & lights)
  * - OutputPass (Tone mapping & sRGB color management)
  *
@@ -25,10 +34,12 @@ export interface PostProcessingConfig {
 export class PostProcessingPass {
     private composer: EffectComposer | null = null;
     private renderPass: RenderPass | null = null;
+    private gtaoPass: GTAOPass | null = null;
     private bloomPass: UnrealBloomPass | null = null;
     private outputPass: OutputPass | null = null;
 
     private _enabled: boolean = true;
+    private _aoEnabled: boolean = true;
     private _bloomEnabled: boolean = true;
     private _isSupported: boolean = true;
 
@@ -41,6 +52,7 @@ export class PostProcessingPass {
         config?: PostProcessingConfig
     ) {
         this._enabled = config?.enabled ?? true;
+        this._aoEnabled = config?.ao?.enabled ?? true;
         this._bloomEnabled = config?.bloom?.enabled ?? true;
 
         try {
@@ -60,7 +72,22 @@ export class PostProcessingPass {
             this.renderPass = new RenderPass(this.scene, this.camera);
             this.composer.addPass(this.renderPass);
 
-            // 2. Selective bloom pass (high threshold so only emissive/intense highlights glow)
+            // 2. Ambient Occlusion pass (GTAO) for realistic contact shadow depth
+            if (this._aoEnabled && typeof GTAOPass === 'function') {
+                try {
+                    this.gtaoPass = new GTAOPass(this.scene, this.camera, w, h);
+                    this.gtaoPass.output = GTAOPass.OUTPUT.Default;
+                    this.gtaoPass.enabled = this._aoEnabled;
+                    if (this.gtaoPass.blendIntensity !== undefined) {
+                        this.gtaoPass.blendIntensity = 1.0;
+                    }
+                    this.composer.addPass(this.gtaoPass);
+                } catch {
+                    this.gtaoPass = null;
+                }
+            }
+
+            // 3. Selective bloom pass (high threshold so only emissive/intense highlights glow)
             const threshold = config?.bloom?.threshold ?? 0.85;
             const strength = config?.bloom?.strength ?? 0.35;
             const radius = config?.bloom?.radius ?? 0.4;
@@ -73,7 +100,7 @@ export class PostProcessingPass {
             this.bloomPass.enabled = this._bloomEnabled;
             this.composer.addPass(this.bloomPass);
 
-            // 3. Output pass for tone-mapping & correct sRGB conversion
+            // 4. Output pass for tone-mapping & correct sRGB conversion
             this.outputPass = new OutputPass();
             this.composer.addPass(this.outputPass);
         } catch {
@@ -92,6 +119,13 @@ export class PostProcessingPass {
 
     public setEnabled(enabled: boolean): void {
         this._enabled = enabled;
+    }
+
+    public setAoEnabled(enabled: boolean): void {
+        this._aoEnabled = enabled;
+        if (this.gtaoPass) {
+            this.gtaoPass.enabled = enabled;
+        }
     }
 
     public setBloomEnabled(enabled: boolean): void {
@@ -118,6 +152,9 @@ export class PostProcessingPass {
             const w = Math.max(1, width);
             const h = Math.max(1, height);
             this.composer.setSize(w, h);
+            if (this.gtaoPass) {
+                this.gtaoPass.setSize(w, h);
+            }
             if (this.bloomPass) {
                 this.bloomPass.resolution.set(w, h);
             }
@@ -150,6 +187,7 @@ export class PostProcessingPass {
             try {
                 this.composer.renderTarget1?.dispose();
                 this.composer.renderTarget2?.dispose();
+                this.gtaoPass?.dispose();
                 this.bloomPass?.dispose();
             } catch {
                 // Ignore disposal errors on mock/stub targets
@@ -157,6 +195,7 @@ export class PostProcessingPass {
             this.composer = null;
         }
         this.renderPass = null;
+        this.gtaoPass = null;
         this.bloomPass = null;
         this.outputPass = null;
     }
