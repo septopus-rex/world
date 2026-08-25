@@ -78,6 +78,10 @@ export class PostProcessingPass {
                     this.gtaoPass = new GTAOPass(this.scene, this.camera, w, h);
                     this.gtaoPass.output = GTAOPass.OUTPUT.Default;
                     this.gtaoPass.enabled = this._aoEnabled;
+                    if (config?.ao?.radius !== undefined) (this.gtaoPass as any).radius = config.ao.radius;
+                    if (config?.ao?.distanceExponent !== undefined) (this.gtaoPass as any).distanceExponent = config.ao.distanceExponent;
+                    if (config?.ao?.thickness !== undefined) (this.gtaoPass as any).thickness = config.ao.thickness;
+                    if (config?.ao?.scale !== undefined) (this.gtaoPass as any).scale = config.ao.scale;
                     if (this.gtaoPass.blendIntensity !== undefined) {
                         this.gtaoPass.blendIntensity = 1.0;
                     }
@@ -89,8 +93,8 @@ export class PostProcessingPass {
 
             // 3. Selective bloom pass (high threshold so only emissive/intense highlights glow)
             const threshold = config?.bloom?.threshold ?? 0.85;
-            const strength = config?.bloom?.strength ?? 0.35;
-            const radius = config?.bloom?.radius ?? 0.4;
+            const strength = config?.bloom?.strength ?? 0.45;
+            const radius = config?.bloom?.radius ?? 0.5;
             this.bloomPass = new UnrealBloomPass(
                 new THREE.Vector2(w, h),
                 strength,
