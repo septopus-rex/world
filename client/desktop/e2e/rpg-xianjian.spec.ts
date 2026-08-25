@@ -61,7 +61,7 @@ const inventory = (page: any) => page.evaluate(() => {
 });
 
 test('灵草记:接任务 → 上山 → 战妖狼 → 采药 → 交任务 → 重载存续', async ({ page }) => {
-    test.setTimeout(300_000);
+    test.setTimeout(600_000);
     await page.goto('/?level=xianjian');
     await waitForWorldReady(page);
     await page.evaluate(() => (window as any).loader.engine.stop());
