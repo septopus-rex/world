@@ -1,0 +1,430 @@
+[
+  0,
+  1,
+  [
+    [
+      161,
+      [
+        [
+          [16, 0.4, 10],
+          [8, 0.2, 5],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [16, 0.4, 10],
+          [8, 15.8, 5],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [0.4, 16, 10],
+          [0.2, 8, 5],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [0.4, 16, 10],
+          [15.8, 8, 5],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ]
+      ]
+    ],
+    [
+      162,
+      [
+        [
+          [15.2, 15.2, 0.2],
+          [8, 8, 0.1],
+          [0, 0, 0],
+          3,
+          [4, 4],
+          null,
+          0
+        ],
+        [
+          [6, 3, 0.8],
+          [8, 2, 7.6],
+          [0, 0, 0],
+          10,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [2.6, 2.6, 0.4],
+          [5, 6, 7],
+          [0, 0, 0],
+          12,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [2.6, 2.6, 0.4],
+          [11, 6, 7],
+          [0, 0, 0],
+          12,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [2.8, 2.8, 0.4],
+          [8, 9, 5.5],
+          [0, 0, 0],
+          15,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [2.6, 2.6, 0.4],
+          [5, 12, 4],
+          [0, 0, 0],
+          28,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [2.6, 2.6, 0.4],
+          [11, 12, 4],
+          [0, 0, 0],
+          28,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [4, 3, 0.8],
+          [8, 14.2, 2.6],
+          [0, 0, 0],
+          24,
+          [1, 1],
+          null,
+          1
+        ]
+      ]
+    ],
+    [
+      163,
+      [
+        [0, [8, 2, 9.5], [0, 0, 0], 16766340, 2.5, 8, 0, 0],
+        [0, [8, 9, 8.0], [0, 0, 0], 16733440, 3, 10, 0, 0],
+        [0, [8, 14, 5.5], [0, 0, 0], 2280686, 2.5, 8, 0, 0]
+      ]
+    ],
+    [
+      228,
+      [
+        [
+          [0.7, 0.2, 0.9],
+          [6, 2, 8.4],
+          [0, 0, 0],
+          10,
+          [1, 1],
+          null,
+          null,
+          [
+            "【碎裂地板生存大乱斗 · 派对淘汰规则】",
+            "【规则一 · 脆弱地砖】：每块悬浮地砖被踏中后将触发下坠塌陷！",
+            "【规则二 · 连续飞跃】：在方块坠落前迅速起跳，沿着多层下降阶梯跃向前方！",
+            "【规则三 · 终点胜出】：成功抵达北端金色安全岛的玩家获得冠军奖杯！",
+            "【警戒】：踩空坠落底部虚空将即刻淘汰重生！"
+          ],
+          "派对生存指南"
+        ]
+      ]
+    ],
+    [
+      186,
+      [
+        [
+          [10, 2, 8.0],
+          {
+            "shape": "box",
+            "size": [0.6, 0.6, 1.7],
+            "color": 16753920
+          },
+          {
+            "initial": "idle",
+            "states": {
+              "idle": {
+                "move": { "kind": "stay" }
+              }
+            }
+          },
+          1,
+          100,
+          {
+            "start": "welcome",
+            "nodes": {
+              "welcome": {
+                "text": "【派对裁判】欢迎来到碎裂地板淘汰赛！前方的地砖一踩即坠，你有把握连续飞跃抵达终点吗？",
+                "options": [
+                  {
+                    "label": "看我的连续飞跃，绝对难不倒我！",
+                    "actions": [
+                      {
+                        "type": "player",
+                        "method": "enterGame",
+                        "params": [
+                          {
+                            "exitPolicy": "ephemeral"
+                          }
+                        ]
+                      },
+                      {
+                        "type": "flag",
+                        "target": "party_royale_joined",
+                        "method": "",
+                        "params": [true]
+                      },
+                      {
+                        "type": "system",
+                        "target": "",
+                        "method": "log",
+                        "params": ["【派对启动】裁判宣布比赛开始，向前飞跃吧！"]
+                      }
+                    ],
+                    "to": null
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      ]
+    ],
+    [
+      184,
+      [
+        [
+          [2.6, 2.6, 1.5],
+          [5, 6, 7.5],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "in",
+              "oneTime": true,
+              "actions": [
+                {
+                  "type": "adjunct",
+                  "target": "adj_~_~_162_2",
+                  "method": "moveZ",
+                  "params": [-15]
+                },
+                {
+                  "type": "flag",
+                  "target": "tile_a_collapsed",
+                  "method": "",
+                  "params": [true]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [0.7]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【地板碎裂】左侧 1 号地砖下坠塌陷！"]
+                }
+              ]
+            }
+          ],
+          {
+            "name": "fragile_tile_a"
+          }
+        ],
+        [
+          [2.6, 2.6, 1.5],
+          [11, 6, 7.5],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "in",
+              "oneTime": true,
+              "actions": [
+                {
+                  "type": "adjunct",
+                  "target": "adj_~_~_162_3",
+                  "method": "moveZ",
+                  "params": [-15]
+                },
+                {
+                  "type": "flag",
+                  "target": "tile_b_collapsed",
+                  "method": "",
+                  "params": [true]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [0.7]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【地板碎裂】右侧 1 号地砖下坠塌陷！"]
+                }
+              ]
+            }
+          ],
+          {
+            "name": "fragile_tile_b"
+          }
+        ],
+        [
+          [2.8, 2.8, 1.5],
+          [8, 9, 6.0],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "in",
+              "oneTime": true,
+              "actions": [
+                {
+                  "type": "adjunct",
+                  "target": "adj_~_~_162_4",
+                  "method": "moveZ",
+                  "params": [-15]
+                },
+                {
+                  "type": "flag",
+                  "target": "tile_c_collapsed",
+                  "method": "",
+                  "params": [true]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [0.7]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【地板碎裂】中层核心地砖下坠塌陷！"]
+                }
+              ]
+            }
+          ],
+          {
+            "name": "fragile_tile_c"
+          }
+        ],
+        [
+          [4.0, 3.0, 2.0],
+          [8, 14.2, 3.6],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "touch",
+              "oneTime": true,
+              "actions": [
+                {
+                  "type": "flag",
+                  "target": "party_royale_winner",
+                  "method": "",
+                  "params": [true]
+                },
+                {
+                  "type": "bag",
+                  "target": "tpl_1",
+                  "method": "give",
+                  "params": [1]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [1.0]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【绝地求生冠军】恭喜你穿越所有碎裂地板，夺得派对冠军金杯！"]
+                }
+              ]
+            }
+          ],
+          {
+            "name": "champion_island"
+          }
+        ],
+        [
+          [15.0, 15.0, 3.0],
+          [8, 8, 1.0],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "in",
+              "oneTime": false,
+              "actions": [
+                {
+                  "type": "player",
+                  "method": "damage",
+                  "params": [100]
+                },
+                {
+                  "type": "flag",
+                  "target": "party_royale_eliminated",
+                  "method": "",
+                  "params": [true]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [0.6]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【坠入淘汰区】踩空跌入底部淘汰层！"]
+                }
+              ]
+            }
+          ],
+          {
+            "name": "bottom_hazard"
+          }
+        ]
+      ]
+    ]
+  ],
+  [],
+  1
+]
