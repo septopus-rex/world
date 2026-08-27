@@ -1,0 +1,450 @@
+[
+  0,
+  1,
+  [
+    [
+      161,
+      [
+        [
+          [16, 0.4, 4],
+          [8, 0.2, 2],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [16, 0.4, 4],
+          [8, 15.8, 2],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [0.4, 16, 4],
+          [0.2, 8, 2],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [0.4, 16, 4],
+          [15.8, 8, 2],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [0.4, 10, 4],
+          [6.5, 10.5, 2],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [0.4, 6, 4],
+          [10.5, 12.5, 2],
+          [0, 0, 0],
+          8,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [2.6, 0.4, 3.2],
+          [8.5, 9.5, 1.6],
+          [0, 0, 0],
+          11,
+          [1, 1],
+          null,
+          1
+        ]
+      ]
+    ],
+    [
+      162,
+      [
+        [
+          [15.2, 15.2, 0.2],
+          [8, 8, 0.1],
+          [0, 0, 0],
+          7,
+          [4, 4],
+          null,
+          1
+        ],
+        [
+          [1.8, 1.8, 0.1],
+          [3.5, 7, 0.2],
+          [0, 0, 0],
+          3,
+          [1, 1],
+          null,
+          0
+        ],
+        [
+          [2.2, 2.2, 0.6],
+          [8.5, 13.5, 0.3],
+          [0, 0, 0],
+          28,
+          [1, 1],
+          null,
+          1
+        ],
+        [
+          [1.0, 0.8, 0.7],
+          [8.5, 13.5, 0.95],
+          [0, 0, 0],
+          24,
+          [1, 1],
+          null,
+          1
+        ]
+      ]
+    ],
+    [
+      163,
+      [
+        [0, [8, 3, 3.2], [0, 0, 0], 16766340, 2, 8, 0, 0],
+        [0, [3.5, 11, 3.2], [0, 0, 0], 16733440, 2.5, 8, 0, 0],
+        [0, [8.5, 13.5, 3.2], [0, 0, 0], 2280686, 3, 10, 0, 0]
+      ]
+    ],
+    [
+      228,
+      [
+        [
+          [0.7, 0.2, 0.9],
+          [6, 2, 1.2],
+          [0, 0, 0],
+          28,
+          [1, 1],
+          null,
+          null,
+          [
+            "【地牢探险手册 · 讨伐魔骸领主】",
+            "【步骤一 · 领取任务】：与入口处的老斥候对话，探听地牢情报。",
+            "【步骤二 · 探索西回廊】：穿过尖刺走廊，击败骸骨守卫夺取暗影钥匙。",
+            "【步骤三 · 解封石门】：使用暗影钥匙开启北面封印之门。",
+            "【步骤四 · 获取宝藏】：开启圣殿金宝箱，夺得上古龙晶完成地牢征服！"
+          ],
+          "地牢探险手册"
+        ]
+      ]
+    ],
+    [
+      186,
+      [
+        [
+          [9.5, 3, 0.2],
+          {
+            "shape": "box",
+            "size": [0.6, 0.6, 1.7],
+            "color": 4482252
+          },
+          {
+            "initial": "idle",
+            "states": {
+              "idle": {
+                "move": { "kind": "stay" }
+              }
+            }
+          },
+          1,
+          100,
+          {
+            "start": "intro",
+            "nodes": {
+              "intro": {
+                "text": "勇敢的冒险者！前方是凶险的骸骨地牢，左侧回廊盘踞着守卫，封印大门紧闭。你准备好深入探索了吗？",
+                "options": [
+                  {
+                    "label": "我这就去击败守卫，夺回暗影钥匙！",
+                    "when": {
+                      "!": [{ "var": "flags.dungeon_quest_accepted" }]
+                    },
+                    "actions": [
+                      {
+                        "type": "flag",
+                        "target": "dungeon_quest_accepted",
+                        "method": "",
+                        "params": [true]
+                      },
+                      {
+                        "type": "system",
+                        "target": "",
+                        "method": "log",
+                        "params": ["【任务接受】前往西回廊讨伐骸骨守卫！"]
+                      }
+                    ],
+                    "to": null
+                  },
+                  {
+                    "label": "我已战胜守卫并开启了宝箱！",
+                    "when": {
+                      "and": [
+                        { "==": [{ "var": "flags.dungeon_complete" }, true] },
+                        { "!": [{ "var": "flags.dungeon_quest_reward" }] }
+                      ]
+                    },
+                    "actions": [
+                      {
+                        "type": "flag",
+                        "target": "dungeon_quest_reward",
+                        "method": "",
+                        "params": [true]
+                      },
+                      {
+                        "type": "sound",
+                        "target": 31,
+                        "method": "play",
+                        "params": [1.0]
+                      },
+                      {
+                        "type": "system",
+                        "target": "",
+                        "method": "log",
+                        "params": ["【任务完成】斥候向你致以崇高的敬意，你是真正的地牢英雄！"]
+                      }
+                    ],
+                    "to": null
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        [
+          [3.5, 11, 0.2],
+          {
+            "shape": "box",
+            "size": [0.8, 0.8, 1.9],
+            "color": 12583100
+          },
+          {
+            "initial": "idle",
+            "states": {
+              "idle": {
+                "move": { "kind": "stay" }
+              }
+            }
+          },
+          2,
+          150,
+          {
+            "start": "challenge",
+            "nodes": {
+              "challenge": {
+                "text": "【骸骨守卫】桀桀桀……血肉之躯也敢闯入吾主领地？化为枯骨吧！",
+                "options": [
+                  {
+                    "label": "【拔剑斩击】休得猖狂，看剑！",
+                    "when": {
+                      "!": [{ "var": "flags.guard_defeated" }]
+                    },
+                    "actions": [
+                      {
+                        "type": "flag",
+                        "target": "guard_defeated",
+                        "method": "",
+                        "params": [true]
+                      },
+                      {
+                        "type": "spawn",
+                        "params": [
+                          181,
+                          [
+                            [0, 0, 0.4],
+                            2,
+                            0,
+                            1
+                          ]
+                        ]
+                      },
+                      {
+                        "type": "sound",
+                        "target": 31,
+                        "method": "play",
+                        "params": [0.9]
+                      },
+                      {
+                        "type": "system",
+                        "target": "",
+                        "method": "log",
+                        "params": ["【守卫败退】你击败了骸骨守卫，守卫掉落了暗影钥匙！"]
+                      }
+                    ],
+                    "to": null
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      ]
+    ],
+    [
+      184,
+      [
+        [
+          [2.0, 2.0, 1.5],
+          [3.5, 7, 0.8],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "in",
+              "oneTime": false,
+              "actions": [
+                {
+                  "type": "player",
+                  "method": "damage",
+                  "params": [20]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [0.6]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【踩中陷阱】地面刺出锋利的毒尖刺，受到 20 点伤害！"]
+                }
+              ]
+            }
+          ]
+        ],
+        [
+          [3.0, 2.0, 3.0],
+          [8.5, 9.0, 1.5],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "touch",
+              "oneTime": true,
+              "conditions": {
+                "and": [
+                  { "==": [{ "var": "flags.guard_defeated" }, true] },
+                  { ">=": [{ "var": "inventory.tpl_2" }, 1] }
+                ]
+              },
+              "actions": [
+                {
+                  "type": "bag",
+                  "target": "tpl_2",
+                  "method": "take",
+                  "params": [1]
+                },
+                {
+                  "type": "adjunct",
+                  "target": "adj_~_~_161_6",
+                  "method": "moveZ",
+                  "params": [3.5]
+                },
+                {
+                  "type": "flag",
+                  "target": "gate_unlocked",
+                  "method": "",
+                  "params": [true]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [1.0]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【暗影石门开启】暗影钥匙转动，封印之门升起，露出了内部圣殿！"]
+                }
+              ],
+              "fallbackActions": [
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【门扉紧锁】需要击败西回廊守卫并持有暗影钥匙方可解封！"]
+                }
+              ]
+            }
+          ],
+          {
+            "name": "dungeon_gate"
+          }
+        ],
+        [
+          [2.5, 2.5, 2.5],
+          [8.5, 13.5, 1.2],
+          [0, 0, 0],
+          1,
+          0,
+          [
+            {
+              "type": "touch",
+              "oneTime": true,
+              "conditions": {
+                "==": [{ "var": "flags.gate_unlocked" }, true]
+              },
+              "actions": [
+                {
+                  "type": "flag",
+                  "target": "dungeon_complete",
+                  "method": "",
+                  "params": [true]
+                },
+                {
+                  "type": "bag",
+                  "target": "tpl_3",
+                  "method": "give",
+                  "params": [1]
+                },
+                {
+                  "type": "sound",
+                  "target": 31,
+                  "method": "play",
+                  "params": [1.0]
+                },
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【宝箱开启】你获得了地牢至宝「上古龙晶」，成功通关地牢！"]
+                }
+              ],
+              "fallbackActions": [
+                {
+                  "type": "system",
+                  "target": "",
+                  "method": "log",
+                  "params": ["【宝箱受禁制保护】必须先完全解开封印大门！"]
+                }
+              ]
+            }
+          ],
+          {
+            "name": "treasure_chest"
+          }
+        ]
+      ]
+    ]
+  ],
+  [],
+  1
+]
