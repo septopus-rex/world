@@ -28,6 +28,7 @@ import dynamicBlockJson from '../../blocks/dynamic.block.json';
 import puzzleBlockJson from '../../blocks/puzzle.block.json';
 import platformerBlockJson from '../../blocks/platformer.block.json';
 import dungeonBlockJson from '../../blocks/dungeon.block.json';
+import shootingGalleryBlockJson from '../../blocks/shooting_gallery.block.json';
 import fallbackBlockJson from '../../blocks/fallback.block.json';
 import { buildWorldLevel } from '../../scenes/worldHubScene';
 import { resolveStylePacks, allStylePackIds } from '../../stylepacks';
@@ -122,7 +123,7 @@ export class WorldContent {
         pool: poolBlockJson, tumble: tumbleBlockJson, mahjong: mahjongBlockJson,
         mahjong3d: mahjong3dBlockJson, sandbox: sandboxBlockJson, holdem: holdemBlockJson,
         dynamic: dynamicBlockJson, puzzle: puzzleBlockJson, platformer: platformerBlockJson,
-        dungeon: dungeonBlockJson, fallback: fallbackBlockJson,
+        dungeon: dungeonBlockJson, shooting_gallery: shootingGalleryBlockJson, fallback: fallbackBlockJson,
         // Level documents are ref-able too (include composition, P4.5's local
         // half): the gallery's portal plaza includes these by name.
         xianjian: xianjianLevelJson, coaster: coasterLevelJson, parkour: parkourLevelJson,
