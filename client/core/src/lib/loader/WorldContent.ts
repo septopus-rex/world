@@ -13,6 +13,7 @@ import galleryLevelJson from '../../levels/gallery.level.json';
 import refineLevelJson from '../../levels/refine.level.json';
 import palaceLevelJson from '../../levels/palace.level.json';
 import modularLevelJson from '../../levels/modular.level.json';
+import escapeRoom3x3LevelJson from '../../levels/escape_room_3x3.level.json';
 import defaultLevelJson from '../../levels/default.level.json';
 import defaultWorldJson from '../../worlds/default.world.json';
 import demoBlockJson from '../../blocks/demo.block.json';
@@ -103,6 +104,7 @@ export class WorldContent {
     private isWorld = this.level === 'world';
     private isRefine = this.level === 'refine';
     private isModular = this.level === 'modular';
+    private isEscape3x3 = this.level === 'escape_room_3x3' || this.level === 'escape3x3';
     /** 6×6 palace — the big-contiguous-area streaming stress level
      *  (docs/plan/specs/palace-stress-level.md). */
     private isPalace = this.level === 'palace';
@@ -130,7 +132,7 @@ export class WorldContent {
         // Level documents are ref-able too (include composition, P4.5's local
         // half): the gallery's portal plaza includes these by name.
         xianjian: xianjianLevelJson, coaster: coasterLevelJson, parkour: parkourLevelJson,
-        palace: palaceLevelJson, modular: modularLevelJson,
+        palace: palaceLevelJson, modular: modularLevelJson, escape_room_3x3: escapeRoom3x3LevelJson,
     };
     private resolveContent: ContentResolver = (ref) => WorldContent.CONTENT[ref] ?? null;
 
@@ -144,6 +146,7 @@ export class WorldContent {
         : this.isRefine ? (refineLevelJson as unknown as AuthoredLevel)
         : this.isPalace ? (palaceLevelJson as unknown as AuthoredLevel)
         : this.isModular ? (modularLevelJson as unknown as AuthoredLevel)
+        : this.isEscape3x3 ? (escapeRoom3x3LevelJson as unknown as AuthoredLevel)
         : this.isDemo ? (defaultLevelJson as unknown as AuthoredLevel)
         // Bare entry (no ?level) = the exhibit corridor: ①–⑳ one capability per
         // block, portal plaza at the north end — the curated front door.
