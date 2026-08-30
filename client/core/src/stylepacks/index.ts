@@ -8,6 +8,7 @@ import modern from './modern.stylepack.json';
 import oriental from './oriental.stylepack.json';
 import spanish from './spanish.stylepack.json';
 import terran from './terran.stylepack.json';
+import terranBeveled from './terran_beveled.stylepack.json';
 
 /**
  * StylePack content store — a stand-in for IPFS/CAS. SPP StylePacks (the reusable
@@ -18,7 +19,7 @@ import terran from './terran.stylepack.json';
  * resolved through IDataSource.stylePack(). Spec: spp-protocol-full.md §3.B.
  */
 
-const PACKS: StylePack[] = [brick as StylePack, cyber as StylePack, dungeon as StylePack, garden as StylePack, ice as StylePack, modern as StylePack, oriental as StylePack, spanish as StylePack, terran as StylePack];
+const PACKS: StylePack[] = [brick as StylePack, cyber as StylePack, dungeon as StylePack, garden as StylePack, ice as StylePack, modern as StylePack, oriental as StylePack, spanish as StylePack, terran as StylePack, terranBeveled as StylePack];
 
 /** Deterministic content id over the canonical JSON — a CID stand-in so packs
  *  are addressable by CONTENT, not name (same bytes → same id). Real IPFS would
