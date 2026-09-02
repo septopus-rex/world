@@ -478,5 +478,17 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/grass-clump.glb"
+  },
+  {
+    "id": 82,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/cyber-pillar.glb"
+  },
+  {
+    "id": 83,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/dungeon-bastion.glb"
   }
 ]
