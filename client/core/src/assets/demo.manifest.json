@@ -490,5 +490,11 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/dungeon-bastion.glb"
+  },
+  {
+    "id": 84,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/oriental-lattice-window.glb"
   }
 ]
