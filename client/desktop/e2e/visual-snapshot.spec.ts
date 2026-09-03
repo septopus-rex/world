@@ -48,9 +48,10 @@ test.describe('3D Visual Snapshot Suite - Phase 4 Comprehensive Visual Captures'
         });
         await waitForWorldReady(page);
         await page.evaluate(() => {
+            document.getElementById('init-loader')?.remove();
             (window as any).loader.teleportSeptopus([2048, 2048], [8, 7.5, 1.2]);
         });
-        await page.waitForTimeout(4000);
+        await page.waitForTimeout(20000);
         await page.evaluate(() => (window as any).loader.engine.stop());
         await stepEngine(page, 90);
         await page.screenshot({ path: path.join(SNAP_DIR, '04_enhanced_xianjian_village.png') });

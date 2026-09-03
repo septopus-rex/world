@@ -496,5 +496,36 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/oriental-lattice-window.glb"
+  },
+  {
+    "id": 85,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-tavern-table.glb"
+  },
+  {
+    "id": 86,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-wine-cask.glb"
+  },
+  {
+    "id": 87,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-sign.glb"
+  },
+  {
+    "id": 88,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-herb-stand.glb"
+  },
+  {
+    "id": 89,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-ancient-sword.glb"
   }
 ]
+
