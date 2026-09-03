@@ -526,6 +526,43 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/pal1-ancient-sword.glb"
+  },
+  {
+    "id": 90,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-counter.glb"
+  },
+  {
+    "id": 91,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-stairs.glb"
+  },
+  {
+    "id": 92,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-bonsai.glb"
+  },
+  {
+    "id": 93,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-window.glb"
+  },
+  {
+    "id": 94,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-railing.glb"
+  },
+  {
+    "id": 95,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-door.glb"
   }
 ]
+
 

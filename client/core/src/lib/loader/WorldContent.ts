@@ -14,6 +14,7 @@ import refineLevelJson from '../../levels/refine.level.json';
 import palaceLevelJson from '../../levels/palace.level.json';
 import modularLevelJson from '../../levels/modular.level.json';
 import escapeRoom3x3LevelJson from '../../levels/escape_room_3x3.level.json';
+import pal1InnLevelJson from '../../levels/pal1_inn.level.json';
 import defaultLevelJson from '../../levels/default.level.json';
 import defaultWorldJson from '../../worlds/default.world.json';
 import demoBlockJson from '../../blocks/demo.block.json';
@@ -105,6 +106,7 @@ export class WorldContent {
     private isRefine = this.level === 'refine';
     private isModular = this.level === 'modular';
     private isEscape3x3 = this.level === 'escape_room_3x3' || this.level === 'escape3x3';
+    private isPal1Inn = this.level === 'pal1_inn';
     /** 6×6 palace — the big-contiguous-area streaming stress level
      *  (docs/plan/specs/palace-stress-level.md). */
     private isPalace = this.level === 'palace';
@@ -133,6 +135,7 @@ export class WorldContent {
         // half): the gallery's portal plaza includes these by name.
         xianjian: xianjianLevelJson, coaster: coasterLevelJson, parkour: parkourLevelJson,
         palace: palaceLevelJson, modular: modularLevelJson, escape_room_3x3: escapeRoom3x3LevelJson,
+        pal1_inn: pal1InnLevelJson,
     };
     private resolveContent: ContentResolver = (ref) => WorldContent.CONTENT[ref] ?? null;
 
@@ -142,6 +145,7 @@ export class WorldContent {
         this.isParkour ? (parkourLevelJson as unknown as AuthoredLevel)
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
+        : this.isPal1Inn ? (pal1InnLevelJson as unknown as AuthoredLevel)
         : this.isWorld ? buildWorldLevel()
         : this.isRefine ? (refineLevelJson as unknown as AuthoredLevel)
         : this.isPalace ? (palaceLevelJson as unknown as AuthoredLevel)
