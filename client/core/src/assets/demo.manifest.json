@@ -562,6 +562,36 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/pal1-inn-door.glb"
+  },
+  {
+    "id": 96,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/pal1-inn-ground.png",
+    "size": [
+      3.2,
+      3.2
+    ]
+  },
+  {
+    "id": 97,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/pal1-inn-woodfloor.png",
+    "size": [
+      2,
+      2
+    ]
+  },
+  {
+    "id": 98,
+    "type": "texture",
+    "format": "png",
+    "path": "/assets/pal1-inn-wallboard.png",
+    "size": [
+      2,
+      2.8
+    ]
   }
 ]
 

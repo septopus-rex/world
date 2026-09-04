@@ -145,6 +145,27 @@ async function main() {
     await page.screenshot({ path: windowPath });
     console.log(`Saved window detail view to: ${windowPath}`);
 
+    // -------------------------------------------------------------
+    // Capture 6: Ground Slate Flagstones & Dining Table Detail View
+    // -------------------------------------------------------------
+    console.log('Capturing View 6: Ground Slate Flagstones & Dining Table Detail View...');
+    await page.evaluate(() => {
+        const w = window.loader.engine.getWorld();
+        const re = w.renderEngine;
+        const metrics = w.metrics;
+        // High angle close-up looking at dining table and surrounding slate flagstones
+        const camPos = metrics.septopusToEngine([9.5, 6.5, 3.2], [2048, 2048]);
+        const targetPos = metrics.septopusToEngine([7.5, 8.5, 0.4], [2048, 2048]);
+        
+        re.setMainCameraPosition(camPos[0], camPos[1], camPos[2]);
+        re.setMainCameraLookAt(targetPos[0], targetPos[1], targetPos[2]);
+        re.render();
+    });
+    await page.waitForTimeout(1000);
+    const groundPath = path.join(BRAIN_DIR, 'pal1_inn_ground_detail.png');
+    await page.screenshot({ path: groundPath });
+    console.log(`Saved ground detail view to: ${groundPath}`);
+
     await browser.close();
     console.log('All tavern captures complete!');
 }
