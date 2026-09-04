@@ -61,6 +61,7 @@ const matPaper = new THREE.MeshStandardMaterial({
     color: 0xf4eedb,
     roughness: 0.75,
     metalness: 0.02,
+    side: THREE.DoubleSide,
 });
 const matCeladon = new THREE.MeshStandardMaterial({
     color: 0x76a38f,
@@ -322,165 +323,199 @@ function buildInnBonsai() {
 }
 
 // =========================================================================
-// 4. Traditional Chinese Partition Lattice Window (落地隔扇木格花窗) - 1.3m x 0.08m x 2.6m
+// 4. Traditional Chinese Continuous Partition Lattice Window Bay (四扇连排落地隔扇长窗间) - 2.4m x 0.14m x 2.65m
 // =========================================================================
 function buildInnWindow() {
     const group = new THREE.Group();
-    group.name = 'Pal1InnWindow';
+    group.name = 'Pal1InnWindowBay';
 
-    const W = 1.30;
-    const H = 2.60;
-    const D = 0.08;
-    const frameT = 0.07;
+    const W = 2.40;
+    const H = 2.65;
+    const D = 0.14;
+    const colW = 0.08;
+    const beamH = 0.09;
+    const sillH = 0.08;
 
-    // 1. Outer Frame (Rosewood)
-    const stileGeom = new THREE.BoxGeometry(frameT, H, D);
-    const leftStile = new THREE.Mesh(stileGeom, matDarkRosewood);
-    leftStile.position.set(-W / 2 + frameT / 2, 0, 0);
-    group.add(leftStile);
+    // 1. Boundary Framing: Left & Right Timber Columns (间柱 / 立柱)
+    const colGeom = new THREE.BoxGeometry(colW, H, D);
+    const leftCol = new THREE.Mesh(colGeom, matDarkRosewood);
+    leftCol.position.set(-W / 2 + colW / 2, 0, 0);
+    group.add(leftCol);
 
-    const rightStile = new THREE.Mesh(stileGeom, matDarkRosewood);
-    rightStile.position.set(W / 2 - frameT / 2, 0, 0);
-    group.add(rightStile);
+    const rightCol = new THREE.Mesh(colGeom, matDarkRosewood);
+    rightCol.position.set(W / 2 - colW / 2, 0, 0);
+    group.add(rightCol);
 
-    const innerW = W - 2 * frameT;
-    const topRailGeom = new THREE.BoxGeometry(innerW, frameT, D);
-    const topRail = new THREE.Mesh(topRailGeom, matDarkRosewood);
-    topRail.position.set(0, H / 2 - frameT / 2, 0);
-    group.add(topRail);
+    // 2. Continuous Top Lintel Beam (额枋 / 楣梁) & Bottom Sill (下槛 / 地栿)
+    const spanW = W - 2 * colW;
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(spanW, beamH, D), matDarkRosewood);
+    lintel.position.set(0, H / 2 - beamH / 2, 0);
+    group.add(lintel);
 
-    const bottomRailGeom = new THREE.BoxGeometry(innerW, 0.10, D);
-    const bottomRail = new THREE.Mesh(bottomRailGeom, matDarkRosewood);
-    bottomRail.position.set(0, -H / 2 + 0.05, 0);
-    group.add(bottomRail);
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(spanW, sillH, D), matDarkRosewood);
+    sill.position.set(0, -H / 2 + sillH / 2, 0);
+    group.add(sill);
 
-    // 2. Horizontal Dividing Rails
-    const midRailGeom = new THREE.BoxGeometry(innerW, 0.05, D * 0.9);
-    const midRailTop = new THREE.Mesh(midRailGeom, matDarkRosewood);
-    midRailTop.position.set(0, 0.82, 0);
-    group.add(midRailTop);
-
-    const waistRail = new THREE.Mesh(midRailGeom, matDarkRosewood);
-    waistRail.position.set(0, -0.40, 0);
-    group.add(waistRail);
-
-    const apronRail = new THREE.Mesh(midRailGeom, matDarkRosewood);
-    apronRail.position.set(0, -0.65, 0);
-    group.add(apronRail);
-
-    // 3. Central Lattice Window Core (槅心)
-    const coreH = 0.82 - (-0.40) - 0.05;
-    const coreY = (-0.40 + 0.82) / 2;
-
-    // Translucent warm silk paper backing
-    const paperGeom = new THREE.PlaneGeometry(innerW - 0.02, coreH - 0.02);
-    const paperFront = new THREE.Mesh(paperGeom, matPaper);
-    paperFront.position.set(0, coreY, 0.005);
-    group.add(paperFront);
-    const paperBack = new THREE.Mesh(paperGeom, matPaper);
-    paperBack.position.set(0, coreY, -0.005);
-    paperBack.rotation.y = Math.PI;
-    group.add(paperBack);
-
-    // 3D Interlocking Lattice Grille
-    const ribT = 0.022;
-    const ribD = 0.035;
-
-    // Vertical ribs (4 bars)
-    const vCols = 4;
-    const vSpacing = innerW / (vCols + 1);
-    for (let c = 1; c <= vCols; c++) {
-        const rx = -innerW / 2 + c * vSpacing;
-        const vRib = new THREE.Mesh(new THREE.BoxGeometry(ribT, coreH, ribD), matPolishedWood);
-        vRib.position.set(rx, coreY, 0);
-        group.add(vRib);
+    // Decorative carved corner brackets (雀替) under lintel at both columns
+    for (const sx of [-1, 1]) {
+        const bracketGeom = new THREE.BoxGeometry(0.18, 0.10, D * 0.7);
+        const bracket = new THREE.Mesh(bracketGeom, matPolishedWood);
+        bracket.position.set(sx * (W / 2 - colW - 0.09), H / 2 - beamH - 0.05, 0);
+        group.add(bracket);
     }
 
-    // Horizontal ribs (6 bars)
-    const hRows = 6;
-    const hSpacing = coreH / (hRows + 1);
-    for (let r = 1; r <= hRows; r++) {
-        const ry = coreY - coreH / 2 + r * hSpacing;
-        const hRib = new THREE.Mesh(new THREE.BoxGeometry(innerW, ribT, ribD), matPolishedWood);
-        hRib.position.set(0, ry, 0);
-        group.add(hRib);
-    }
+    // 3. 4 Continuous Window Leaves (四扇格扇窗扇)
+    const numLeaves = 4;
+    const leafW = spanW / numLeaves; // exactly (2.4 - 0.16) / 4 = 0.56m
+    const leafH = H - beamH - sillH; // 2.65 - 0.09 - 0.08 = 2.48m
+    const leafY = (-H / 2 + sillH + H / 2 - beamH) / 2;
+    const leafD = 0.07;
+    const stileT = 0.038;
 
-    // Geometric diamond lattice centers (方胜菱形木棂)
-    for (let c = 1; c <= vCols - 1; c++) {
-        for (let r = 1; r <= hRows - 1; r++) {
-            if ((c + r) % 2 === 0) {
-                const cx = -innerW / 2 + (c + 0.5) * vSpacing;
-                const cy = coreY - coreH / 2 + (r + 0.5) * hSpacing;
-                const diagGeom = new THREE.BoxGeometry(vSpacing * 0.55, ribT * 0.8, ribD * 0.9);
-                const d1 = new THREE.Mesh(diagGeom, matPolishedWood);
-                d1.position.set(cx, cy, 0);
-                d1.rotation.z = Math.PI / 4;
-                group.add(d1);
-                const d2 = new THREE.Mesh(diagGeom, matPolishedWood);
-                d2.position.set(cx, cy, 0);
-                d2.rotation.z = -Math.PI / 4;
-                group.add(d2);
+    for (let i = 0; i < numLeaves; i++) {
+        const leafGroup = new THREE.Group();
+        const lx = -spanW / 2 + (i + 0.5) * leafW;
+
+        // Leaf outer stiles (left and right)
+        const leafStileGeom = new THREE.BoxGeometry(stileT, leafH, leafD);
+        const lsLeft = new THREE.Mesh(leafStileGeom, matDarkRosewood);
+        lsLeft.position.set(-leafW / 2 + stileT / 2, 0, 0);
+        leafGroup.add(lsLeft);
+
+        const lsRight = new THREE.Mesh(leafStileGeom, leafH, leafD);
+        const lsRightMesh = new THREE.Mesh(leafStileGeom, matDarkRosewood);
+        lsRightMesh.position.set(leafW / 2 - stileT / 2, 0, 0);
+        leafGroup.add(lsRightMesh);
+
+        const innerLeafW = leafW - 2 * stileT; // ~0.484m
+
+        // Top rail, bottom rail of leaf
+        const railGeom = new THREE.BoxGeometry(innerLeafW, 0.045, leafD);
+        const topRail = new THREE.Mesh(railGeom, matDarkRosewood);
+        topRail.position.set(0, leafH / 2 - 0.0225, 0);
+        leafGroup.add(topRail);
+
+        const botRail = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, 0.06, leafD), matDarkRosewood);
+        botRail.position.set(0, -leafH / 2 + 0.03, 0);
+        leafGroup.add(botRail);
+
+        // Mid dividing rails:
+        const transomRailY = leafH / 2 - 0.40;
+        const transomRail = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, 0.035, leafD * 0.95), matDarkRosewood);
+        transomRail.position.set(0, transomRailY, 0);
+        leafGroup.add(transomRail);
+
+        const waistRailUpperY = -0.32;
+        const waistRailUpper = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, 0.035, leafD * 0.95), matDarkRosewood);
+        waistRailUpper.position.set(0, waistRailUpperY, 0);
+        leafGroup.add(waistRailUpper);
+
+        const waistRailLowerY = -0.56;
+        const waistRailLower = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, 0.035, leafD * 0.95), matDarkRosewood);
+        waistRailLower.position.set(0, waistRailLowerY, 0);
+        leafGroup.add(waistRailLower);
+
+        // A. Top Transom (楣子 / 亮子): height ~0.35m
+        const tH = (leafH / 2 - 0.045) - (transomRailY + 0.0175);
+        const tY = (leafH / 2 - 0.045 + transomRailY + 0.0175) / 2;
+        const tPaper = new THREE.Mesh(new THREE.PlaneGeometry(innerLeafW, tH), matPaper);
+        tPaper.position.set(0, tY, 0.002);
+        leafGroup.add(tPaper);
+        for (let tr = 1; tr <= 2; tr++) {
+            const rx = -innerLeafW / 2 + tr * (innerLeafW / 3);
+            const rib = new THREE.Mesh(new THREE.BoxGeometry(0.018, tH, 0.025), matPolishedWood);
+            rib.position.set(rx, tY, 0);
+            leafGroup.add(rib);
+        }
+
+        // B. Central Lattice Window Core (槅心): height ~1.03m
+        const coreH = (transomRailY - 0.0175) - (waistRailUpperY + 0.0175);
+        const coreY = (transomRailY - 0.0175 + waistRailUpperY + 0.0175) / 2;
+
+        const paper = new THREE.Mesh(new THREE.PlaneGeometry(innerLeafW - 0.005, coreH - 0.005), matPaper);
+        paper.position.set(0, coreY, 0.002);
+        leafGroup.add(paper);
+
+        // 3D Interlocking Diamond Lattice (方胜纹格眼)
+        const vCols = 3;
+        const vStep = innerLeafW / (vCols + 1);
+        const hRows = 6;
+        const hStep = coreH / (hRows + 1);
+        const ribW = 0.018;
+        const ribD = 0.028;
+
+        for (let vc = 1; vc <= vCols; vc++) {
+            const vx = -innerLeafW / 2 + vc * vStep;
+            const vRib = new THREE.Mesh(new THREE.BoxGeometry(ribW, coreH, ribD), matPolishedWood);
+            vRib.position.set(vx, coreY, 0);
+            leafGroup.add(vRib);
+        }
+        for (let hr = 1; hr <= hRows; hr++) {
+            const hy = coreY - coreH / 2 + hr * hStep;
+            const hRib = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, ribW, ribD), matPolishedWood);
+            hRib.position.set(0, hy, 0);
+            leafGroup.add(hRib);
+        }
+        for (let vc = 1; vc <= vCols - 1; vc++) {
+            for (let hr = 1; hr <= hRows - 1; hr++) {
+                if ((vc + hr) % 2 === 0) {
+                    const cx = -innerLeafW / 2 + (vc + 0.5) * vStep;
+                    const cy = coreY - coreH / 2 + (hr + 0.5) * hStep;
+                    const dGeom = new THREE.BoxGeometry(vStep * 0.65, ribW * 0.85, ribD * 0.9);
+                    const d1 = new THREE.Mesh(dGeom, matPolishedWood);
+                    d1.position.set(cx, cy, 0);
+                    d1.rotation.z = Math.PI / 4;
+                    leafGroup.add(d1);
+                    const d2 = new THREE.Mesh(dGeom, matPolishedWood);
+                    d2.position.set(cx, cy, 0);
+                    d2.rotation.z = -Math.PI / 4;
+                    leafGroup.add(d2);
+                }
             }
         }
-    }
 
-    // 4. Top Transom Lattice (楣子)
-    const transomH = H / 2 - frameT - 0.82 - 0.025;
-    const transomY = 0.82 + 0.025 + transomH / 2;
-    const transomPaper = new THREE.Mesh(new THREE.PlaneGeometry(innerW - 0.02, transomH - 0.02), matPaper);
-    transomPaper.position.set(0, transomY, 0.005);
-    group.add(transomPaper);
+        // C. Waist Board (绦环板): height ~0.20m
+        const waistH = (waistRailUpperY - 0.0175) - (waistRailLowerY + 0.0175);
+        const waistY = (waistRailUpperY - 0.0175 + waistRailLowerY + 0.0175) / 2;
+        const wBase = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, waistH, leafD * 0.7), matDarkRosewood);
+        wBase.position.set(0, waistY, 0);
+        leafGroup.add(wBase);
 
-    for (let c = 1; c <= 3; c++) {
-        const rx = -innerW / 2 + c * (innerW / 4);
-        const tRib = new THREE.Mesh(new THREE.BoxGeometry(ribT, transomH, ribD), matPolishedWood);
-        tRib.position.set(rx, transomY, 0);
-        group.add(tRib);
-    }
+        const wPlate = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW * 0.78, waistH * 0.65, leafD * 0.85), matPolishedWood);
+        wPlate.position.set(0, waistY, 0);
+        leafGroup.add(wPlate);
 
-    // 5. Waist Board (绦环板)
-    const waistH = 0.20;
-    const waistY = -0.525;
-    const waistPanel = new THREE.Mesh(new THREE.BoxGeometry(innerW, waistH, D * 0.6), matDarkRosewood);
-    waistPanel.position.set(0, waistY, 0);
-    group.add(waistPanel);
+        // D. Bottom Apron Board (裙板): height ~0.60m
+        const apronH = (waistRailLowerY - 0.0175) - (-leafH / 2 + 0.06);
+        const apronY = (waistRailLowerY - 0.0175 + -leafH / 2 + 0.06) / 2;
+        const aBase = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, apronH, leafD * 0.7), matDarkRosewood);
+        aBase.position.set(0, apronY, 0);
+        leafGroup.add(aBase);
 
-    const waistCarve = new THREE.Mesh(new THREE.BoxGeometry(innerW * 0.7, waistH * 0.6, D * 0.75), matPolishedWood);
-    waistCarve.position.set(0, waistY, 0);
-    group.add(waistCarve);
+        const aPanel1 = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW * 0.82, apronH * 0.80, leafD * 0.82), matPolishedWood);
+        aPanel1.position.set(0, apronY, 0);
+        leafGroup.add(aPanel1);
 
-    // 6. Bottom Apron Board (裙板)
-    const apronH = (-0.65 - 0.025) - (-H / 2 + 0.10);
-    const apronY = (-H / 2 + 0.10 + -0.675) / 2;
-    const apronPanel = new THREE.Mesh(new THREE.BoxGeometry(innerW, apronH, D * 0.6), matDarkRosewood);
-    apronPanel.position.set(0, apronY, 0);
-    group.add(apronPanel);
+        const aPanel2 = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW * 0.65, apronH * 0.58, leafD * 0.92), matDarkRosewood);
+        aPanel2.position.set(0, apronY, 0);
+        leafGroup.add(aPanel2);
 
-    const apronCarve1 = new THREE.Mesh(new THREE.BoxGeometry(innerW * 0.82, apronH * 0.78, D * 0.75), matPolishedWood);
-    apronCarve1.position.set(0, apronY, 0);
-    group.add(apronCarve1);
-    const apronCarve2 = new THREE.Mesh(new THREE.BoxGeometry(innerW * 0.65, apronH * 0.55, D * 0.85), matDarkRosewood);
-    apronCarve2.position.set(0, apronY, 0);
-    group.add(apronCarve2);
+        // Corner brass plates on each window leaf
+        const bSize = 0.045;
+        const bT = 0.004;
+        for (const [bx, by] of [
+            [-innerLeafW / 2 + bSize / 2, leafH / 2 - bSize / 2],
+            [innerLeafW / 2 - bSize / 2, leafH / 2 - bSize / 2],
+            [-innerLeafW / 2 + bSize / 2, -leafH / 2 + bSize / 2],
+            [innerLeafW / 2 - bSize / 2, -leafH / 2 + bSize / 2],
+        ]) {
+            const bMesh = new THREE.Mesh(new THREE.BoxGeometry(bSize, bSize, bT), matBrass);
+            bMesh.position.set(bx, by, leafD / 2 + bT / 2);
+            leafGroup.add(bMesh);
+        }
 
-    // 7. Antique Brass Corner Plates (錾铜包角)
-    const bracketSize = 0.08;
-    const bracketT = 0.005;
-    const bracketZ = D / 2 + bracketT / 2;
-    const corners = [
-        [-W / 2 + bracketSize / 2, H / 2 - bracketSize / 2],
-        [W / 2 - bracketSize / 2, H / 2 - bracketSize / 2],
-        [-W / 2 + bracketSize / 2, -H / 2 + bracketSize / 2],
-        [W / 2 - bracketSize / 2, -H / 2 + bracketSize / 2],
-    ];
-    for (const [cx, cy] of corners) {
-        const b = new THREE.Mesh(new THREE.BoxGeometry(bracketSize, bracketSize, bracketT), matBrass);
-        b.position.set(cx, cy, bracketZ);
-        group.add(b);
-        const bBack = new THREE.Mesh(new THREE.BoxGeometry(bracketSize, bracketSize, bracketT), matBrass);
-        bBack.position.set(cx, cy, -bracketZ);
-        group.add(bBack);
+        leafGroup.position.set(lx, leafY, 0);
+        group.add(leafGroup);
     }
 
     const bbox = new THREE.Box3().setFromObject(group);
@@ -602,92 +637,162 @@ function buildInnRailing() {
 }
 
 // =========================================================================
-// 6. Traditional Chinese Guest Room Door (客房双开隔扇门) - 1.3m x 0.10m x 2.6m
+// 6. Traditional Chinese Door Bay with Flanking Windows (客房双开门与两侧连窗间) - 2.4m x 0.14m x 2.65m
 // =========================================================================
 function buildInnDoor() {
     const group = new THREE.Group();
-    group.name = 'Pal1InnDoor';
+    group.name = 'Pal1InnDoorBay';
 
-    const W = 1.30;
-    const H = 2.60;
-    const D = 0.10;
-    const frameT = 0.08;
+    const W = 2.40;
+    const H = 2.65;
+    const D = 0.14;
+    const colW = 0.08;
+    const beamH = 0.09;
+    const sillH = 0.08;
 
-    // Doorframe
-    const leftJamb = new THREE.Mesh(new THREE.BoxGeometry(frameT, H, D), matDarkRosewood);
-    leftJamb.position.set(-W / 2 + frameT / 2, 0, 0);
-    group.add(leftJamb);
+    // 1. Boundary Timber Columns & Top Lintel
+    const colGeom = new THREE.BoxGeometry(colW, H, D);
+    const leftCol = new THREE.Mesh(colGeom, matDarkRosewood);
+    leftCol.position.set(-W / 2 + colW / 2, 0, 0);
+    group.add(leftCol);
 
-    const rightJamb = new THREE.Mesh(new THREE.BoxGeometry(frameT, H, D), matDarkRosewood);
-    rightJamb.position.set(W / 2 - frameT / 2, 0, 0);
-    group.add(rightJamb);
+    const rightCol = new THREE.Mesh(colGeom, matDarkRosewood);
+    rightCol.position.set(W / 2 - colW / 2, 0, 0);
+    group.add(rightCol);
 
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(W - 2 * frameT, frameT, D), matDarkRosewood);
-    lintel.position.set(0, H / 2 - frameT / 2, 0);
+    const spanW = W - 2 * colW;
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(spanW, beamH, D), matDarkRosewood);
+    lintel.position.set(0, H / 2 - beamH / 2, 0);
     group.add(lintel);
 
-    const sill = new THREE.Mesh(new THREE.BoxGeometry(W - 2 * frameT, 0.12, D), matDarkRosewood);
-    sill.position.set(0, -H / 2 + 0.06, 0);
+    const sill = new THREE.Mesh(new THREE.BoxGeometry(spanW, sillH, D), matDarkRosewood);
+    sill.position.set(0, -H / 2 + sillH / 2, 0);
     group.add(sill);
 
-    // Door Pivot Plugs (门簪)
-    for (const mx of [-0.22, 0.22]) {
+    // 2. Center Doorway flanked by 2 window leaves
+    const flankW = 0.56;
+    const doorOpeningW = spanW - 2 * flankW; // 1.12m
+
+    const jambW = 0.045;
+    const jambGeom = new THREE.BoxGeometry(jambW, H - beamH - sillH, D * 0.95);
+    const leftJamb = new THREE.Mesh(jambGeom, matDarkRosewood);
+    leftJamb.position.set(-doorOpeningW / 2 + jambW / 2, (-beamH + sillH) / 2, 0);
+    group.add(leftJamb);
+
+    const rightJamb = new THREE.Mesh(jambGeom, matDarkRosewood);
+    rightJamb.position.set(doorOpeningW / 2 - jambW / 2, (-beamH + sillH) / 2, 0);
+    group.add(rightJamb);
+
+    const doorLintelH = 0.06;
+    const doorLintelY = H / 2 - beamH - 0.45;
+    const dLintel = new THREE.Mesh(new THREE.BoxGeometry(doorOpeningW - 2 * jambW, doorLintelH, D * 0.9), matDarkRosewood);
+    dLintel.position.set(0, doorLintelY, 0);
+    group.add(dLintel);
+
+    // Door Pivot Pins (门簪)
+    for (const mx of [-0.20, 0.20]) {
         const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.08, 6), matBrass);
         pin.rotation.x = Math.PI / 2;
-        pin.position.set(mx, H / 2 - frameT / 2, D / 2 + 0.03);
+        pin.position.set(mx, doorLintelY, D / 2 + 0.02);
         group.add(pin);
     }
 
-    // Double-leaf door panels
-    const doorW = (W - 2 * frameT - 0.02) / 2;
-    const doorH = H - frameT - 0.12 - 0.01;
-    const doorY = (-H / 2 + 0.12 + H / 2 - frameT) / 2;
+    // Doorway Upper Transom (门头上槛格眼)
+    const dTransomH = (H / 2 - beamH) - (doorLintelY + doorLintelH / 2);
+    const dTransomY = (H / 2 - beamH + doorLintelY + doorLintelH / 2) / 2;
+    const dTransomPaper = new THREE.Mesh(new THREE.PlaneGeometry(doorOpeningW - 2 * jambW, dTransomH), matPaper);
+    dTransomPaper.position.set(0, dTransomY, 0.002);
+    group.add(dTransomPaper);
 
-    for (const [leafX, side] of [[-doorW / 2 - 0.005, -1], [doorW / 2 + 0.005, 1]]) {
+    for (let tr = 1; tr <= 4; tr++) {
+        const rx = -(doorOpeningW - 2 * jambW) / 2 + tr * ((doorOpeningW - 2 * jambW) / 5);
+        const rib = new THREE.Mesh(new THREE.BoxGeometry(0.018, dTransomH, 0.025), matPolishedWood);
+        rib.position.set(rx, dTransomY, 0);
+        group.add(rib);
+    }
+
+    // Double-leaf Door (双开板门)
+    const doorLeafW = (doorOpeningW - 2 * jambW - 0.01) / 2;
+    const doorH = doorLintelY - doorLintelH / 2 - (-H / 2 + sillH);
+    const doorY = (doorLintelY - doorLintelH / 2 + -H / 2 + sillH) / 2;
+
+    for (const [leafX, side] of [[-doorLeafW / 2 - 0.003, -1], [doorLeafW / 2 + 0.003, 1]]) {
         const leafGroup = new THREE.Group();
-
-        const leaf = new THREE.Mesh(new THREE.BoxGeometry(doorW, doorH, 0.04), matDarkRosewood);
+        const leaf = new THREE.Mesh(new THREE.BoxGeometry(doorLeafW, doorH, 0.045), matDarkRosewood);
         leafGroup.add(leaf);
 
-        // Top lattice panel
-        const topLatticeH = doorH * 0.42;
-        const topLatticeY = doorH / 2 - topLatticeH / 2 - 0.06;
-        const topScreen = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.08, topLatticeH, 0.045), matPolishedWood);
-        topScreen.position.set(0, topLatticeY, 0);
-        leafGroup.add(topScreen);
+        const panelH = doorH * 0.42;
+        const panel1 = new THREE.Mesh(new THREE.BoxGeometry(doorLeafW - 0.08, panelH, 0.055), matPolishedWood);
+        panel1.position.set(0, doorH * 0.20, 0);
+        leafGroup.add(panel1);
 
-        for (let r = -1; r <= 1; r++) {
-            const hBar = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.10, 0.02, 0.05), matDarkRosewood);
-            hBar.position.set(0, topLatticeY + r * 0.12, 0);
-            leafGroup.add(hBar);
-        }
-        for (let c = -1; c <= 1; c++) {
-            const vBar = new THREE.Mesh(new THREE.BoxGeometry(0.02, topLatticeH - 0.04, 0.05), matDarkRosewood);
-            vBar.position.set(c * 0.11, topLatticeY, 0);
-            leafGroup.add(vBar);
-        }
+        const panel2 = new THREE.Mesh(new THREE.BoxGeometry(doorLeafW - 0.08, panelH, 0.055), matPolishedWood);
+        panel2.position.set(0, -doorH * 0.25, 0);
+        leafGroup.add(panel2);
 
-        // Bottom carved panel
-        const bottomPanelH = doorH * 0.40;
-        const bottomPanelY = -doorH / 2 + bottomPanelH / 2 + 0.06;
-        const bPanel = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.08, bottomPanelH, 0.048), matPolishedWood);
-        bPanel.position.set(0, bottomPanelY, 0);
-        leafGroup.add(bPanel);
-
-        // Brass Door Knocker & Ring (铺首衔环)
-        const plateX = side * (-doorW / 2 + 0.06);
-        const plateY = 0.0;
+        // Brass Knocker (铺首衔环)
+        const knockerX = side * (-doorLeafW / 2 + 0.07);
+        const knockerY = 0.05;
         const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.01, 8), matBrass);
         plate.rotation.x = Math.PI / 2;
-        plate.position.set(plateX, plateY, 0.025);
+        plate.position.set(knockerX, knockerY, 0.03);
         leafGroup.add(plate);
 
-        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 8, 16), matBrass);
-        ring.position.set(plateX, plateY - 0.03, 0.032);
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.008, 8, 16), matBrass);
+        ring.position.set(knockerX, knockerY - 0.035, 0.038);
         leafGroup.add(ring);
 
         leafGroup.position.set(leafX, doorY, 0);
         group.add(leafGroup);
+    }
+
+    // 3. Flanking Window Leaves (Left and Right of door)
+    const fLeafH = H - beamH - sillH;
+    const fLeafY = (-H / 2 + sillH + H / 2 - beamH) / 2;
+    for (const fx of [-spanW / 2 + flankW / 2, spanW / 2 - flankW / 2]) {
+        const fGroup = new THREE.Group();
+        const innerLeafW = flankW - 0.07;
+        const leafD = 0.07;
+
+        const lsLeft = new THREE.Mesh(new THREE.BoxGeometry(0.035, fLeafH, leafD), matDarkRosewood);
+        lsLeft.position.set(-flankW / 2 + 0.0175, 0, 0);
+        fGroup.add(lsLeft);
+
+        const lsRight = new THREE.Mesh(new THREE.BoxGeometry(0.035, fLeafH, leafD), matDarkRosewood);
+        lsRight.position.set(flankW / 2 - 0.0175, 0, 0);
+        fGroup.add(lsRight);
+
+        const coreH = 1.05;
+        const coreY = 0.20;
+        const paper = new THREE.Mesh(new THREE.PlaneGeometry(innerLeafW, coreH), matPaper);
+        paper.position.set(0, coreY, 0.002);
+        fGroup.add(paper);
+
+        for (let vc = 1; vc <= 2; vc++) {
+            const rx = -innerLeafW / 2 + vc * (innerLeafW / 3);
+            const vRib = new THREE.Mesh(new THREE.BoxGeometry(0.018, coreH, 0.028), matPolishedWood);
+            vRib.position.set(rx, coreY, 0);
+            fGroup.add(vRib);
+        }
+        for (let hr = 1; hr <= 5; hr++) {
+            const ry = coreY - coreH / 2 + hr * (coreH / 6);
+            const hRib = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, 0.018, 0.028), matPolishedWood);
+            hRib.position.set(0, ry, 0);
+            fGroup.add(hRib);
+        }
+
+        const apronH = 0.65;
+        const apronY = -fLeafH / 2 + apronH / 2 + 0.05;
+        const aBase = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW, apronH, leafD * 0.75), matDarkRosewood);
+        aBase.position.set(0, apronY, 0);
+        fGroup.add(aBase);
+
+        const aPanel = new THREE.Mesh(new THREE.BoxGeometry(innerLeafW * 0.8, apronH * 0.75, leafD * 0.88), matPolishedWood);
+        aPanel.position.set(0, apronY, 0);
+        fGroup.add(aPanel);
+
+        fGroup.position.set(fx, fLeafY, 0);
+        group.add(fGroup);
     }
 
     const bbox = new THREE.Box3().setFromObject(group);

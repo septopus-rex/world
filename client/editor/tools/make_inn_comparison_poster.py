@@ -8,6 +8,7 @@ GROUND_IMG = os.path.join(BRAIN_DIR, 'pal1_inn_ground_detail.png')
 RAILING_IMG = os.path.join(BRAIN_DIR, 'pal1_inn_railing_detail.png')
 WINDOW_IMG = os.path.join(BRAIN_DIR, 'pal1_inn_window_detail.png')
 COUNTER_IMG = os.path.join(BRAIN_DIR, 'pal1_inn_counter_detail.png')
+INTERIOR_IMG = os.path.join(BRAIN_DIR, 'pal1_inn_interior.png')
 OUTPUT_POSTER = os.path.join(BRAIN_DIR, 'pal1_indoor_recreation_comparison.png')
 
 W, H = 2560, 1600
@@ -40,10 +41,10 @@ draw.rectangle([(0, 0), (W, 110)], fill=(20, 24, 33))
 draw.line([(0, 110), (W, 110)], fill=(45, 55, 75), width=2)
 
 # Titles
-title_text = "《仙剑奇侠传》余杭客栈大堂 · 青石方砖地面与古建木构 完整复刻对比"
+title_text = "《仙剑奇侠传》余杭客栈大堂 · 连排 3D 隔扇木构门窗屏壁 完整复刻对比"
 draw.text((W // 2, 40), title_text, font=title_font, fill=(245, 205, 120), anchor="mm")
 
-sub_text = "重构地面体系：青灰大方砖（ID 96）+ 走廊实木地板（ID 97）+ 素雅木板壁（ID 98），告别错位墙砖与金圈贴图，全面对齐 1995 原作神韵"
+sub_text = "重构门窗体系：四扇一间连排落地隔扇长窗（ID 93）+ 客房双开门立面间（ID 95），实现面面相接零空白木构屏壁，告别平素白墙"
 draw.text((W // 2, 82), sub_text, font=subtitle_font, fill=(180, 195, 215), anchor="mm")
 
 # Helper to paste an image card with border and header
@@ -84,34 +85,33 @@ def draw_card(img_path, rect, title, border_color=(70, 130, 220)):
 # Top Row: 2 large cards (1995 Original vs 2026 3D Isometric View)
 # Y: 125, Height: 750
 # X: 40 to 1260 (W=1220), 1300 to 2520 (W=1220)
-draw_card(ORIGINAL_MAP, (40, 125, 1220, 750), "① 1995 原版经典像素地图（余杭客栈大堂 2D 切角）", border_color=(235, 175, 75))
-draw_card(ISO_IMG, (1300, 125, 1220, 750), "② 2026 最新 3D 建筑复刻（青石方砖铺地 · 实木回廊 · 63 构件全量渲染）", border_color=(60, 200, 140))
+draw_card(ORIGINAL_MAP, (40, 125, 1220, 750), "① 1995 原版经典像素地图（余杭客栈大堂 2D 连排隔扇门窗屏壁）", border_color=(235, 175, 75))
+draw_card(ISO_IMG, (1300, 125, 1220, 750), "② 2026 最新 3D 建筑复刻（全周 28 间 3D 隔扇连排无缝覆盖 · 64 构件满额呈现）", border_color=(60, 200, 140))
 
 # Bottom Row: 4 detail cards across
 # Y: 895, Height: 525
-# W: 590 each, gap = 20
-# X0 = 40, X1 = 660, X2 = 1280, X3 = 1900 (Total W = 590*4 + 20*3 = 2420)
-draw_card(GROUND_IMG, (40, 895, 600, 525), "③ 一楼地面 · 大方青石板砖与平直浅灰勾缝", border_color=(100, 200, 220))
-draw_card(RAILING_IMG, (660, 895, 600, 525), "④ 二楼回廊 · 实木地板铺设与 3D 透空栏杆", border_color=(220, 100, 140))
-draw_card(WINDOW_IMG, (1280, 895, 600, 525), "⑤ 落地隔扇花窗 · 3D 方胜格眼与丝绢衬纸", border_color=(100, 180, 245))
-draw_card(COUNTER_IMG, (1900, 895, 620, 525), "⑥ 掌柜账台 · 迎客松盆景、绍兴老酒与素木板壁", border_color=(200, 140, 230))
+# W: 600 each, gap = 20
+draw_card(WINDOW_IMG, (40, 895, 600, 525), "③ 2F 客房门窗特写 · 铺首衔环与连排落地长窗", border_color=(100, 180, 245))
+draw_card(INTERIOR_IMG, (660, 895, 600, 525), "④ 室内漫游全景 · 连续木构屏壁与挑空回廊", border_color=(220, 100, 140))
+draw_card(RAILING_IMG, (1280, 895, 600, 525), "⑤ 2F 走廊回廊 · 3D 透空寻杖栏杆与实木地板", border_color=(100, 200, 220))
+draw_card(COUNTER_IMG, (1900, 895, 620, 525), "⑥ 账台与客堂 · 迎客松盆景与青石方砖铺地", border_color=(200, 140, 230))
 
 # Footer bar (Y: 1440 to 1580)
 draw.rectangle([(0, 1440), (W, H)], fill=(18, 22, 30))
 draw.line([(0, 1440), (W, 1440)], fill=(45, 55, 75), width=2)
 
 footer_col1 = [
-    "【地面材质缺陷与排查诊断】",
-    "1. 地砖类型错乱：原场景使用 oriental-brick.png (ID 54)，其本质是立面错缝青砖墙，直接平铺导致大堂像室外马路或翻倒的砖墙，比例狭长杂乱。",
-    "2. 走廊违和图案：二楼走廊与外墙套用带有金色同心圆环的 oriental-wood.png (ID 52)，与中国古典木构建筑风格完全脱节，极其抢戏刺眼。",
-    "3. 色彩与光感脱节：原版余杭客栈地面为素雅冷青灰色大方砖（RGB ~85,85,81），与朱红木构形成经典冷暖对比，此前版本呈现暗沉死灰。"
+    "【原版门窗特征与此前痛点诊断】",
+    "1. 平面贴图单薄无纵深：此前采用单张贴图或薄片模型，无法呈现中国古建筑隔扇窗的框棂榫卯、凹凸裙板与黄铜铺首等 3D 进深浮雕。",
+    "2. 宽度狭窄留空白墙：原版客栈二楼与一楼全为相接相连的连续门窗屏壁（四扇一间）。此前单窗宽仅 1.3m，窗间遗留 0.8m~1.5m 违和白墙。",
+    "3. 门户缺乏辨识特征：原版二楼北侧与东侧有多间上房客房门，此前未区分门与窗，缺少六角门簪、黄铜铺首衔环与门头上槛亮子等客栈入口神髓。"
 ]
 
 footer_col2 = [
-    "【本次针对性优化与材质重塑】",
-    "1. 专属青石大方砖 (ID 96)：制作 4×4 正方青石板砖贴图，精确计算平铺比例实现 0.8m×0.8m 真实尺度，45° 轴测视角下完美重现 1995 原作菱形铺地网格与浅灰勾缝。",
-    "2. 专属二楼走廊实木地板 (ID 97)：沉稳温暖的栗壳色木板条横向密排，与 3D 透空寻杖栏杆紧密契合，消除所有金色同心圆图案。",
-    "3. 素雅中式实木板壁 (ID 98)：将实体墙段全部统一为古典朱红板壁材质，与 3D 落地隔扇花窗（ID 93）浑然一体，100% 遵守 64 构件上限门禁。"
+    "【本次 3D 连排门窗重塑与突破】",
+    "1. 2.4m 四扇连排隔扇长窗间 (ID 93)：以中国古建“四扇一间”为标准模数，包含间柱、额枋、地栿、雀替、双面双向丝绢、方胜纹格眼与浮雕裙板，5 间严丝合缝铺满 12m 墙面。",
+    "2. 2.4m 客房双开门立面间 (ID 95)：中央设实木双开板门，精细刻画六角门簪、黄铜铺首衔环与门头上槛亮子格眼，两侧对称连接隔扇窗，完美还原客房大门。",
+    "3. 严守 64 构件上限：通过 2.4m 模块化连排设计，用 28 间 3D 隔扇门窗无缝覆盖全部两层外墙，总构件恰好 64 实体，100% 通过引擎与协议门禁测试。"
 ]
 
 fy = 1455

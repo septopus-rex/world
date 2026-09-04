@@ -132,9 +132,9 @@ async function main() {
         const w = window.loader.engine.getWorld();
         const re = w.renderEngine;
         const metrics = w.metrics;
-        // Direct close-up facing the 3D lattice partition window at [2.1, 9.8]
-        const camPos = metrics.septopusToEngine([4.2, 9.8, 1.4], [2048, 2048]);
-        const targetPos = metrics.septopusToEngine([2.1, 9.8, 1.4], [2048, 2048]);
+        // Direct close-up facing the 2F continuous door bay and flanking partition windows at [8.0, 13.9, 4.0]
+        const camPos = metrics.septopusToEngine([8.0, 10.5, 3.85], [2048, 2048]);
+        const targetPos = metrics.septopusToEngine([8.0, 13.9, 3.85], [2048, 2048]);
         
         re.setMainCameraPosition(camPos[0], camPos[1], camPos[2]);
         re.setMainCameraLookAt(targetPos[0], targetPos[1], targetPos[2]);
