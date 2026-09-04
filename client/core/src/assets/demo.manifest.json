@@ -592,6 +592,42 @@
       2,
       2.8
     ]
+  },
+  {
+    "id": 99,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-roof-front.glb"
+  },
+  {
+    "id": 100,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-roof-back.glb"
+  },
+  {
+    "id": 101,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-roof-front-west.glb"
+  },
+  {
+    "id": 102,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-roof-front-east.glb"
+  },
+  {
+    "id": 103,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-roof-back-west.glb"
+  },
+  {
+    "id": 104,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-inn-roof-back-east.glb"
   }
 ]
 

@@ -1,0 +1,133 @@
+{
+  "format": "septopus.world.level",
+  "version": 1,
+  "name": "pal1_rooms",
+  "start": {
+    "block": [2048, 2048],
+    "position": [4.0, 3.5, 0.5],
+    "rotation": [0, 0, 0]
+  },
+  "blocks": [
+    {
+      "x": 2048,
+      "y": 2048,
+      "raw": [
+        0,
+        1,
+        [
+          [
+            162,
+            [
+              [
+                [16, 16, 0.2],
+                [8, 8, -0.1],
+                [0, 0, 0],
+                0,
+                [4, 4],
+                0,
+                1,
+                96
+              ]
+            ]
+          ],
+          [
+            182,
+            [
+              [
+                [2, 2, 0],
+                [
+                  {
+                    "position": [0, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "roof_front_west"],
+                      [1, "wood_floor"],
+                      [1, "gallery_railing"],
+                      [1, "guest_door"],
+                      [1, "solid"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "roof_front"],
+                      [1, "wood_floor"],
+                      [1, "gallery_railing"],
+                      [1, "guest_door"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "roof_front_east"],
+                      [1, "wood_floor"],
+                      [1, "gallery_railing"],
+                      [1, "guest_door"],
+                      [0, "empty"],
+                      [1, "solid"]
+                    ]
+                  },
+                  {
+                    "position": [0, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "roof_back_west"],
+                      [1, "floor"],
+                      [0, "empty"],
+                      [1, "lattice_window"],
+                      [1, "solid"],
+                      [1, "solid"]
+                    ]
+                  },
+                  {
+                    "position": [1, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "roof_back"],
+                      [1, "floor"],
+                      [0, "empty"],
+                      [1, "lattice_window"],
+                      [0, "empty"],
+                      [1, "solid"]
+                    ]
+                  },
+                  {
+                    "position": [2, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "roof_back_east"],
+                      [1, "floor"],
+                      [0, "empty"],
+                      [1, "lattice_window"],
+                      [0, "empty"],
+                      [1, "solid"]
+                    ]
+                  }
+                ],
+                "pal1_inn"
+              ]
+            ]
+          ],
+          [
+            163,
+            [
+              [0, [4.0, 4.0, 3.2], [0, 0, 0], 16769184, 2.6, 10, 0, 0],
+              [0, [8.0, 4.0, 3.2], [0, 0, 0], 16769184, 2.6, 10, 0, 0],
+              [0, [12.0, 4.0, 3.2], [0, 0, 0], 16769184, 2.6, 10, 0, 0],
+              [0, [4.0, 8.0, 3.0], [0, 0, 0], 16769184, 2.8, 10, 0, 0],
+              [0, [8.0, 8.0, 3.0], [0, 0, 0], 16769184, 2.8, 10, 0, 0],
+              [0, [12.0, 8.0, 3.0], [0, 0, 0], 16769184, 2.8, 10, 0, 0]
+            ]
+          ]
+        ],
+        [],
+        1
+      ]
+    }
+  ]
+}
