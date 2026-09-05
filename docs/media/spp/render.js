@@ -22,7 +22,14 @@ const OUT = __dirname;
 const SCENE_DIR = '/' + path.relative(ROOT, __dirname).split(path.sep).join('/');
 const PORT = 7912;                       // 临时端口，随进程结束；不读 env.PORT
 const FORMATS = { '16x9': [1920, 1080], '9x16': [1080, 1920] };
-const MIME = { '.html': 'text/html', '.json': 'application/json', '.png': 'image/png' };
+const MIME = {
+  '.html': 'text/html',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.glb': 'model/gltf-binary',
+};
 
 const args = process.argv.slice(2);
 const SCENES = { 'reveal.html': 'spp-reveal', 'street.html': 'spp-street' };

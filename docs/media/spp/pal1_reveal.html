@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Pal1 SPP Reveal & Evolution</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #06080e;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+    }
+    #c {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<script type="module">
+import * as THREE from '/client/desktop/node_modules/three/build/three.module.js';
+
+const Q = new URLSearchParams(location.search);
+const W = +Q.get('w') || 1080;
+const H = +Q.get('h') || 1920;
+const FPS = 60, DUR = 10, TOTAL = FPS * DUR; // 600 frames = 10.0s
+
+const cv = document.getElementById('c');
+cv.width = W;
+cv.height = H;
+const mainCtx = cv.getContext('2d');
+
+// Offscreen WebGL canvas for Three.js 3D rendering
+const threeCv = document.createElement('canvas');
+threeCv.width = W;
+threeCv.height = H;
+
+// Offscreen 2D HUD canvas for sharp UI overlays
+const hudCv = document.createElement('canvas');
+hudCv.width = W;
+hudCv.height = H;
+const hud = hudCv.getContext('2d');
+
+// --- Three.js Scene Setup ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x06080e);
+scene.fog = new THREE.FogExp2(0x06080e, 0.018);
+
+// 9:16 vertical FOV (54 deg vertical allows ~32 deg horizontal)
+const camera = new THREE.PerspectiveCamera(54, W / H, 0.1, 250);
+const renderer = new THREE.WebGLRenderer({
+  canvas: threeCv,
+  antialias: true,
+  alpha: false,
+  preserveDrawingBuffer: true
+});
+renderer.setSize(W, H, false);
+renderer.setPixelRatio(1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+
+// --- Lighting ---
+const ambientLight = new THREE.AmbientLight(0x404859, 1.25);
+scene.add(ambientLight);
+
+const sunLight = new THREE.DirectionalLight(0xfff3e0, 2.7);
+sunLight.position.set(16, 28, 20);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.width = 2048;
+sunLight.shadow.mapSize.height = 2048;
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 80;
+sunLight.shadow.camera.left = -25;
+sunLight.shadow.camera.right = 25;
+sunLight.shadow.camera.top = 25;
+sunLight.shadow.camera.bottom = -25;
+sunLight.shadow.bias = -0.0005;
+scene.add(sunLight);
+
+// Cool blue rim light
+const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.4);
+rimLight.position.set(-18, 14, -16);
+scene.add(rimLight);
+
+// Ground subtle cyber grid
+const grid = new THREE.GridHelper(64, 32, 0x1e3a5f, 0x0c1726);
+grid.position.y = -0.01;
+scene.add(grid);
+
+// --- Materials Palette ---
+const matPlasterWhite = new THREE.MeshStandardMaterial({ color: 0xf2eee8, roughness: 0.85, metalness: 0.05 });
+const matRedWood = new THREE.MeshStandardMaterial({ color: 0x6e2217, roughness: 0.55, metalness: 0.1 });
+const matDarkWood = new THREE.MeshStandardMaterial({ color: 0x331e15, roughness: 0.65, metalness: 0.1 });
+const matFloorPlank = new THREE.MeshStandardMaterial({ color: 0x6e432a, roughness: 0.7, metalness: 0.05 });
+const matStoneGrey = new THREE.MeshStandardMaterial({ color: 0x484d54, roughness: 0.8, metalness: 0.05 });
+const matPavingLight = new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.75, metalness: 0.05 });
+const matRoofTile = new THREE.MeshStandardMaterial({ color: 0x242a33, roughness: 0.65, metalness: 0.15 });
+const matGoldAccent = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.8 });
+const matGreenFoliage = new THREE.MeshStandardMaterial({ color: 0x2e6f40, roughness: 0.75, metalness: 0.05 });
+const matBambooStem = new THREE.MeshStandardMaterial({ color: 0x4d883b, roughness: 0.45, metalness: 0.1 });
+const matLanternGlow = new THREE.MeshStandardMaterial({ color: 0xdd1515, emissive: 0xbb1100, emissiveIntensity: 0.85, roughness: 0.3 });
+
+// Wireframe & indicator materials
+const matWireCyan = new THREE.LineBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.95 });
+const matSeamOrange = new THREE.LineBasicMaterial({ color: 0xff6600, linewidth: 2 });
+
+// --- Geometry Hierarchies ---
+const rootGroup = new THREE.Group();
+scene.add(rootGroup);
+
+// Container groups for phased animations
+const phase1Wires = new THREE.Group(); // Wireframes (Unit cells)
+const phase2House = new THREE.Group(); // Solid Inn structure (walls, floor, columns, doors, windows)
+const phase3Roof = new THREE.Group();  // Classical Dual-Pitch Tile Roof with Flying Eaves
+const phase4Courtyard = new THREE.Group(); // Courtyard (moon gate wall, stone table, well, rockery)
+const phase4Promenade = new THREE.Group(); // Outdoor path, willow tree, bamboo, lantern
+const particleGroup = new THREE.Group();
+const seamLinesGroup = new THREE.Group(); // Orange seam markers before consolidation
+
+rootGroup.add(phase1Wires);
+rootGroup.add(phase2House);
+rootGroup.add(phase3Roof);
+rootGroup.add(phase4Courtyard);
+rootGroup.add(phase4Promenade);
+rootGroup.add(particleGroup);
+rootGroup.add(seamLinesGroup);
+
+// --- Phase 1: Unit Cell Wireframes (3 bays of 4m x 4m x 4m) ---
+const wireBoxes = [];
+for (let i = -1; i <= 1; i++) {
+  const boxGeom = new THREE.BoxGeometry(4, 4, 4);
+  const edges = new THREE.EdgesGeometry(boxGeom);
+  const line = new THREE.LineSegments(edges, matWireCyan.clone());
+  line.position.set(i * 4, 2, 0);
+  phase1Wires.add(line);
+  wireBoxes.push(line);
+}
+
+// Glowing Core Particle for Genesis
+const coreParticle = new THREE.Mesh(
+  new THREE.SphereGeometry(0.5, 24, 24),
+  new THREE.MeshBasicMaterial({ color: 0x00ffff })
+);
+coreParticle.position.set(0, 2, 0);
+particleGroup.add(coreParticle);
+
+const particleLight = new THREE.PointLight(0x00ffff, 4, 10);
+particleLight.position.set(0, 2, 0);
+particleGroup.add(particleLight);
+
+// --- Phase 2: Solid Inn Structure (客栈正房 3开间) ---
+// 1. Foundation & Floor
+const floorGeom = new THREE.BoxGeometry(12, 0.3, 4);
+const floorMesh = new THREE.Mesh(floorGeom, matFloorPlank);
+floorMesh.position.set(0, 0.15, 0);
+floorMesh.receiveShadow = true;
+phase2House.add(floorMesh);
+
+// 2. Pillars (8 main columns at bay corners)
+const pillarPositions = [
+  [-6, 2, -2], [-2, 2, -2], [2, 2, -2], [6, 2, -2],
+  [-6, 2, 2],  [-2, 2, 2],  [2, 2, 2],  [6, 2, 2],
+];
+const pillarGeom = new THREE.CylinderGeometry(0.16, 0.18, 4, 16);
+pillarPositions.forEach(p => {
+  const col = new THREE.Mesh(pillarGeom, matRedWood);
+  col.position.set(p[0], p[1], p[2]);
+  col.castShadow = true;
+  col.receiveShadow = true;
+  phase2House.add(col);
+});
+
+// 3. Walls (North back wall, East & West partition walls)
+const backWall = new THREE.Mesh(new THREE.BoxGeometry(11.8, 3.8, 0.2), matPlasterWhite);
+backWall.position.set(0, 2.05, -1.9);
+backWall.castShadow = true;
+phase2House.add(backWall);
+
+const sideWallW = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.8, 3.8), matPlasterWhite);
+sideWallW.position.set(-5.9, 2.05, 0);
+sideWallW.castShadow = true;
+phase2House.add(sideWallW);
+
+const sideWallE = new THREE.Mesh(new THREE.BoxGeometry(0.2, 3.8, 3.8), matPlasterWhite);
+sideWallE.position.set(5.9, 2.05, 0);
+sideWallE.castShadow = true;
+phase2House.add(sideWallE);
+
+// 4. Front Wall Panels & Lattice Windows / Central Double Door
+for (let i = -1; i <= 1; i++) {
+  const wallPanel = new THREE.Mesh(new THREE.BoxGeometry(3.68, 3.8, 0.15), matPlasterWhite);
+  wallPanel.position.set(i * 4, 2.05, 1.92);
+  wallPanel.castShadow = true;
+  phase2House.add(wallPanel);
+
+  if (i === 0) {
+    // Center entrance: red wood double door
+    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.9, 2.85, 0.22), matRedWood);
+    doorFrame.position.set(0, 1.58, 1.94);
+    doorFrame.castShadow = true;
+    phase2House.add(doorFrame);
+
+    // Inn Plaque (客栈匾额)
+    const plaqueBorder = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.75, 0.1), matGoldAccent);
+    plaqueBorder.position.set(0, 3.4, 1.95);
+    phase2House.add(plaqueBorder);
+    const plaque = new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.62, 0.12), matDarkWood);
+    plaque.position.set(0, 3.4, 1.97);
+    phase2House.add(plaque);
+  } else {
+    // Flank lattice windows & railings
+    const winCut = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.6, 0.2), matDarkWood);
+    winCut.position.set(i * 4, 2.2, 1.93);
+    phase2House.add(winCut);
+
+    // Porch railings
+    const railMesh = new THREE.Mesh(new THREE.BoxGeometry(3.68, 0.12, 0.16), matRedWood);
+    railMesh.position.set(i * 4, 1.05, 1.92);
+    phase2House.add(railMesh);
+
+    for (let b = -3; b <= 3; b++) {
+      const baluster = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.75, 8), matDarkWood);
+      baluster.position.set(i * 4 + b * 0.45, 0.65, 1.92);
+      phase2House.add(baluster);
+    }
+  }
+}
+
+// 5. Hanging Red Lanterns under Eaves (仙剑客栈飞檐红灯笼)
+[-4.2, 4.2].forEach(lx => {
+  const lanternGroup = new THREE.Group();
+  lanternGroup.position.set(lx, 3.8, 2.15);
+  const sphere = new THREE.Mesh(new THREE.SphereGeometry(0.38, 16, 16), matLanternGlow);
+  sphere.scale.set(1, 1.22, 1);
+  lanternGroup.add(sphere);
+  const topRing = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.08, 12), matGoldAccent);
+  topRing.position.y = 0.46;
+  lanternGroup.add(topRing);
+  const tassel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.12, 0.45, 8), matGoldAccent);
+  tassel.position.y = -0.58;
+  lanternGroup.add(tassel);
+  const lLight = new THREE.PointLight(0xff3311, 2.2, 7);
+  lLight.position.set(0, 0, 0);
+  lanternGroup.add(lLight);
+  phase2House.add(lanternGroup);
+});
+
+// --- Phase 3: Classical Dual-Pitch Tile Roof with Flying Eaves (古典歇山青瓦大屋顶) ---
+// 1. Central Ridge (正脊)
+const ridge = new THREE.Mesh(new THREE.BoxGeometry(13.6, 0.38, 0.38), matDarkWood);
+ridge.position.set(0, 5.75, 0);
+ridge.castShadow = true;
+phase3Roof.add(ridge);
+
+// 2. Front & Back Sloped Tile Panels
+const slopeLen = 3.35;
+const roofAngle = 0.38; // ~22 degrees slope
+
+const frontSlope = new THREE.Mesh(new THREE.BoxGeometry(13.4, 0.18, slopeLen), matRoofTile);
+frontSlope.position.set(0, 5.05, slopeLen * 0.42);
+frontSlope.rotation.x = roofAngle;
+frontSlope.castShadow = true;
+frontSlope.receiveShadow = true;
+phase3Roof.add(frontSlope);
+
+const backSlope = new THREE.Mesh(new THREE.BoxGeometry(13.4, 0.18, slopeLen), matRoofTile);
+backSlope.position.set(0, 5.05, -slopeLen * 0.42);
+backSlope.rotation.x = -roofAngle;
+backSlope.castShadow = true;
+backSlope.receiveShadow = true;
+phase3Roof.add(backSlope);
+
+// 3. Tile Ridges (筒瓦垄线)
+for (let r = -12; r <= 12; r++) {
+  const ridgeLineF = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, slopeLen), matDarkWood);
+  ridgeLineF.position.set(r * 0.54, 5.09, slopeLen * 0.42);
+  ridgeLineF.rotation.x = roofAngle;
+  phase3Roof.add(ridgeLineF);
+
+  const ridgeLineB = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, slopeLen), matDarkWood);
+  ridgeLineB.position.set(r * 0.54, 5.09, -slopeLen * 0.42);
+  ridgeLineB.rotation.x = -roofAngle;
+  phase3Roof.add(ridgeLineB);
+}
+
+// 4. Flying Eaves (起翘飞檐角 4角起翘)
+[[-6.8, 1.5], [6.8, 1.5], [-6.8, -1.5], [6.8, -1.5]].forEach(([ex, ez]) => {
+  const eaveTip = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.3, 4), matGoldAccent);
+  eaveTip.position.set(ex, 4.55, ez * 1.05);
+  eaveTip.rotation.z = ex < 0 ? -0.48 : 0.48;
+  eaveTip.rotation.x = ez > 0 ? 0.38 : -0.38;
+  eaveTip.castShadow = true;
+  phase3Roof.add(eaveTip);
+});
+
+// --- Phase 4: Courtyard Garden (South of Inn 幽篁庭院) ---
+// 1. Courtyard Paved Ground (12m wide x 8m deep)
+const yardGround = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 8), matPavingLight);
+yardGround.position.set(0, 0.1, 6.0);
+yardGround.receiveShadow = true;
+phase4Courtyard.add(yardGround);
+
+// 2. Central Stone Pathway (青石甬道)
+const stoneWalkway = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.22, 7.85), matStoneGrey);
+stoneWalkway.position.set(0, 0.12, 6.0);
+stoneWalkway.receiveShadow = true;
+phase4Courtyard.add(stoneWalkway);
+
+// Porch stone step leading into courtyard
+const porchStep = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.16, 0.8), matStoneGrey);
+porchStep.position.set(0, 0.08, 2.3);
+porchStep.receiveShadow = true;
+phase4Courtyard.add(porchStep);
+
+// 3. White Garden Wall with Moon Gate (江南白粉墙与小青瓦压顶)
+// Wall West Segment
+const wallWest = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.6, 0.3), matPlasterWhite);
+wallWest.position.set(-3.9, 1.4, 9.85);
+wallWest.castShadow = true;
+phase4Courtyard.add(wallWest);
+
+const wallCapWest = new THREE.Mesh(new THREE.BoxGeometry(4.35, 0.14, 0.45), matRoofTile);
+wallCapWest.position.set(-3.9, 2.75, 9.85);
+phase4Courtyard.add(wallCapWest);
+
+// Wall East Segment
+const wallEast = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.6, 0.3), matPlasterWhite);
+wallEast.position.set(3.9, 1.4, 9.85);
+wallEast.castShadow = true;
+phase4Courtyard.add(wallEast);
+
+const wallCapEast = new THREE.Mesh(new THREE.BoxGeometry(4.35, 0.14, 0.45), matRoofTile);
+wallCapEast.position.set(3.9, 2.75, 9.85);
+phase4Courtyard.add(wallCapEast);
+
+// Moon Gate Over-arch lintel & Wall Cap
+const archTop = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.5, 0.32), matPlasterWhite);
+archTop.position.set(0, 2.45, 9.85);
+phase4Courtyard.add(archTop);
+
+const wallCapTop = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.14, 0.48), matRoofTile);
+wallCapTop.position.set(0, 2.75, 9.85);
+phase4Courtyard.add(wallCapTop);
+
+// Circular Moon Gate Frame (Dark Lacquered Wood Hoop)
+const moonHoop = new THREE.Mesh(new THREE.TorusGeometry(1.05, 0.09, 12, 32), matRedWood);
+moonHoop.position.set(0, 1.25, 9.85);
+phase4Courtyard.add(moonHoop);
+
+// Flower Window on West Garden Wall
+const winHoop = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 8, 24), matRedWood);
+winHoop.position.set(-3.8, 1.45, 9.85);
+phase4Courtyard.add(winHoop);
+
+// 4. Courtyard Dressing: Stone Table, Stools, Ancient Well, Rockery
+// Stone Table
+const tableTop = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.1, 18), matStoneGrey);
+tableTop.position.set(0, 0.75, 5.2);
+tableTop.castShadow = true;
+phase4Courtyard.add(tableTop);
+const tableLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 0.65, 12), matStoneGrey);
+tableLeg.position.set(0, 0.425, 5.2);
+phase4Courtyard.add(tableLeg);
+
+// Drum Stools
+for (let a = 0; a < 4; a++) {
+  const rad = a * Math.PI / 2;
+  const stool = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 0.42, 12), matStoneGrey);
+  stool.position.set(Math.cos(rad) * 1.15, 0.31, 5.2 + Math.sin(rad) * 1.15);
+  stool.castShadow = true;
+  phase4Courtyard.add(stool);
+}
+
+// Ancient Well with wooden roof frame (青石八角井与井架)
+const wellRing = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.60, 0.7, 16, 1, true), matStoneGrey);
+wellRing.position.set(3.2, 0.45, 4.0);
+wellRing.castShadow = true;
+phase4Courtyard.add(wellRing);
+
+const wellPost1 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8), matDarkWood);
+wellPost1.position.set(3.2 - 0.45, 1.0, 4.0);
+const wellPost2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8), matDarkWood);
+wellPost2.position.set(3.2 + 0.45, 1.0, 4.0);
+const wellBeam = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 0.08), matDarkWood);
+wellBeam.position.set(3.2, 1.68, 4.0);
+const wellRoof = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.06, 0.8), matRoofTile);
+wellRoof.position.set(3.2, 1.78, 4.0);
+phase4Courtyard.add(wellPost1);
+phase4Courtyard.add(wellPost2);
+phase4Courtyard.add(wellBeam);
+phase4Courtyard.add(wellRoof);
+
+// Rockery (假山太湖石)
+[
+  [ -3.2, 0.7, 4.2, 0.75 ],
+  [ -2.7, 0.5, 4.6, 0.55 ],
+  [ -3.5, 0.4, 4.8, 0.45 ],
+].forEach(([rx, ry, rz, s]) => {
+  const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 1), matStoneGrey);
+  rock.position.set(rx, ry, rz);
+  rock.scale.set(1, 1.4, 0.9);
+  rock.castShadow = true;
+  phase4Courtyard.add(rock);
+});
+
+// Bamboo Clump in Courtyard (修竹)
+for (let b = 0; b < 6; b++) {
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.2, 8), matBambooStem);
+  stem.position.set(-4.2 + (b % 3) * 0.35, 1.7, 3.2 + Math.floor(b / 3) * 0.45);
+  stem.castShadow = true;
+  phase4Courtyard.add(stem);
+}
+
+// --- Phase 4B: Outdoor Promenade (外部青石长街) ---
+// 1. Long Stone Promenade Path
+const pathSlab = new THREE.Mesh(new THREE.BoxGeometry(20, 0.15, 4.2), matPavingLight);
+pathSlab.position.set(0, 0.08, 12.2);
+pathSlab.receiveShadow = true;
+phase4Promenade.add(pathSlab);
+
+// 2. Green Turf around path
+const turfL = new THREE.Mesh(new THREE.BoxGeometry(20, 0.12, 3), matGreenFoliage);
+turfL.position.set(0, 0.06, 15.6);
+phase4Promenade.add(turfL);
+
+// 3. Bamboo Fences along Promenade
+for (let f = -3; f <= 3; f++) {
+  const fence = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.95, 0.08), matBambooStem);
+  fence.position.set(f * 3.2, 0.55, 14.2);
+  fence.castShadow = true;
+  phase4Promenade.add(fence);
+}
+
+// 4. Stone Lantern with glowing warm light (青石庭院引路灯)
+const lanternBase = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.25, 0.8, 8), matStoneGrey);
+lanternBase.position.set(2.2, 0.48, 10.6);
+lanternBase.castShadow = true;
+phase4Promenade.add(lanternBase);
+const lanternCap = new THREE.Mesh(new THREE.ConeGeometry(0.42, 0.35, 6), matStoneGrey);
+lanternCap.position.set(2.2, 1.05, 10.6);
+phase4Promenade.add(lanternCap);
+const lanternLight = new THREE.PointLight(0xffaa44, 2.5, 6);
+lanternLight.position.set(2.2, 0.9, 10.6);
+phase4Promenade.add(lanternLight);
+
+// 5. Willow Tree in Foreground (垂柳)
+const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.38, 3.2, 10), matDarkWood);
+trunk.position.set(-3.2, 1.6, 11.2);
+trunk.castShadow = true;
+phase4Promenade.add(trunk);
+const foliage = new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 10), matGreenFoliage);
+foliage.position.set(-3.2, 3.4, 11.2);
+foliage.scale.set(1.2, 0.8, 1.2);
+foliage.castShadow = true;
+phase4Promenade.add(foliage);
+
+// --- Seam Indicator Lines (Orange Glowing Lines Before Consolidation) ---
+// Seam 1: Inn Porch - Courtyard Junction (Z = 2.0, X = -6..+6)
+const seamGeom1 = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(-6, 0.26, 2.0), new THREE.Vector3(6, 0.26, 2.0)
+]);
+const seam1 = new THREE.Line(seamGeom1, matSeamOrange);
+seamLinesGroup.add(seam1);
+
+// Seam 2: Courtyard - Moon Gate / Promenade Junction (Z = 10.0, X = -6..+6)
+const seamGeom2 = new THREE.BufferGeometry().setFromPoints([
+  new THREE.Vector3(-6, 0.26, 10.0), new THREE.Vector3(6, 0.26, 10.0)
+]);
+const seam2 = new THREE.Line(seamGeom2, matSeamOrange);
+seamLinesGroup.add(seam2);
+
+// --- Golden Scanline Plane for Consolidation Pass ---
+const scanGeom = new THREE.PlaneGeometry(28, 22);
+const scanMat = new THREE.MeshBasicMaterial({
+  color: 0xf59e0b,
+  transparent: true,
+  opacity: 0,
+  side: THREE.DoubleSide
+});
+const scanPlane = new THREE.Mesh(scanGeom, scanMat);
+scanPlane.rotation.x = Math.PI / 2;
+scanPlane.position.y = 0.26;
+scene.add(scanPlane);
+
+// --- Helper Functions ---
+function easeOutCubic(x) {
+  return 1 - Math.pow(1 - x, 3);
+}
+
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
+// =============================================================================
+// MAIN FRAME RENDERER (0 <= f < 600)
+// =============================================================================
+window.renderFrame = function(f) {
+  // Default states
+  particleGroup.visible = false;
+  phase1Wires.visible = false;
+  phase2House.visible = false;
+  phase3Roof.visible = false;
+  phase4Courtyard.visible = false;
+  phase4Promenade.visible = false;
+  seamLinesGroup.visible = false;
+  scanPlane.material.opacity = 0;
+
+  let titleText = "";
+  let subText = "";
+  let badgeText = "";
+  let badgeColor = "rgba(14, 165, 233, 0.9)";
+
+  // Camera coordinates & target
+  let camX = 0, camY = 6, camZ = 28;
+  let tarX = 0, tarY = 2.4, tarZ = 0;
+
+  // =========================================================================
+  // STAGE 1: Frames 0 - 80 (0.0s - 1.33s) —— 灵力粒子诞生与 4m 晶格定标
+  // =========================================================================
+  if (f < 80) {
+    const p1 = f / 80;
+    titleText = "SPP 4m 空间单胞晶格诞生";
+    subText = "弦粒子空间标定 · 建立 [3 × 1] 三开间客栈网格坐标系";
+
+    camX = 0;
+    camY = 5.0;
+    camZ = lerp(27.0, 24.0, p1);
+    tarX = 0; tarY = 2.4; tarZ = 0;
+
+    if (f < 35) {
+      particleGroup.visible = true;
+      const pulse = 1 + 0.35 * Math.sin(f * 0.35);
+      coreParticle.scale.set(pulse, pulse, pulse);
+    }
+
+    if (f >= 20) {
+      phase1Wires.visible = true;
+      const growT = easeOutCubic((f - 20) / 35);
+      // Center cell expands
+      wireBoxes[1].scale.set(growT, growT, growT);
+
+      // Flank cells expand
+      if (f >= 45) {
+        const flankT = easeOutCubic((f - 45) / 30);
+        wireBoxes[0].scale.set(flankT, flankT, flankT);
+        wireBoxes[2].scale.set(flankT, flankT, flankT);
+      } else {
+        wireBoxes[0].scale.set(0.001, 0.001, 0.001);
+        wireBoxes[2].scale.set(0.001, 0.001, 0.001);
+      }
+    }
+  }
+
+  // =========================================================================
+  // STAGE 2: Frames 80 - 190 (1.33s - 3.16s) —— 叠加态闪烁与坍缩扫描成型
+  // =========================================================================
+  else if (f < 190) {
+    const p2 = (f - 80) / 110;
+    titleText = "空间叠加态坍缩 · 物理材质实体化";
+    subText = "六面变体坍缩扫描波自底向上成型 · 地板、朱红柱与花窗就位";
+    badgeText = "COLLAPSE PASS: IN PROGRESS";
+
+    camX = lerp(0, 7.5, p2);
+    camY = lerp(5.0, 6.5, p2);
+    camZ = lerp(24.0, 23.0, p2);
+    tarX = 0; tarY = 2.4; tarZ = 0;
+
+    phase1Wires.visible = true;
+    phase2House.visible = true;
+
+    // Superposition flickering
+    if (f < 120) {
+      const flicker = (Math.sin(f * 1.2) > 0);
+      matWireCyan.opacity = flicker ? 0.9 : 0.3;
+      phase2House.scale.set(1, 0.01, 1);
+    } else {
+      // Wavefront collapse: scale Y rises from 0 to 1
+      const colT = easeOutCubic((f - 120) / 60);
+      phase2House.scale.set(1, colT, 1);
+      matWireCyan.opacity = lerp(0.8, 0.05, colT);
+    }
+  }
+
+  // =========================================================================
+  // STAGE 3: Frames 190 - 310 (3.16s - 5.16s) —— 双坡青瓦大屋顶与飞檐降落
+  // =========================================================================
+  else if (f < 310) {
+    const p3 = (f - 190) / 120;
+    titleText = "古典歇山青瓦大屋顶 · 起翘飞檐就位";
+    subText = "三开间连贯瓦当与垂脊降落安装 · 自然挑檐出挑 0.5m";
+    badgeText = "ROOF ASSEMBLED: 6 VARIANTS";
+    badgeColor = "rgba(245, 158, 11, 0.9)";
+
+    camX = lerp(7.5, 11.0, p3);
+    camY = lerp(6.5, 9.0, p3);
+    camZ = lerp(23.0, 26.0, p3);
+    tarX = 0; tarY = 3.2; tarZ = 0;
+
+    phase2House.visible = true;
+    phase3Roof.visible = true;
+
+    // Roof descends from Y = 6.5m to Y = 0 with spring ease
+    const roofT = easeOutCubic(p3);
+    const dropY = lerp(6.5, 0, roofT);
+    phase3Roof.position.y = dropY;
+  }
+
+  // =========================================================================
+  // STAGE 4: Frames 310 - 450 (5.16s - 7.5s) —— 多 SPP 混排：中式合院与外部路网展开
+  // =========================================================================
+  else if (f < 450) {
+    const p4 = (f - 310) / 140;
+    titleText = "多 SPP 混排 · 园林合院与外部步道串联";
+    subText = "月亮门、青石水井、假山石桌、垂柳竹篱无缝对接";
+    badgeText = "MULTI-SPP COMPOUND: 3 PREFABS CONNECTED";
+    badgeColor = "rgba(16, 185, 129, 0.9)";
+
+    // Camera moves back and elevates to high isometric viewpoint
+    camX = lerp(11.0, 19.0, p4);
+    camY = lerp(9.0, 20.0, p4);
+    camZ = lerp(26.0, 32.0, p4);
+    tarX = 0; tarY = lerp(3.2, 1.8, p4); tarZ = lerp(0, 5.5, p4);
+
+    phase2House.visible = true;
+    phase3Roof.visible = true;
+    phase3Roof.position.y = 0;
+    phase4Courtyard.visible = true;
+    phase4Promenade.visible = true;
+
+    // Scale up courtyard & promenade
+    const yardT = easeOutCubic(Math.min(p4 * 1.5, 1));
+    phase4Courtyard.scale.set(1, yardT, 1);
+
+    if (p4 > 0.3) {
+      const promT = easeOutCubic((p4 - 0.3) / 0.7);
+      phase4Promenade.scale.set(1, promT, 1);
+    } else {
+      phase4Promenade.scale.set(1, 0.001, 1);
+    }
+
+    // Show seam warnings before consolidation
+    seamLinesGroup.visible = (Math.sin(f * 0.4) > -0.2);
+  }
+
+  // =========================================================================
+  // STAGE 5: Frames 450 - 600 (7.5s - 10.0s) —— 后处理合并消缝与全景巡检定格
+  // =========================================================================
+  else {
+    const p5 = (f - 450) / 150;
+    titleText = "后处理合并优化 (Consolidation Pass)";
+    subText = "相邻 AABB 纯函数融合 · 消除接缝闪烁 · 消除碰撞体绊脚";
+    badgeText = "CONSOLIDATION: ACTIVE (-25% ENTITIES)";
+    badgeColor = "rgba(245, 158, 11, 0.95)";
+
+    // Smooth continuous cinematic orbit
+    const orbitAngle = lerp(0.55, 0.92, p5);
+    const r = 36.0;
+    camX = r * Math.sin(orbitAngle);
+    camY = lerp(20.0, 18.5, p5);
+    camZ = 5.5 + r * Math.cos(orbitAngle);
+    tarX = 0; tarY = 1.8; tarZ = 5.5;
+
+    phase2House.visible = true;
+    phase3Roof.visible = true;
+    phase3Roof.position.y = 0;
+    phase4Courtyard.visible = true;
+    phase4Promenade.visible = true;
+    phase4Courtyard.scale.set(1, 1, 1);
+    phase4Promenade.scale.set(1, 1, 1);
+
+    // Golden scanline wave moving from Z = -2 to Z = 16
+    if (f < 530) {
+      const scanT = (f - 450) / 80;
+      scanPlane.position.z = lerp(-2.0, 16.0, scanT);
+      scanPlane.material.opacity = 0.5 * Math.sin(scanT * Math.PI);
+      seamLinesGroup.visible = (scanT < 0.6);
+    } else {
+      seamLinesGroup.visible = false;
+    }
+
+    // Seamless unified slate tone
+    matPavingLight.roughness = 0.65;
+    matFloorPlank.roughness = 0.60;
+  }
+
+  // Set Camera in Three.js
+  camera.position.set(camX, camY, camZ);
+  camera.lookAt(tarX, tarY, tarZ);
+
+  // Render 3D Scene
+  renderer.render(scene, camera);
+
+  // =========================================================================
+  // 2D HUD TELEMETRY OVERLAY
+  // =========================================================================
+  hud.clearRect(0, 0, W, H);
+
+  // 1. Top HUD Card
+  hud.fillStyle = "rgba(10, 14, 22, 0.82)";
+  hud.fillRect(40, 60, W - 80, 140);
+  hud.strokeStyle = "rgba(56, 189, 248, 0.35)";
+  hud.lineWidth = 2;
+  hud.strokeRect(40, 60, W - 80, 140);
+
+  // Cyan corner accents
+  hud.strokeStyle = "#38bdf8";
+  hud.lineWidth = 3;
+  // Top-Left
+  hud.beginPath(); hud.moveTo(40, 80); hud.lineTo(40, 60); hud.lineTo(60, 60); hud.stroke();
+  // Top-Right
+  hud.beginPath(); hud.moveTo(W - 60, 60); hud.lineTo(W - 40, 60); hud.lineTo(W - 40, 80); hud.stroke();
+  // Bottom-Left
+  hud.beginPath(); hud.moveTo(40, 180); hud.lineTo(40, 200); hud.lineTo(60, 200); hud.stroke();
+  // Bottom-Right
+  hud.beginPath(); hud.moveTo(W - 60, 200); hud.lineTo(W - 40, 200); hud.lineTo(W - 40, 180); hud.stroke();
+
+  // Brand header
+  hud.fillStyle = "#f59e0b";
+  hud.font = "bold 24px sans-serif";
+  hud.fillText("SEPTOPUS WORLD · 弦粒子空间预制体 (SPP)", 68, 102);
+
+  // Dynamic Title
+  hud.fillStyle = "#ffffff";
+  hud.font = "bold 34px sans-serif";
+  hud.fillText(titleText, 68, 146);
+
+  // Subtitle
+  hud.fillStyle = "#94a3b8";
+  hud.font = "20px sans-serif";
+  hud.fillText(subText, 68, 178);
+
+  // Dynamic Badge on Top-Right
+  if (badgeText) {
+    hud.font = "bold 18px sans-serif";
+    const textW = hud.measureText(badgeText).width;
+    const badgeX = W - 70 - textW - 24;
+    hud.fillStyle = badgeColor;
+    hud.beginPath();
+    hud.roundRect(badgeX, 86, textW + 24, 34, 6);
+    hud.fill();
+
+    hud.fillStyle = "#ffffff";
+    hud.fillText(badgeText, badgeX + 12, 110);
+  }
+
+  // 2. Bottom Stats Panel (When in Stage 4 & 5)
+  if (f >= 310) {
+    const bottomY = H - 180;
+    hud.fillStyle = "rgba(10, 14, 22, 0.85)";
+    hud.fillRect(40, bottomY, W - 80, 120);
+    hud.strokeStyle = "rgba(245, 158, 11, 0.4)";
+    hud.lineWidth = 2;
+    hud.strokeRect(40, bottomY, W - 80, 120);
+
+    hud.fillStyle = "#f1f5f9";
+    hud.font = "bold 22px sans-serif";
+    hud.fillText("【仙剑合院与外部路网空间拓扑实时看板】", 68, bottomY + 38);
+
+    hud.font = "18px sans-serif";
+    hud.fillStyle = "#38bdf8";
+    hud.fillText("• 预制体构型：客栈正房 (3x1) + 幽篁合院 (3x2) + 外部青石长街", 68, bottomY + 70);
+
+    const isConsolidated = f >= 480;
+    const entCount = isConsolidated ? "186 实体 (-25%)" : "248 实体 (未合并)";
+    const seamState = isConsolidated ? "0 接缝 (完全消除)" : "42 处碎片重叠接缝";
+    const passability = isConsolidated ? "100% 极佳 (消除了12处绊脚卡墙)" : "存在微小接缝阻挡";
+
+    hud.fillStyle = isConsolidated ? "#34d399" : "#fbbf24";
+    hud.fillText(`• 实体规模: ${entCount}   |   接缝检测: ${seamState}   |   角色通行度: ${passability}`, 68, bottomY + 98);
+  }
+
+  // Composite Three.js WebGL and 2D HUD onto main canvas
+  mainCtx.drawImage(threeCv, 0, 0);
+  mainCtx.drawImage(hudCv, 0, 0);
+};
+
+// Expose total frames and ready flag for render.js
+window.TOTAL = TOTAL;
+window.READY = true;
+console.log('Pal1 SPP Reveal visualizer ready!');
+</script>
+</body>
+</html>
