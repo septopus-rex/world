@@ -1,5 +1,5 @@
 ---
-name: spp-particle
+name: spp
 description: 创作、设计与构建 SPP（弦粒子空间预制体）的全流程技能。涵盖微观单胞粒子库（StylePack 面变体池与独立组合件 Prefabs）到宏观建筑、合院庭院与外部路网空间规划、多 SPP 混排串联、高精 3D 资产（GLB）程序化生成与 Manifest 契约、物理碰撞体隐形防坑规范、纯数据关卡交付与自动化门禁/视觉多机位巡检。
 ---
 
