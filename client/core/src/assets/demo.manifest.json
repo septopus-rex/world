@@ -628,6 +628,36 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/pal1-inn-roof-back-east.glb"
+  },
+  {
+    "id": 105,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-courtyard-moon-gate.glb"
+  },
+  {
+    "id": 106,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-courtyard-stone-table.glb"
+  },
+  {
+    "id": 107,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-courtyard-ancient-well.glb"
+  },
+  {
+    "id": 108,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-courtyard-rockery.glb"
+  },
+  {
+    "id": 109,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-courtyard-garden-wall.glb"
   }
 ]
 
