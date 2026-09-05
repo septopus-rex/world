@@ -19,6 +19,7 @@ import { WorldConfig, FullWorldConfig } from './core/types/WorldConfig';
 import { SystemMode } from './core/types/SystemMode';
 
 export { SystemMode };
+export { setSppConsolidation, isSppConsolidationEnabled, consolidateSppRows } from './core/spp/Consolidator';
 
 export interface EngineServices {
     api: IDataSource;

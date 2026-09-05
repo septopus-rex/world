@@ -1,4 +1,4 @@
-import type { Engine } from '@engine/Engine';
+import { type Engine, setSppConsolidation } from '@engine/Engine';
 import { hasIndexedDB, IdbDraftBackend } from '@engine/core/services/IdbDraftBackend';
 import { LocalDataSource, SceneProvider } from '@engine/core/services/LocalDataSource';
 // Authored levels are pure DATA (AuthoredLevel JSON) — content lives here with
@@ -88,7 +88,17 @@ export interface SeptopusPlayerState {
  * CAS live on the booted world).
  */
 export class WorldContent {
-    constructor(private engine: () => Engine | null) {}
+    constructor(private engine: () => Engine | null) {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const cons = params.get('spp_consolidate') ?? params.get('consolidate');
+            if (cons === '1' || cons === 'true') {
+                setSppConsolidation(true);
+            } else if (cons === '0' || cons === 'false') {
+                setSppConsolidation(false);
+            }
+        }
+    }
 
     // ── level identity ────────────────────────────────────────────────────────
 

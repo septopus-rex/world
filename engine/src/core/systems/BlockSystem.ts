@@ -171,7 +171,12 @@ export class BlockSystem implements ISystem {
                                 // persists only the source row.
                                 const expand = SOURCE_EXPANDERS[typeId];
                                 if (expand) {
-                                    expand(rawInst as any, { blockX: block.x, blockY: block.y }).forEach(([dType, dRow], k) => {
+                                    const sppConsolidate = (world.config as any)?.spp?.consolidate;
+                                    expand(rawInst as any, {
+                                        blockX: block.x,
+                                        blockY: block.y,
+                                        ...(sppConsolidate != null ? { consolidate: sppConsolidate } : {}),
+                                    }).forEach(([dType, dRow], k) => {
                                         const dDef = getBuiltinAdjunct(dType);
                                         const dStd = dDef?.attribute?.deserialize(dRow);
                                         if (!dDef || !dStd) return;

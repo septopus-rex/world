@@ -47,6 +47,7 @@ export interface SppCell {
     trigger?: TriggerLogicNode[];
 }
 
+import { consolidateSppRows, isSppConsolidationEnabled } from './Consolidator';
 export type SppRaw = [origin: [number, number, number], cells: SppCell[], theme: string];
 
 export type ExpandedRow = [typeId: number, raw: any[]];
@@ -56,7 +57,13 @@ export type ExpandedRow = [typeId: number, raw: any[]];
  *  `budget` caps derived rows (graceful coarse fallback + a logged truncation).
  *  Neither affects the canonical source/CID — they are runtime LOD only
  *  (spp-protocol-full.md §3.D / spp-recursive-refinement.md §4). */
-export interface ExpandContext { blockX?: number; blockY?: number; maxLevel?: number; budget?: number; }
+export interface ExpandContext {
+    blockX?: number;
+    blockY?: number;
+    maxLevel?: number;
+    budget?: number;
+    consolidate?: boolean;
+}
 
 const FACES: ParticleFace[] = [
     ParticleFace.Top, ParticleFace.Bottom,
@@ -390,7 +397,8 @@ export function expandSpp(raw: SppRaw, ctx: ExpandContext = {}): ExpandedRow[] {
         // eslint-disable-next-line no-console
         console.warn(`[spp] expansion hit the ${ctx.budget}-row budget; deeper refinements rendered coarse`);
     }
-    return rows;
+    const shouldConsolidate = ctx.consolidate ?? isSppConsolidationEnabled();
+    return shouldConsolidate ? consolidateSppRows(rows) : rows;
 }
 
 /** @deprecated Renamed to `expandSpp` (2026-07-06). Kept as an alias. */
