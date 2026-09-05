@@ -658,6 +658,36 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/pal1-courtyard-garden-wall.glb"
+  },
+  {
+    "id": 110,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-env-stone-lantern.glb"
+  },
+  {
+    "id": 111,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-env-bamboo-grove.glb"
+  },
+  {
+    "id": 112,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-env-willow-tree.glb"
+  },
+  {
+    "id": 113,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-env-stone-bridge.glb"
+  },
+  {
+    "id": 114,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/pal1-env-bamboo-fence.glb"
   }
 ]
 
