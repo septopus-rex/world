@@ -116,6 +116,11 @@ if [ -n "$engine_reason" ]; then
     fi
 fi
 
+# ── procedural 3D assets (generated on-demand, zero-git bloat) ────────────────
+if [ -f "$ROOT/client/editor/tools/build_all_assets.mjs" ]; then
+    node "$ROOT/client/editor/tools/build_all_assets.mjs"
+fi
+
 free_port() { # $1 = port
     if lsof -i ":$1" &>/dev/null; then
         warn "端口 $1 被占用，清理旧进程..."

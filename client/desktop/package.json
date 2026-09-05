@@ -5,7 +5,10 @@
   "description": "Septopus World — desktop 3D client. Pure engine, chain-free. Replaces /app.",
   "type": "module",
   "scripts": {
+    "build:assets": "node ../editor/tools/build_all_assets.mjs",
+    "predev": "npm run build:assets",
     "dev": "vite",
+    "prebuild": "npm run build:assets",
     "build": "vite build",
     "preview": "vite preview",
     "test:e2e": "playwright test",

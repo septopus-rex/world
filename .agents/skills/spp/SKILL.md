@@ -200,6 +200,8 @@ exporter.parse(root, (gltf) => {
   }
   ```
 - **红线警告**：**严禁在任何 Level/Block/StylePack JSON 中直接写 `"/assets/xxx.glb"` 相对路径！** 必须使用分配的整型数字 ID 引用（如 110）。
+- **Git 体积零膨胀规范（源码进库，产物就地生成）**：
+  凡是通过 Three.js 脚本纯代码生成的 GLB，**不得提交到 Git 仓库**，一律写入 `.gitignore`；新生成的脚本必须挂接至 `client/editor/tools/build_all_assets.mjs`，由 `deploy/dev.sh` 或 `npm run build:assets` 在启动/构建时就地秒级生成（<1s）。仓库中仅保留真正不可再生的外部导入手工模型。
 
 ### 5.4 StylePack 中的模型消费模式
 在 StylePack 的 `prefabs` 或面变体中使用 a4 模型组件（`kind: 4`）调用：
