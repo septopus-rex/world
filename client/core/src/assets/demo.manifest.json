@@ -688,6 +688,54 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/pal1-env-bamboo-fence.glb"
+  },
+  {
+    "id": 120,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-holo-table.glb"
+  },
+  {
+    "id": 121,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-radar-dish.glb"
+  },
+  {
+    "id": 122,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-thruster-pod.glb"
+  },
+  {
+    "id": 123,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-vespene-tank.glb"
+  },
+  {
+    "id": 124,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-mineral-crate.glb"
+  },
+  {
+    "id": 125,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-armory-rack.glb"
+  },
+  {
+    "id": 126,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-computer-console.glb"
+  },
+  {
+    "id": 127,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-exhaust-turbine.glb"
   }
 ]
 

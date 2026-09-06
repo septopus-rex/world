@@ -32,6 +32,7 @@ const GENERATORS = [
     { name: 'Pal1 Inn Interior', script: 'generate_inn_assets.mjs' },
     { name: 'Pal1 Courtyard & Garden', script: 'generate_courtyard_assets.mjs' },
     { name: 'Pal1 Environmental Props', script: 'generate_environment_assets.mjs' },
+    { name: 'StarCraft Terran Command Center', script: 'generate_terran_assets.mjs' },
 ];
 
 const EXPECTED_GLBS = [
@@ -65,6 +66,14 @@ const EXPECTED_GLBS = [
     'pal1-env-willow-tree.glb',
     'pal1-env-stone-bridge.glb',
     'pal1-env-bamboo-fence.glb',
+    'terran-holo-table.glb',
+    'terran-radar-dish.glb',
+    'terran-thruster-pod.glb',
+    'terran-vespene-tank.glb',
+    'terran-mineral-crate.glb',
+    'terran-armory-rack.glb',
+    'terran-computer-console.glb',
+    'terran-exhaust-turbine.glb',
 ];
 
 const isForce = process.argv.includes('--force') || process.argv.includes('-f');

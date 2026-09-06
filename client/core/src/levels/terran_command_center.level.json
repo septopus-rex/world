@@ -1,0 +1,338 @@
+{
+  "format": "septopus.world.level",
+  "version": 1,
+  "name": "terran_command_center",
+  "start": {
+    "block": [2048, 2048],
+    "position": [8.0, -1.0, 0.5],
+    "rotation": [0, 0, 0]
+  },
+  "blocks": [
+    {
+      "x": 2048,
+      "y": 2048,
+      "raw": [
+        0,
+        1,
+        [
+          [
+            162,
+            [
+              [
+                [26, 26, 0.2],
+                [8, 8, -0.1],
+                [0, 0, 0],
+                0,
+                [6, 6],
+                0,
+                1,
+                37
+              ]
+            ]
+          ],
+          [
+            182,
+            [
+              [
+                [2, 2, 0],
+                [
+                  {
+                    "position": [0, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "armor_solid"],
+                      [1, "bulkhead_arch"],
+                      [1, "armor_solid"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "blast_doorway"],
+                      [1, "bulkhead_arch"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "armor_solid"],
+                      [1, "bulkhead_arch"],
+                      [0, "empty"],
+                      [1, "armor_solid"]
+                    ]
+                  },
+                  {
+                    "position": [0, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "bulkhead_arch"],
+                      [1, "bulkhead_arch"],
+                      [1, "comms_wall"],
+                      [1, "bulkhead_arch"]
+                    ]
+                  },
+                  {
+                    "position": [1, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "bulkhead_arch"],
+                      [1, "bulkhead_arch"],
+                      [1, "bulkhead_arch"],
+                      [1, "bulkhead_arch"]
+                    ]
+                  },
+                  {
+                    "position": [2, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "bulkhead_arch"],
+                      [1, "bulkhead_arch"],
+                      [1, "bulkhead_arch"],
+                      [1, "armor_window"]
+                    ]
+                  },
+                  {
+                    "position": [0, 2, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "bulkhead_arch"],
+                      [1, "armor_solid"],
+                      [1, "armor_solid"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 2, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "bulkhead_arch"],
+                      [1, "armor_solid"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 2, 0],
+                    "level": 0,
+                    "faces": [
+                      [1, "ceiling_industrial"],
+                      [1, "deck_floor"],
+                      [1, "bulkhead_arch"],
+                      [1, "armor_solid"],
+                      [0, "empty"],
+                      [1, "armor_solid"]
+                    ]
+                  }
+                ],
+                "terran_command"
+              ],
+              [
+                [2, 2, 3.5],
+                [
+                  {
+                    "position": [0, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_plate"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_plate"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_plate"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [0, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_plate"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_cupola"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_plate"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [0, 2, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_plate"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 2, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_silos"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 2, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "roof_plate"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  }
+                ],
+                "terran_command_roof"
+              ]
+            ]
+          ],
+          [
+            164,
+            [
+              [
+                [2.8, 2.8, 2.5],
+                [2.0, 2.0, 0.0],
+                [0, 0.785398, 0],
+                122
+              ],
+              [
+                [2.8, 2.8, 2.5],
+                [14.0, 2.0, 0.0],
+                [0, -0.785398, 0],
+                122
+              ],
+              [
+                [2.8, 2.8, 2.5],
+                [2.0, 14.0, 0.0],
+                [0, 2.356194, 0],
+                122
+              ],
+              [
+                [2.8, 2.8, 2.5],
+                [14.0, 14.0, 0.0],
+                [0, -2.356194, 0],
+                122
+              ],
+              [
+                [3.6, 4.0, 2.6],
+                [8.0, 0.6, 0.0],
+                [0, 0, 0],
+                123
+              ],
+              [
+                [3.2, 4.2, 1.8],
+                [14.5, 8.0, 0.0],
+                [0, 0, 0],
+                124
+              ],
+              [
+                [2.4, 0.8, 2.2],
+                [3.6, 8.0, 0.0],
+                [0, 1.570796, 0],
+                125
+              ],
+              [
+                [2.6, 2.2, 1.6],
+                [6.8, 8.0, 0.0],
+                [0, 1.570796, 0],
+                126
+              ],
+              [
+                [2.2, 2.2, 1.8],
+                [8.0, 11.5, 0.0],
+                [0, 0, 0],
+                127
+              ]
+            ]
+          ],
+          [
+            163,
+            [
+              [0, [8.0, 8.0, 2.8], [0, 0, 0], 54527, 2.5, 9.0, 0, 0],
+              [0, [4.5, 8.0, 2.6], [0, 0, 0], 13840175, 1.8, 7.0, 0, 0],
+              [0, [8.0, 11.5, 2.4], [0, 0, 0], 2278750, 2.0, 7.0, 0, 0],
+              [0, [8.0, 3.0, 2.6], [0, 0, 0], 16777215, 1.5, 6.0, 0, 0]
+            ]
+          ]
+        ]
+      ]
+    }
+  ]
+}

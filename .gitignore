@@ -65,6 +65,7 @@ client/desktop/public/assets/cyber-pillar.glb
 client/desktop/public/assets/dungeon-bastion.glb
 client/desktop/public/assets/oriental-lattice-window.glb
 client/desktop/public/assets/pal1-*.glb
+client/desktop/public/assets/terran-*.glb
 
 # Claude Code: per-machine permission grants stay local; .claude/skills/ is
 # shared project tooling and DOES belong in the repo.
