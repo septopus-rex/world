@@ -1,0 +1,122 @@
+{
+  "format": "septopus.world.level",
+  "version": 1,
+  "name": "pal1_roof_only",
+  "start": {
+    "block": [2048, 2048],
+    "position": [8.0, 6.0, 1.0],
+    "rotation": [0, 0, 0]
+  },
+  "blocks": [
+    {
+      "x": 2048,
+      "y": 2048,
+      "raw": [
+        0,
+        1,
+        [
+          [
+            162,
+            [
+              [
+                [16, 16, 0.2],
+                [8, 8, -0.1],
+                [0, 0, 0],
+                0,
+                [4, 4],
+                0,
+                1,
+                96
+              ]
+            ]
+          ],
+          [
+            182,
+            [
+              [
+                [2, 2, 1.0],
+                [
+                  {
+                    "position": [0, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "eave_front_west"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "eave_front_mid"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 0, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "eave_front_east"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [0, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "eave_back_west"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [1, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "eave_back_mid"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  },
+                  {
+                    "position": [2, 1, 0],
+                    "level": 0,
+                    "faces": [
+                      [0, "empty"],
+                      [1, "eave_back_east"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"],
+                      [0, "empty"]
+                    ]
+                  }
+                ],
+                "pal1_roof"
+              ]
+            ]
+          ]
+        ],
+        [],
+        1
+      ]
+    }
+  ]
+}

@@ -16,6 +16,9 @@ import modularLevelJson from '../../levels/modular.level.json';
 import escapeRoom3x3LevelJson from '../../levels/escape_room_3x3.level.json';
 import pal1InnLevelJson from '../../levels/pal1_inn.level.json';
 import pal1RoomsLevelJson from '../../levels/pal1_rooms.level.json';
+import pal1RoomsSeparatedLevelJson from '../../levels/pal1_rooms_separated.level.json';
+import pal1RoomsLiftedLevelJson from '../../levels/pal1_rooms_lifted.level.json';
+import pal1RoofOnlyLevelJson from '../../levels/pal1_roof_only.level.json';
 import pal1CourtyardLevelJson from '../../levels/pal1_courtyard.level.json';
 import pal1VillageCompoundLevelJson from '../../levels/pal1_village_compound.level.json';
 import defaultLevelJson from '../../levels/default.level.json';
@@ -121,6 +124,9 @@ export class WorldContent {
     private isEscape3x3 = this.level === 'escape_room_3x3' || this.level === 'escape3x3';
     private isPal1Inn = this.level === 'pal1_inn';
     private isPal1Rooms = this.level === 'pal1_rooms';
+    private isPal1RoomsSeparated = this.level === 'pal1_rooms_separated';
+    private isPal1RoomsLifted = this.level === 'pal1_rooms_lifted';
+    private isPal1RoofOnly = this.level === 'pal1_roof_only';
     private isPal1Courtyard = this.level === 'pal1_courtyard';
     private isPal1VillageCompound = this.level === 'pal1_village_compound' || this.level === 'pal1_village';
     /** 6×6 palace — the big-contiguous-area streaming stress level
@@ -153,6 +159,9 @@ export class WorldContent {
         palace: palaceLevelJson, modular: modularLevelJson, escape_room_3x3: escapeRoom3x3LevelJson,
         pal1_inn: pal1InnLevelJson,
         pal1_rooms: pal1RoomsLevelJson,
+        pal1_rooms_separated: pal1RoomsSeparatedLevelJson,
+        pal1_rooms_lifted: pal1RoomsLiftedLevelJson,
+        pal1_roof_only: pal1RoofOnlyLevelJson,
         pal1_courtyard: pal1CourtyardLevelJson,
         pal1_village_compound: pal1VillageCompoundLevelJson,
     };
@@ -166,6 +175,9 @@ export class WorldContent {
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
         : this.isPal1VillageCompound ? (pal1VillageCompoundLevelJson as unknown as AuthoredLevel)
         : this.isPal1Courtyard ? (pal1CourtyardLevelJson as unknown as AuthoredLevel)
+        : this.isPal1RoomsLifted ? (pal1RoomsLiftedLevelJson as unknown as AuthoredLevel)
+        : this.isPal1RoofOnly ? (pal1RoofOnlyLevelJson as unknown as AuthoredLevel)
+        : this.isPal1RoomsSeparated ? (pal1RoomsSeparatedLevelJson as unknown as AuthoredLevel)
         : this.isPal1Rooms ? (pal1RoomsLevelJson as unknown as AuthoredLevel)
         : this.isPal1Inn ? (pal1InnLevelJson as unknown as AuthoredLevel)
         : this.isWorld ? buildWorldLevel()
