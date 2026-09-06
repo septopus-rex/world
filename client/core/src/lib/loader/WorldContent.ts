@@ -23,6 +23,8 @@ import pal1CourtyardLevelJson from '../../levels/pal1_courtyard.level.json';
 import pal1VillageCompoundLevelJson from '../../levels/pal1_village_compound.level.json';
 import terranCommandCenterLevelJson from '../../levels/terran_command_center.level.json';
 import terranCommandLiftedLevelJson from '../../levels/terran_command_lifted.level.json';
+import terranLivingUnitLevelJson from '../../levels/terran_living_unit.level.json';
+import terranLivingLiftedLevelJson from '../../levels/terran_living_lifted.level.json';
 import defaultLevelJson from '../../levels/default.level.json';
 import defaultWorldJson from '../../worlds/default.world.json';
 import demoBlockJson from '../../blocks/demo.block.json';
@@ -133,6 +135,8 @@ export class WorldContent {
     private isPal1VillageCompound = this.level === 'pal1_village_compound' || this.level === 'pal1_village';
     private isTerranCommandCenter = this.level === 'terran_command_center' || this.level === 'terran_command';
     private isTerranCommandLifted = this.level === 'terran_command_lifted';
+    private isTerranLivingUnit = this.level === 'terran_living_unit' || this.level === 'terran_living';
+    private isTerranLivingLifted = this.level === 'terran_living_lifted';
     /** 6×6 palace — the big-contiguous-area streaming stress level
      *  (docs/plan/specs/palace-stress-level.md). */
     private isPalace = this.level === 'palace';
@@ -170,6 +174,8 @@ export class WorldContent {
         pal1_village_compound: pal1VillageCompoundLevelJson,
         terran_command_center: terranCommandCenterLevelJson,
         terran_command_lifted: terranCommandLiftedLevelJson,
+        terran_living_unit: terranLivingUnitLevelJson,
+        terran_living_lifted: terranLivingLiftedLevelJson,
     };
     private resolveContent: ContentResolver = (ref) => WorldContent.CONTENT[ref] ?? null;
 
@@ -179,6 +185,8 @@ export class WorldContent {
         this.isParkour ? (parkourLevelJson as unknown as AuthoredLevel)
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
+        : this.isTerranLivingLifted ? (terranLivingLiftedLevelJson as unknown as AuthoredLevel)
+        : this.isTerranLivingUnit ? (terranLivingUnitLevelJson as unknown as AuthoredLevel)
         : this.isTerranCommandLifted ? (terranCommandLiftedLevelJson as unknown as AuthoredLevel)
         : this.isTerranCommandCenter ? (terranCommandCenterLevelJson as unknown as AuthoredLevel)
         : this.isPal1VillageCompound ? (pal1VillageCompoundLevelJson as unknown as AuthoredLevel)

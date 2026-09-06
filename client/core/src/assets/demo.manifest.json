@@ -736,6 +736,54 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/terran-exhaust-turbine.glb"
+  },
+  {
+    "id": 128,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunk-bed.glb"
+  },
+  {
+    "id": 129,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-ration-dispenser.glb"
+  },
+  {
+    "id": 130,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-crew-locker.glb"
+  },
+  {
+    "id": 131,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-life-support.glb"
+  },
+  {
+    "id": 132,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-workstation.glb"
+  },
+  {
+    "id": 133,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-airlock-door.glb"
+  },
+  {
+    "id": 134,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-observation-window.glb"
+  },
+  {
+    "id": 135,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-habitat-roof-kit.glb"
   }
 ]
 
