@@ -16,6 +16,8 @@ import terranCommand from './terran_command.stylepack.json';
 import terranCommandRoof from './terran_command_roof.stylepack.json';
 import terranLiving from './terran_living.stylepack.json';
 import terranLivingRoof from './terran_living_roof.stylepack.json';
+import terranDepot from './terran_depot.stylepack.json';
+import terranDepotRoof from './terran_depot_roof.stylepack.json';
 
 /**
  * StylePack content store — a stand-in for IPFS/CAS. SPP StylePacks (the reusable
@@ -26,7 +28,7 @@ import terranLivingRoof from './terran_living_roof.stylepack.json';
  * resolved through IDataSource.stylePack(). Spec: spp-protocol-full.md §3.B.
  */
 
-const PACKS: StylePack[] = [brick as StylePack, cyber as StylePack, dungeon as StylePack, garden as StylePack, ice as StylePack, modern as StylePack, oriental as StylePack, spanish as StylePack, terran as StylePack, terranBeveled as StylePack, classicalGeo as StylePack, pal1Inn as StylePack, pal1Roof as StylePack, terranCommand as StylePack, terranCommandRoof as StylePack, terranLiving as StylePack, terranLivingRoof as StylePack];
+const PACKS: StylePack[] = [brick as StylePack, cyber as StylePack, dungeon as StylePack, garden as StylePack, ice as StylePack, modern as StylePack, oriental as StylePack, spanish as StylePack, terran as StylePack, terranBeveled as StylePack, classicalGeo as StylePack, pal1Inn as StylePack, pal1Roof as StylePack, terranCommand as StylePack, terranCommandRoof as StylePack, terranLiving as StylePack, terranLivingRoof as StylePack, terranDepot as StylePack, terranDepotRoof as StylePack];
 
 /** Deterministic content id over the canonical JSON — a CID stand-in so packs
  *  are addressable by CONTENT, not name (same bytes → same id). Real IPFS would

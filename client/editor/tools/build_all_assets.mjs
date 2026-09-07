@@ -34,6 +34,7 @@ const GENERATORS = [
     { name: 'Pal1 Environmental Props', script: 'generate_environment_assets.mjs' },
     { name: 'StarCraft Terran Command Center', script: 'generate_terran_assets.mjs' },
     { name: 'StarCraft Terran Living Unit', script: 'generate_terran_living_assets.mjs' },
+    { name: 'StarCraft Terran Supply Depot', script: 'generate_terran_depot_assets.mjs' },
 ];
 
 const EXPECTED_GLBS = [
@@ -83,6 +84,14 @@ const EXPECTED_GLBS = [
     'terran-airlock-door.glb',
     'terran-observation-window.glb',
     'terran-habitat-roof-kit.glb',
+    'terran-depot-roof-vent.glb',
+    'terran-power-core.glb',
+    'terran-supply-crates.glb',
+    'terran-cryo-freezer.glb',
+    'terran-logistics-console.glb',
+    'terran-fold-bunks.glb',
+    'terran-depot-airlock.glb',
+    'terran-depot-corner-damper.glb',
 ];
 
 const isForce = process.argv.includes('--force') || process.argv.includes('-f');

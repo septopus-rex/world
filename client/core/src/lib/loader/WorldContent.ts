@@ -25,6 +25,8 @@ import terranCommandCenterLevelJson from '../../levels/terran_command_center.lev
 import terranCommandLiftedLevelJson from '../../levels/terran_command_lifted.level.json';
 import terranLivingUnitLevelJson from '../../levels/terran_living_unit.level.json';
 import terranLivingLiftedLevelJson from '../../levels/terran_living_lifted.level.json';
+import terranSupplyDepotLevelJson from '../../levels/terran_supply_depot.level.json';
+import terranDepotLiftedLevelJson from '../../levels/terran_depot_lifted.level.json';
 import defaultLevelJson from '../../levels/default.level.json';
 import defaultWorldJson from '../../worlds/default.world.json';
 import demoBlockJson from '../../blocks/demo.block.json';
@@ -137,6 +139,8 @@ export class WorldContent {
     private isTerranCommandLifted = this.level === 'terran_command_lifted';
     private isTerranLivingUnit = this.level === 'terran_living_unit' || this.level === 'terran_living';
     private isTerranLivingLifted = this.level === 'terran_living_lifted';
+    private isTerranSupplyDepot = this.level === 'terran_supply_depot' || this.level === 'terran_depot';
+    private isTerranDepotLifted = this.level === 'terran_depot_lifted';
     /** 6×6 palace — the big-contiguous-area streaming stress level
      *  (docs/plan/specs/palace-stress-level.md). */
     private isPalace = this.level === 'palace';
@@ -176,6 +180,8 @@ export class WorldContent {
         terran_command_lifted: terranCommandLiftedLevelJson,
         terran_living_unit: terranLivingUnitLevelJson,
         terran_living_lifted: terranLivingLiftedLevelJson,
+        terran_supply_depot: terranSupplyDepotLevelJson,
+        terran_depot_lifted: terranDepotLiftedLevelJson,
     };
     private resolveContent: ContentResolver = (ref) => WorldContent.CONTENT[ref] ?? null;
 
@@ -185,6 +191,8 @@ export class WorldContent {
         this.isParkour ? (parkourLevelJson as unknown as AuthoredLevel)
         : this.isCoaster ? (coasterLevelJson as unknown as AuthoredLevel)
         : this.isXianjian ? (xianjianLevelJson as unknown as AuthoredLevel)
+        : this.isTerranDepotLifted ? (terranDepotLiftedLevelJson as unknown as AuthoredLevel)
+        : this.isTerranSupplyDepot ? (terranSupplyDepotLevelJson as unknown as AuthoredLevel)
         : this.isTerranLivingLifted ? (terranLivingLiftedLevelJson as unknown as AuthoredLevel)
         : this.isTerranLivingUnit ? (terranLivingUnitLevelJson as unknown as AuthoredLevel)
         : this.isTerranCommandLifted ? (terranCommandLiftedLevelJson as unknown as AuthoredLevel)

@@ -784,6 +784,54 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/terran-habitat-roof-kit.glb"
+  },
+  {
+    "id": 136,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-depot-roof-vent.glb"
+  },
+  {
+    "id": 137,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-power-core.glb"
+  },
+  {
+    "id": 138,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-supply-crates.glb"
+  },
+  {
+    "id": 139,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-cryo-freezer.glb"
+  },
+  {
+    "id": 140,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-logistics-console.glb"
+  },
+  {
+    "id": 141,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-fold-bunks.glb"
+  },
+  {
+    "id": 142,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-depot-airlock.glb"
+  },
+  {
+    "id": 143,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-depot-corner-damper.glb"
   }
 ]
 
