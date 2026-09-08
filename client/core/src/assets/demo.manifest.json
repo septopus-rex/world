@@ -832,6 +832,54 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/terran-depot-corner-damper.glb"
+  },
+  {
+    "id": 144,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-roof-dome.glb"
+  },
+  {
+    "id": 145,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-ammo-tower.glb"
+  },
+  {
+    "id": 146,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-gun-station.glb"
+  },
+  {
+    "id": 147,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-firing-slit.glb"
+  },
+  {
+    "id": 148,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-periscope-console.glb"
+  },
+  {
+    "id": 149,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-stim-station.glb"
+  },
+  {
+    "id": 150,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-escape-hatch.glb"
+  },
+  {
+    "id": 151,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-smoke-scrubber.glb"
   }
 ]
 

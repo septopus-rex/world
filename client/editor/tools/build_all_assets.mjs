@@ -35,6 +35,7 @@ const GENERATORS = [
     { name: 'StarCraft Terran Command Center', script: 'generate_terran_assets.mjs' },
     { name: 'StarCraft Terran Living Unit', script: 'generate_terran_living_assets.mjs' },
     { name: 'StarCraft Terran Supply Depot', script: 'generate_terran_depot_assets.mjs' },
+    { name: 'StarCraft Terran Bunker', script: 'generate_terran_bunker_assets.mjs' },
 ];
 
 const EXPECTED_GLBS = [
@@ -92,6 +93,14 @@ const EXPECTED_GLBS = [
     'terran-fold-bunks.glb',
     'terran-depot-airlock.glb',
     'terran-depot-corner-damper.glb',
+    'terran-bunker-roof-dome.glb',
+    'terran-bunker-ammo-tower.glb',
+    'terran-bunker-gun-station.glb',
+    'terran-bunker-firing-slit.glb',
+    'terran-bunker-periscope-console.glb',
+    'terran-bunker-stim-station.glb',
+    'terran-bunker-escape-hatch.glb',
+    'terran-bunker-smoke-scrubber.glb',
 ];
 
 const isForce = process.argv.includes('--force') || process.argv.includes('-f');
