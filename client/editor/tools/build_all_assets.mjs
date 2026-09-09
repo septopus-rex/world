@@ -101,6 +101,8 @@ const EXPECTED_GLBS = [
     'terran-bunker-stim-station.glb',
     'terran-bunker-escape-hatch.glb',
     'terran-bunker-smoke-scrubber.glb',
+    'terran-bunker-corner-wall.glb',
+    'terran-bunker-entrance-wall.glb',
 ];
 
 const isForce = process.argv.includes('--force') || process.argv.includes('-f');

@@ -41,7 +41,7 @@ draw.line([(0, 110), (W, 110)], fill=(212, 160, 23), width=2)
 title_text = "SPP《星际争霸1》经典人族地堡（Terran Bunker）前线战术防御节点重建与全内构推演"
 draw.text((W // 2, 40), title_text, font=title_font, fill=(245, 190, 45), anchor="mm")
 
-sub_text = "还原 SC1 八角装甲轮廓 · 4向 C-14 穿甲机枪双联战位与射击狭缝 · 中央自动化弹药旋转分发塔 · 360°潜望火控台与CRT战术雷达 · 兴奋剂急救柜与逃生舱 · 顶盖升空剖透"
+sub_text = "还原 SC1 八角圆弧外廓（2面连通/2面阻断 1/4圆角单胞矩阵）· 4向 C-14 双联战位 · 45°斜切削角立柱 · 中央自动化供弹塔 · 顶盖升空剖透"
 draw.text((W // 2, 82), sub_text, font=subtitle_font, fill=(203, 213, 225), anchor="mm")
 
 def draw_card(img_path, rect, title, border_color=(212, 160, 23)):
@@ -79,7 +79,7 @@ top_y = 125
 top_h = 700
 hero_w = (W - 40 - 20) // 2 # 1240
 
-draw_card(EXTERIOR_IMG, (20, top_y, hero_w, top_h), "① 《星际1》前线战备防御构型（八角防爆复合装甲 · 顶置旋转探照灯与潜望狭缝 · 四向射击狭缝 · 人员进出气闸门）")
+draw_card(EXTERIOR_IMG, (20, top_y, hero_w, top_h), "① 《星际1》前线战备防御构型（4象限 1/4 八角圆弧防爆装甲 · 45°斜切角柱 · 顶置旋转探照灯 · 防爆气闸）")
 draw_card(LIFTED_IMG, (20 + hero_w + 20, top_y, hero_w, top_h), "② 顶盖悬浮作战态 (Z=8.5m) 战位全景剖透（4组 C-14 射击战位 · 4向柔性供弹滑轨 · 中央自动化弹药分发旋转塔）")
 
 # --- Bottom Row: 4 Detailed Functional Cards (Height 690) ---
@@ -95,7 +95,7 @@ draw_card(STIM_HATCH_IMG, (20 + (card_w + 20) * 3, bot_y, card_w, bot_h), "⑥ �
 # Footer
 draw.rectangle([(0, H - 45), (W, H)], fill=(20, 26, 40))
 draw.line([(0, H - 45), (W, H - 45)], fill=(38, 48, 64), width=1)
-footer_text = "Septopus Engine 3D SPP 架构 · 纯数据 JSON 关卡与风格包 · 8组定制 PBR 3D 资产（ID 144-151） · 遵循《AGENTS.md》红线与仙剑全流程规范 · 门禁测试 100% 绿灯通过"
+footer_text = "Septopus Engine 3D SPP 架构 · 纯数据 JSON 关卡与风格包 · 10组定制 PBR 3D 资产（ID 144-153） · 遵循《AGENTS.md》红线与仙剑全流程规范 · 门禁测试 100% 绿灯通过"
 draw.text((W // 2, H - 22), footer_text, font=footer_font, fill=(148, 163, 184), anchor="mm")
 
 poster.save(OUTPUT_POSTER, quality=95)

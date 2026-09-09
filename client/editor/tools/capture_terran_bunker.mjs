@@ -10,12 +10,26 @@ async function main() {
     const browser = await chromium.launch({
         args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
     });
-    const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    const context = await browser.newContext({
+        viewport: { width: 1280, height: 720 },
+        bypassCSP: true,
+    });
     const page = await context.newPage();
+    await page.route('**/*.glb*', async (route) => {
+        const response = await route.fetch();
+        await route.fulfill({
+            response,
+            headers: {
+                ...response.headers(),
+                'Cache-Control': 'no-store, no-cache, must-revalidate',
+            },
+        });
+    });
 
     async function loadLevel(levelName) {
-        console.log(`\nNavigating to http://127.0.0.1:7777/?level=${levelName} ...`);
-        await page.goto(`http://127.0.0.1:7777/?level=${levelName}`, { waitUntil: 'domcontentloaded' });
+        const url = `http://127.0.0.1:7777/?level=${levelName}&nocache=${Date.now()}`;
+        console.log(`\nNavigating to ${url} ...`);
+        await page.goto(url, { waitUntil: 'domcontentloaded' });
 
         await page.waitForFunction(() => {
             const l = window.loader;
@@ -40,8 +54,20 @@ async function main() {
             return false;
         }, null, { timeout: 45_000 });
 
-        console.log('Waiting 5s for GLB models to fully swap into scene...');
-        await page.waitForTimeout(5000);
+        console.log('Waiting for all GLB models to finish swapping (isPlaceholder === 0)...');
+        await page.waitForFunction(() => {
+            const w = window.loader?.engine?.getWorld();
+            if (!w) return false;
+            let placeholders = 0;
+            w.renderEngine.scene.traverse(o => {
+                if (o.userData?.isPlaceholder === true && o.userData?.adjunct === 'module') {
+                    placeholders++;
+                }
+            });
+            return placeholders === 0;
+        }, null, { timeout: 60_000 });
+        console.log('All GLB models fully swapped! Waiting 1s for settle...');
+        await page.waitForTimeout(1000);
 
         // Stop engine loop so manual camera stays fixed and avatars/DOM are cleaned
         await page.evaluate(() => {
@@ -83,14 +109,14 @@ async function main() {
     // --- 1. Assembled Level (terran_bunker) ---
     await loadLevel('terran_bunker');
 
-    // 1.1 South-East Isometric Exterior
+    // 1.1 South-West Isometric Exterior (Exact SC1 25° Sprite Perspective)
     console.log('Capturing bunker_exterior_iso.png ...');
-    await setCamera([14.5, 1.5, 7.5], [8.0, 8.0, 2.0]);
+    await setCamera([0.8, 0.8, 5.6], [8.0, 8.0, 1.35]);
     await page.screenshot({ path: path.join(BRAIN_DIR, 'bunker_exterior_iso.png') });
 
-    // 1.2 South Front View (Blast Portal & Front Slits & Dome)
+    // 1.2 South Front View (Blast Ramp & Slits & Dome)
     console.log('Capturing bunker_exterior_front.png ...');
-    await setCamera([8.0, 0.5, 2.2], [8.0, 7.5, 1.8]);
+    await setCamera([8.0, 0.8, 2.2], [8.0, 8.0, 1.35]);
     await page.screenshot({ path: path.join(BRAIN_DIR, 'bunker_exterior_front.png') });
 
     // --- 2. Lifted / Cutaway Level (terran_bunker_lifted) ---
@@ -98,27 +124,27 @@ async function main() {
 
     // 2.1 Cutaway Isometric Bird's Eye (showing lifted roof dome + 4 firing stations + carousel)
     console.log('Capturing bunker_lifted_cutaway.png ...');
-    await setCamera([15.5, 2.0, 11.5], [8.0, 8.0, 2.0]);
+    await setCamera([1.2, 1.2, 11.5], [8.0, 8.0, 2.0]);
     await page.screenshot({ path: path.join(BRAIN_DIR, 'bunker_lifted_cutaway.png') });
 
     // 2.2 Central Automated Rotary Ammo Carousel Close-up
     console.log('Capturing bunker_ammo_tower_close.png ...');
-    await setCamera([8.0, 5.5, 1.3], [8.0, 8.0, 1.1]);
+    await setCamera([8.0, 5.8, 1.25], [8.0, 8.0, 0.85]);
     await page.screenshot({ path: path.join(BRAIN_DIR, 'bunker_ammo_tower_close.png') });
 
     // 2.3 Heavy Gun Station & Slit Embrasure (Over-The-Shoulder combat view)
     console.log('Capturing bunker_gun_station_close.png ...');
-    await setCamera([9.4, 6.0, 1.35], [10.0, 4.0, 0.95]);
+    await setCamera([8.0, 6.8, 1.25], [8.0, 5.5, 0.95]);
     await page.screenshot({ path: path.join(BRAIN_DIR, 'bunker_gun_station_close.png') });
 
     // 2.4 Periscope Fire Control Console & Glowing CRT Radar Screen
     console.log('Capturing bunker_periscope_radar_close.png ...');
-    await setCamera([7.6, 8.8, 1.35], [6.0, 10.2, 1.1]);
+    await setCamera([7.4, 8.6, 1.30], [6.6, 9.4, 1.05]);
     await page.screenshot({ path: path.join(BRAIN_DIR, 'bunker_periscope_radar_close.png') });
 
     // 2.5 Stimpack Emergency Locker & Escape Hatch
     console.log('Capturing bunker_stim_hatch_close.png ...');
-    await setCamera([7.8, 5.0, 1.65], [4.4, 6.0, 0.65]);
+    await setCamera([7.8, 7.8, 1.45], [9.4, 6.6, 0.95]);
     await page.screenshot({ path: path.join(BRAIN_DIR, 'bunker_stim_hatch_close.png') });
 
     await browser.close();

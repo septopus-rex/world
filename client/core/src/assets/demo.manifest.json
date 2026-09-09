@@ -880,6 +880,18 @@
     "type": "module",
     "format": "glb",
     "path": "/assets/terran-bunker-smoke-scrubber.glb"
+  },
+  {
+    "id": 152,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-corner-wall.glb"
+  },
+  {
+    "id": 153,
+    "type": "module",
+    "format": "glb",
+    "path": "/assets/terran-bunker-entrance-wall.glb"
   }
 ]
 
