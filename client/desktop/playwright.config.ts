@@ -74,7 +74,7 @@ export default defineConfig({
     {
       command: 'npm run dev',
       url: 'http://127.0.0.1:7777',
-      reuseExistingServer: true,
+      reuseExistingServer: !process.env.SEPTOPUS_LAND,
       timeout: 90_000,
     },
     {

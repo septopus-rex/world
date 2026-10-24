@@ -56,6 +56,15 @@ export default defineConfig({
       // Shared client core (loader/useEngine/components/content data) — the
       // desktop and mobile shells both consume it by source alias (specs/mobile-client.md).
       '@core': resolve(__dirname, '../core/src'),
+      // Optional land-registry plugin (roadmap P4/P5, protocol land.md): the
+      // default pure build aliases to plugin-none (zero chain code in dist/);
+      // SEPTOPUS_LAND=solana swaps in client/chain.
+      '@land-plugin': process.env.SEPTOPUS_LAND === 'solana'
+        ? resolve(__dirname, '../chain/src/index.ts')
+        : resolve(__dirname, '../core/src/land/plugin-none.ts'),
+      ...(process.env.SEPTOPUS_LAND === 'solana'
+        ? { 'buffer': resolve(__dirname, '../chain/node_modules/buffer') }
+        : {}),
       // Out-of-root shared source (core/engine) must resolve bare deps from THIS
       // app's node_modules at build time (rolldown resolves relative to importer).
       'react': resolve(__dirname, 'node_modules/react'),
@@ -137,5 +146,6 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 7777,
     strictPort: true,
+    fs: { allow: [resolve(__dirname, '../..')] },
   },
 })

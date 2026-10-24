@@ -568,11 +568,35 @@ export class WorldContent {
     /** Block-data seam: unifies the scene seed with the local draft overlay.
      *  Built once draftStore is hydrated (buildLocalData). */
     private localData: LocalDataSource | null = null;
+    /** Optional on-chain content layer (LandCoordinator, land.md §4): sits
+     *  between the local draft and the level seed. */
+    private chainLayer: {
+        rawAt: (x: number, y: number) => any[] | null;
+        onGridWindow?: (coords: [number, number][]) => void;
+    } | null = null;
+
+    public setChainLayer(layer: { rawAt: (x: number, y: number) => any[] | null; onGridWindow?: (coords: [number, number][]) => void } | null): void {
+        this.chainLayer = layer;
+    }
+
+    public get worldDoc(): any { return this._worldDoc ?? defaultWorldJson; }
 
     public get loadedCount(): number { return this.loadedBlockKeys.size; }
     /** Mark a block resident (callers that inject outside handleGridRequest —
      *  AI previews, stamped scenes — keep the eviction bookkeeping honest). */
     public markLoaded(bx: number, by: number): void { this.loadedBlockKeys.add(`${bx}_${by}`); }
+
+    /** Re-inject a resident block from the now-effective merged raw (draft →
+     *  on-chain CID → level seed). No-op if the block is outside the window. */
+    public rematerializeBlock(bx: number, by: number): void {
+        const key = `${bx}_${by}`;
+        const engine = this.engine();
+        if (!engine || !this.localData || !this.loadedBlockKeys.has(key)) return;
+        engine.removeBlock(bx, by);
+        const merged = this.localData.blockAt(bx, by);
+        engine.injectBlock({ x: bx, y: by, adjuncts: merged.raw, elevation: merged.raw[0] });
+        this.loadedBlockKeys.add(key);
+    }
 
     /** The unified block seam: one SceneProvider (level-document seed) + the
      *  now-hydrated DraftStore + the content-addressed block store. */
@@ -594,11 +618,13 @@ export class WorldContent {
 
     /**
      * SceneProvider seed: the base authored raw for a block, BEFORE local drafts
-     * (LocalDataSource overlays those). ONE path (P7): the active level document
-     * — the DEFAULT world is itself default.level.json (9 block refs + the
-     * declared `fallback` ground for every other coordinate).
+     * (LocalDataSource overlays those). When the land registry has a published
+     * CID for (x, y), it wins over the static level seed (land.md §4:
+     * DraftStore → on-chain CID → level seed/fallback).
      */
     private sceneBlock(x: number, y: number): any[] {
+        const onChain = this.chainLayer?.rawAt(x, y);
+        if (onChain) return onChain;
         return this.levelProvider.block(x, y) as any[];
     }
 
@@ -607,12 +633,15 @@ export class WorldContent {
         if (!engine) return;
         const extend = this.playerState.extend;
         const requiredKeys: string[] = [];
+        const windowCoords: [number, number][] = [];
 
         for (let dx = -extend; dx <= extend; dx++) {
             for (let dy = -extend; dy <= extend; dy++) {
                 requiredKeys.push(`${center[0] + dx}_${center[1] + dy}`);
+                windowCoords.push([center[0] + dx, center[1] + dy]);
             }
         }
+        this.chainLayer?.onGridWindow?.(windowCoords);
 
         (engine.getWorld() as any)?.blocks.syncVisibility(requiredKeys);
 

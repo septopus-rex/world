@@ -1,0 +1,1008 @@
+{
+  "address": "BchyjzrcoUdsuLH8fdbx1GSDj95cf3nvcAKeKsmC9ye5",
+  "metadata": {
+    "name": "septopus_land",
+    "version": "0.2.0",
+    "spec": "0.1.0",
+    "description": "Septopus land registry — block ownership + content CID on Solana (protocol/cn|en/land.md)."
+  },
+  "instructions": [
+    {
+      "name": "buy_block",
+      "docs": [
+        "Buy a listed block. `expected_price` guards against the seller",
+        "re-pricing between the buyer's read and the transaction landing."
+      ],
+      "discriminator": [
+        137,
+        144,
+        19,
+        181,
+        253,
+        137,
+        71,
+        245
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "relations": [
+            "block"
+          ]
+        },
+        {
+          "name": "block",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "world"
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "buyer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "seller",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "_x",
+          "type": "u32"
+        },
+        {
+          "name": "_y",
+          "type": "u32"
+        },
+        {
+          "name": "expected_price",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "delist_block",
+      "docs": [
+        "Withdraw a listing."
+      ],
+      "discriminator": [
+        205,
+        111,
+        63,
+        17,
+        67,
+        117,
+        69,
+        221
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "relations": [
+            "block"
+          ]
+        },
+        {
+          "name": "block",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "world"
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "block"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "_x",
+          "type": "u32"
+        },
+        {
+          "name": "_y",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "init_world",
+      "docs": [
+        "Register a world's land registry. `name` must equal the Bitcoin anchor",
+        "name (`land.world` in the world config); `range` mirrors `world.range`."
+      ],
+      "discriminator": [
+        10,
+        53,
+        110,
+        193,
+        166,
+        122,
+        251,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  111,
+                  114,
+                  108,
+                  100
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "name"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "treasury"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "range_x",
+          "type": "u32"
+        },
+        {
+          "name": "range_y",
+          "type": "u32"
+        },
+        {
+          "name": "mint_price",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "list_block",
+      "docs": [
+        "List the block for sale at `price` lamports."
+      ],
+      "discriminator": [
+        118,
+        140,
+        88,
+        131,
+        213,
+        131,
+        221,
+        138
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "relations": [
+            "block"
+          ]
+        },
+        {
+          "name": "block",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "world"
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "block"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "_x",
+          "type": "u32"
+        },
+        {
+          "name": "_y",
+          "type": "u32"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "mint_block",
+      "docs": [
+        "Claim an unminted block. Pays `world.mint_price` to the treasury. The",
+        "PDA `init` makes a second mint of the same (x, y) fail atomically."
+      ],
+      "discriminator": [
+        68,
+        105,
+        25,
+        214,
+        251,
+        82,
+        180,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "writable": true
+        },
+        {
+          "name": "block",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "world"
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "treasury",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "x",
+          "type": "u32"
+        },
+        {
+          "name": "y",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "moderate_block",
+      "docs": [
+        "World-authority moderation: ban hides the block's content in every",
+        "conforming client (land.md §4) and freezes owner actions; unban restores."
+      ],
+      "discriminator": [
+        109,
+        199,
+        85,
+        39,
+        175,
+        42,
+        68,
+        126
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "relations": [
+            "block"
+          ]
+        },
+        {
+          "name": "block",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "world"
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "world"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "_x",
+          "type": "u32"
+        },
+        {
+          "name": "_y",
+          "type": "u32"
+        },
+        {
+          "name": "banned",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_content",
+      "docs": [
+        "Publish (or clear, with all-zero) the block's content digest. Refused",
+        "while listed — a buyer must get the content they saw (no bait-and-switch)."
+      ],
+      "discriminator": [
+        235,
+        50,
+        79,
+        199,
+        109,
+        249,
+        27,
+        10
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "relations": [
+            "block"
+          ]
+        },
+        {
+          "name": "block",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "world"
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "block"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "_x",
+          "type": "u32"
+        },
+        {
+          "name": "_y",
+          "type": "u32"
+        },
+        {
+          "name": "content",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "transfer_block",
+      "docs": [
+        "Gift the block to another wallet (clears any listing)."
+      ],
+      "discriminator": [
+        245,
+        162,
+        180,
+        43,
+        223,
+        222,
+        191,
+        85
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "relations": [
+            "block"
+          ]
+        },
+        {
+          "name": "block",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  108,
+                  111,
+                  99,
+                  107
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "world"
+              },
+              {
+                "kind": "arg",
+                "path": "x"
+              },
+              {
+                "kind": "arg",
+                "path": "y"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "block"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "_x",
+          "type": "u32"
+        },
+        {
+          "name": "_y",
+          "type": "u32"
+        },
+        {
+          "name": "new_owner",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "update_world",
+      "docs": [
+        "Authority-only knobs: mint price, mint freeze, treasury."
+      ],
+      "discriminator": [
+        210,
+        102,
+        227,
+        47,
+        84,
+        122,
+        22,
+        66
+      ],
+      "accounts": [
+        {
+          "name": "world",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true,
+          "relations": [
+            "world"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "mint_price",
+          "type": {
+            "option": "u64"
+          }
+        },
+        {
+          "name": "frozen",
+          "type": {
+            "option": "bool"
+          }
+        },
+        {
+          "name": "treasury",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Block",
+      "discriminator": [
+        12,
+        72,
+        207,
+        108,
+        1,
+        228,
+        167,
+        221
+      ]
+    },
+    {
+      "name": "World",
+      "discriminator": [
+        145,
+        45,
+        170,
+        174,
+        122,
+        32,
+        155,
+        124
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BlockMinted",
+      "discriminator": [
+        152,
+        178,
+        79,
+        21,
+        203,
+        45,
+        184,
+        240
+      ]
+    },
+    {
+      "name": "BlockTransferred",
+      "discriminator": [
+        243,
+        218,
+        26,
+        178,
+        26,
+        109,
+        124,
+        66
+      ]
+    },
+    {
+      "name": "ContentSet",
+      "discriminator": [
+        123,
+        118,
+        132,
+        219,
+        186,
+        169,
+        69,
+        148
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidWorldName",
+      "msg": "world name must be 1..=32 bytes"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidRange",
+      "msg": "world range must be positive"
+    },
+    {
+      "code": 6002,
+      "name": "OutOfRange",
+      "msg": "block coordinate outside world.range"
+    },
+    {
+      "code": 6003,
+      "name": "WorldFrozen",
+      "msg": "minting is frozen for this world"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidTreasury",
+      "msg": "treasury does not match world.treasury"
+    },
+    {
+      "code": 6005,
+      "name": "NotOwner",
+      "msg": "signer is not the block owner"
+    },
+    {
+      "code": 6006,
+      "name": "NotAuthority",
+      "msg": "signer is not the world authority"
+    },
+    {
+      "code": 6007,
+      "name": "BlockBanned",
+      "msg": "block is banned by the world authority"
+    },
+    {
+      "code": 6008,
+      "name": "BlockListed",
+      "msg": "block is listed; delist before changing content"
+    },
+    {
+      "code": 6009,
+      "name": "BlockNotForSale",
+      "msg": "block is not for sale"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidPrice",
+      "msg": "listing price must be > 0"
+    },
+    {
+      "code": 6011,
+      "name": "PriceMismatch",
+      "msg": "on-chain price differs from expected_price"
+    },
+    {
+      "code": 6012,
+      "name": "BuyOwnBlock",
+      "msg": "cannot buy your own block"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidSeller",
+      "msg": "seller account is not the block owner"
+    },
+    {
+      "code": 6014,
+      "name": "Overflow",
+      "msg": "arithmetic overflow"
+    }
+  ],
+  "types": [
+    {
+      "name": "Block",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "world",
+            "type": "pubkey"
+          },
+          {
+            "name": "x",
+            "type": "u32"
+          },
+          {
+            "name": "y",
+            "type": "u32"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "content",
+            "docs": [
+              "sha2-256 digest of the canonical block bytes = CIDv1(raw) payload; zero = empty."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          },
+          {
+            "name": "status",
+            "type": "u8"
+          },
+          {
+            "name": "revision",
+            "type": "u32"
+          },
+          {
+            "name": "minted_slot",
+            "type": "u64"
+          },
+          {
+            "name": "updated_slot",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BlockMinted",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "world",
+            "type": "pubkey"
+          },
+          {
+            "name": "x",
+            "type": "u32"
+          },
+          {
+            "name": "y",
+            "type": "u32"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BlockTransferred",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "world",
+            "type": "pubkey"
+          },
+          {
+            "name": "x",
+            "type": "u32"
+          },
+          {
+            "name": "y",
+            "type": "u32"
+          },
+          {
+            "name": "from",
+            "type": "pubkey"
+          },
+          {
+            "name": "to",
+            "type": "pubkey"
+          },
+          {
+            "name": "price",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ContentSet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "world",
+            "type": "pubkey"
+          },
+          {
+            "name": "x",
+            "type": "u32"
+          },
+          {
+            "name": "y",
+            "type": "u32"
+          },
+          {
+            "name": "content",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "revision",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "World",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "range_x",
+            "type": "u32"
+          },
+          {
+            "name": "range_y",
+            "type": "u32"
+          },
+          {
+            "name": "mint_price",
+            "type": "u64"
+          },
+          {
+            "name": "minted",
+            "type": "u64"
+          },
+          {
+            "name": "frozen",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

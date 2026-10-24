@@ -245,6 +245,23 @@ describe('content gate — worlds', () => {
             if (doc.block?.color !== undefined && typeof doc.block.color !== 'number') {
                 errs.push(`${f}: block.color must be a number (palette index or literal 0xRRGGBB)`);
             }
+            if (doc.land !== undefined) {
+                const l = doc.land;
+                if (!l || typeof l !== 'object') {
+                    errs.push(`${f}: land must be an object when present (land.md §2)`);
+                } else {
+                    if (typeof l.chain !== 'string' || !l.chain) errs.push(`${f}: land.chain must be a non-empty string`);
+                    if (!['localnet', 'devnet', 'testnet', 'mainnet-beta'].includes(l.cluster)) {
+                        errs.push(`${f}: land.cluster must be localnet|devnet|testnet|mainnet-beta`);
+                    }
+                    if (typeof l.program !== 'string' || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(l.program)) {
+                        errs.push(`${f}: land.program must be a base58 pubkey`);
+                    }
+                    if (typeof l.world !== 'string' || l.world.length < 1 || l.world.length > 32) {
+                        errs.push(`${f}: land.world must be 1..32 chars`);
+                    }
+                }
+            }
             expect(errs).toEqual([]);
         });
     }

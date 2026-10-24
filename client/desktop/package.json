@@ -8,8 +8,10 @@
     "build:assets": "node ../editor/tools/build_all_assets.mjs",
     "predev": "npm run build:assets",
     "dev": "vite",
+    "dev:chain": "SEPTOPUS_LAND=solana vite",
     "prebuild": "npm run build:assets",
     "build": "vite build",
+    "build:chain": "SEPTOPUS_LAND=solana vite build --outDir dist-chain",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"

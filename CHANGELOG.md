@@ -7,6 +7,14 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
 
 ## [Unreleased]
 
+### 功能
+- **混合链架构 · 比特币锚 + Solana 地块产权注册表(P4/P5 落地)**:新增规范 `protocol/cn|en/land.md`
+  (双语同步),明确世界根(代码/配置/关卡)走比特币锚(`boot-chain.md`)、高频地块产权与市场走世界
+  配置 `land` 段指定的产权注册表(Solana `septopus_land` 合约)。链上 `Block.content` 仅存
+  `CIDv1(raw, sha2-256)` 的 32 字节 sha2-256 摘要,完整地块字节住 IPFS;客户端经 `@land-plugin`
+  编译期别名实现纯无链构建(`dist/` 零 `@solana` 依赖)与含链构建(`SEPTOPUS_LAND=solana`)双目标,
+  配齐 `LandCoordinator`(`IChainPublisher`)+`LandPanel` UI + Playwright 全链路 e2e(`solana-land.spec.ts`)。
+
 ### 修复
 - **化身运动僵直(stiff avatar)**:平地行走时物理 `isGrounded` 逐帧 true/false 抖动
   (grounded 跳过重力→无下坠探测→false→施重力→又落地→true),裸喂状态机导致 `walk`

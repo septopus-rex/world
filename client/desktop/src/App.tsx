@@ -22,6 +22,7 @@ import { BookReader } from '@core/components/BookReader';
 import { BoardPanel } from '@core/components/BoardPanel';
 import { AvatarPicker } from '@core/components/AvatarPicker';
 import { SppFacePanel, type SppFaceInfo } from '@core/components/SppFacePanel';
+import { LandPanel } from '@core/components/LandPanel';
 import { ActionRail } from './components/desktop/ActionRail';
 
 function App() {
@@ -215,6 +216,7 @@ function App() {
       <ShootingHUD loader={loader} ready={ready} />
       <AuthorChat loader={loader} ready={ready} />
       <WorldLabsPanel loader={loader} ready={ready} />
+      <LandPanel loader={loader} ready={ready} />
 
       {/* Game-mode entry is ZONE-GATED: this prompt appears only while the player
           stands in a playable block (block.game, surfaced via game.zone_enter).

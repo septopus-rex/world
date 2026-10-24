@@ -51,10 +51,11 @@ import { AiAuthoring } from './loader/AiAuthoring';
 import { WorldLabsAuthoring } from './loader/WorldLabsAuthoring';
 import { EnvClock } from './loader/EnvClock';
 import { BtcClock } from './loader/BtcClock';
+import { LandCoordinator, type LandUiSnapshot } from './loader/LandCoordinator';
 
 // The map + player-state shapes moved to WorldContent with the content core;
 // re-exported so existing `import { MapCell } from '../lib/DesktopLoader'` holds.
-export type { MapCell, SeptopusPlayerState };
+export type { MapCell, SeptopusPlayerState, LandUiSnapshot };
 
 export class DesktopLoader implements IDataSource {
     public engine: Engine | null = null;
@@ -92,6 +93,12 @@ export class DesktopLoader implements IDataSource {
         ? new BtcClock((h, hash, i) => this.engine?.feedChainState(h, hash, i))
         : new EnvClock((h, hash, i) => this.engine?.feedChainState(h, hash, i));
     private panels = new PanelState(() => this.net);
+    private ipfsReady = false;
+    private land = new LandCoordinator(
+        () => this.engine,
+        this.content,
+        () => (this.ipfsReady ? this.net.http('ipfs') : null),
+    );
     private spp = new SppStudio({
         world: () => this.engine?.getWorld() ?? null,
         engine: () => this.engine,
@@ -280,7 +287,7 @@ export class DesktopLoader implements IDataSource {
         const liveUrl = (import.meta as any).env?.VITE_LIVE_WS;
         this._live = new WebSocketLiveSource(liveUrl ? this.net.socket(liveUrl) : new FakeWebSocket());
 
-        this.engine = new Engine(containerId, { api: this, ui, gameApi, liveSource: this._live });
+        this.engine = new Engine(containerId, { api: this, ui, gameApi, liveSource: this._live, publisher: this.land });
 
         // Streaming + player-mirror: the content core owns both ends.
         this.engine.on('block.need', (payload) => { void this.content.handleGridRequest(payload.center); });
@@ -362,6 +369,7 @@ export class DesktopLoader implements IDataSource {
         try {
             const ipfsCh = this.net.http('ipfs');
             if (await ipfsCh.probe()) {
+                this.ipfsReady = true;
                 this.engine.getWorld()!.ipfs.addProvider(new HttpCasProvider(ipfsCh));
                 console.log(`[Loader] IPFS gateway online → router tier-2: ${ipfsCh.base}`);
             }
@@ -400,6 +408,11 @@ export class DesktopLoader implements IDataSource {
 
         // The unified block seam (scene seed + now-hydrated DraftStore + CAS).
         this.content.buildLocalData();
+
+        // Land registry (optional plugin, protocol land.md): activates only
+        // when the build includes `@land-plugin` AND the world doc declares
+        // `land` AND the registry is reachable on chain.
+        await this.land.init(this.content.worldDoc);
 
         // Parkour: load the persisted best time for the HUD.
         if (this.content.isParkour) {
@@ -591,20 +604,37 @@ export class DesktopLoader implements IDataSource {
     }
 
     /** Request a world-mode switch: normal / edit / game / ghost / observe.
-     *  Returns whether the engine accepted it (Game is refused outside a zone).
-     *  The actual UI state follows the engine's system.mode event, not this call. */
+     *  Returns whether the engine accepted it (Game is refused outside a zone;
+     *  Edit is refused when the land registry is active and the player does not
+     *  own the current block). The actual UI state follows system.mode. */
     public setMode(mode: 'normal' | 'edit' | 'game' | 'ghost' | 'observe'): boolean {
+        if (mode === 'edit' && !this.canEditBlock()) return false;
         return this.engine?.setMode(mode as any) ?? false;
     }
 
     /** May the player edit the block they are STANDING ON? This is the single
-     *  seam the shells gate their edit entry through. Ownership is not modelled
-     *  yet (standalone world = every block is editable), so it only checks that
-     *  a world is up — when ownership lands, this predicate changes, not the
-     *  shells. */
+     *  seam the shells gate their edit entry through: standalone world = every
+     *  block is editable; with the land registry active, only the connected
+     *  owner of an `owned` (non-listed, non-banned) block may edit (land.md §4). */
     public canEditBlock(): boolean {
-        return this.engine != null;
+        if (!this.engine) return false;
+        const [bx, by] = this.content.playerState.block;
+        return this.land.canEdit(bx, by);
     }
+
+    // ── land registry (Solana plugin, protocol land.md) ───────────────────────
+
+    public get landEnabled(): boolean { return this.land.enabled; }
+    public landSnapshot(): LandUiSnapshot { return this.land.snapshot(); }
+    public onLandChange(cb: () => void): () => void { return this.land.onChange(cb); }
+    public landRefresh() { return this.land.refreshCurrent(); }
+    public landConnect(): Promise<string> { return this.land.connectWallet(); }
+    public landDisconnect(): Promise<void> { return this.land.disconnectWallet(); }
+    public landMint(x?: number, y?: number): Promise<string> { return this.land.mint(x, y); }
+    public landPublish(x?: number, y?: number): Promise<{ cid: string; signature: string }> { return this.land.publishOnChain(x, y); }
+    public landList(priceLamports: number, x?: number, y?: number): Promise<string> { return this.land.listForSale(priceLamports, x, y); }
+    public landDelist(x?: number, y?: number): Promise<string> { return this.land.delist(x, y); }
+    public landBuy(x?: number, y?: number): Promise<string> { return this.land.buy(x, y); }
 
     public setCameraView(mode: 'first' | 'third', immediate = false) {
         this.engine?.setCameraView(mode, immediate);

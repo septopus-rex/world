@@ -1,0 +1,20 @@
+{
+  "name": "septopus-chain-plugin",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Optional Solana land-registry plugin for the Septopus clients (protocol land.md). Never imported by the pure build.",
+  "type": "module",
+  "scripts": {
+    "localnet": "bash ../../deploy/chain-localnet.sh",
+    "init-world": "tsx scripts/init-world.ts",
+    "test:program": "tsx scripts/program-smoke.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.98.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "~5.8.0"
+  }
+}

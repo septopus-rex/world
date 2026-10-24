@@ -6,8 +6,11 @@
 > resources — the chain holds exactly one tiny record; everything else is an
 > [envelope](envelope.md) document on IPFS, resolved recursively by CID.
 > Design principle: **one anchor + one envelope protocol + a CID chain**; the
-> chain's responsibility is minimized to "proof of existence + ordering +
-> publication history"; no smart contracts.
+> Bitcoin anchor chain's responsibility is minimized to "proof of existence +
+> ordering + publication history" (no smart contracts); high-frequency block
+> ownership and marketplace operations may optionally be delegated by the
+> `land` section of `septopus.world.config` to a land registry contract (see
+> [land.md](land.md)).
 
 ## 1. The chain at a glance
 
