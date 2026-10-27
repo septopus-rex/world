@@ -49,7 +49,10 @@ export default function StylePackEditor() {
     // Debug handle, sibling of `window.spLoader`: the contract guard's verdict on
     // the CURRENT document. tools/snapshot.mjs reads it so the machine-checkable
     // half of a review comes from the same code the panel shows.
-    useEffect(() => { (window as any).__spGuard = () => checkPack(pack); }, [pack]);
+    useEffect(() => {
+        (window as any).__spGuard = () => checkPack(pack);
+        try { (window as any).loader?.engine?.registerStylePack?.(pack); } catch { /* standalone editor */ }
+    }, [pack]);
 
     // ── derived: the selected face's [state, variant] IS what we edit ─────────
     const [selState, selRef] = dial[selFace] ?? [1, variantRef(pack.closed[0], 0)];
@@ -305,7 +308,19 @@ export default function StylePackEditor() {
     };
     const publish = async () => {
         const router = (loaderRef.current?.getEngine() as any)?.ipfs; if (!router) return;
-        setCid(await router.put(new TextEncoder().encode(JSON.stringify(pack))));
+        const json = JSON.stringify(pack);
+        const bytes = new TextEncoder().encode(json);
+        const nextCid = await router.put(bytes);
+        try {
+            const worldLoader = (window as any).loader;
+            await worldLoader?.engine?.ipfs?.put?.(bytes);
+            worldLoader?.engine?.registerStylePack?.(pack);
+        } catch { /* standalone editor */ }
+        try {
+            const gw = (globalThis as any).__SEPTOPUS_ASSET_BASE__ || 'http://127.0.0.1:7789';
+            await fetch(`${String(gw).replace(/\/$/, '')}/v0/add`, { method: 'POST', body: json });
+        } catch { /* offline / no gateway */ }
+        setCid(nextCid);
     };
 
     return (

@@ -48,10 +48,12 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'es2020',
     sourcemap: false,
+    modulePreload: false,                   // single IIFE — no preload helper needed
+    chunkSizeWarningLimit: 15000,
     cssCodeSplit: false,                    // one CSS blob for the prelude to inject
     assetsInlineLimit: 1024 * 1024,         // inline small assets as data: URIs
     rollupOptions: {
-      input: resolve(__dirname, 'src/main.tsx'),   // JS entry only — no index.html
+      input: resolve(__dirname, 'src/chain-main.tsx'), // Unified system JS entry — no index.html
       output: {
         format: 'iife',                     // runnable via new Function (no ESM)
         inlineDynamicImports: true,         // a single chunk, no code-splitting

@@ -26,7 +26,7 @@ import { LandPanel } from '@core/components/LandPanel';
 import { ActionRail } from './components/desktop/ActionRail';
 
 function App() {
-  const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
+  const { loader, hostRef, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, showMinimap, setShowMinimap, view, setView } = useEngine('three_demo');
   const pages = usePages();
 
   const [selectedBlock, setSelectedBlock] = useState<any>(null);
@@ -121,7 +121,7 @@ function App() {
       className="relative w-screen h-screen overflow-hidden bg-black text-white font-sans touch-none"
       onContextMenu={(e) => e.preventDefault()}
     >
-      <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
+      <div ref={hostRef} className="absolute inset-0 z-0 w-full h-full"></div>
 
       {/* SPP craft: a held "magic ball" you orbit. Two-level edit — tap a cell to
           open it, then tap its faces to cycle 实/门/窗/空; Esc closes the cell. */}

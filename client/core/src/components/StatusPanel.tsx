@@ -71,7 +71,7 @@ export function StatusPanel({ loader, version, onInspect }: { loader: any; versi
     const dot = mode === 'game' ? 'bg-green-400' : mode === 'edit' ? 'bg-amber-400' : 'bg-cyan-400';
 
     return (
-        <div className="absolute top-3 left-3 z-20 pointer-events-auto select-none">
+        <div className={`absolute top-3 left-3 ${open ? 'z-40' : 'z-20'} pointer-events-auto select-none`}>
             <button
                 data-testid="status-toggle"
                 aria-label={`status: ${mode}`}

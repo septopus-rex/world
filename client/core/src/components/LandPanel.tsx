@@ -16,7 +16,7 @@ function fmtAmount(base: number, decimals: number): string {
  * registry is inactive (pure build or offline validator), so the standalone
  * client chrome is unchanged.
  */
-export function LandPanel({ loader, ready }: { loader: DesktopLoader | null; ready: boolean }) {
+export function LandPanel({ loader, ready, className = 'absolute top-12 left-4 z-30' }: { loader: DesktopLoader | null; ready: boolean; className?: string }) {
     const [open, setOpen] = useState(false);
     const [snap, setSnap] = useState<LandUiSnapshot | null>(null);
     const [busy, setBusy] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function LandPanel({ loader, ready }: { loader: DesktopLoader | null; rea
                     : { text: `已认领 · ${shortAddr(b.owner)}`, cls: 'bg-cyan-500/20 border-cyan-400/40 text-cyan-200' };
 
     return (
-        <div className="absolute top-12 left-4 z-30 pointer-events-auto select-none font-mono text-xs">
+        <div className={`${className} pointer-events-auto select-none font-mono text-xs`}>
             <button
                 data-testid="land-toggle"
                 onClick={() => { setOpen((v) => !v); void loader.landRefresh(); }}

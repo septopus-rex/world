@@ -17,8 +17,9 @@ GREEN=$'\033[0;32m'; RED=$'\033[0;31m'; CYAN=$'\033[0;36m'; NC=$'\033[0m'
 info()  { printf "${GREEN}[publish]${NC} %s\n" "$*"; }
 error() { printf "${RED}[publish]${NC} %s\n" "$*" >&2; exit 1; }
 
-# 1. 构建:mobile 壳 → 单文件 IIFE(dist-chain/app.js + style.css)
-info "1/3 构建链包(client/mobile → dist-chain)..."
+# 1. 构建程序化 3D 资产 + 全系统链包(Mobile + Desktop + SPP Editor + Solana Land → dist-chain/app.js + style.css)
+info "1/3 生成程序化 3D 资产 & 构建全系统单文件链包(dist-chain)..."
+( cd "$ROOT/client/desktop" && npm run build:assets ) | tail -1
 ( cd "$ROOT/client/mobile" && npm run build:chain ) | tail -2
 
 # 2. 网关重播种:seed() 读 dist-chain → 组装 loader 文档(prelude+css+app,

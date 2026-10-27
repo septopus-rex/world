@@ -19,6 +19,7 @@ import { PoolHUD } from '@core/components/PoolHUD';
 import { StatusPanel } from '@core/components/StatusPanel';
 import { MiniCompass } from '@core/components/MiniCompass';
 import { BlockInspector } from '@core/components/BlockInspector';
+import { LandPanel } from '@core/components/LandPanel';
 
 /**
  * CornerBadge — one of the three notched corners framing the joystick.
@@ -308,7 +309,7 @@ function PadButton({ slot, testId, label, children, onClick, onPointerDown, acti
  * is the SAME shared component set the desktop uses — shells only compose.
  */
 function MobileApp() {
-    const { loader, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, view, setView } = useEngine('three_demo');
+    const { loader, hostRef, ready, mode, setMode, gameZoneActive, leaveIntent, activeGame, gameState, view, setView } = useEngine('three_demo');
     const pages = usePages();
     const [sheet, setSheet] = useState<'bag' | 'avatar' | null>(null);
     const [inspecting, setInspecting] = useState(false);
@@ -356,11 +357,12 @@ function MobileApp() {
     return (
         <div data-testid="mobile-app" className={`relative w-screen h-screen overflow-hidden bg-black text-white select-none${paletteOpen ? ' m-palette-open' : ''}`}>
             {/* The engine canvas host — drag = look (engine-native touch), tap = interact. */}
-            <div id="three_demo" className="absolute inset-0 z-0 w-full h-full"></div>
+            <div ref={hostRef} className="absolute inset-0 z-0 w-full h-full"></div>
 
             {/* ── top-left: collapsible status (mode + version, collapsed by default);
                    top-right: mini compass + block coord / world id ── */}
             {ready && <StatusPanel loader={loader} version={__APP_VERSION__} onInspect={() => setInspecting(true)} />}
+            <LandPanel loader={loader} ready={ready} className="absolute top-3 left-14 z-30" />
             {ready && <MiniCompass loader={loader} onOpenMap={() => pages.push(mapPage(loader))} />}
             {ready && <BlockInspector loader={loader} open={inspecting} onClose={() => setInspecting(false)} />}
 

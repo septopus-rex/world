@@ -7,7 +7,7 @@
 
 ## 1. 客户端矩阵：需要几个 Client？
 
-结论：**不需要新建第 4 个客户端，维持现有 3 个独立前端壳（共享 `client/core`）即可覆盖全部用户场景**。
+结论：**开发期保留 3 个独立前端壳（`:7777` 桌面、`:7778` 移动、`:7779` 粒子工坊），而在链上发布时，已实现由单个 `septopus.loader`（`ChainSystemApp`）一次性装载整个系统（移动端 3D 世界 + 桌面端 3D 世界 + SPP 粒子工坊 + Solana 土地合约与市场）！**
 
 ```mermaid
 flowchart TD
@@ -17,22 +17,26 @@ flowchart TD
         CHAIN["@land-plugin · Solana 插件\n(client/chain: SEPTOPUS_LAND=solana 时注入)"]
     end
 
-    subgraph Clients["面向用户的 3 个前端应用"]
-        DESK["① Desktop 桌面端 (:7777)\nclient/desktop\n主力全功能端"]
-        MOB["② Mobile 移动端 (:7778)\nclient/mobile\n触控端 + 比特币锚单文件 IIFE 载体"]
-        EDIT["③ Editor 粒子工坊 (:7779)\nclient/editor\nSPP 粒子(StylePack) + 组合件(Prefab) 创作与上架"]
+    subgraph Shells["3 个业务壳（开发期独立调试 / 链上期合入同一 Loader）"]
+        DESK["① Desktop 桌面世界壳 (:7777)\nclient/desktop/src/App.tsx"]
+        MOB["② Mobile 触屏世界壳 (:7778)\nclient/mobile/src/MobileApp.tsx"]
+        EDIT["③ Editor SPP 粒子工坊壳 (:7779)\nclient/editor/src/StylePackEditor.tsx"]
     end
 
+    LOADER["⛓ 单一全系统装载器 septopus.loader\n(client/mobile/src/ChainSystemApp.tsx → dist-chain/app.js)\n通过 /boot?name=septopus 一键启动全系统并支持 0ms 切壳"]
+
     ENG --> CORE
-    CHAIN -. "编译期可选注入" .-> DESK & MOB & EDIT
+    CHAIN --> CORE
     CORE --> DESK & MOB & EDIT
+    DESK & MOB & EDIT --> LOADER
 ```
 
-| 客户端 | 目录与端口 | 目标用户 | 承担的核心职责 | 构建模式 |
+| 形态 | 入口与地址 | 目标用户 | 承担的核心职责 | 构建与发布命令 |
 |---|---|---|---|---|
-| **① 桌面世界端**<br>`client/desktop` | `:7777`<br>（主域名 `world.septopus.xyz`） | 普通玩家、地主、空间搭建者 | 3D 漫游浏览、小游戏交互、2D 地图选地、**土地认领/挂单/购买（`LandPanel`）**、地主在块内用「SPP 魔法球（Editor 1）」与 Adjunct 工具箱搭建并一键发布 CID 上链 | `npm run build:chain`<br>（`SEPTOPUS_LAND=solana`） |
-| **② 移动世界端**<br>`client/mobile` | `:7778`<br>（移动适配 + `/boot` 链入口） | 手机玩家、全链启动用户 | 虚拟摇杆 + 触屏 3D 浏览、轻量交互、底部抽屉看背包/地图；同时也是**比特币锚 `septopus.loader` 的单文件 IIFE 构建目标** | `npm run build:chain`<br>（单文件 `app.js` 进 IPFS） |
-| **③ SPP 粒子工坊**<br>`client/editor` | `:7779`<br>（子路径 `/studio` 或 `studio.septopus.xyz`） | 粒子设计师、3D 资产创作者 | **独立于世界运行时的「SPP 粒子（StylePack）与组合件（Prefab）创作器 + 市场工作台」**：编辑 6 面通/挡变体池与独立组合件、实时单胞 3D 预览、一键打包生成 CID 并铸造/上架到粒子市场 | 静态 SPA 构建 |
+| **⚡ 全系统单一 Loader（推荐主入口）**<br>[`ChainSystemApp.tsx`](../../client/mobile/src/ChainSystemApp.tsx) | `:7789/boot?name=septopus`<br>（可选 `&shell=mobile\|desktop\|editor`） | 所有用户（零应用服务器依赖，纯 BIOS shim + IPFS CAS + 链） | **一个 `septopus.loader` 文档装入全部子系统**：底部内置 `📱 触屏` / `🖥 桌面` / `🧬 粒子工坊` 切换栏；触屏与桌面共享同一个 `#three_demo` WebGL 实例（**0ms 无缝热切**，保持坐标、钱包与区块状态），粒子工坊发布的 `StylePack` CID 直接写入 IPFS 网关并实时同步回 3D 世界沙盘，且双端均内置 Solana `LandPanel` | `bash deploy/publish-chain.sh`<br>（自动带 `SEPTOPUS_LAND=solana` 打包单文件 IIFE 并重播种锚） |
+| **① 桌面世界端（独立壳）**<br>`client/desktop` | `:7777` | 桌面玩家、地主、空间搭建者 | 键鼠 3D 漫游、小游戏、2D 地图、**土地认领/挂单/购买（`LandPanel`）**、块内「SPP 魔法球（Editor 1）」与 Adjunct 工具箱搭建并一键发布 CID 上链 | `npm run build`（纯引擎）<br>`npm run build:chain`（含 Solana） |
+| **② 移动世界端（独立壳）**<br>`client/mobile` | `:7778` | 手机触屏玩家 | 虚拟摇杆 + 触屏 3D 浏览、角落徽章开地图/背包/化身、右侧十字动作盘、移动端块编辑与 `LandPanel` | `npm run build` |
+| **③ SPP 粒子工坊（独立壳）**<br>`client/editor` | `:7779` | 粒子设计师、3D 资产创作者 | 6 面通/挡变体池与独立组合件（`prefabs`）编辑、3D 坍缩盘实时预览、`OptionGuard` 契约守卫、一键打包生成 CID 并写入 IPFS | `npm run build` |
 
 > **为什么不把粒子市场单独拆成第 4 个网站？**
 > - **买粒子、用粒子**发生在世界里（地主在 `client/desktop` 的 SPP 魔法球里切风格包/摆组合件时，直接预览并解锁购买最顺畅）；

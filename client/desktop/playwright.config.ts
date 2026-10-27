@@ -39,7 +39,10 @@ export default defineConfig({
     // their own URLs. The DEFAULT (full) tier is asserted by render-tier.spec.ts.
     storageState: {
       cookies: [],
-      origins: [{ origin: 'http://127.0.0.1:7777', localStorage: [{ name: 'septopus_fx', value: 'low' }] }],
+      origins: [
+        { origin: 'http://127.0.0.1:7777', localStorage: [{ name: 'septopus_fx', value: 'low' }] },
+        { origin: 'http://127.0.0.1:7789', localStorage: [{ name: 'septopus_fx', value: 'low' }] },
+      ],
     },
     headless: true,
     screenshot: 'only-on-failure',

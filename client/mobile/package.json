@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test:e2e": "playwright test",
-    "build:chain": "vite build -c vite.chain.config.ts"
+    "build:chain": "SEPTOPUS_LAND=solana vite build -c vite.chain.config.ts"
   },
   "dependencies": {
     "react": "^19.2.4",

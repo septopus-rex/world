@@ -1,46 +1,119 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DesktopLoader } from './DesktopLoader';
 
 /**
- * Boots the chain-free engine loader and exposes UI-facing state.
- * No wallet, no chain — the loader runs on local data only.
+ * Boots the engine loader and exposes UI-facing state.
+ * Keeps a page-lifetime singleton per containerId so the unified chain loader
+ * can hot-swap between Mobile and Desktop HUD shells in 0ms without recreating
+ * the WebGL context or losing player/wallet/world state.
  */
 export type WorldMode = 'normal' | 'edit' | 'game' | 'ghost' | 'observe';
 
+interface SharedEngineInstance {
+    hostEl: HTMLDivElement | null;
+    loader: DesktopLoader;
+    initPromise: Promise<void>;
+    ready: boolean;
+    readySubs: Set<() => void>;
+}
+
+const sharedEngines = new Map<string, SharedEngineInstance>();
+
+function getOrCreateShared(containerId: string): SharedEngineInstance {
+    let inst = sharedEngines.get(containerId);
+    if (!inst) {
+        const loader = new DesktopLoader();
+        (window as any).loader = loader;
+        const readySubs = new Set<() => void>();
+        inst = {
+            hostEl: null,
+            loader,
+            ready: false,
+            readySubs,
+            initPromise: Promise.resolve(),
+        };
+        sharedEngines.set(containerId, inst);
+    }
+    return inst;
+}
+
 export function useEngine(containerId: string) {
     const loaderRef = useRef<DesktopLoader | null>(null);
-    const [ready, setReady] = useState(false);
+    const bootedRef = useRef(false);
+    const [ready, setReady] = useState(() => sharedEngines.get(containerId)?.ready ?? false);
     // The ENGINE is the source of truth for mode: it can refuse a switch (Game
     // outside a zone) or auto-revert (leaving the zone). We mirror its
     // system.mode event into React rather than driving it from React state.
-    const [mode, setModeState] = useState<WorldMode>('normal');
-    const [gameZoneActive, setGameZoneActive] = useState(false);
+    const [mode, setModeState] = useState<WorldMode>(() => (sharedEngines.get(containerId)?.loader.currentMode as WorldMode) ?? 'normal');
+    const [gameZoneActive, setGameZoneActive] = useState(() => sharedEngines.get(containerId)?.loader.gameZoneActive ?? false);
     // A 'confirm'-policy game wants confirmation to leave (player stepped off its
     // block; the round is kept alive). Drives the leave-game dialog.
-    const [leaveIntent, setLeaveIntent] = useState(false);
+    const [leaveIntent, setLeaveIntent] = useState(() => sharedEngines.get(containerId)?.loader.leaveIntentActive ?? false);
     const [showMinimap, setShowMinimap] = useState(false);
     // Default third-person so the avatar is visible (matches CharacterController default).
-    const [view, setView] = useState<'first' | 'third'>('third');
+    const [view, setView] = useState<'first' | 'third'>(() => sharedEngines.get(containerId)?.loader.getCameraView() ?? 'third');
     // Active in-world game + its state, mirrored from game.started/ended + moves.
     // Generic: the game's name selects the HUD, gameState is that game's payload.
-    const [activeGame, setActiveGame] = useState<string | null>(null);
-    const [gameState, setGameState] = useState<any>(null);
+    const [activeGame, setActiveGame] = useState<string | null>(() => sharedEngines.get(containerId)?.loader.activeGame ?? null);
+    const [gameState, setGameState] = useState<any>(() => sharedEngines.get(containerId)?.loader.gameState ?? null);
+
+    // Callback ref that attaches the singleton `#three_demo` DOM node into
+    // whichever HUD shell (Mobile or Desktop) is currently mounted.
+    const hostRef = useCallback((slot: HTMLDivElement | null) => {
+        if (!slot) return;
+        const inst = getOrCreateShared(containerId);
+        if (!inst.hostEl) {
+            const el = document.createElement('div');
+            el.id = containerId;
+            el.className = 'w-full h-full';
+            inst.hostEl = el;
+        }
+        if (inst.hostEl.parentElement !== slot) {
+            slot.appendChild(inst.hostEl);
+            try {
+                (inst.loader.engine?.getWorld() as any)?.renderEngine?.resize?.();
+            } catch { /* ignore pre-boot */ }
+        }
+    }, [containerId]);
 
     useEffect(() => {
-        if (!loaderRef.current) {
-            loaderRef.current = new DesktopLoader();
-            (window as any).loader = loaderRef.current;
-            loaderRef.current.onModeChange((m) => setModeState(m as WorldMode));
-            loaderRef.current.onZoneChange((active) => setGameZoneActive(active));
-            loaderRef.current.onLeaveIntent((active) => setLeaveIntent(active));
-            loaderRef.current.onGameStateChange((game, s) => { setActiveGame(game); setGameState(s); });
-            loaderRef.current
-                .init(containerId)
-                .then(() => setReady(true))
-                .catch((e) => console.error('[useEngine] init failed', e));
+        const inst = getOrCreateShared(containerId);
+        const loader = inst.loader;
+        loaderRef.current = loader;
+        (window as any).loader = loader;
+
+        loader.onModeChange((m) => setModeState(m as WorldMode));
+        loader.onZoneChange((active) => setGameZoneActive(active));
+        loader.onLeaveIntent((active) => setLeaveIntent(active));
+        loader.onGameStateChange((game, s) => { setActiveGame(game); setGameState(s); });
+
+        // Sync current state on shell switch
+        setModeState(loader.currentMode as WorldMode);
+        setGameZoneActive(loader.gameZoneActive);
+        setLeaveIntent(loader.leaveIntentActive);
+        setActiveGame(loader.activeGame);
+        setGameState(loader.gameState);
+
+        if (inst.ready) {
+            setReady(true);
+            const v = loader.getCameraView();
+            if (v) setView(v);
+        } else {
+            const onReady = () => setReady(true);
+            inst.readySubs.add(onReady);
+            if (!bootedRef.current && !loader.engine) {
+                bootedRef.current = true;
+                inst.initPromise = loader
+                    .init(containerId)
+                    .then(() => {
+                        inst.ready = true;
+                        inst.readySubs.forEach((cb) => cb());
+                        inst.readySubs.clear();
+                    })
+                    .catch((e) => console.error('[useEngine] init failed', e));
+            }
+            return () => { inst.readySubs.delete(onReady); };
         }
-        // The engine owns a single canvas for the page lifetime; intentionally
-        // no teardown here (matches the app's single-instance model).
     }, [containerId]);
 
     useEffect(() => { loaderRef.current?.toggleMinimap(showMinimap); }, [showMinimap]);
@@ -61,7 +134,8 @@ export function useEngine(containerId: string) {
     const setMode = (m: WorldMode): boolean => loaderRef.current?.setMode(m) ?? false;
 
     return {
-        loader: loaderRef.current,
+        loader: loaderRef.current ?? sharedEngines.get(containerId)?.loader ?? null,
+        hostRef,
         ready,
         mode,
         setMode,
