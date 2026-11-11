@@ -60,10 +60,13 @@ export interface ILandRegistry {
     info(): Promise<LandWorldInfo | null>;
     /** Connected wallet address, null when disconnected. */
     wallet(): string | null;
-    /** Which wallet backs the session ('injected' / 'dev-burner'). */
+    /** Which wallet backs the session ('injected' | 'dev-burner' | 'sim'). */
     walletKind(): string | null;
     connect(): Promise<string>;
     disconnect(): Promise<void>;
+    /** Optional simulation helper: cycle between local test wallet slots (#1..#3). */
+    switchAccount?(): Promise<string>;
+    accountSlot?(): number;
     /** Wallet balance in base units (0 when disconnected). */
     balance(): Promise<number>;
     /** Batch read; unminted coords come back with status 'unminted'. */

@@ -73,6 +73,7 @@ export class DesktopLoader implements IDataSource {
         hub.register('ipfs', env.VITE_IPFS_GATEWAY || 'http://127.0.0.1:7789');
         hub.register('ai', env.VITE_AI_GATEWAY || 'http://127.0.0.1:7788');
         hub.register('worldlabs', env.VITE_WORLDLABS_GATEWAY || 'http://127.0.0.1:7790');
+        hub.register('land-sim', env.VITE_LAND_SIM_SERVER || 'http://127.0.0.1:7792');
         return hub;
     })();
 
@@ -626,10 +627,13 @@ export class DesktopLoader implements IDataSource {
 
     public get landEnabled(): boolean { return this.land.enabled; }
     public landSnapshot(): LandUiSnapshot { return this.land.snapshot(); }
+    public landBlockState(x: number, y: number) { return this.land.enabled ? this.land.blockState(x, y) : null; }
+    public landSyncCoords(coords: [number, number][]): Promise<void> { return this.land.syncCoords(coords); }
     public onLandChange(cb: () => void): () => void { return this.land.onChange(cb); }
     public landRefresh() { return this.land.refreshCurrent(); }
     public landConnect(): Promise<string> { return this.land.connectWallet(); }
     public landDisconnect(): Promise<void> { return this.land.disconnectWallet(); }
+    public landSwitchAccount(): Promise<string> { return this.land.switchAccount(); }
     public landMint(x?: number, y?: number): Promise<string> { return this.land.mint(x, y); }
     public landPublish(x?: number, y?: number): Promise<{ cid: string; signature: string }> { return this.land.publishOnChain(x, y); }
     public landList(priceLamports: number, x?: number, y?: number): Promise<string> { return this.land.listForSale(priceLamports, x, y); }

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:sim": "SEPTOPUS_LAND=sim vite",
     "build": "tsc -b && vite build",
+    "build:sim": "SEPTOPUS_LAND=sim tsc -b && SEPTOPUS_LAND=sim vite build --outDir dist-sim",
     "test:e2e": "playwright test",
     "build:chain": "SEPTOPUS_LAND=solana vite build -c vite.chain.config.ts"
   },

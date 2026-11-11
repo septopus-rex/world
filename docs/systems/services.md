@@ -22,6 +22,7 @@
 | 7789 | `services/ipfs` | 内容网络 dev 网关（file-CAS）+ `/boot` 链上启动 |
 | 7790 | `services/worldlabs` | AI 生成世界演示（Marble API 代理） |
 | 7791 | `services/ai-builder` | AI 造物 v2 实验（直出 adjunct + 服务端碰撞校验） |
+| 7792 | `services/land-sim` | 免钱包模拟土地账本（初始 10 SOL，1:1 镜像 `septopus_land` 合约） |
 
 **新增服务时**：在 `deploy/dev.sh` 的 `FE_SERVICES` 加一行 `名字|路径|端口|命令`，
 并在 `npm_deps`、参数 `case`、仪表盘 `printf` 三处各补一行。名字派生出两个键——

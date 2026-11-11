@@ -23,7 +23,9 @@ export default defineConfig({
       '@core': resolve(__dirname, '../core/src'),
       '@land-plugin': process.env.SEPTOPUS_LAND === 'solana'
         ? resolve(__dirname, '../chain/src/index.ts')
-        : resolve(__dirname, '../core/src/land/plugin-none.ts'),
+        : process.env.SEPTOPUS_LAND === 'sim'
+          ? resolve(__dirname, '../core/src/land/plugin-sim.ts')
+          : resolve(__dirname, '../core/src/land/plugin-none.ts'),
       ...(process.env.SEPTOPUS_LAND === 'solana'
         ? { 'buffer': resolve(__dirname, '../chain/node_modules/buffer') }
         : {}),

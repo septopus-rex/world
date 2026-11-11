@@ -39,13 +39,15 @@ command -v node &>/dev/null || error "node 未安装"
 command -v npm  &>/dev/null || error "npm 未安装"
 
 # ── args ──────────────────────────────────────────────────────────────────────
-ONLY=""; HOST="127.0.0.1"; CHAIN=""
+ONLY=""; HOST="127.0.0.1"; CHAIN=""; SIM=""
 for arg in "$@"; do
     case "$arg" in
-        desktop|mobile|editor|ai-gw|aigw|ai-build|aibuild|ipfs|mahjong|pool|holdem|board|worldlabs) ONLY="${arg/aigw/ai-gw}"; ONLY="${ONLY/aibuild/ai-build}" ;;
+        desktop|mobile|editor|ai-gw|aigw|ai-build|aibuild|ipfs|mahjong|pool|holdem|board|worldlabs|land-sim|landsim)
+            ONLY="${arg/aigw/ai-gw}"; ONLY="${ONLY/aibuild/ai-build}"; ONLY="${ONLY/landsim/land-sim}" ;;
         lan) HOST="0.0.0.0" ;;
+        --sim|sim) SIM=1; export SEPTOPUS_LAND=sim ;; # 免钱包模拟链模式(10 SOL + :7792 账本)
         --chain|chain) CHAIN=1 ;;   # 链上启动模式(boot-chain.md dev 彩排)
-        *) warn "未知参数 '$arg'(可用:desktop | mobile | ai-gw | ai-build | ipfs | worldlabs | lan | --chain)" ;;
+        *) warn "未知参数 '$arg'(可用:desktop | mobile | editor | ai-gw | ai-build | ipfs | worldlabs | land-sim | lan | --sim | --chain)" ;;
     esac
 done
 
@@ -68,6 +70,7 @@ FE_SERVICES=(
     "AI-GW    |services/ai-gateway|7788|npm start"
     "WorldLabs|services/worldlabs|7790|npm start"
     "AI-Build |services/ai-builder|7791|npm start"
+    "Land-Sim |services/land-sim|7792|npm start"
     "IPFS     |services/ipfs|7789|npm start"
 )
 
@@ -93,6 +96,7 @@ if [ -z "$CHAIN" ]; then
     npm_deps services/ai-gateway tsx
     npm_deps services/ai-builder tsx
     npm_deps services/worldlabs tsx
+    npm_deps services/land-sim tsx
     npm_deps services/mahjong tsx
     npm_deps services/pool tsx
     npm_deps services/holdem tsx
@@ -182,7 +186,7 @@ fi
 
 LAN_IP=$(ipconfig getifaddr en0 2>/dev/null || hostname -I 2>/dev/null | awk '{print $1}' || echo "")
 START_TOTAL=$(date +%s)
-clear; tput civis 2>/dev/null || true
+clear 2>/dev/null || true; tput civis 2>/dev/null || true
 
 # ── dashboard loop (solo-style: repaint every 2s) ─────────────────────────────
 # 每行前的 [ON]/[OFF] 即实时状态灯(lsof 端口探针,同端口行共用一个事实);
@@ -226,6 +230,7 @@ while true; do
     printf -- "  AI 造物        $(st 7788) ${GREEN}:7788${NC}  POST /v0/generate · POST /v0/revise\n"
     printf -- "  AI 造物 v2     $(st 7791) ${GREEN}:7791${NC}  POST /v0/generate(直出 adjunct + 服务端碰撞校验,实验)\n"
     printf -- "  AI 生成世界    $(st 7790) ${GREEN}:7790${NC}  POST /v0/generate · GET /v0/jobs/:id(画廊㉑,Marble API)\n"
+    printf -- "  模拟土地链     $(st 7792) ${GREEN}:7792${NC}  /v0/{info,blocks,mint,set-content,list,delist,buy}(免钱包 10 SOL$( [ -n "$SIM" ] && echo ' · 已激活' || echo ' · 加 --sim 启用' ))\n"
     printf -- "  IPFS 网关      $(st 7789) ${GREEN}:7789${NC}  /v0/health · /v0/names · /ipfs/<cid> · /assets/<file> · POST /v0/add\n"
     printf -- "\n${BOLD}说明${NC}\n"
     printf -- "--------------------------------------------------------------------------------\n"

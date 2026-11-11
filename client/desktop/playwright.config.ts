@@ -100,5 +100,12 @@ export default defineConfig({
       reuseExistingServer: true,
       timeout: 30_000,
     },
+    {
+      // Simulated land-registry & 10-SOL wallet ledger (SEPTOPUS_LAND=sim).
+      command: 'npm start --prefix ../../services/land-sim',
+      url: 'http://127.0.0.1:7792/v0/health',
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
   ],
 });

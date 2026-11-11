@@ -58,10 +58,13 @@ export default defineConfig({
       '@core': resolve(__dirname, '../core/src'),
       // Optional land-registry plugin (roadmap P4/P5, protocol land.md): the
       // default pure build aliases to plugin-none (zero chain code in dist/);
-      // SEPTOPUS_LAND=solana swaps in client/chain.
+      // SEPTOPUS_LAND=solana swaps in client/chain; SEPTOPUS_LAND=sim swaps in
+      // the wallet-free 10-SOL shared simulation registry (:7792).
       '@land-plugin': process.env.SEPTOPUS_LAND === 'solana'
         ? resolve(__dirname, '../chain/src/index.ts')
-        : resolve(__dirname, '../core/src/land/plugin-none.ts'),
+        : process.env.SEPTOPUS_LAND === 'sim'
+          ? resolve(__dirname, '../core/src/land/plugin-sim.ts')
+          : resolve(__dirname, '../core/src/land/plugin-none.ts'),
       ...(process.env.SEPTOPUS_LAND === 'solana'
         ? { 'buffer': resolve(__dirname, '../chain/node_modules/buffer') }
         : {}),

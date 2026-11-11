@@ -68,6 +68,8 @@ export function WorldMap2D({ loader }: Props) {
     const cell = useRef(DEFAULT_CELL);
     const cache = useRef(new Map<string, MapCell>());
     const pending = useRef(new Set<string>());
+    const landSynced = useRef(new Set<string>());
+    const landPending = useRef(new Set<string>());
     const drag = useRef<{ on: boolean; lastX: number; lastY: number; moved: number }>({ on: false, lastX: 0, lastY: 0, moved: 0 });
     const inited = useRef(false);
 
@@ -111,6 +113,12 @@ export function WorldMap2D({ loader }: Props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loader]);
 
+    // Re-sync visible land ownership states whenever wallet/mint/list/buy fires.
+    useEffect(() => {
+        if (!loader) return;
+        return loader.onLandChange(() => { landSynced.current.clear(); });
+    }, [loader]);
+
     /** Open a block's detail page; clearing the selection when it leaves. */
     function inspect(cell: MapCell) {
         setSelected([cell.x, cell.y]);
@@ -151,11 +159,35 @@ export function WorldMap2D({ loader }: Props) {
         }
         if (cache.current.size > CACHE_CAP) evict(bx0 - 8, by0 - 8, bx1 + 8, by1 + 8);
 
+        // ── land ownership batch sync for visible viewport (when land active) ──
+        if (loader.landEnabled) {
+            const landBatch: [number, number][] = [];
+            for (let by = by0; by <= by1 && landBatch.length < FETCH_PER_TICK; by++) {
+                for (let bx = bx0; bx <= bx1 && landBatch.length < FETCH_PER_TICK; bx++) {
+                    if (bx < 1 || by < 1 || bx > rangeX || by > rangeY) continue;
+                    const k = `${bx}_${by}`;
+                    if (landSynced.current.has(k) || landPending.current.has(k)) continue;
+                    landPending.current.add(k);
+                    landBatch.push([bx, by]);
+                }
+            }
+            if (landBatch.length > 0) {
+                loader.landSyncCoords(landBatch).finally(() => {
+                    for (const [lx, ly] of landBatch) {
+                        const lk = `${lx}_${ly}`;
+                        landPending.current.delete(lk);
+                        landSynced.current.add(lk);
+                    }
+                });
+            }
+        }
+
         draw(ctx, W, H);
 
         // e2e/test seam.
         (window as any).__map2d = {
             center: { x: cx, y: cy }, cell: c, loaded: cache.current.size,
+            landEnabled: loader.landEnabled, landSynced: landSynced.current.size,
             view: [bx0, by0, bx1, by1], range: [rangeX, rangeY],
             selected: selectedRef.current,
         };
@@ -164,7 +196,10 @@ export function WorldMap2D({ loader }: Props) {
     function evict(kx0: number, ky0: number, kx1: number, ky1: number) {
         for (const [k] of cache.current) {
             const [bx, by] = k.split('_').map(Number);
-            if (bx < kx0 || bx > kx1 || by < ky0 || by > ky1) cache.current.delete(k);
+            if (bx < kx0 || bx > kx1 || by < ky0 || by > ky1) {
+                cache.current.delete(k);
+                landSynced.current.delete(k);
+            }
         }
     }
 
@@ -181,6 +216,9 @@ export function WorldMap2D({ loader }: Props) {
         const bx0 = Math.floor(cx - (W / 2) / c) - 1, bx1 = Math.floor(cx + (W / 2) / c) + 1;
         const by0 = Math.floor(cy - (H / 2) / c) - 1, by1 = Math.floor(cy + (H / 2) / c) + 1;
         const grid = c >= 10;
+        const landSnap = loader?.landEnabled ? loader.landSnapshot() : null;
+        const myWallet = landSnap?.wallet ?? null;
+        const unitScale = landSnap ? 10 ** landSnap.decimals : 1e9;
 
         for (let by = by0; by <= by1; by++) {
             for (let bx = bx0; bx <= bx1; bx++) {
@@ -205,6 +243,40 @@ export function WorldMap2D({ loader }: Props) {
                     ctx.strokeStyle = 'rgba(255,255,255,0.06)';
                     ctx.lineWidth = 1;
                     ctx.strokeRect(left + 0.5, top + 0.5, c, c);
+                }
+                // Land ownership & marketplace tint (protocol/cn/land.md).
+                if (landSnap) {
+                    const lb = loader!.landBlockState(bx, by);
+                    if (lb && lb.status !== 'unminted') {
+                        if (lb.status === 'listed') {
+                            ctx.fillStyle = 'rgba(245,158,11,0.36)';
+                            ctx.fillRect(left, top, c, c);
+                            ctx.strokeStyle = 'rgba(251,191,36,0.92)';
+                            ctx.lineWidth = 1.5;
+                            ctx.strokeRect(left + 0.75, top + 0.75, Math.max(0, c - 1.5), Math.max(0, c - 1.5));
+                            if (c >= 18 && lb.price > 0) {
+                                const priceTag = (lb.price / unitScale).toFixed(2).replace(/\.?0+$/, '');
+                                ctx.fillStyle = '#fde68a';
+                                ctx.font = 'bold 8px monospace';
+                                ctx.fillText(priceTag, left + 2, top + 9);
+                            }
+                        } else if (lb.status === 'banned') {
+                            ctx.fillStyle = 'rgba(244,63,94,0.28)';
+                            ctx.fillRect(left, top, c, c);
+                        } else if (myWallet && lb.owner === myWallet) {
+                            ctx.fillStyle = 'rgba(16,185,129,0.34)';
+                            ctx.fillRect(left, top, c, c);
+                            ctx.strokeStyle = 'rgba(52,211,153,0.88)';
+                            ctx.lineWidth = 1.5;
+                            ctx.strokeRect(left + 0.75, top + 0.75, Math.max(0, c - 1.5), Math.max(0, c - 1.5));
+                        } else {
+                            ctx.fillStyle = 'rgba(56,189,248,0.24)';
+                            ctx.fillRect(left, top, c, c);
+                            ctx.strokeStyle = 'rgba(56,189,248,0.65)';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(left + 0.5, top + 0.5, Math.max(0, c - 1), Math.max(0, c - 1));
+                        }
+                    }
                 }
                 // Teleport anchors (fast-travel destinations) — a violet diamond
                 // per anchor at its in-block position. Only streamed cells carry
@@ -337,9 +409,16 @@ export function WorldMap2D({ loader }: Props) {
             <div className="absolute bottom-2 left-2 right-2 bg-black/55 border border-white/15 rounded-lg px-2.5 py-1 text-[10px] font-mono text-gray-300 flex flex-wrap items-center gap-x-3 gap-y-0.5 pointer-events-none">
                 <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(50,220,120,0.6)' }} />可玩区</span>
                 <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: 'rgba(0,200,255,0.6)' }} />有内容</span>
+                {loader?.landEnabled && (
+                    <>
+                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#10b981' }} />我的地</span>
+                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#38bdf8' }} />已认领</span>
+                        <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#fbbf24' }} />挂单在售</span>
+                    </>
+                )}
                 <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#c084fc' }} />传送点</span>
                 <span><span className="inline-block w-2.5 h-2.5 align-middle mr-1.5" style={{ background: '#ffd23f' }} />玩家</span>
-                <span className="text-gray-500">拖拽平移 · 滚轮缩放 · 点击地块看详情</span>
+                <span className="text-gray-500">拖拽平移 · 滚轮缩放 · 点击地块看详情{loader?.landEnabled ? '/交易' : ''}</span>
             </div>
         </div>
     );

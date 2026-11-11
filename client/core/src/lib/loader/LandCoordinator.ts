@@ -35,6 +35,8 @@ export interface LandUiSnapshot {
     decimals: number;
     wallet: string | null;
     walletKind: string | null;
+    accountSlot: number | null;
+    canSwitchAccount: boolean;
     balance: number;
     block: LandBlock | null;
     hasDraft: boolean;
@@ -225,6 +227,19 @@ export class LandCoordinator implements IChainPublisher {
         this.notify();
     }
 
+    public async switchAccount(): Promise<string> {
+        if (!this.registry?.switchAccount) throw new Error('current wallet does not support account switching');
+        const addr = await this.registry.switchAccount();
+        this.walletBalance = await this.registry.balance();
+        const [bx, by] = this.content.playerState.block;
+        if (this.engine()?.getWorld()?.mode === 'edit' && !this.canEdit(bx, by)) {
+            this.engine()?.setMode('normal' as any);
+        }
+        await this.refreshCurrent();
+        this.notify();
+        return addr;
+    }
+
     public async mint(x?: number, y?: number): Promise<string> {
         if (!this.registry) throw new Error('land registry not active');
         const [bx, by] = [x ?? this.content.playerState.block[0], y ?? this.content.playerState.block[1]];
@@ -296,6 +311,8 @@ export class LandCoordinator implements IChainPublisher {
             decimals: this.worldInfo?.decimals ?? 9,
             wallet: this.registry?.wallet() ?? null,
             walletKind: this.registry?.walletKind() ?? null,
+            accountSlot: this.registry?.accountSlot?.() ?? null,
+            canSwitchAccount: typeof this.registry?.switchAccount === 'function',
             balance: this.walletBalance,
             block: this.enabled ? this.blockState(bx, by) : null,
             hasDraft,

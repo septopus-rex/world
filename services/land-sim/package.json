@@ -1,0 +1,13 @@
+{
+  "name": "@septopus/land-sim",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Septopus simulated land-registry & wallet ledger (:7792) — 1:1 stand-in for the Solana septopus_land contract (protocol/cn/land.md) with wallet-free 10 SOL initial accounts and atomic JSON persistence.",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

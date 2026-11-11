@@ -52,6 +52,7 @@ client/*/e2e/__screenshots__/
 deploy/logs/
 
 client/*/dist-chain/
+client/*/dist-sim/
 services/*/data/
 
 # 宣传片成品（一条 1080p60 的 10s 片约 12 MB，同步代价太大）。生成器

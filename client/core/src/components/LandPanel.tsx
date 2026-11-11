@@ -106,32 +106,49 @@ export function LandPanel({ loader, ready, className = 'absolute top-12 left-4 z
                     </div>
 
                     {/* Wallet row */}
-                    <div className="flex items-center justify-between bg-white/5 rounded-xl px-2.5 py-2 border border-white/10">
+                    <div className="flex items-center justify-between bg-white/5 rounded-xl px-2.5 py-2 border border-white/10 gap-2">
                         {snap.wallet ? (
                             <>
-                                <div>
+                                <div className="min-w-0">
                                     <div className="text-[10px] text-white/50">
-                                        钱包 ({snap.walletKind === 'injected' ? '浏览器' : '本地测试'})
+                                        钱包 ({snap.walletKind === 'injected'
+                                            ? '浏览器'
+                                            : snap.walletKind === 'sim'
+                                                ? `模拟账号 #${snap.accountSlot ?? 1}`
+                                                : '本地测试'})
                                     </div>
-                                    <div data-testid="land-wallet" className="text-cyan-200 font-bold" title={snap.wallet}>
+                                    <div data-testid="land-wallet" className="text-cyan-200 font-bold truncate" title={snap.wallet}>
                                         {shortAddr(snap.wallet)} · {fmtAmount(snap.balance, snap.decimals)} {snap.unit}
                                     </div>
                                 </div>
-                                <button
-                                    data-testid="land-disconnect"
-                                    onClick={() => void run('disconnect', () => loader.landDisconnect())}
-                                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-[10px]"
-                                >断开</button>
+                                <div className="flex items-center gap-1 shrink-0">
+                                    {snap.canSwitchAccount && (
+                                        <button
+                                            data-testid="land-switch-account"
+                                            disabled={!!busy}
+                                            onClick={() => void run('switch', () => loader.landSwitchAccount())}
+                                            className="px-2 py-1 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-400/40 text-cyan-200 text-[10px]"
+                                            title="切换本地模拟账号 (#1 / #2 / #3)，每个新号初始 10 SOL"
+                                        >⇄ 切号</button>
+                                    )}
+                                    <button
+                                        data-testid="land-disconnect"
+                                        onClick={() => void run('disconnect', () => loader.landDisconnect())}
+                                        className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 text-[10px]"
+                                    >断开</button>
+                                </div>
                             </>
                         ) : (
                             <>
-                                <span className="text-white/60">未连接钱包</span>
+                                <span className="text-white/60">
+                                    {snap.chain === 'sim' ? '免插件模拟钱包' : '未连接钱包'}
+                                </span>
                                 <button
                                     data-testid="land-connect"
                                     disabled={!!busy}
                                     onClick={() => void run('connect', () => loader.landConnect())}
                                     className="px-3 py-1 rounded-lg bg-cyan-500/25 hover:bg-cyan-500/40 border border-cyan-300/50 text-cyan-100 font-bold"
-                                >连接钱包</button>
+                                >{snap.chain === 'sim' ? '领取/连接 (10 SOL)' : '连接钱包'}</button>
                             </>
                         )}
                     </div>

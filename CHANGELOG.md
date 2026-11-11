@@ -8,6 +8,11 @@ Septopus World 的版本记录。格式循 [Keep a Changelog](https://keepachang
 ## [Unreleased]
 
 ### 功能
+- **免钱包 10 SOL 模拟土地账本 + 2D 地图选地交易(`SEPTOPUS_LAND=sim`)**:新增共享模拟链服务
+  `services/land-sim`(`:7792`,1:1 复刻 `septopus_land` 状态机,首次连接自动发放 `10 SOL`、
+  `Bearer` 凭证鉴权 + JSON 原子落盘)与客户端插件 `plugin-sim.ts`(零 `@solana` 依赖,支持本地
+  `#1/#2/#3` 多账号一键切换);打通 `WorldMap2D` 视口土地产权着色(我的地/已认领/在售标价)与
+  `BlockDetailPage` 远程认领、挂单、购买及一键前往地块,配齐 Playwright e2e(`sim-land.spec.ts`)。
 - **混合链架构 · 比特币锚 + Solana 地块产权注册表(P4/P5 落地)**:新增规范 `protocol/cn|en/land.md`
   (双语同步),明确世界根(代码/配置/关卡)走比特币锚(`boot-chain.md`)、高频地块产权与市场走世界
   配置 `land` 段指定的产权注册表(Solana `septopus_land` 合约)。链上 `Block.content` 仅存

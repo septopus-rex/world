@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react';
-import type { DesktopLoader, MapCell } from '../lib/DesktopLoader';
+import type { DesktopLoader, LandUiSnapshot, MapCell } from '../lib/DesktopLoader';
+import type { LandBlock } from '../land/types';
 import { usePages, type PageSpec } from './page';
+
+function shortAddr(a: string | null): string {
+    return a ? `${a.slice(0, 4)}…${a.slice(-4)}` : '—';
+}
+
+function fmtSol(base: number, decimals = 9): string {
+    const v = base / 10 ** decimals;
+    return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, '');
+}
 
 /**
  * BlockDetailPage — the page you land on by tapping a block on the 2D map, and
@@ -37,6 +47,11 @@ export function blockDetailPage(loader: DesktopLoader | null, cell: MapCell, onD
 function BlockDetail({ loader, initial }: { loader: DesktopLoader | null; initial: MapCell }) {
     const pages = usePages();
     const [cell, setCell] = useState<MapCell>(initial);
+    const [snap, setSnap] = useState<LandUiSnapshot | null>(() => loader?.landEnabled ? loader.landSnapshot() : null);
+    const [landBlock, setLandBlock] = useState<LandBlock | null>(() => loader?.landBlockState(initial.x, initial.y) ?? null);
+    const [askSol, setAskSol] = useState('0.5');
+    const [busy, setBusy] = useState<string | null>(null);
+    const [err, setErr] = useState<string | null>(null);
 
     useEffect(() => {
         let alive = true;
@@ -46,7 +61,38 @@ function BlockDetail({ loader, initial }: { loader: DesktopLoader | null; initia
         return () => { alive = false; };
     }, [loader, initial.x, initial.y]);
 
+    useEffect(() => {
+        if (!loader?.landEnabled) return;
+        const refreshLocal = () => {
+            setSnap(loader.landSnapshot());
+            setLandBlock(loader.landBlockState(initial.x, initial.y));
+        };
+        refreshLocal();
+        void loader.landSyncCoords([[initial.x, initial.y]]);
+        return loader.onLandChange(() => {
+            refreshLocal();
+            loader.fetchMapCell(initial.x, initial.y).then(setCell).catch(() => {});
+        });
+    }, [loader, initial.x, initial.y]);
+
+    const runLand = async (label: string, fn: () => Promise<unknown>) => {
+        if (!loader) return;
+        setBusy(label);
+        setErr(null);
+        try {
+            await fn();
+            setSnap(loader.landSnapshot());
+            setLandBlock(loader.landBlockState(initial.x, initial.y));
+        } catch (e: any) {
+            setErr(String(e?.message ?? e));
+        } finally {
+            setBusy(null);
+        }
+    };
+
     const anchors = cell.anchors ?? [];
+    const isOwner = !!(snap?.wallet && landBlock?.owner && snap.wallet === landBlock.owner);
+    const scale = snap ? 10 ** snap.decimals : 1e9;
 
     return (
         <div data-testid="block-detail" className="space-y-3 text-xs font-mono text-stone-200">
@@ -56,6 +102,112 @@ function BlockDetail({ loader, initial }: { loader: DesktopLoader | null; initia
                 <Row label="可玩 Game" value={cell.game >= 1 ? 'yes' : 'no'} tone={cell.game >= 1 ? 'good' : 'dim'} />
                 <Row label="海拔 Elev" value={String(cell.elevation)} />
             </div>
+
+            {snap?.enabled && landBlock && (
+                <div data-testid="block-detail-land" className="pt-2 border-t border-white/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider">
+                            ⛓ 土地产权 · Land ({snap.unit})
+                        </span>
+                        {snap.wallet ? (
+                            <span data-testid="block-detail-wallet" className="text-[10px] text-cyan-200/80">
+                                {shortAddr(snap.wallet)} · {fmtSol(snap.balance, snap.decimals)} {snap.unit}
+                            </span>
+                        ) : (
+                            <button
+                                data-testid="block-detail-land-connect"
+                                disabled={!!busy}
+                                onClick={() => void runLand('connect', () => loader!.landConnect())}
+                                className="px-2 py-0.5 rounded bg-cyan-500/25 border border-cyan-400/50 text-[10px] text-cyan-100 font-bold hover:bg-cyan-500/40"
+                            >{snap.chain === 'sim' ? '领取/连接 (10 SOL)' : '连接钱包'}</button>
+                        )}
+                    </div>
+
+                    <div className="space-y-1">
+                        <Row
+                            label="产权状态"
+                            testId="block-detail-land-status"
+                            value={landBlock.status === 'listed'
+                                ? `listed (${fmtSol(landBlock.price, snap.decimals)} ${snap.unit})`
+                                : landBlock.status}
+                            tone={isOwner || landBlock.status === 'listed' ? 'good' : 'plain'}
+                        />
+                        <Row
+                            label="所有者"
+                            testId="block-detail-land-owner"
+                            value={landBlock.owner ? (isOwner ? `${shortAddr(landBlock.owner)} (你)` : shortAddr(landBlock.owner)) : '—'}
+                            tone={landBlock.owner ? 'plain' : 'dim'}
+                        />
+                        <Row
+                            label="链上 CID"
+                            testId="block-detail-land-cid"
+                            value={landBlock.cid ? `${landBlock.cid.slice(0, 10)}… (v${landBlock.revision})` : '未发布'}
+                            tone={landBlock.cid ? 'plain' : 'dim'}
+                        />
+                    </div>
+
+                    {snap.wallet && landBlock.status === 'unminted' && (
+                        <button
+                            data-testid="block-detail-land-mint"
+                            disabled={!!busy}
+                            onClick={() => void runLand('mint', () => loader!.landMint(cell.x, cell.y))}
+                            className="w-full py-1.5 rounded-lg bg-emerald-500/25 hover:bg-emerald-500/40 border border-emerald-400/60 text-emerald-100 font-bold text-[11px]"
+                        >⛏ 认领此地块 ({fmtSol(snap.mintPrice, snap.decimals)} {snap.unit})</button>
+                    )}
+
+                    {isOwner && landBlock.status === 'owned' && (
+                        <div className="flex items-center gap-1.5">
+                            <input
+                                data-testid="block-detail-land-price"
+                                value={askSol}
+                                onChange={(e) => setAskSol(e.target.value)}
+                                onKeyDown={(e) => e.stopPropagation()}
+                                placeholder="SOL"
+                                className="w-20 px-2 py-1 rounded-lg bg-black/50 border border-white/20 text-amber-200 text-[11px] outline-none focus:border-amber-400"
+                            />
+                            <button
+                                data-testid="block-detail-land-list"
+                                disabled={!!busy}
+                                onClick={() => {
+                                    const n = Number(askSol);
+                                    if (!Number.isFinite(n) || n <= 0) { setErr('价格必须 > 0'); return; }
+                                    void runLand('list', () => loader!.landList(Math.round(n * scale), cell.x, cell.y));
+                                }}
+                                className="flex-1 py-1 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/50 text-amber-100 font-bold text-[11px]"
+                            >🏷 挂单出售 ({snap.unit})</button>
+                        </div>
+                    )}
+
+                    {isOwner && landBlock.status === 'listed' && (
+                        <button
+                            data-testid="block-detail-land-delist"
+                            disabled={!!busy}
+                            onClick={() => void runLand('delist', () => loader!.landDelist(cell.x, cell.y))}
+                            className="w-full py-1.5 rounded-lg bg-amber-500/25 hover:bg-amber-500/40 border border-amber-400/60 text-amber-100 font-bold text-[11px]"
+                        >↩ 撤回挂单 ({fmtSol(landBlock.price, snap.decimals)} {snap.unit})</button>
+                    )}
+
+                    {snap.wallet && !isOwner && landBlock.status === 'listed' && (
+                        <button
+                            data-testid="block-detail-land-buy"
+                            disabled={!!busy}
+                            onClick={() => void runLand('buy', () => loader!.landBuy(cell.x, cell.y))}
+                            className="w-full py-1.5 rounded-lg bg-emerald-500/30 hover:bg-emerald-500/45 border border-emerald-300/60 text-emerald-100 font-bold text-[11px]"
+                        >💎 立即购买 ({fmtSol(landBlock.price, snap.decimals)} {snap.unit})</button>
+                    )}
+
+                    <button
+                        data-testid="block-detail-land-goto"
+                        onClick={() => {
+                            loader?.teleportSeptopus([cell.x, cell.y], [8, 8, 2]);
+                            pages.close();
+                        }}
+                        className="w-full py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-stone-200 text-[11px]"
+                    >📍 前往此地块漫游 / 建造</button>
+
+                    {err && <div data-testid="block-detail-land-error" className="text-[10px] text-rose-300 break-words">⚠ {err}</div>}
+                </div>
+            )}
 
             <div className="pt-2 border-t border-white/10">
                 <div className="text-[10px] text-purple-300 font-bold uppercase mb-1.5 tracking-wider">
